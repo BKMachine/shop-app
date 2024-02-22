@@ -1,0 +1,12 @@
+{
+  "name": "shop-app",
+  "repository": "https://github.com/BKMachine/shop-app.git",
+  "author": "Dave <dave@bkmachine.net>",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "server",
+    "www"
+  ],
+  "packageManager": "yarn@4.1.0"
+}
