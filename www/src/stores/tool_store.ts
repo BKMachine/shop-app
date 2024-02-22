@@ -6,7 +6,7 @@ export const useToolStore = defineStore('tools', () => {
   const manufacturers = ref<ToolManufacturer[]>([]);
 
   const manufacturersSorted = computed(() => {
-    return manufacturers.value.sort((a, b) => {
+    return [...manufacturers.value].sort((a, b) => {
       const c = a.name.toLowerCase();
       const d = b.name.toLowerCase();
       if (c < d) return -1;

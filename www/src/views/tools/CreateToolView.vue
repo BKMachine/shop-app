@@ -12,7 +12,7 @@
   <div>
     <v-row>
       <v-text-field label="Name" v-model="tool.description"></v-text-field>
-      <ToolManufacturerSelect />
+      <ToolManufacturerSelect v-model="tool.manufacturer" />
       <v-text-field label="Item No." v-model="tool.item"></v-text-field>
     </v-row>
     <v-row> </v-row>

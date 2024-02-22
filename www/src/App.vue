@@ -25,6 +25,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useToolStore } from '@/stores/tool_store';
+import onScan from 'onscan.js';
+import axios from '@/plugins/axios';
+import router from './router';
 
 const toolStore = useToolStore();
 
@@ -32,6 +35,14 @@ const drawer = ref(true);
 
 onMounted(() => {
   toolStore.getManufacturers();
+  onScan.attachTo(document);
+});
+
+document.addEventListener('scan', function (e) {
+  axios.post('/scan', { query: e.detail.scanCode }).then(({ data }) => {
+    console.log(data);
+    router.push({ name: 'createTool', params: { id: e.detail.scanCode } });
+  });
 });
 </script>
 

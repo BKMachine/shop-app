@@ -1,3 +1,8 @@
 import Tool from './tool_model';
 
-export default {};
+async function search(itemNumber: string) {
+  return Tool.find({ item: itemNumber });
+}
+export default {
+  search,
+};
