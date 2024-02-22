@@ -11,8 +11,8 @@
   </div>
   <div>
     <v-row>
-      <v-text-field label="Name" v-model="tool.name"></v-text-field>
-      <v-select label="Manufacturer" :items="manufacturers" v-model="tool.manufacturer"></v-select>
+      <v-text-field label="Name" v-model="tool.description"></v-text-field>
+      <ToolManufacturerSelect />
       <v-text-field label="Item No." v-model="tool.item"></v-text-field>
     </v-row>
     <v-row> </v-row>
@@ -33,25 +33,19 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import ToolManufacturerSelect from '@/components/ToolManufacturerSelect.vue';
 
-const tool = ref({
-  name: '1/2x3" SQ 3FL 1-1/4" F/L',
-  manufacturer: 'Garr',
+const tool = ref<Tool>({
+  description: '1/2x3" SQ 3FL 1-1/4" F/L',
   item: '07096',
-  img: 'https://www.garrtool.com/product-images/A3.PNG',
+  manufacturer: 'Garr',
+  vendor: 'Black Hawk',
   stock: 14,
+  img: 'https://www.garrtool.com/product-images/A3.PNG',
   productPage: 'https://www.garrtool.com/product-details/?EDP=07096',
   price: '$55.26',
   location: 'Blue Lista',
   subLocation: 'A7',
-});
-
-const manufacturers = ['Iscar', 'Kennametal', 'OSG', 'Garr', 'Accupro'].sort((a, b) => {
-  const c = a.toLowerCase();
-  const d = b.toLowerCase();
-  if (c < d) return -1;
-  else if (c > d) return 1;
-  else return 0;
 });
 
 function openNewTab(url: string) {

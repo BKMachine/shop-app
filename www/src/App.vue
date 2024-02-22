@@ -23,9 +23,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue';
+import { useToolStore } from '@/stores/tool_store';
 
-const drawer = ref(true)
+const toolStore = useToolStore();
+
+const drawer = ref(true);
+
+onMounted(() => {
+  toolStore.getManufacturers();
+});
 </script>
 
 <style scoped></style>
