@@ -15,6 +15,10 @@
         <v-list-item prepend-icon="mdi-apps" link to="/"> Home </v-list-item>
         <v-list-item prepend-icon="mdi-tools" link to="/tools"> Tools </v-list-item>
       </v-list>
+      <template v-slot:append>
+        <v-divider />
+        <v-list-item prepend-icon="mdi-cog" link to="/settings">Settings</v-list-item>
+      </template>
     </v-navigation-drawer>
     <v-main>
       <RouterView />

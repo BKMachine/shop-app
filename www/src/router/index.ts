@@ -3,6 +3,7 @@ import HomeView from '@/views/HomeView.vue';
 import CreateToolView from '@/views/tools/CreateToolView.vue';
 import ToolsDatabaseView from '@/views/tools/ToolsDatabaseView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
+import SettingsView from '@/views/SettingsView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -31,6 +32,11 @@ const router = createRouter({
       path: '/tools/database/:id',
       name: 'createTool',
       component: CreateToolView,
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingsView,
     },
   ],
 });
