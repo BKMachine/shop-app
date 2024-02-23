@@ -23,11 +23,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useToolStore } from '@/stores/tool_store';
 import onScan from 'onscan.js';
-import axios from '@/plugins/axios';
+import { onMounted, ref } from 'vue';
 import router from './router';
+import axios from '@/plugins/axios';
+import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
+import { computed, ref } from 'vue';
 import axios from '@/plugins/axios';
-import { ref, computed } from 'vue';
 
 export const useToolStore = defineStore('tools', () => {
   const manufacturers = ref<ToolManufacturer[]>([]);

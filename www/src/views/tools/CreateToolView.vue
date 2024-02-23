@@ -11,9 +11,9 @@
   </div>
   <div>
     <v-row>
-      <v-text-field label="Name" v-model="tool.description"></v-text-field>
+      <v-text-field v-model="tool.description" label="Name"></v-text-field>
       <ToolManufacturerSelect v-model="tool.manufacturer" />
-      <v-text-field label="Item No." v-model="tool.item"></v-text-field>
+      <v-text-field v-model="tool.item" label="Item No."></v-text-field>
     </v-row>
     <v-row> </v-row>
     <v-row>
@@ -26,7 +26,7 @@
       <v-text-field label="Location"></v-text-field>
       <v-text-field label="Sub Location"></v-text-field>
       <v-text-field label="Coating"></v-text-field>
-      <v-text-field label="Cost" v-model="tool.price"></v-text-field>
+      <v-text-field v-model="tool.price" label="Cost"></v-text-field>
     </v-row>
   </div>
 </template>
