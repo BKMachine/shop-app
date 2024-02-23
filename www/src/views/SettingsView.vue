@@ -1,5 +1,15 @@
-<script setup lang="ts"></script>
+<template>
+  <v-expansion-panels>
+    <v-expansion-panel title="Tool Manufacturers">
+      <v-expansion-panel-text>
+        <ToolBrandSettings />
+      </v-expansion-panel-text>
+    </v-expansion-panel>
+  </v-expansion-panels>
+</template>
 
-<template>Settingts</template>
+<script setup lang="ts">
+import ToolBrandSettings from '@/components/ToolBrandSettings.vue';
+</script>
 
 <style scoped></style>

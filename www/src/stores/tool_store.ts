@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import axios from '@/plugins/axios';
 
 export const useToolStore = defineStore('tools', () => {
-  const manufacturers = ref<ToolManufacturer[]>([]);
+  const manufacturers = ref<ToolManufacturerDoc[]>([]);
 
   const manufacturersSorted = computed(() => {
     return [...manufacturers.value].sort((a, b) => {
@@ -21,5 +21,20 @@ export const useToolStore = defineStore('tools', () => {
     });
   }
 
-  return { manufacturers, manufacturersSorted, getManufacturers };
+  function addManufacturer(doc: ToolManufacturerDoc) {
+    manufacturers.value.push(doc);
+  }
+
+  function updateManufacturer(doc: ToolManufacturerDoc) {
+    const i = manufacturers.value.findIndex((x) => x._id === doc._id);
+    manufacturers.value[i] = doc;
+  }
+
+  return {
+    manufacturers,
+    manufacturersSorted,
+    getManufacturers,
+    addManufacturer,
+    updateManufacturer,
+  };
 });

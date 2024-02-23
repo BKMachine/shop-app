@@ -1,5 +1,3 @@
-type ObjectId = import('mongoose').Types.ObjectId;
-
 interface Tool {
   description: string;
   item: string;
@@ -11,7 +9,7 @@ interface Tool {
   img: string;
 }
 interface ToolDoc extends Tool {
-  _id: ObjectId;
+  _id: string;
 }
 
 interface ToolManufacturer {
@@ -20,5 +18,5 @@ interface ToolManufacturer {
 }
 
 interface ToolManufacturerDoc extends ToolManufacturer {
-  _id: ObjectId;
+  _id: string;
 }
