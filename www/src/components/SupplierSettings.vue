@@ -26,18 +26,10 @@
           :rules="[rules.required, rules.counter, rules.unique]"
         ></v-text-field>
         <div class="logo-container">
-          <v-text-field
-            v-model="editingItem.logo"
-            label="Logo URL"
-            :rules="[rules.required]"
-          ></v-text-field>
+          <v-text-field v-model="editingItem.logo" label="Logo URL"></v-text-field>
           <v-img :src="editingItem.logo" class="logo-preview ml-3"></v-img>
         </div>
-        <v-text-field
-          v-model="editingItem.homepage"
-          label="Homepage"
-          :rules="[rules.required]"
-        ></v-text-field>
+        <v-text-field v-model="editingItem.homepage" label="Homepage"></v-text-field>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
@@ -58,13 +50,15 @@ const defaultItem: SupplierDoc = { _id: '', name: '' };
 const editingIndex = ref(-1);
 const editingItem = ref<SupplierDoc>(defaultItem);
 
+const isEditing = computed(() => editingIndex.value > -1);
+
 const cardTitle = computed(() => {
-  const prefix = editingIndex.value === -1 ? 'Add' : 'Edit';
+  const prefix = isEditing.value ? 'Edit' : 'Add';
   return prefix + ' Supplier';
 });
 
 const actionText = computed(() => {
-  return editingIndex.value === -1 ? 'Save' : 'Update';
+  return isEditing.value ? 'Update' : 'Save';
 });
 
 function create() {
@@ -90,7 +84,8 @@ const names = computed(() => {
 const rules: Rules = {
   required: (value) => !!value || 'Required',
   counter: (value) => value.length <= 20 || 'Max 20 characters',
-  unique: (value) => !names.value.includes(value.toLowerCase()) || 'Name already used',
+  unique: (value) =>
+    isEditing.value || !names.value.includes(value.toLowerCase()) || 'Name already used',
 };
 
 async function save() {
