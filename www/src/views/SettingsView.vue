@@ -1,15 +1,32 @@
 <template>
-  <v-expansion-panels>
-    <v-expansion-panel title="Tool Manufacturers">
-      <v-expansion-panel-text>
-        <ToolBrandSettings />
-      </v-expansion-panel-text>
-    </v-expansion-panel>
-  </v-expansion-panels>
+  <v-container>
+    <v-expansion-panels>
+      <v-expansion-panel>
+        <v-expansion-panel-title>
+          <v-icon class="mr-2">mdi-truck-delivery-outline</v-icon>
+          Suppliers
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <SupplierSettings />
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title>
+          <v-icon class="mr-2">mdi-package-variant-closed</v-icon>
+          Vendors
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <VendorSettings />
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
+  </v-container>
 </template>
 
 <script setup lang="ts">
-import ToolBrandSettings from '@/components/ToolBrandSettings.vue';
+import SupplierSettings from '@/components/SupplierSettings.vue';
+import VendorSettings from '@/components/VendorSettings.vue';
 </script>
 
 <style scoped></style>

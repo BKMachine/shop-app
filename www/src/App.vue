@@ -31,14 +31,17 @@ import onScan from 'onscan.js';
 import { onMounted, ref } from 'vue';
 import router from './router';
 import axios from '@/plugins/axios';
-import { useToolStore } from '@/stores/tool_store';
+import { useSupplierStore } from '@/stores/supplier_store';
+import { useVendorStore } from '@/stores/vendor_store';
 
-const toolStore = useToolStore();
+const supplierStore = useSupplierStore();
+const vendorStore = useVendorStore();
 
 const drawer = ref(true);
 
 onMounted(() => {
-  toolStore.getManufacturers();
+  supplierStore.fetch();
+  vendorStore.fetch();
   onScan.attachTo(document);
 });
 

@@ -1,15 +1,18 @@
 <template>
   <div class="container">
     <v-btn
-      v-for="(manufacturer, i) in toolStore.manufacturersSorted"
-      :key="manufacturer._id"
+      v-for="(supplier, i) in supplierStore.sorted"
+      :key="supplier._id"
       class="tile elevation-2"
       @click="edit(i)"
     >
-      <v-img v-if="manufacturer.logo" :src="manufacturer.logo" class="logo"></v-img>
-      <span v-else>{{ manufacturer.name }}</span>
+      <v-img v-if="supplier.logo" :src="supplier.logo" class="logo"></v-img>
+      <span v-else>{{ supplier.name }}</span>
+      <v-tooltip activator="parent" open-delay="500" location="top" offset="-20">
+        {{ supplier.name }}
+      </v-tooltip>
     </v-btn>
-    <v-btn class="tile elevation-2" color="primary" @click="create">
+    <v-btn class="tile elevation-2" color="blue-lighten-2" @click="create">
       <v-icon size="36">mdi-plus</v-icon>
     </v-btn>
   </div>
@@ -30,6 +33,11 @@
           ></v-text-field>
           <v-img :src="editingItem.logo" class="logo-preview ml-3"></v-img>
         </div>
+        <v-text-field
+          v-model="editingItem.homepage"
+          label="Homepage"
+          :rules="[rules.required]"
+        ></v-text-field>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
@@ -42,18 +50,17 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import axios from '@/plugins/axios';
-import { useToolStore } from '@/stores/tool_store';
+import { useSupplierStore } from '@/stores/supplier_store';
 
-const toolStore = useToolStore();
+const supplierStore = useSupplierStore();
 const dialog = ref(false);
-const defaultItem: ToolManufacturerDoc = { _id: '', name: '', logo: '' };
+const defaultItem: SupplierDoc = { _id: '', name: '' };
 const editingIndex = ref(-1);
-const editingItem = ref<ToolManufacturerDoc>(defaultItem);
+const editingItem = ref<SupplierDoc>(defaultItem);
 
 const cardTitle = computed(() => {
   const prefix = editingIndex.value === -1 ? 'Add' : 'Edit';
-  return prefix + ' Tool Manufacturer';
+  return prefix + ' Supplier';
 });
 
 const actionText = computed(() => {
@@ -68,7 +75,7 @@ function create() {
 
 function edit(i: number) {
   editingIndex.value = i;
-  editingItem.value = toolStore.manufacturersSorted[editingIndex.value];
+  editingItem.value = { ...supplierStore.sorted[editingIndex.value] };
   dialog.value = true;
 }
 
@@ -77,7 +84,7 @@ async function close() {
 }
 
 const names = computed(() => {
-  return toolStore.manufacturers.map((x) => x.name.toLowerCase());
+  return supplierStore.suppliers.map((x) => x.name.toLowerCase());
 });
 
 const rules: Rules = {
@@ -88,13 +95,9 @@ const rules: Rules = {
 
 async function save() {
   if (editingIndex.value === -1) {
-    await axios.post('/tools/manufacturer', { data: editingItem.value }).then(({ data }) => {
-      toolStore.addManufacturer(data);
-    });
+    await supplierStore.add(editingItem.value);
   } else {
-    await axios.put('/tools/manufacturer', { data: editingItem.value }).then(() => {
-      toolStore.updateManufacturer(editingItem.value);
-    });
+    await supplierStore.update(editingItem.value);
   }
   dialog.value = false;
 }

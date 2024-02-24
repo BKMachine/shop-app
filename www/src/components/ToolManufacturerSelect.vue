@@ -1,5 +1,5 @@
 <template>
-  <v-select label="Brand" :items="toolStore.manufacturersSorted" item-title="name" item-value="_id">
+  <v-select label="Brand" :items="toolStore.sorted" item-title="name" item-value="_id">
     <template v-slot:item="{ props, item }">
       <v-list-item v-bind="props" title="">
         <template v-slot:prepend>
@@ -24,9 +24,9 @@
 </template>
 
 <script setup lang="ts">
-import { useToolStore } from '@/stores/tool_store';
+import { useVendorStore } from '@/stores/vendor_store';
 
-const toolStore = useToolStore();
+const toolStore = useVendorStore();
 </script>
 
 <style scoped></style>
