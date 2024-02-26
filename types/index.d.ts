@@ -4,12 +4,9 @@ interface Rules {
 
 interface Tool {
   description: string;
+  vendor: VendorDoc;
   item: string;
-  manufacturer: ToolManufacturerDoc;
-  vendor: string;
   stock: number;
-  price: number;
-  productPage: string;
   img: string;
 }
 

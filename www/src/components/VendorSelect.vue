@@ -3,21 +3,10 @@
     <template v-slot:item="{ props, item }">
       <v-list-item v-bind="props" title="">
         <template v-slot:prepend>
-          <v-avatar><v-img :src="item.raw.logo"></v-img></v-avatar>
+          <v-avatar rounded="0"><v-img class="logo" :src="item.raw.logo"></v-img></v-avatar>
         </template>
 
         {{ item.raw.name }}
-      </v-list-item>
-    </template>
-
-    <template v-slot:prepend-item>
-      <v-divider class="mb-2"></v-divider>
-
-      <v-list-item disabled>
-        <template v-slot:prepend>
-          <v-spacer></v-spacer>
-          <v-btn>New</v-btn>
-        </template>
       </v-list-item>
     </template>
   </v-select>
@@ -29,4 +18,8 @@ import { useVendorStore } from '@/stores/vendor_store';
 const toolStore = useVendorStore();
 </script>
 
-<style scoped></style>
+<style scoped>
+.logo {
+  width: 100%;
+}
+</style>
