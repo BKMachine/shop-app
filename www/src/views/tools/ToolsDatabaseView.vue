@@ -1,5 +1,5 @@
 <template>
-  <v-tabs v-model="tab" bg-color="primary" align-tabs="center" grow>
+  <v-tabs v-model="tab" bg-color="primary" align-tabs="center" grow @update:modelValue="onChange">
     <v-tab value="milling">Milling</v-tab>
     <v-tab value="turning">Turning</v-tab>
   </v-tabs>
@@ -12,10 +12,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onBeforeMount, ref } from 'vue';
 import MillingToolsDataTable from '@/components/MillingToolsDataTable.vue';
 
 const tab = ref('milling');
+
+onBeforeMount(() => {
+  const type = window.localStorage.getItem('type');
+  if (!type) window.localStorage.setItem('type', tab.value);
+  else tab.value = type;
+});
+
+function onChange() {
+  window.localStorage.setItem('type', tab.value);
+}
 </script>
 
 <style scoped></style>
