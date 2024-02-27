@@ -1,20 +1,6 @@
 <template>
   <div class="container">
-    <v-btn
-      v-for="(supplier, i) in supplierStore.suppliers"
-      :key="supplier._id"
-      class="tile elevation-2"
-      @click="edit(i)"
-    >
-      <v-img v-if="supplier.logo" :src="supplier.logo" class="logo"></v-img>
-      <span v-else>{{ supplier.name }}</span>
-      <v-tooltip activator="parent" open-delay="500" location="top" offset="-20">
-        {{ supplier.name }}
-      </v-tooltip>
-    </v-btn>
-    <v-btn class="tile elevation-2" color="blue-lighten-2" @click="create">
-      <v-icon size="36">mdi-plus</v-icon>
-    </v-btn>
+    <SettingsTiles :items="supplierStore.suppliers" @create="create" @edit="edit"></SettingsTiles>
   </div>
   <v-dialog v-model="dialog" class="dialog" @blur="close">
     <v-card>
@@ -42,6 +28,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import SettingsTiles from '@/components/SettingsTiles.vue';
 import { useSupplierStore } from '@/stores/supplier_store';
 
 const supplierStore = useSupplierStore();
@@ -102,18 +89,6 @@ async function save() {
 .container {
   display: flex;
   flex-wrap: wrap;
-}
-.tile {
-  width: 120px;
-  height: 120px;
-  border: 1px solid #999999;
-  margin: 8px;
-  border-radius: 20px;
-  position: relative;
-}
-.logo {
-  width: 100px;
-  height: 100px;
 }
 .dialog {
   max-width: 700px;
