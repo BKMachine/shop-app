@@ -34,21 +34,21 @@ import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
+onScan.attachTo(document, { minLength: 5 });
+document.addEventListener('scan', function (e) {
+  const match = toolStore.tools.find((x) => x.item === e.detail.scanCode);
+  if (match) {
+    router.push({ name: 'viewTool', params: { id: match._id } });
+  } else {
+    alert('No matching tool was found in the database. Would you like to create one?');
+  }
+});
+
 const supplierStore = useSupplierStore();
 const vendorStore = useVendorStore();
 const toolStore = useToolStore();
 
 const drawer = ref(true);
-
-onScan.attachTo(document);
-document.addEventListener('scan', function (e) {
-  const match = toolStore.tools.find((x) => x.item === e.detail.scanCode);
-  if (match) {
-    router.push({ name: 'createTool', params: { id: match._id } });
-  } else {
-    alert('No matching tool was found in the database. Would you like to create one?');
-  }
-});
 
 onMounted(() => {
   supplierStore.fetch();
