@@ -1,11 +1,14 @@
 import { Schema, Types, model } from 'mongoose';
 
 const schema = new Schema<ToolDoc>({
-  description: String,
+  description: { type: String, required: true },
   _vendor: { type: Types.ObjectId, ref: 'vendors' },
   item: { type: String, unique: true },
-  stock: Number,
+  stock: { type: Number, default: 0 },
   img: String,
+  type: { type: String, required: true },
+  coating: String,
+  flutes: Number,
 });
 
 export default model<ToolDoc>('tools', schema);

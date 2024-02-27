@@ -39,7 +39,11 @@ export const useToolStore = defineStore('tools', () => {
   }
 
   async function add(vendor: Tool) {
-    await axios.post('/tools', { data: vendor }).then(({ data }) => {
+    const data = {
+      ...vendor,
+      type: vendor.type.toLowerCase(),
+    };
+    await axios.post('/tools', { data }).then(({ data }) => {
       rawTools.value.push(data);
     });
   }

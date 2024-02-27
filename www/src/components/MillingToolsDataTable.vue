@@ -51,18 +51,23 @@ const headers = computed(() => {
     },
     {
       title: 'Description',
-      align: 'start',
       key: 'description',
     },
     {
       title: 'Vendor',
-      align: 'start',
       key: '_vendor.name',
     },
     {
       title: 'Item',
-      align: 'start',
       key: 'item',
+    },
+    {
+      title: 'Coating',
+      key: 'coating',
+    },
+    {
+      title: 'Flutes',
+      key: 'flutes',
     },
   ];
 });

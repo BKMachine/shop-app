@@ -6,11 +6,13 @@ interface Rules {
 
 interface Tool {
   description: string;
-  _vendor: VendorDoc['_id'];
-  item: string;
+  _vendor?: VendorDoc['_id'];
+  item?: string;
   stock: number;
-  img: string;
+  img?: string;
   type: 'milling' | 'turning';
+  coating?: string;
+  flutes?: number;
 }
 
 interface ToolDoc extends Tool {

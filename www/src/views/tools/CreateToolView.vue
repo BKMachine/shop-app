@@ -21,9 +21,11 @@
           label="Barcode"
           append-inner-icon="mdi-barcode"
         ></v-text-field>
-        <v-select v-model="tool.type" label="Type" :items="['Milling', 'Turning']"></v-select>
+        <v-select v-model="tool.type" label="Type" :items="types"></v-select>
         <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
         <v-text-field v-model="tool.img" label="Tool Image URL"></v-text-field>
+        <v-select v-model="tool.coating" label="Coating" :items="coatings"></v-select>
+        <v-text-field v-model.number="tool.flutes" label="Flutes"></v-text-field>
       </v-col>
     </v-row>
     <v-divider />
@@ -36,14 +38,31 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import VendorSelect from '@/components/VendorSelect.vue';
+import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 
-const tool = ref<Tool>({});
+const tool = ref<Tool>({} as Tool);
+const types = ['Milling', 'Turning'];
+const coatings = [
+  'AlTiN',
+  'AlCrN',
+  'ALUMASTAR',
+  'HLUBE',
+  'IC08',
+  'Bright',
+  'V',
+  'Nitride',
+  'APLUS',
+  'ZPLUS',
+  'ALtima',
+  'TiAlN',
+];
 
 async function save() {
   await toolStore.add(tool.value);
+  await router.push({ name: 'toolsDatabase' });
 }
 </script>
 

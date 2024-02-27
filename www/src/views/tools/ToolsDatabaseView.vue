@@ -4,7 +4,7 @@
     <v-tab value="turning">Turning</v-tab>
   </v-tabs>
 
-  <v-window v-model="tab">
+  <v-window v-model="tab" class="mt-3">
     <v-window-item value="milling"> <MillingToolsDataTable /> </v-window-item>
 
     <v-window-item value="turning"> Turning </v-window-item>
