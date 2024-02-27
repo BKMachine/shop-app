@@ -21,12 +21,13 @@
 defineProps<{
   items: any[];
 }>();
+defineEmits(['create', 'edit']);
 </script>
 
 <style scoped>
 .tile {
   width: 120px;
-  height: 120px;
+  height: 120px !important;
   border: 1px solid #999999;
   margin: 8px;
   border-radius: 20px;
