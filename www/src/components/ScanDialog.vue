@@ -1,6 +1,14 @@
 <template>
   <v-card>
-    <v-card-title>{{ tool.item }} - {{ tool.stock }} in stock</v-card-title>
+    <v-card-title>
+      <div class="title">
+        <img :src="tool._vendor?.logo" height="100px" alt="" class="mr-4" />
+        {{ tool.item }} - {{ tool.stock }} in stock
+      </div>
+      <div>
+        {{ tool.description }}
+      </div>
+    </v-card-title>
     <v-card-text class="card">
       <v-btn class="remove">
         <v-icon size="100">mdi-export</v-icon>
@@ -26,7 +34,7 @@ const props = defineProps<{
 const toolStore = useToolStore();
 
 const tool = computed(() => {
-  return toolStore.tools.find((x) => x.item === props.scanCode) || ({} as Tool);
+  return toolStore.tools.find((x) => x.item === props.scanCode) || ({} as ToolDoCProp);
 });
 </script>
 
@@ -42,6 +50,10 @@ const tool = computed(() => {
   height: 200px;
   margin: 20px;
   border-radius: 20px;
+}
+.title {
+  display: flex;
+  align-items: center;
 }
 .remove:hover {
   background: red;

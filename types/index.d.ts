@@ -15,6 +15,10 @@ interface Tool {
   flutes?: number;
 }
 
+interface ToolDoCProp extends ToolDoc {
+  _vendor?: VendorDoc;
+}
+
 interface ToolDoc extends Tool {
   _id: ObjectId;
 }
