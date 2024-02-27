@@ -33,8 +33,8 @@ router.put('/vendors', async (req, res, next) => {
     return;
   }
   try {
-    const doc = await VendorService.update(data);
-    res.status(200).json(doc);
+    await VendorService.update(data);
+    res.sendStatus(204);
   } catch (e) {
     next(e);
   }

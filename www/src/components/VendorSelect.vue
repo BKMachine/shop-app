@@ -1,5 +1,5 @@
 <template>
-  <v-select label="Brand" :items="toolStore.sorted" item-title="name" item-value="_id">
+  <v-select label="Brand" :items="toolStore.vendors" item-title="name" item-value="_id">
     <template v-slot:item="{ props, item }">
       <v-list-item v-bind="props" title="">
         <template v-slot:prepend>

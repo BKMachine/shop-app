@@ -1,31 +1,21 @@
 <template>
-  <div class="header">
-    <v-btn link to="/tools/database/create" color="primary" prepend-icon="mdi-plus">
-      Create New Tool
-    </v-btn>
-  </div>
-  <v-card flat>
-    <template v-slot:text>
-      <v-text-field
-        v-model="search"
-        label="Search"
-        prepend-inner-icon="mdi-magnify"
-        single-line
-        variant="outlined"
-        hide-details
-      ></v-text-field>
-    </template>
+  <v-tabs v-model="tab" bg-color="primary" align-tabs="center" grow>
+    <v-tab value="milling">Milling</v-tab>
+    <v-tab value="turning">Turning</v-tab>
+  </v-tabs>
 
-    <v-data-table :headers="headers" :items="desserts" :search="search"></v-data-table>
-  </v-card>
+  <v-window v-model="tab">
+    <v-window-item value="milling"> <MillingToolsDataTable /> </v-window-item>
+
+    <v-window-item value="turning"> Turning </v-window-item>
+  </v-window>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { ref } from 'vue';
+import MillingToolsDataTable from '@/components/MillingToolsDataTable.vue';
 
-<style scoped>
-.header {
-  padding: 15px 15px 0 0;
-  display: flex;
-  justify-content: flex-end;
-}
-</style>
+const tab = ref('milling');
+</script>
+
+<style scoped></style>

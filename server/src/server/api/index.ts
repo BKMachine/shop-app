@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import SupplierRoutes from './routes/suppliers';
+import ToolRoutes from './routes/tools';
 import VendorRoutes from './routes/vendors';
 
 const router = Router();
@@ -10,5 +11,6 @@ router.get('/', (req, res, next) => {
 
 router.use(SupplierRoutes);
 router.use(VendorRoutes);
+router.use(ToolRoutes);
 
 export default router;

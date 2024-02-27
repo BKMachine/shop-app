@@ -3,7 +3,7 @@
     <v-app-bar class="elevation-2">
       <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
       <v-app-bar-title>
-        <v-avatar>
+        <v-avatar size="48">
           <v-img src="@/assets/img/bk_logo.png"></v-img>
         </v-avatar>
         BK Machine
@@ -30,26 +30,30 @@
 import onScan from 'onscan.js';
 import { onMounted, ref } from 'vue';
 import router from './router';
-import axios from '@/plugins/axios';
 import { useSupplierStore } from '@/stores/supplier_store';
+import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const supplierStore = useSupplierStore();
 const vendorStore = useVendorStore();
+const toolStore = useToolStore();
 
 const drawer = ref(true);
+
+onScan.attachTo(document);
+document.addEventListener('scan', function (e) {
+  const match = toolStore.tools.find((x) => x.item === e.detail.scanCode);
+  if (match) {
+    router.push({ name: 'createTool', params: { id: match._id } });
+  } else {
+    alert('No matching tool was found in the database. Would you like to create one?');
+  }
+});
 
 onMounted(() => {
   supplierStore.fetch();
   vendorStore.fetch();
-  onScan.attachTo(document);
-});
-
-document.addEventListener('scan', function (e) {
-  axios.post('/scan', { query: e.detail.scanCode }).then(({ data }) => {
-    console.log(data);
-    router.push({ name: 'createTool', params: { id: e.detail.scanCode } });
-  });
+  toolStore.fetch();
 });
 </script>
 

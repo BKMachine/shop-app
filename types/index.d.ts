@@ -1,17 +1,20 @@
+type ObjectId = import('mongoose').Types.ObjectId;
+
 interface Rules {
   [key: string]: (value: string) => boolean | string;
 }
 
 interface Tool {
   description: string;
-  vendor: VendorDoc;
+  _vendor: VendorDoc['_id'];
   item: string;
   stock: number;
   img: string;
+  type: 'milling' | 'turning';
 }
 
 interface ToolDoc extends Tool {
-  _id: string;
+  _id: ObjectId;
 }
 
 interface Vendor {
@@ -21,7 +24,7 @@ interface Vendor {
 }
 
 interface VendorDoc extends Vendor {
-  _id: string;
+  _id: ObjectId;
 }
 
 interface Supplier {
@@ -31,5 +34,5 @@ interface Supplier {
 }
 
 interface SupplierDoc extends Supplier {
-  _id: string;
+  _id: ObjectId;
 }

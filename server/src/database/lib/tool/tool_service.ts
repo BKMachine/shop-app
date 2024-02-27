@@ -1,8 +1,21 @@
-import Tool from './tool_model';
+import ToolModel from './tool_model';
 
-async function search(itemNumber: string) {
-  return Tool.find({ item: itemNumber });
+async function list() {
+  return ToolModel.find({});
 }
+
+async function add(data: Tool) {
+  const doc = new ToolModel(data);
+  await doc.save();
+  return doc;
+}
+
+async function update(doc: ToolDoc) {
+  await ToolModel.findByIdAndUpdate(doc._id, doc);
+}
+
 export default {
-  search,
+  list,
+  add,
+  update,
 };

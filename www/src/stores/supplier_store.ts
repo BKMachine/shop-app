@@ -3,10 +3,10 @@ import { computed, ref } from 'vue';
 import axios from '@/plugins/axios';
 
 export const useSupplierStore = defineStore('suppliers', () => {
-  const suppliers = ref<SupplierDoc[]>([]);
+  const _suppliers = ref<SupplierDoc[]>([]);
 
-  const sorted = computed(() => {
-    return [...suppliers.value].sort((a, b) => {
+  const suppliers = computed(() => {
+    return [..._suppliers.value].sort((a, b) => {
       const c = a.name.toLowerCase();
       const d = b.name.toLowerCase();
       if (c < d) return -1;
@@ -17,26 +17,26 @@ export const useSupplierStore = defineStore('suppliers', () => {
 
   function fetch() {
     axios.get('/suppliers').then(({ data }) => {
-      suppliers.value = data;
+      _suppliers.value = data;
     });
   }
 
   async function add(supplier: Supplier) {
     await axios.post('/suppliers', { data: supplier }).then(({ data }) => {
-      suppliers.value.push(data);
+      _suppliers.value.push(data);
     });
   }
 
   async function update(doc: SupplierDoc) {
     await axios.put('/suppliers', { data: doc }).then(() => {
-      const i = suppliers.value.findIndex((x) => x._id === doc._id);
-      suppliers.value[i] = doc;
+      const i = _suppliers.value.findIndex((x) => x._id === doc._id);
+      _suppliers.value[i] = doc;
     });
   }
 
   return {
+    _suppliers,
     suppliers,
-    sorted,
     fetch,
     add,
     update,

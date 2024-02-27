@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <v-btn
-      v-for="(vendor, i) in vendorStore.sorted"
+      v-for="(vendor, i) in vendorStore.vendors"
       :key="vendor._id"
       class="tile elevation-2"
       @click="edit(i)"
@@ -69,7 +69,7 @@ function create() {
 
 function edit(i: number) {
   editingIndex.value = i;
-  editingItem.value = { ...vendorStore.sorted[editingIndex.value] };
+  editingItem.value = { ...vendorStore.vendors[editingIndex.value] };
   dialog.value = true;
 }
 

@@ -4,10 +4,8 @@ async function list() {
   return SupplierModel.find();
 }
 
-async function create(data: SupplierDoc) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { _id, ...rest } = data;
-  const doc = new SupplierModel(rest);
+async function create(data: Supplier) {
+  const doc = new SupplierModel(data);
   await doc.save();
   return doc;
 }
