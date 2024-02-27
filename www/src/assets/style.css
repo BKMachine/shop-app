@@ -6,3 +6,7 @@
 .flex {
     display: flex;
 }
+
+.v-data-table__tr:hover {
+    background-color: rgba(204, 204, 204, 0.42) !important;
+}

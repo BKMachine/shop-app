@@ -30,7 +30,7 @@ const router = createRouter({
     },
     {
       path: '/tools/database/:id',
-      name: 'createTool',
+      name: 'viewTool',
       component: CreateToolView,
     },
     {

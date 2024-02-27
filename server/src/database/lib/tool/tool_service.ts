@@ -4,6 +4,10 @@ async function list() {
   return ToolModel.find({});
 }
 
+async function findById(id: string) {
+  return ToolModel.findById(id);
+}
+
 async function add(data: Tool) {
   const doc = new ToolModel(data);
   await doc.save();
@@ -16,6 +20,7 @@ async function update(doc: ToolDoc) {
 
 export default {
   list,
+  findById,
   add,
   update,
 };

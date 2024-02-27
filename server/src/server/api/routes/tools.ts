@@ -12,6 +12,16 @@ router.get('/tools', async (req, res, next) => {
   }
 });
 
+router.get('/tools/:id', async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const result = await ToolService.findById(id);
+    res.status(200).json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/tools', async (req, res, next) => {
   const { data }: { data: Tool | undefined } = req.body;
   if (!data) {

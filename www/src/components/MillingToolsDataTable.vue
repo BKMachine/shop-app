@@ -24,6 +24,7 @@
           :items="toolStore.millingTools"
           :search="search"
           :loading="toolStore.loading"
+          @dblclick:row="openTool"
         >
           <template v-slot:item.img="{ item }">
             <v-img :src="item.img"></v-img>
@@ -39,6 +40,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
@@ -71,6 +73,10 @@ const headers = computed(() => {
     },
   ];
 });
+
+function openTool(event: unknown, { item }: { item: ToolDoc }) {
+  router.push({ name: 'viewTool', params: { id: item._id } });
+}
 </script>
 
 <style scoped>

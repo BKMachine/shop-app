@@ -36,15 +36,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import VendorSelect from '@/components/VendorSelect.vue';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
+import axios from '@/plugins/axios';
 
 const toolStore = useToolStore();
 
 const tool = ref<Tool>({} as Tool);
 const types = ['Milling', 'Turning'];
+
+onMounted(() => {
+  const { id } = router.currentRoute.value.params;
+  const match = toolStore.tools.find((x) => x._id === id);
+  if (match) {
+    tool.value = match;
+  } else {
+    axios
+      .get(`/tools/${id}`)
+      .then(({ data }) => {
+        tool.value = data;
+      })
+      .catch(() => {
+        alert('Tool not found');
+      });
+  }
+});
+
 const coatings = [
   'AlTiN',
   'AlCrN',
