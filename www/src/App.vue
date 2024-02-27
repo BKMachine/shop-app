@@ -23,22 +23,28 @@
     <v-main>
       <RouterView />
     </v-main>
+    <v-dialog v-model="scanDialog" class="scan-dialog">
+      <ScanDialog :scanCode="scanCode" />
+    </v-dialog>
   </v-app>
 </template>
 
 <script setup lang="ts">
 import onScan from 'onscan.js';
 import { onMounted, ref } from 'vue';
-import router from './router';
+import ScanDialog from '@/components/ScanDialog.vue';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
+
+const scanCode = ref('');
 
 onScan.attachTo(document, { minLength: 5 });
 document.addEventListener('scan', function (e) {
   const match = toolStore.tools.find((x) => x.item === e.detail.scanCode);
   if (match) {
-    router.push({ name: 'viewTool', params: { id: match._id } });
+    scanCode.value = e.detail.scanCode;
+    scanDialog.value = true;
   } else {
     alert('No matching tool was found in the database. Would you like to create one?');
   }
@@ -47,6 +53,7 @@ document.addEventListener('scan', function (e) {
 const supplierStore = useSupplierStore();
 const vendorStore = useVendorStore();
 const toolStore = useToolStore();
+const scanDialog = ref(false);
 
 const drawer = ref(true);
 
@@ -57,4 +64,8 @@ onMounted(() => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.scan-dialog {
+  max-width: 700px;
+}
+</style>
