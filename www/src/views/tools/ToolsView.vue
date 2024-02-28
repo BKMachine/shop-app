@@ -1,27 +1,31 @@
 <template>
-  <div class="container">
-    <v-btn class="big-button" link to="/tools/database">
-      <v-icon size="200">mdi-magnify</v-icon>
-    </v-btn>
-    <v-btn class="big-button" link to="/tools/database"> Database </v-btn>
-    <v-btn class="big-button" link to="/tools/database"> Database </v-btn>
-  </div>
+  <v-tabs v-model="tab" bg-color="primary" align-tabs="center" grow @update:modelValue="onChange">
+    <v-tab value="milling">Milling</v-tab>
+    <v-tab value="turning">Turning</v-tab>
+  </v-tabs>
+
+  <v-window v-model="tab" class="mt-3">
+    <v-window-item value="milling"> <MillingToolsDataTable /> </v-window-item>
+
+    <v-window-item value="turning"> Turning </v-window-item>
+  </v-window>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { onBeforeMount, ref } from 'vue';
+import MillingToolsDataTable from '@/components/MillingToolsDataTable.vue';
 
-<style scoped>
-.container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+const tab = ref('milling');
+
+onBeforeMount(() => {
+  const type = window.localStorage.getItem('type');
+  if (!type) window.localStorage.setItem('type', tab.value);
+  else tab.value = type;
+});
+
+function onChange() {
+  window.localStorage.setItem('type', tab.value);
 }
-.big-button {
-  width: 200px;
-  height: 200px;
-  border: 2px solid black;
-  margin: 25px;
-  border-radius: 20px;
-}
-</style>
+</script>
+
+<style scoped></style>

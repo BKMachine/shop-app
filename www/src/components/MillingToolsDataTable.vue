@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title class="header">
       Milling Tools
-      <v-btn link to="/tools/database/create" color="primary" prepend-icon="mdi-plus">
+      <v-btn link :to="{ name: 'createTool' }" color="primary" prepend-icon="mdi-plus">
         Create New Tool
       </v-btn>
     </v-card-title>

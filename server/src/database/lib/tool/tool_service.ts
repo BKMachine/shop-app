@@ -18,9 +18,14 @@ async function update(doc: ToolDoc) {
   await ToolModel.findByIdAndUpdate(doc._id, doc);
 }
 
+async function getReorders() {
+  return ToolModel.find({ $expr: { $lte: ['$stock', '$reorderThreshold'] } });
+}
+
 export default {
   list,
   findById,
   add,
   update,
+  getReorders,
 };

@@ -10,12 +10,13 @@
       </div>
     </v-card-title>
     <v-card-text class="card">
-      <v-btn class="remove">
+      <v-btn class="remove" @click="adjustStock(-1)">
         <v-icon size="100">mdi-export</v-icon>
       </v-btn>
-      <v-btn class="add">
+      <v-btn class="add" @click="adjustStock(stockAdjustment)">
         <v-icon size="100">mdi-import</v-icon>
       </v-btn>
+      <v-text-field v-model.number="stockAdjustment" type="number"></v-text-field>
       <v-btn class="details" @click="details">
         <v-icon size="100">mdi-file-document-outline</v-icon>
       </v-btn>
@@ -24,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
@@ -34,10 +35,18 @@ const props = defineProps<{
 const emit = defineEmits(['close']);
 
 const toolStore = useToolStore();
+const stockAdjustment = ref(0);
 
 const tool = computed(() => {
-  return (toolStore.tools.find((x) => x.item === props.scanCode) || {}) as ToolDocProp;
+  return (toolStore.tools.find((x) => x.item === props.scanCode || x.barcode === props.scanCode) ||
+    {}) as ToolDocProp;
 });
+
+async function adjustStock(num: number) {
+  await toolStore.adjustStock(tool.value._id, num);
+  stockAdjustment.value = 0;
+  close();
+}
 
 function details() {
   close();

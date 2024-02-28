@@ -8,11 +8,15 @@ interface Tool {
   description: string;
   _vendor?: VendorDoc['_id'];
   item?: string;
+  barcode?: string;
   stock: number;
   img?: string;
   type: 'milling' | 'turning';
   coating?: string;
   flutes?: number;
+  autoReorder: boolean;
+  reorderQty: number;
+  reorderThreshold: number;
 }
 
 interface ToolDocProp extends ToolDoc {

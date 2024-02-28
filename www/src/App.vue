@@ -49,15 +49,16 @@ import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 // Hardware barcode scanner
-const scanCode = ref('62147');
-const showScanDialog = ref(true);
-const scanDialogType = ref<'404' | 'tool'>('tool');
+const scanCode = ref('');
+const showScanDialog = ref(false);
+const scanDialogType = ref<'404' | 'tool'>();
 onScan.attachTo(document, { minLength: 5 });
 document.addEventListener('scan', function (e) {
   // Don't respond to scans if the scan dialog is already shown
   if (showScanDialog.value === true) return;
-  scanCode.value = e.detail.scanCode;
-  const toolMatch = toolStore.tools.find((x) => x.item === e.detail.scanCode);
+  const code = e.detail.scanCode;
+  scanCode.value = code;
+  const toolMatch = toolStore.tools.find((x) => x.item === code || x.barcode === code);
   if (toolMatch) scanDialogType.value = 'tool';
   else scanDialogType.value = '404';
   showScanDialog.value = true;

@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import CreateToolView from '@/views/tools/CreateToolView.vue';
-import ToolsDatabaseView from '@/views/tools/ToolsDatabaseView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
 
 const router = createRouter({
@@ -19,12 +18,7 @@ const router = createRouter({
       component: ToolsView,
     },
     {
-      path: '/tools/database',
-      name: 'toolsDatabase',
-      component: ToolsDatabaseView,
-    },
-    {
-      path: '/tools/database/create',
+      path: '/tools/create',
       name: 'createTool',
       component: CreateToolView,
     },

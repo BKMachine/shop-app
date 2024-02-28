@@ -12,6 +12,15 @@ router.get('/tools', async (req, res, next) => {
   }
 });
 
+router.get('/tools/reorders', async (req, res, next) => {
+  try {
+    const reorders = await ToolService.getReorders();
+    res.status(200).json(reorders);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/tools/:id', async (req, res, next) => {
   const { id } = req.params;
   try {

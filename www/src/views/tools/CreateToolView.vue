@@ -16,8 +16,9 @@
       <v-col cols="12">
         <v-text-field v-model="tool.description" label="Description"></v-text-field>
         <VendorSelect v-model="tool._vendor" />
+        <v-text-field v-model="tool.item" label="EDP Order Number"></v-text-field>
         <v-text-field
-          v-model="tool.item"
+          v-model="tool.barcode"
           label="Barcode"
           append-inner-icon="mdi-barcode"
         ></v-text-field>
@@ -26,6 +27,8 @@
         <v-text-field v-model="tool.img" label="Tool Image URL"></v-text-field>
         <v-select v-model="tool.coating" label="Coating" :items="coatings"></v-select>
         <v-text-field v-model.number="tool.flutes" label="Flutes"></v-text-field>
+        <v-text-field v-model.number="tool.reorderQty" label="Reorder Qty"></v-text-field>
+        <v-text-field v-model.number="tool.reorderThreshold" label="Min Stock Qty"></v-text-field>
       </v-col>
     </v-row>
     <v-divider />
@@ -48,6 +51,11 @@ const tool = ref<ToolDocProp>({} as ToolDocProp);
 const types = ['Milling', 'Turning'];
 
 onMounted(() => {
+  const routeName = router.currentRoute.value.name;
+  if (routeName === 'viewTool') fetchTool();
+});
+
+function fetchTool() {
   const { id } = router.currentRoute.value.params;
   const match = toolStore.tools.find((x) => x._id === id);
   if (match) {
@@ -62,7 +70,7 @@ onMounted(() => {
         alert('Tool not found');
       });
   }
-});
+}
 
 const coatings = computed(() => {
   return tool.value._vendor?.coatings;
@@ -84,8 +92,13 @@ const coatings = computed(() => {
 ];*/
 
 async function save() {
-  await toolStore.add(tool.value);
-  await router.push({ name: 'toolsDatabase' });
+  const routeName = router.currentRoute.value.name;
+  if (routeName === 'createTool') {
+    await toolStore.add(tool.value);
+  } else if (routeName === 'viewTool') {
+    await toolStore.update(tool.value);
+  }
+  await router.push({ name: 'tools' });
 }
 </script>
 
