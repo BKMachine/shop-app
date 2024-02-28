@@ -36,15 +36,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import VendorSelect from '@/components/VendorSelect.vue';
+import axios from '@/plugins/axios';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
-import axios from '@/plugins/axios';
 
 const toolStore = useToolStore();
 
-const tool = ref<Tool>({} as Tool);
+const tool = ref<ToolDocProp>({} as ToolDocProp);
 const types = ['Milling', 'Turning'];
 
 onMounted(() => {
@@ -64,7 +64,11 @@ onMounted(() => {
   }
 });
 
-const coatings = [
+const coatings = computed(() => {
+  return tool.value._vendor?.coatings;
+});
+
+/*const coatings = [
   'AlTiN',
   'AlCrN',
   'ALUMASTAR',
@@ -77,7 +81,7 @@ const coatings = [
   'ZPLUS',
   'ALtima',
   'TiAlN',
-];
+];*/
 
 async function save() {
   await toolStore.add(tool.value);

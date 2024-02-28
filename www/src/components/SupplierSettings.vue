@@ -2,25 +2,31 @@
   <div class="container">
     <SettingsTiles :items="supplierStore.suppliers" @create="create" @edit="edit"></SettingsTiles>
   </div>
-  <v-dialog v-model="dialog" class="dialog" @blur="close">
+  <v-dialog v-model="dialog" class="dialog">
     <v-card>
       <v-card-title>{{ cardTitle }}</v-card-title>
       <v-card-text>
-        <v-text-field
-          v-model="editingItem.name"
-          label="Name"
-          :rules="[rules.required, rules.counter, rules.unique]"
-        ></v-text-field>
-        <div class="logo-container">
-          <v-text-field v-model="editingItem.logo" label="Logo URL"></v-text-field>
-          <v-img :src="editingItem.logo" class="logo-preview ml-3"></v-img>
-        </div>
-        <v-text-field v-model="editingItem.homepage" label="Homepage"></v-text-field>
+        <v-form v-model="valid">
+          <v-text-field
+            v-model="editingItem.name"
+            label="Name"
+            :rules="[rules.required, rules.counter, rules.unique]"
+          ></v-text-field>
+          <div class="logo-container">
+            <v-text-field v-model="editingItem.logo" label="Logo URL"></v-text-field>
+            <div class="logo-preview ml-3 elevation-1">
+              <img :src="editingItem.logo" alt="" />
+            </div>
+          </div>
+          <v-text-field v-model="editingItem.homepage" label="Homepage"></v-text-field>
+        </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn color="red" variant="elevated" @click="close">Cancel</v-btn>
-        <v-btn color="green" variant="elevated" @click="save">{{ actionText }}</v-btn>
+        <v-btn color="green" variant="elevated" :disabled="!valid" @click="save">{{
+          actionText
+        }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -36,6 +42,7 @@ const dialog = ref(false);
 const defaultItem: SupplierDoc = { _id: '', name: '' };
 const editingIndex = ref(-1);
 const editingItem = ref<SupplierDoc>(defaultItem);
+const valid = ref(true);
 
 const isEditing = computed(() => editingIndex.value > -1);
 
@@ -99,8 +106,16 @@ async function save() {
 }
 .logo-preview {
   height: 80px;
-  max-width: 80px;
+  width: 80px;
   border: 1px solid #ababab;
   border-radius: 10px;
+  position: relative;
+  bottom: 10px;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+}
+.logo-preview img {
+  width: 100%;
 }
 </style>

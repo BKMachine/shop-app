@@ -27,7 +27,7 @@ defineEmits(['create', 'edit']);
 <style scoped>
 .tile {
   width: 120px;
-  height: 120px !important;
+  height: 120px;
   border: 1px solid #999999;
   margin: 8px;
   border-radius: 20px;

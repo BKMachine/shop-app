@@ -16,7 +16,7 @@
       <v-btn class="add">
         <v-icon size="100">mdi-import</v-icon>
       </v-btn>
-      <v-btn class="details">
+      <v-btn class="details" @click="details">
         <v-icon size="100">mdi-file-document-outline</v-icon>
       </v-btn>
     </v-card-text>
@@ -25,17 +25,28 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
 const props = defineProps<{
   scanCode: string;
 }>();
+const emit = defineEmits(['close']);
 
 const toolStore = useToolStore();
 
 const tool = computed(() => {
-  return toolStore.tools.find((x) => x.item === props.scanCode) || ({} as ToolDoCProp);
+  return (toolStore.tools.find((x) => x.item === props.scanCode) || {}) as ToolDocProp;
 });
+
+function details() {
+  close();
+  router.push({ name: 'viewTool', params: { id: tool.value._id } });
+}
+
+function close() {
+  emit('close');
+}
 </script>
 
 <style scoped>

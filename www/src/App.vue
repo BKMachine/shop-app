@@ -3,7 +3,7 @@
     <v-app-bar class="elevation-2">
       <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
       <v-app-bar-title>
-        <v-avatar size="48">
+        <v-avatar size="48" style="cursor: pointer" @click="router.push('/')">
           <v-img src="@/assets/img/bk_logo.png"></v-img>
         </v-avatar>
         BK Machine
@@ -23,8 +23,17 @@
     <v-main>
       <RouterView />
     </v-main>
-    <v-dialog v-model="scanDialog" class="scan-dialog">
-      <ScanDialog :scanCode="scanCode" />
+    <v-dialog v-model="showScanDialog" class="scan-dialog">
+      <ScanDialogTool
+        v-if="scanDialogType === 'tool'"
+        :scanCode="scanCode"
+        @close="showScanDialog = false"
+      />
+      <ScanDialog404
+        v-else-if="scanDialogType === '404'"
+        :scanCode="scanCode"
+        @close="showScanDialog = false"
+      />
     </v-dialog>
   </v-app>
 </template>
@@ -32,28 +41,31 @@
 <script setup lang="ts">
 import onScan from 'onscan.js';
 import { onMounted, ref } from 'vue';
-import ScanDialog from '@/components/ScanDialog.vue';
+import ScanDialog404 from '@/components/ScanDialog404.vue';
+import ScanDialogTool from '@/components/ScanDialogTool.vue';
+import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
-const scanCode = ref('');
-
+// Hardware barcode scanner
+const scanCode = ref('62147');
+const showScanDialog = ref(true);
+const scanDialogType = ref<'404' | 'tool'>('tool');
 onScan.attachTo(document, { minLength: 5 });
 document.addEventListener('scan', function (e) {
-  const match = toolStore.tools.find((x) => x.item === e.detail.scanCode);
-  if (match) {
-    scanCode.value = e.detail.scanCode;
-    scanDialog.value = true;
-  } else {
-    alert('No matching tool was found in the database. Would you like to create one?');
-  }
+  // Don't respond to scans if the scan dialog is already shown
+  if (showScanDialog.value === true) return;
+  scanCode.value = e.detail.scanCode;
+  const toolMatch = toolStore.tools.find((x) => x.item === e.detail.scanCode);
+  if (toolMatch) scanDialogType.value = 'tool';
+  else scanDialogType.value = '404';
+  showScanDialog.value = true;
 });
 
 const supplierStore = useSupplierStore();
 const vendorStore = useVendorStore();
 const toolStore = useToolStore();
-const scanDialog = ref(false);
 
 const drawer = ref(true);
 

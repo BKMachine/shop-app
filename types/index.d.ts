@@ -15,7 +15,7 @@ interface Tool {
   flutes?: number;
 }
 
-interface ToolDoCProp extends ToolDoc {
+interface ToolDocProp extends ToolDoc {
   _vendor?: VendorDoc;
 }
 
@@ -27,6 +27,7 @@ interface Vendor {
   name: string;
   logo?: string;
   homepage?: string;
+  coatings?: string[];
 }
 
 interface VendorDoc extends Vendor {

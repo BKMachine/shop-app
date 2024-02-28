@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <v-btn class="big-button" link to="/tools/database">
-      <img class="icon" src="@/assets/img/search.png" alt="" />
+      <v-icon size="200">mdi-magnify</v-icon>
     </v-btn>
     <v-btn class="big-button" link to="/tools/database"> Database </v-btn>
     <v-btn class="big-button" link to="/tools/database"> Database </v-btn>
@@ -23,8 +23,5 @@
   border: 2px solid black;
   margin: 25px;
   border-radius: 20px;
-}
-.icon {
-  width: 100%;
 }
 </style>

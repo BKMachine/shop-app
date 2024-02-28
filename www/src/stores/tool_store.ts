@@ -8,7 +8,7 @@ export const useToolStore = defineStore('tools', () => {
 
   const rawTools = ref<ToolDoc[]>([]);
 
-  const tools = computed<ToolDoCProp[]>(() => {
+  const tools = computed<ToolDocProp[]>(() => {
     return rawTools.value.map((x) => {
       return {
         ...x,

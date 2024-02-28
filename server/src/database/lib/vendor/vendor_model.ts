@@ -4,6 +4,7 @@ const schema = new Schema<VendorDoc>({
   name: { type: String, unique: true },
   logo: String,
   homepage: String,
+  coatings: Array,
 });
 
 export default model<VendorDoc>('vendors', schema);
