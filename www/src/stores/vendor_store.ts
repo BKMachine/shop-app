@@ -22,7 +22,8 @@ export const useVendorStore = defineStore('vendors', () => {
   }
 
   async function add(vendor: Vendor) {
-    await axios.post('/vendors', { data: vendor }).then(({ data }) => {
+    const { _id, ...rest } = vendor;
+    await axios.post('/vendors', { data: rest }).then(({ data }) => {
       _vendors.value.push(data);
     });
   }

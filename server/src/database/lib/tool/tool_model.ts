@@ -7,7 +7,7 @@ const schema = new Schema<ToolDoc>({
   barcode: { type: String, unique: true },
   stock: { type: Number, default: 0 },
   img: String,
-  type: { type: String, required: true },
+  category: { type: String, required: true },
   coating: String,
   flutes: Number,
   autoReorder: { type: Boolean, default: false },

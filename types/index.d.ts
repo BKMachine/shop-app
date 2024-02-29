@@ -11,7 +11,7 @@ interface Tool {
   barcode?: string;
   stock: number;
   img?: string;
-  type: 'milling' | 'turning';
+  category: 'milling' | 'turning';
   coating?: string;
   flutes?: number;
   autoReorder: boolean;

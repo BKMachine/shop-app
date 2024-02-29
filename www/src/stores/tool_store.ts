@@ -18,11 +18,11 @@ export const useToolStore = defineStore('tools', () => {
   });
 
   const millingTools = computed(() => {
-    return tools.value.filter((x) => x.type === 'milling');
+    return tools.value.filter((x) => x.category === 'milling');
   });
 
   const turningTools = computed(() => {
-    return tools.value.filter((x) => x.type === 'turning');
+    return tools.value.filter((x) => x.category === 'turning');
   });
 
   const loading = ref(false);

@@ -21,6 +21,7 @@
         @click="openLink(tool.productLink)"
         >Product Page</v-btn
       >
+      <v-switch v-model="tool.autoReorder" label="Auto Reorder"></v-switch>
     </v-row>
     <v-divider />
     <v-text-field
