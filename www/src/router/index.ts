@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import CreateToolView from '@/views/tools/CreateToolView.vue';
+import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
 
 const router = createRouter({
@@ -31,6 +32,11 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingsView,
+    },
+    {
+      path: '/report',
+      name: 'toolReport',
+      component: ToolReportView,
     },
   ],
 });

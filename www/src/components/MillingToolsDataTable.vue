@@ -1,10 +1,18 @@
 <template>
   <v-card>
     <v-card-title class="header">
-      Milling Tools
-      <v-btn link :to="{ name: 'createTool' }" color="primary" prepend-icon="mdi-plus">
-        Create New Tool
-      </v-btn>
+      <div>Milling Tools</div>
+      <div>
+        <v-btn
+          icon="mdi-file-document-outline"
+          class="mr-2"
+          link
+          :to="{ name: 'toolReport' }"
+        ></v-btn>
+        <v-btn link :to="{ name: 'createTool' }" color="primary" prepend-icon="mdi-plus">
+          Create New Tool
+        </v-btn>
+      </div>
     </v-card-title>
     <v-card-text>
       <v-card flat>
@@ -82,6 +90,7 @@ function openTool(event: unknown, { item }: { item: ToolDoc }) {
 <style scoped>
 .header {
   display: flex;
+  width: 100%;
   justify-content: space-between;
 }
 </style>
