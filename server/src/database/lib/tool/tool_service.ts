@@ -19,7 +19,7 @@ async function update(doc: ToolDoc) {
 }
 
 async function getReorders() {
-  return ToolModel.find({ $expr: { $lte: ['$stock', '$reorderThreshold'] } });
+  return ToolModel.find({ $expr: { $lte: ['$stock', '$reorderThreshold'] } }).populate('_vendor');
 }
 
 export default {

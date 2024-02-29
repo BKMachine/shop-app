@@ -15,8 +15,11 @@ interface Tool {
   coating?: string;
   flutes?: number;
   autoReorder: boolean;
-  reorderQty: number;
-  reorderThreshold: number;
+  reorderQty?: number;
+  reorderThreshold?: number;
+  productLink?: string;
+  techDataLink?: string;
+  cost?: number;
 }
 
 interface ToolDocProp extends ToolDoc {

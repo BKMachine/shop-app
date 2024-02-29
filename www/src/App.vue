@@ -23,7 +23,7 @@
     <v-main>
       <RouterView />
     </v-main>
-    <v-dialog v-model="showScanDialog" class="scan-dialog">
+    <v-dialog v-model="showScanDialog" class="scan-dialog" opacity="0.65">
       <ScanDialogTool
         v-if="scanDialogType === 'tool'"
         :scanCode="scanCode"
@@ -49,7 +49,7 @@ import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 // Hardware barcode scanner
-const scanCode = ref('');
+const scanCode = ref<string>();
 const showScanDialog = ref(false);
 const scanDialogType = ref<'404' | 'tool'>();
 onScan.attachTo(document, { minLength: 5 });

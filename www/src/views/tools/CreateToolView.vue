@@ -11,10 +11,36 @@
         </div>
       </div>
     </v-row>
+    <v-row>
+      <v-btn color="green" variant="outlined" @click="save">Save</v-btn>
+      <v-btn
+        color="yellow"
+        prepend-icon="mdi-link"
+        variant="elevated"
+        :disabled="!tool.productLink"
+        @click="openLink(tool.productLink)"
+        >Product Page</v-btn
+      >
+    </v-row>
     <v-divider />
+    <v-text-field
+      v-model.number="tool.cost"
+      label="Cost"
+      prepend-inner-icon="mdi-currency-usd"
+    ></v-text-field>
     <v-row class="my-4">
       <v-col cols="12">
         <v-text-field v-model="tool.description" label="Description"></v-text-field>
+        <v-text-field
+          v-model="tool.productLink"
+          label="Product Page Link"
+          append-inner-icon="mdi-link"
+        ></v-text-field>
+        <v-text-field
+          v-model="tool.techDataLink"
+          label="Speed & Feeds Link"
+          append-inner-icon="mdi-link"
+        ></v-text-field>
         <VendorSelect v-model="tool._vendor" />
         <v-text-field v-model="tool.item" label="EDP Order Number"></v-text-field>
         <v-text-field
@@ -32,9 +58,6 @@
       </v-col>
     </v-row>
     <v-divider />
-    <v-row>
-      <v-btn color="green" variant="outlined" @click="save">Save</v-btn>
-    </v-row>
   </v-container>
 </template>
 
@@ -72,11 +95,11 @@ function fetchTool() {
   }
 }
 
-const coatings = computed(() => {
+/*const coatings = computed(() => {
   return tool.value._vendor?.coatings;
-});
+});*/
 
-/*const coatings = [
+const coatings = [
   'AlTiN',
   'AlCrN',
   'ALUMASTAR',
@@ -89,7 +112,9 @@ const coatings = computed(() => {
   'ZPLUS',
   'ALtima',
   'TiAlN',
-];*/
+  'C3',
+  'ALCR',
+];
 
 async function save() {
   const routeName = router.currentRoute.value.name;
@@ -99,6 +124,10 @@ async function save() {
     await toolStore.update(tool.value);
   }
   await router.push({ name: 'tools' });
+}
+
+function openLink(link: string) {
+  window.open(link, '_blank');
 }
 </script>
 

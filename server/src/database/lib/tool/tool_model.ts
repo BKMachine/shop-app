@@ -10,9 +10,12 @@ const schema = new Schema<ToolDoc>({
   type: { type: String, required: true },
   coating: String,
   flutes: Number,
-  autoReorder: Boolean,
+  autoReorder: { type: Boolean, default: false },
   reorderQty: Number,
   reorderThreshold: Number,
+  productLink: String,
+  techDataLink: String,
+  cost: Number,
 });
 
 export default model<ToolDoc>('tools', schema);
