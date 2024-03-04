@@ -10,31 +10,22 @@
         <div>{{ tool.stock }} in stock</div>
       </v-card-title>
       <v-card-text class="card-body">
-        <v-btn class="" :disabled="tool.stock === 0" @click="adjustStock(-1)"> Pick Tool </v-btn>
-
-        <v-btn class="" @click="adjustDialog = true">
-          <div>Adjust Stock</div>
-        </v-btn>
-
-        <!--        <v-dialog v-model="adjustDialog">
-          <template v-slot:activator>
-            <v-btn class="add" @click="adjustDialog = true">
-              <div>Adjust Stock</div>
-            </v-btn>
-          </template>
-          <v-card>
-            <v-card-title> Adjust Stock </v-card-title>
-            <v-card-text>
-              <v-text-field v-model.number="stockAdjustment" type="number"></v-text-field>
-            </v-card-text>
-            <v-card-actions>
-              <v-btn @click="adjustDialog = false">Cancel</v-btn>
-              <v-btn @click="adjustStock(stockAdjustment)"> Submit </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>-->
-
-        <v-btn class="" @click="details"> View Details </v-btn>
+        <div>
+          <v-btn class="v-arrow-select" :disabled="tool.stock === 0" @click="adjustStock(-1)">
+            Pick Tool
+          </v-btn>
+        </div>
+        <div>
+          <v-btn class="v-arrow-select" @click="adjustStock(stockAdjustment)"> Adjust Stock </v-btn>
+          <div class="stock-adjust-container">
+            <v-btn class="h-arrow-select" icon="mdi-minus" @click="stockAdjustment--"></v-btn>
+            <div class="stack-adjust-number">{{ stockAdjustText }}</div>
+            <v-btn class="h-arrow-select" icon="mdi-plus" @click="stockAdjustment++"></v-btn>
+          </div>
+        </div>
+        <div>
+          <v-btn class="v-arrow-select" @click="details"> View Details </v-btn>
+        </div>
       </v-card-text>
     </v-card>
   </div>
@@ -53,6 +44,11 @@ const emit = defineEmits(['close']);
 const toolStore = useToolStore();
 const stockAdjustment = ref(0);
 const adjustDialog = ref(false);
+
+const stockAdjustText = computed(() => {
+  if (stockAdjustment.value > 0) return `+${stockAdjustment.value}`;
+  else return stockAdjustment.value;
+});
 
 const tool = computed(() => {
   return (toolStore.tools.find((x) => x.item === props.scanCode || x.barcode === props.scanCode) ||
@@ -75,13 +71,16 @@ function close() {
   emit('close');
 }
 
+let vButtons: NodeListOf<HTMLElement>;
+let hButtons: NodeListOf<HTMLElement>;
+
 onMounted(() => {
   addEventListener('keydown', handleKeydown);
-  const e = document.querySelector('.card-body');
-  if (!e) return;
-  let c = e.children[0] as HTMLElement;
-  if (c.getAttribute('disabled') === '') c = e.children[1] as HTMLElement;
-  c.focus();
+  vButtons = document.querySelectorAll('.v-arrow-select');
+  hButtons = document.querySelectorAll('.h-arrow-select');
+  let buttonToFocus = vButtons[0];
+  if (buttonToFocus.getAttribute('disabled') === '') buttonToFocus = vButtons[1];
+  buttonToFocus.focus();
 });
 
 onUnmounted(() => {
@@ -89,34 +88,56 @@ onUnmounted(() => {
 });
 
 function handleKeydown(e: KeyboardEvent) {
-  const cardBody = document.querySelector('.card-body');
-  if (!cardBody) return;
-  const activeElement = document.activeElement;
   let index: number | undefined;
-  for (let i = 0; i < cardBody.children.length; i++) {
-    if (activeElement === cardBody.children[i]) {
-      index = i;
-      break;
+  const pickIsDisabled = vButtons[0].getAttribute('disabled') === '';
+
+  function handleVButtons() {
+    if (!vButtons.length) return;
+    const activeElement = document.activeElement;
+    for (let i = 0; i < vButtons.length; i++) {
+      if (activeElement === vButtons[i]) {
+        index = i;
+        break;
+      }
     }
   }
 
-  const pickIsDisabled = cardBody.children[0].getAttribute('disabled') === '';
-
   switch (e.key) {
     case 'ArrowDown':
-      if (index === undefined || index + 1 >= cardBody.children.length) index = 0;
+      handleVButtons();
+      if (index === undefined || index + 1 >= vButtons.length) index = 0;
       else index++;
       if (index === 0 && pickIsDisabled) index++;
+      focusVButton();
       break;
     case 'ArrowUp':
-      if (index === undefined || index - 1 < 0) index = cardBody.children.length - 1;
+      handleVButtons();
+      if (index === undefined || index - 1 < 0) index = vButtons.length - 1;
       else index--;
-      if (index === 0 && pickIsDisabled) index = cardBody.children.length - 1;
+      if (index === 0 && pickIsDisabled) index = vButtons.length - 1;
+      focusVButton();
+      break;
+    case 'ArrowRight':
+      stockAdjustment.value++;
+      animateButton(1);
+      break;
+    case 'ArrowLeft':
+      stockAdjustment.value--;
+      animateButton(0);
       break;
   }
 
-  if (index === undefined) return;
-  (cardBody.children[index] as HTMLElement).focus();
+  function focusVButton() {
+    if (index === undefined) return;
+    (vButtons[index] as HTMLElement).focus();
+  }
+
+  function animateButton(index: number) {
+    hButtons[index].classList.add('animate');
+    setTimeout(() => {
+      hButtons[index].classList.remove('animate');
+    }, 10);
+  }
 }
 </script>
 
@@ -137,18 +158,17 @@ function handleKeydown(e: KeyboardEvent) {
   display: flex;
   flex-direction: column;
 }
+.card-body > div {
+  margin: 16px auto;
+}
 .card-body .v-btn {
-  width: 220px;
-  height: 65px;
+  width: 200px;
+  height: 60px;
   border-radius: 20px;
   background: #f6f6f6;
-  margin: 20px auto;
 }
 .card-body .v-btn:focus {
   background: aquamarine;
-}
-.card-body .v-btn:nth-child(2) {
-  margin-bottom: 0;
 }
 .avatar {
   position: absolute;
@@ -161,5 +181,37 @@ function handleKeydown(e: KeyboardEvent) {
 }
 .tool-img {
   width: 90%;
+}
+.stock-adjust-container {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: autO;
+  margin-top: 5px;
+  width: 60%;
+}
+.stock-adjust-container .v-btn {
+  border-radius: 5px;
+  height: 24px;
+  width: 24px;
+}
+.stack-adjust-number {
+  flex-grow: 1;
+  text-align: center;
+  font-size: 2em;
+}
+.h-arrow-select.animate {
+  animation: flash 200ms;
+}
+@keyframes flash {
+  0% {
+    background: #f6f6f6;
+  }
+  50% {
+    background: #85c714;
+  }
+  100% {
+    background: #f6f6f6;
+  }
 }
 </style>
