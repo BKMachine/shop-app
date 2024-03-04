@@ -14,6 +14,7 @@
       <v-list>
         <v-list-item prepend-icon="mdi-apps" link to="/"> Home </v-list-item>
         <v-list-item prepend-icon="mdi-tools" link to="/tools"> Tools </v-list-item>
+        <v-list-item prepend-icon="mdi-barcode" @click="showScanDialog = true"> Scan </v-list-item>
       </v-list>
       <template v-slot:append>
         <v-divider />
@@ -49,12 +50,12 @@ import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 // Hardware barcode scanner
-const scanCode = ref<string>();
+const scanCode = ref<string>('62147');
 const showScanDialog = ref(false);
-const scanDialogType = ref<'404' | 'tool'>();
+const scanDialogType = ref<'404' | 'tool'>('tool');
 onScan.attachTo(document, { minLength: 5 });
 document.addEventListener('scan', function (e) {
-  // Don't respond to scans if the scan dialog is already shown
+  // Don't respond to scans if the scan dialog is already being shown
   if (showScanDialog.value === true) return;
   const code = e.detail.scanCode;
   scanCode.value = code;
@@ -79,6 +80,6 @@ onMounted(() => {
 
 <style scoped>
 .scan-dialog {
-  max-width: 700px;
+  max-width: 500px;
 }
 </style>

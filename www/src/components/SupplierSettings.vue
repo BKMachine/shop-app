@@ -39,9 +39,8 @@ import { useSupplierStore } from '@/stores/supplier_store';
 
 const supplierStore = useSupplierStore();
 const dialog = ref(false);
-const defaultItem: SupplierDoc = { _id: '', name: '' };
 const editingIndex = ref(-1);
-const editingItem = ref<SupplierDoc>(defaultItem);
+const editingItem = ref<SupplierDoc>({} as SupplierDoc);
 const valid = ref(true);
 
 const isEditing = computed(() => editingIndex.value > -1);
@@ -57,7 +56,7 @@ const actionText = computed(() => {
 
 function create() {
   editingIndex.value = -1;
-  editingItem.value = { ...defaultItem };
+  editingItem.value = {} as SupplierDoc;
   dialog.value = true;
 }
 

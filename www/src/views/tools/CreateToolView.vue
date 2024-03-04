@@ -83,7 +83,7 @@ function fetchTool() {
   const { id } = router.currentRoute.value.params;
   const match = toolStore.tools.find((x) => x._id === id);
   if (match) {
-    tool.value = match;
+    tool.value = { ...match };
   } else {
     axios
       .get(`/tools/${id}`)
