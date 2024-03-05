@@ -15,7 +15,7 @@ async function add(data: ToolDoc) {
 }
 
 async function update(doc: ToolDoc) {
-  await Tool.findByIdAndUpdate(doc._id, doc);
+  return Tool.findByIdAndUpdate(doc._id, doc, { new: true });
 }
 
 async function getAutoReorders() {

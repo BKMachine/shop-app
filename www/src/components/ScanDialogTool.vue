@@ -1,30 +1,49 @@
 <template>
-  <div class="container">
+  <div>
     <v-avatar class="avatar" size="150">
-      <img :src="tool.img" class="tool-img" />
+      <img :src="tool.img" class="tool-img" alt="" />
     </v-avatar>
     <v-card class="card">
       <v-card-title class="text-right">
-        <div class="title">{{ tool.item }}</div>
+        <div>{{ tool.item }}</div>
         <div>{{ tool.description }}</div>
         <div>{{ tool.stock }} in stock</div>
       </v-card-title>
       <v-card-text class="card-body">
-        <div>
+        <div class="mb-8">
           <v-btn class="v-arrow-select" :disabled="tool.stock === 0" @click="adjustStock(-1)">
-            Pick Tool
+            <div class="barcode-container">
+              <div>Pick Tool</div>
+              <div class="barcode">
+                <BarcodeGenerator :code="scanCodes.PICK_TOOL" :showText="false" />
+              </div>
+            </div>
           </v-btn>
         </div>
-        <div>
-          <v-btn class="v-arrow-select" @click="adjustStock(stockAdjustment)"> Adjust Stock </v-btn>
-          <div class="stock-adjust-container">
-            <v-btn class="h-arrow-select" icon="mdi-minus" @click="stockAdjustment--"></v-btn>
+        <div class="mb-8">
+          <v-btn class="v-arrow-select" @click="adjustStock(scannerStore.stockAdjustment)">
+            <div class="barcode-container">
+              <div>Adjust Stock</div>
+              <div class="barcode">
+                <BarcodeGenerator :code="scanCodes.ADJUST_STOCK" :showText="false" />
+              </div>
+            </div>
+          </v-btn>
+          <div class="stock-adjust-container mt-2">
+            <v-btn class="h-arrow-select" icon="mdi-minus" @mousedown.left="arrowLeft"></v-btn>
             <div class="stack-adjust-number">{{ stockAdjustText }}</div>
-            <v-btn class="h-arrow-select" icon="mdi-plus" @click="stockAdjustment++"></v-btn>
+            <v-btn class="h-arrow-select" icon="mdi-plus" @mousedown.left="arrowRight"></v-btn>
           </div>
         </div>
         <div>
-          <v-btn class="v-arrow-select" @click="details"> View Details </v-btn>
+          <v-btn class="v-arrow-select" @click="openDetails">
+            <div class="barcode-container">
+              <div>View Details</div>
+              <div class="barcode">
+                <BarcodeGenerator :code="scanCodes.VIEW_DETAILS" :showText="false" />
+              </div>
+            </div>
+          </v-btn>
         </div>
       </v-card-text>
     </v-card>
@@ -32,43 +51,38 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
+import BarcodeGenerator from '@/components/BarcodeGenerator.vue';
+import { scanCodes } from '@/plugins/enums';
 import router from '@/router';
+import { useScannerStore } from '@/stores/scanner_store';
 import { useToolStore } from '@/stores/tool_store';
 
-const props = defineProps<{
-  scanCode: string;
-}>();
-const emit = defineEmits(['close']);
-
 const toolStore = useToolStore();
-const stockAdjustment = ref(0);
-const adjustDialog = ref(false);
+const scannerStore = useScannerStore();
 
 const stockAdjustText = computed(() => {
-  if (stockAdjustment.value > 0) return `+${stockAdjustment.value}`;
-  else return stockAdjustment.value;
+  if (scannerStore.stockAdjustment > 0) return `+${scannerStore.stockAdjustment}`;
+  else return scannerStore.stockAdjustment;
 });
 
 const tool = computed(() => {
-  return (toolStore.tools.find((x) => x.item === props.scanCode || x.barcode === props.scanCode) ||
-    {}) as ToolDoc;
+  return scannerStore.getTool() as ToolDoc;
 });
 
 async function adjustStock(num: number) {
   await toolStore.adjustStock(tool.value._id, num);
-  stockAdjustment.value = 0;
+  scannerStore.setStockAdjustment(0);
   close();
 }
 
-function details() {
+function openDetails() {
   close();
   router.push({ name: 'viewTool', params: { id: tool.value._id } });
 }
 
 function close() {
-  adjustDialog.value = false;
-  emit('close');
+  scannerStore.showDialog(false);
 }
 
 let vButtons: NodeListOf<HTMLElement>;
@@ -88,70 +102,68 @@ onUnmounted(() => {
 });
 
 function handleKeydown(e: KeyboardEvent) {
-  let index: number | undefined;
+  let index = findVerticalIndex();
   const pickIsDisabled = vButtons[0].getAttribute('disabled') === '';
 
-  function handleVButtons() {
-    if (!vButtons.length) return;
-    const activeElement = document.activeElement;
-    for (let i = 0; i < vButtons.length; i++) {
-      if (activeElement === vButtons[i]) {
-        index = i;
-        break;
-      }
-    }
-  }
-
   switch (e.key) {
-    case 'ArrowDown':
-      handleVButtons();
-      if (index === undefined || index + 1 >= vButtons.length) index = 0;
-      else index++;
-      if (index === 0 && pickIsDisabled) index++;
-      focusVButton();
-      break;
     case 'ArrowUp':
-      handleVButtons();
-      if (index === undefined || index - 1 < 0) index = vButtons.length - 1;
+      if (index === null || index - 1 < 0) index = vButtons.length - 1;
       else index--;
       if (index === 0 && pickIsDisabled) index = vButtons.length - 1;
-      focusVButton();
+      focusVButton(index);
       break;
-    case 'ArrowRight':
-      stockAdjustment.value++;
-      animateButton(1);
+    case 'ArrowDown':
+      if (index === null || index + 1 >= vButtons.length) index = 0;
+      else index++;
+      if (index === 0 && pickIsDisabled) index++;
+      focusVButton(index);
       break;
     case 'ArrowLeft':
-      stockAdjustment.value--;
-      animateButton(0);
+      scannerStore.decrementStockAdjustment();
+      focusVButton(1);
+      break;
+    case 'ArrowRight':
+      scannerStore.incrementStockAdjustment();
+      focusVButton(1);
       break;
   }
+}
 
-  function focusVButton() {
-    if (index === undefined) return;
-    (vButtons[index] as HTMLElement).focus();
+function findVerticalIndex(): number | null {
+  if (!vButtons.length) return null;
+  const activeElement = document.activeElement;
+  for (let i = 0; i < vButtons.length; i++) {
+    if (activeElement === vButtons[i]) return i;
   }
+  return null;
+}
 
-  function animateButton(index: number) {
-    hButtons[index].classList.add('animate');
-    setTimeout(() => {
-      hButtons[index].classList.remove('animate');
-    }, 10);
-  }
+function focusVButton(index: number | null) {
+  if (index === null) return;
+  (vButtons[index] as HTMLElement).focus();
+}
+
+function arrowRight(e: MouseEvent) {
+  e.preventDefault();
+  (vButtons[1] as HTMLElement).focus();
+  scannerStore.incrementStockAdjustment();
+}
+
+function arrowLeft(e: MouseEvent) {
+  e.preventDefault();
+  (vButtons[1] as HTMLElement).focus();
+  scannerStore.decrementStockAdjustment();
 }
 </script>
 
 <style scoped>
-.container {
-  position: relative;
-}
 .card {
   background: rgb(101, 108, 217);
   background: linear-gradient(
-    315deg,
-    rgba(101, 108, 217, 1) 0%,
-    rgba(215, 101, 101, 1) 64%,
-    rgba(215, 218, 99, 1) 100%
+    -135deg,
+    rgba(215, 218, 99, 1) 0%,
+    rgba(215, 101, 101, 1) 55%,
+    rgba(101, 108, 217, 1) 100%
   );
 }
 .card-body {
@@ -159,7 +171,8 @@ function handleKeydown(e: KeyboardEvent) {
   flex-direction: column;
 }
 .card-body > div {
-  margin: 16px auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 .card-body .v-btn {
   width: 200px;
@@ -174,7 +187,7 @@ function handleKeydown(e: KeyboardEvent) {
   position: absolute;
   top: 0;
   left: 0;
-  transform: translate(-35%, -35%);
+  translate: -35% -35%;
   z-index: 1;
   border: 2px solid #545454;
   background: white;
@@ -186,8 +199,7 @@ function handleKeydown(e: KeyboardEvent) {
   display: flex;
   align-items: center;
   margin-left: auto;
-  margin-right: autO;
-  margin-top: 5px;
+  margin-right: auto;
   width: 60%;
 }
 .stock-adjust-container .v-btn {
@@ -200,18 +212,14 @@ function handleKeydown(e: KeyboardEvent) {
   text-align: center;
   font-size: 2em;
 }
-.h-arrow-select.animate {
-  animation: flash 200ms;
+.barcode-container {
+  display: flex;
+  flex-direction: column;
 }
-@keyframes flash {
-  0% {
-    background: #f6f6f6;
-  }
-  50% {
-    background: #85c714;
-  }
-  100% {
-    background: #f6f6f6;
-  }
+.barcode {
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  right: 0;
 }
 </style>

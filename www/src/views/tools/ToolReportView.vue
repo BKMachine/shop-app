@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <div v-for="(item, i) in items" :key="item">
+    <div v-for="(item, i) in items" :key="i">
       <span class="bold">
         {{ item[0] }}
       </span>
@@ -8,7 +8,7 @@
       <div v-for="(tool, j) in item[1]" :key="tool._id">
         <span class="item"> {{ tool.item }} - Qty: {{ tool.reorderQty }} </span>
         <span class="line"> - </span>
-        <span class="subtotal">{{ formatCost(tool.cost * tool.reorderQty) }}</span>
+        <span class="subtotal">{{ formatCost(getCost(tool)) }}</span>
         <div v-if="j === item[1].length - 1" class="space"></div>
       </div>
     </div>
@@ -26,14 +26,21 @@ const USDollar = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 });
 
-function formatCost(cost: number) {
+function formatCost(cost: number): string {
   return USDollar.format(cost);
 }
-const tools = ref<ToolDocProp[]>([]);
-const items = computed(() => {
-  const brands = new Set(
+
+function getCost(tool: ToolDocPopulated): number {
+  return (tool.cost as number) * (tool.reorderQty as number);
+}
+
+type Item = [brand: string, matches: ToolDocPopulated[]];
+
+const tools = ref<ToolDocPopulated[]>([]);
+const items = computed<Item[]>(() => {
+  const brands: Set<string> = new Set(
     tools.value
-      .map((x) => x._vendor?.name)
+      .map((x) => (typeof x.vendor === 'string' ? x.vendor : x.vendor?.name))
       .sort((a, b) => {
         const c = a.toLowerCase();
         const d = b.toLowerCase();
@@ -42,13 +49,16 @@ const items = computed(() => {
         else return 0;
       }),
   );
-  const main = [];
+  const main: Item[] = [];
   brands.forEach((brand) => {
     const matches = tools.value
-      .filter((x) => x._vendor?.name.toLowerCase() === brand.toLowerCase())
+      .filter((x) => {
+        const name = typeof x.vendor === 'string' ? x.vendor : x.vendor?.name;
+        return name.toLowerCase() === brand.toLowerCase();
+      })
       .sort((a, b) => {
-        const c = a.item?.toLowerCase();
-        const d = b.item?.toLowerCase();
+        const c = a.item?.toLowerCase() || 0;
+        const d = b.item?.toLowerCase() || 0;
         if (c < d) return -1;
         else if (d < c) return 1;
         else return 0;

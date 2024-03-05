@@ -21,8 +21,8 @@ interface ToolDoc {
   cost?: number;
 }
 
-interface ToolDocPopulated {
-  vendor?: VendorDoc;
+interface ToolDocPopulated extends ToolDoc {
+  vendor: VendorDoc | string;
 }
 
 interface VendorDoc {

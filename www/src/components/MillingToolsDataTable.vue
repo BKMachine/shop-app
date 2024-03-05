@@ -34,7 +34,7 @@
           :loading="toolStore.loading"
           @dblclick:row="openTool"
         >
-          <template v-slot:item.img="{ item }">
+          <template v-slot:[`item.img`]="{ item }">
             <v-img :src="item.img"></v-img>
           </template>
         </v-data-table>

@@ -52,8 +52,8 @@ router.put('/tools', async (req, res, next) => {
     return;
   }
   try {
-    await Tools.update(data);
-    res.sendStatus(204);
+    const response = await Tools.update(data);
+    res.status(200).json(response);
   } catch (e) {
     next(e);
   }

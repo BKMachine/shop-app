@@ -8,11 +8,11 @@ export const useToolStore = defineStore('tools', () => {
 
   const rawTools = ref<ToolDoc[]>([]);
 
-  const tools = computed<ToolDocProp[]>(() => {
+  const tools = computed<ToolDocPopulated[]>(() => {
     return rawTools.value.map((x) => {
       return {
         ...x,
-        _vendor: vendorStore.vendors.find((y) => y._id === x._vendor),
+        vendor: vendorStore.vendors.find((y) => y._id === x.vendor) as VendorDoc,
       };
     });
   });
@@ -38,28 +38,35 @@ export const useToolStore = defineStore('tools', () => {
       });
   }
 
-  async function add(vendor: Tool) {
+  async function add(tool: ToolDocPopulated) {
     const data = {
-      ...vendor,
-      type: vendor.type.toLowerCase(),
+      ...tool,
+      category: tool.category.toLowerCase(),
     };
     await axios.post('/tools', { data }).then(({ data }) => {
       rawTools.value.push(data);
     });
   }
 
-  async function update(doc: ToolDoc) {
-    const vendor = doc._vendor;
-    if (vendor && vendor._id) doc._vendor = vendor._id;
-    await axios.put('/tools', { data: doc }).then(() => {
+  async function update(doc: ToolDocPopulated) {
+    const vendor = doc.vendor;
+    if (vendor && typeof vendor === 'object') {
+      doc.vendor = vendor._id;
+    }
+    await axios.put('/tools', { data: doc }).then(({ data }: { data: ToolDoc }) => {
       const i = rawTools.value.findIndex((x) => x._id === doc._id);
-      rawTools.value[i] = doc;
+      rawTools.value[i] = data;
     });
   }
 
   async function adjustStock(id: string, num: number) {
     const i = rawTools.value.findIndex((x) => x._id === id);
-    const clone = { ...rawTools.value[i], _vendor: rawTools.value[i]._vendor };
+    const tool = rawTools.value[i];
+    if (!tool) return;
+    const clone: ToolDocPopulated = {
+      ...tool[i],
+      vendor: tool.vendor as VendorDoc,
+    };
     clone.stock += num;
     if (clone.stock < 0) throw Error('Stock cannot be less than 0');
     await update(clone);
@@ -68,11 +75,11 @@ export const useToolStore = defineStore('tools', () => {
     rawTools,
     tools,
     loading,
+    millingTools,
+    turningTools,
     fetch,
     add,
     update,
-    millingTools,
-    turningTools,
     adjustStock,
   };
 });

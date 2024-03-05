@@ -41,5 +41,6 @@ module.exports = {
     'import/newline-after-import': 'error',
     'sort-imports': ['error', { ignoreDeclarationSort: true }],
     'vue/attributes-order': 'error',
+    'no-case-declarations': 'off'
   },
 }

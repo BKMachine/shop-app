@@ -7,29 +7,24 @@
     <v-card-text>
       No items were found with the scan code:
       <span class="scan-code">
-        {{ scanCode }}
+        {{ scannerStore.code }}
         <v-icon size="14" class="copy-icon" @click="copyToClipboard">mdi-content-copy</v-icon>
       </span>
     </v-card-text>
     <v-card-actions>
       <v-spacer />
-      <v-btn color="primary" variant="elevated" @click="close">OK</v-btn>
+      <v-btn color="primary" variant="elevated" @click="scannerStore.showDialog(false)">OK</v-btn>
     </v-card-actions>
   </v-card>
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-  scanCode: string;
-}>();
-const emit = defineEmits(['close']);
+import { useScannerStore } from '@/stores/scanner_store';
+
+const scannerStore = useScannerStore();
 
 function copyToClipboard() {
-  navigator.clipboard.writeText(props.scanCode);
-}
-
-function close() {
-  emit('close');
+  navigator.clipboard.writeText(scannerStore.code);
 }
 </script>
 

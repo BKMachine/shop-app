@@ -6,12 +6,13 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/"
+    "prettier": "prettier --write \"**/*.{js,ts,md,*rc,json}\" --ignore-path ../.gitignore",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "axios": "^1.6.7",
+    "jsbarcode": "^3.11.6",
     "onscan.js": "^1.5.2",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",

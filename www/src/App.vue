@@ -1,20 +1,19 @@
 <template>
   <v-app>
     <v-app-bar class="elevation-2">
-      <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
       <v-app-bar-title>
-        <v-avatar size="48" style="cursor: pointer" @click="router.push('/')">
+        <v-avatar size="48" class="pointer" @click="router.push({ name: 'home' })">
           <v-img src="@/assets/img/bk_logo.png"></v-img>
         </v-avatar>
         BK Machine
       </v-app-bar-title>
-      <v-spacer></v-spacer>
     </v-app-bar>
     <v-navigation-drawer v-model="drawer">
       <v-list>
-        <v-list-item prepend-icon="mdi-apps" link to="/"> Home </v-list-item>
-        <v-list-item prepend-icon="mdi-tools" link to="/tools"> Tools </v-list-item>
-        <v-list-item prepend-icon="mdi-barcode" @click="showScanDialog = true"> Scan </v-list-item>
+        <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }"> Home </v-list-item>
+        <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }"> Tools </v-list-item>
+        <v-list-item prepend-icon="mdi-barcode" @click="scanTest"> Test </v-list-item>
       </v-list>
       <template v-slot:append>
         <v-divider />
@@ -24,58 +23,48 @@
     <v-main>
       <RouterView />
     </v-main>
-    <v-dialog v-model="showScanDialog" class="scan-dialog" opacity="0.65">
-      <ScanDialogTool
-        v-if="scanDialogType === 'tool'"
-        :scanCode="scanCode"
-        @close="showScanDialog = false"
-      />
-      <ScanDialog404
-        v-else-if="scanDialogType === '404'"
-        :scanCode="scanCode"
-        @close="showScanDialog = false"
-      />
+    <v-dialog v-model="scannerStore.dialog" class="scan-dialog" opacity="0.65">
+      <ScanDialogTool v-if="scannerStore.type === 'tool'" />
+      <ScanDialog404 v-else-if="scannerStore.type === '404'" />
     </v-dialog>
   </v-app>
 </template>
 
 <script setup lang="ts">
 import onScan from 'onscan.js';
-import { onMounted, ref } from 'vue';
+import { onBeforeMount, ref } from 'vue';
 import ScanDialog404 from '@/components/ScanDialog404.vue';
 import ScanDialogTool from '@/components/ScanDialogTool.vue';
 import router from '@/router';
+import { useScannerStore } from '@/stores/scanner_store';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
-// Hardware barcode scanner
-const scanCode = ref<string>('62147');
-const showScanDialog = ref(false);
-const scanDialogType = ref<'404' | 'tool'>('tool');
-onScan.attachTo(document, { minLength: 5 });
-document.addEventListener('scan', function (e) {
-  // Don't respond to scans if the scan dialog is already being shown
-  if (showScanDialog.value === true) return;
-  const code = e.detail.scanCode;
-  scanCode.value = code;
-  const toolMatch = toolStore.tools.find((x) => x.item === code || x.barcode === code);
-  if (toolMatch) scanDialogType.value = 'tool';
-  else scanDialogType.value = '404';
-  showScanDialog.value = true;
-});
-
 const supplierStore = useSupplierStore();
 const vendorStore = useVendorStore();
 const toolStore = useToolStore();
+const scannerStore = useScannerStore();
+
+// Hardware barcode scanner
+onScan.attachTo(document, { minLength: 5 });
+document.addEventListener('scan', function (e) {
+  scannerStore.setStockAdjustment(0);
+  scannerStore.scan(e.detail.scanCode);
+});
 
 const drawer = ref(true);
 
-onMounted(() => {
+onBeforeMount(() => {
   supplierStore.fetch();
   vendorStore.fetch();
   toolStore.fetch();
 });
+
+function scanTest() {
+  scannerStore.setStockAdjustment(0);
+  scannerStore.scan('62147');
+}
 </script>
 
 <style scoped>

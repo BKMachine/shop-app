@@ -42,14 +42,14 @@
           label="Speed & Feeds Link"
           append-inner-icon="mdi-link"
         ></v-text-field>
-        <VendorSelect v-model="tool._vendor" />
+        <VendorSelect v-model="tool.vendor" />
         <v-text-field v-model="tool.item" label="EDP Order Number"></v-text-field>
         <v-text-field
           v-model="tool.barcode"
           label="Barcode"
           append-inner-icon="mdi-barcode"
         ></v-text-field>
-        <v-select v-model="tool.type" label="Type" :items="types"></v-select>
+        <v-select v-model="tool.category" label="Type" :items="types"></v-select>
         <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
         <v-text-field v-model="tool.img" label="Tool Image URL"></v-text-field>
         <v-select v-model="tool.coating" label="Coating" :items="coatings"></v-select>
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import VendorSelect from '@/components/VendorSelect.vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
@@ -71,7 +71,7 @@ import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 
-const tool = ref<ToolDocProp>({} as ToolDocProp);
+const tool = ref<ToolDocPopulated>({} as ToolDocPopulated);
 const types = ['Milling', 'Turning'];
 
 onMounted(() => {
@@ -127,7 +127,8 @@ async function save() {
   await router.push({ name: 'tools' });
 }
 
-function openLink(link: string) {
+function openLink(link: string | undefined) {
+  if (!link) return;
   window.open(link, '_blank');
 }
 </script>

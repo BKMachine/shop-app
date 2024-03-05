@@ -21,7 +21,8 @@ export const useSupplierStore = defineStore('suppliers', () => {
     });
   }
 
-  async function add(supplier: Supplier) {
+  async function add(supplier: SupplierDoc) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { _id, ...rest } = supplier;
     await axios.post('/suppliers', { data: rest }).then(({ data }) => {
       _suppliers.value.push(data);
