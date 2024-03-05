@@ -115,7 +115,7 @@ const coatings = [
 async function save() {
   const routeName = router.currentRoute.value.name;
   if (routeName === 'createTool') {
-    await toolStore.add(tool.value as ToolDoc);
+    await toolStore.add({ ...(tool.value as ToolDoc), category: 'milling' });
   } else if (routeName === 'viewTool') {
     await toolStore.update(tool.value as ToolDoc_Vendor);
   }
