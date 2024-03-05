@@ -5,7 +5,7 @@ async function list() {
 }
 
 async function findById(id: string) {
-  return Tool.findById(id);
+  return Tool.findById(id).populate('vendor');
 }
 
 async function add(data: ToolDoc) {

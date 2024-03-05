@@ -8,7 +8,7 @@
       <div v-for="(tool, j) in item[1]" :key="tool._id">
         <span class="item"> {{ tool.item }} - Qty: {{ tool.reorderQty }} </span>
         <span class="line"> - </span>
-        <span class="subtotal">{{ formatCost(getCost(tool)) }}</span>
+        <span class="subtotal">{{ getCost(tool) }}</span>
         <div v-if="j === item[1].length - 1" class="space"></div>
       </div>
     </div>
@@ -26,21 +26,22 @@ const USDollar = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 });
 
+const tools = ref<ToolDoc_Vendor[]>([]);
+
 function formatCost(cost: number): string {
   return USDollar.format(cost);
 }
 
-function getCost(tool: ToolDocPopulated): number {
-  return (tool.cost as number) * (tool.reorderQty as number);
+function getCost(tool: ToolDoc_Vendor): string {
+  if (!tool.cost || !tool.reorderQty) return formatCost(0);
+  return formatCost(tool.cost * tool.reorderQty);
 }
 
-type Item = [brand: string, matches: ToolDocPopulated[]];
-
-const tools = ref<ToolDocPopulated[]>([]);
+type Item = [brand: string, matches: ToolDoc_Vendor[]];
 const items = computed<Item[]>(() => {
   const brands: Set<string> = new Set(
     tools.value
-      .map((x) => (typeof x.vendor === 'string' ? x.vendor : x.vendor?.name))
+      .map((x) => x.vendor?.name || 'No Brand')
       .sort((a, b) => {
         const c = a.toLowerCase();
         const d = b.toLowerCase();
@@ -53,7 +54,7 @@ const items = computed<Item[]>(() => {
   brands.forEach((brand) => {
     const matches = tools.value
       .filter((x) => {
-        const name = typeof x.vendor === 'string' ? x.vendor : x.vendor?.name;
+        const name = x.vendor?.name || 'No Brand';
         return name.toLowerCase() === brand.toLowerCase();
       })
       .sort((a, b) => {
@@ -75,9 +76,10 @@ const total = computed(() => {
     return qty * cost + a;
   }, 0);
 });
+
 onMounted(() => {
   tools.value = [];
-  axios.get('/tools/reorders').then(({ data }) => {
+  axios.get('/tools/reorders').then(({ data }: { data: ToolDoc_Vendor[] }) => {
     tools.value = data;
   });
 });

@@ -19,8 +19,9 @@
         variant="elevated"
         :disabled="!tool.productLink"
         @click="openLink(tool.productLink)"
-        >Product Page</v-btn
       >
+        Product Page
+      </v-btn>
       <v-switch v-model="tool.autoReorder" label="Auto Reorder"></v-switch>
     </v-row>
     <v-divider />
@@ -49,7 +50,6 @@
           label="Barcode"
           append-inner-icon="mdi-barcode"
         ></v-text-field>
-        <v-select v-model="tool.category" label="Type" :items="types"></v-select>
         <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
         <v-text-field v-model="tool.img" label="Tool Image URL"></v-text-field>
         <v-select v-model="tool.coating" label="Coating" :items="coatings"></v-select>
@@ -71,8 +71,7 @@ import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 
-const tool = ref<ToolDocPopulated>({} as ToolDocPopulated);
-const types = ['Milling', 'Turning'];
+const tool = ref<ToolDoc | ToolDoc_Vendor>({} as ToolDoc_Vendor);
 
 onMounted(() => {
   const routeName = router.currentRoute.value.name;
@@ -87,7 +86,7 @@ function fetchTool() {
   } else {
     axios
       .get(`/tools/${id}`)
-      .then(({ data }) => {
+      .then(({ data }: { data: ToolDoc_Vendor }) => {
         tool.value = data;
       })
       .catch(() => {
@@ -95,10 +94,6 @@ function fetchTool() {
       });
   }
 }
-
-/*const coatings = computed(() => {
-  return tool.value._vendor?.coatings;
-});*/
 
 const coatings = [
   'AlTiN',
@@ -120,9 +115,9 @@ const coatings = [
 async function save() {
   const routeName = router.currentRoute.value.name;
   if (routeName === 'createTool') {
-    await toolStore.add(tool.value);
+    await toolStore.add(tool.value as ToolDoc);
   } else if (routeName === 'viewTool') {
-    await toolStore.update(tool.value);
+    await toolStore.update(tool.value as ToolDoc_Vendor);
   }
   await router.push({ name: 'tools' });
 }

@@ -8,11 +8,11 @@ export const useToolStore = defineStore('tools', () => {
 
   const rawTools = ref<ToolDoc[]>([]);
 
-  const tools = computed<ToolDocPopulated[]>(() => {
+  const tools = computed<ToolDoc_Vendor[]>(() => {
     return rawTools.value.map((x) => {
       return {
         ...x,
-        vendor: vendorStore.vendors.find((y) => y._id === x.vendor) as VendorDoc,
+        vendor: vendorStore.vendors.find((y) => y._id === x.vendor),
       };
     });
   });
@@ -30,7 +30,7 @@ export const useToolStore = defineStore('tools', () => {
     loading.value = true;
     axios
       .get('/tools')
-      .then(({ data }) => {
+      .then(({ data }: { data: ToolDoc[] }) => {
         rawTools.value = data;
       })
       .finally(() => {
@@ -38,36 +38,36 @@ export const useToolStore = defineStore('tools', () => {
       });
   }
 
-  async function add(tool: ToolDocPopulated) {
+  async function add(tool: ToolDoc_VendorMap) {
     const data = {
       ...tool,
       category: tool.category.toLowerCase(),
     };
-    await axios.post('/tools', { data }).then(({ data }) => {
+    await axios.post('/tools', { data }).then(({ data }: { data: ToolDoc }) => {
       rawTools.value.push(data);
     });
   }
 
-  async function update(doc: ToolDocPopulated) {
-    const vendor = doc.vendor;
-    if (vendor && typeof vendor === 'object') {
-      doc.vendor = vendor._id;
-    }
-    await axios.put('/tools', { data: doc }).then(({ data }: { data: ToolDoc }) => {
-      const i = rawTools.value.findIndex((x) => x._id === doc._id);
-      rawTools.value[i] = data;
+  async function update(doc: ToolDoc_Vendor) {
+    const data: ToolDoc_VendorMap = {
+      ...doc,
+      vendor: doc.vendor ? doc.vendor._id : undefined,
+    };
+    await axios.put('/tools', { data }).then(({ data }: { data: ToolDoc }) => {
+      const index = rawTools.value.findIndex((x) => x._id === doc._id);
+      if (index > -1) rawTools.value[index] = data;
     });
   }
 
   async function adjustStock(id: string, num: number) {
-    const i = rawTools.value.findIndex((x) => x._id === id);
-    const tool = rawTools.value[i];
+    const index = tools.value.findIndex((x) => x._id === id);
+    const tool = tools.value[index];
     if (!tool) return;
-    const clone: ToolDocPopulated = {
-      ...tool[i],
-      vendor: tool.vendor as VendorDoc,
+    const clone: ToolDoc_Vendor = {
+      ...tool,
+      vendor: tool.vendor,
+      stock: (tool.stock += num),
     };
-    clone.stock += num;
     if (clone.stock < 0) throw Error('Stock cannot be less than 0');
     await update(clone);
   }
