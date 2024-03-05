@@ -1,17 +1,17 @@
-import SupplierModel from './supplier_model';
+import Supplier from './supplier_model';
 
 async function list() {
-  return SupplierModel.find();
+  return Supplier.find({});
 }
 
-async function create(data: Supplier) {
-  const doc = new SupplierModel(data);
+async function create(data: SupplierDoc) {
+  const doc = new Supplier(data);
   await doc.save();
   return doc;
 }
 
 async function update(doc: SupplierDoc) {
-  await SupplierModel.findByIdAndUpdate(doc._id, doc);
+  await Supplier.findByIdAndUpdate(doc._id, doc);
 }
 
 export default {

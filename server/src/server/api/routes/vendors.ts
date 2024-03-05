@@ -1,11 +1,11 @@
 import express from 'express';
-import VendorService from '../../../database/lib/vendor';
+import Vendors from '../../../database/lib/vendor';
 
 const router = express.Router();
 
 router.get('/vendors', async (req, res, next) => {
   try {
-    const data = await VendorService.list();
+    const data = await Vendors.list();
     res.status(200).json(data);
   } catch (e) {
     next(e);
@@ -13,13 +13,13 @@ router.get('/vendors', async (req, res, next) => {
 });
 
 router.post('/vendors', async (req, res, next) => {
-  const { data }: { data: Vendor | undefined } = req.body;
+  const { data }: { data: VendorDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
     return;
   }
   try {
-    const doc = await VendorService.create(data);
+    const doc = await Vendors.create(data);
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -33,7 +33,7 @@ router.put('/vendors', async (req, res, next) => {
     return;
   }
   try {
-    await VendorService.update(data);
+    await Vendors.update(data);
     res.sendStatus(204);
   } catch (e) {
     next(e);

@@ -1,28 +1,28 @@
-import ToolModel from './tool_model';
+import Tool from './tool_model';
 
 async function list() {
-  return ToolModel.find({});
+  return Tool.find({});
 }
 
 async function findById(id: string) {
-  return ToolModel.findById(id);
+  return Tool.findById(id);
 }
 
-async function add(data: Tool) {
-  const doc = new ToolModel(data);
+async function add(data: ToolDoc) {
+  const doc = new Tool(data);
   await doc.save();
   return doc;
 }
 
 async function update(doc: ToolDoc) {
-  await ToolModel.findByIdAndUpdate(doc._id, doc);
+  await Tool.findByIdAndUpdate(doc._id, doc);
 }
 
-async function getReorders() {
-  return ToolModel.find({
+async function getAutoReorders() {
+  return Tool.find({
     $expr: { $lte: ['$stock', '$reorderThreshold'] },
     autoReorder: true,
-  }).populate('_vendor');
+  }).populate('vendor');
 }
 
 export default {
@@ -30,5 +30,5 @@ export default {
   findById,
   add,
   update,
-  getReorders,
+  getAutoReorders,
 };

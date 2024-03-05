@@ -1,12 +1,11 @@
-type ObjectId = import('mongoose').Types.ObjectId;
-
 interface Rules {
   [key: string]: (value: string) => boolean | string;
 }
 
-interface Tool {
+interface ToolDoc {
+  _id: string;
   description: string;
-  _vendor?: VendorDoc['_id'];
+  vendor?: string;
   item?: string;
   barcode?: string;
   stock: number;
@@ -22,31 +21,21 @@ interface Tool {
   cost?: number;
 }
 
-interface ToolDocProp extends ToolDoc {
-  _vendor?: VendorDoc;
+interface ToolDocPopulated {
+  vendor?: VendorDoc;
 }
 
-interface ToolDoc extends Tool {
-  _id: ObjectId;
-}
-
-interface Vendor {
+interface VendorDoc {
+  _id: string;
   name: string;
   logo?: string;
   homepage?: string;
   coatings?: string[];
 }
 
-interface VendorDoc extends Vendor {
-  _id: ObjectId;
-}
-
-interface Supplier {
+interface SupplierDoc {
+  _id: string;
   name: string;
   logo?: string;
   homepage?: string;
-}
-
-interface SupplierDoc extends Supplier {
-  _id: ObjectId;
 }

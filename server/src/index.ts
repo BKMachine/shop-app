@@ -10,6 +10,7 @@ app
   })
   .catch((e) => {
     logger.error(e.message);
+    process.exit(1);
   });
 
 const signals: NodeJS.Signals[] = ['SIGHUP', 'SIGINT', 'SIGTERM'];

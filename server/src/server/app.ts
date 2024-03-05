@@ -13,7 +13,7 @@ app.use(express.json());
 app.use('/api', api);
 
 if (process.env.NODE_ENV === 'production') {
-  const wwwDir = path.join(__dirname, '../../../frontend/dist');
+  const wwwDir = path.join(__dirname, '../../../www/dist');
 
   app.get('/', (req, res, next) => {
     res.sendFile(path.join(wwwDir, 'index.html'));

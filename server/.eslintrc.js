@@ -9,7 +9,6 @@ module.exports = {
   },
   plugins: ['import', '@typescript-eslint'],
   extends: ['plugin:import/typescript', 'plugin:prettier/recommended'],
-  // add your custom rules here
   rules: {
     'max-len': 0,
     'no-console': process.env.NODE_ENV !== 'production' ? 'warn' : 'error',
