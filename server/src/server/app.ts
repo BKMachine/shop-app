@@ -1,6 +1,7 @@
 import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
+import favicon from 'serve-favicon';
 import * as logger from '../logger';
 import api from './api';
 
@@ -10,6 +11,7 @@ const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(format, { stream: logger.stream }));
 app.use(express.json());
 
+app.use(favicon(path.join(__dirname, 'favicon.ico')));
 app.use('/api', api);
 
 if (process.env.NODE_ENV === 'production') {
