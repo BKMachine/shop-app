@@ -23,6 +23,7 @@
         Product Page
       </v-btn>
       <v-switch v-model="tool.autoReorder" label="Auto Reorder"></v-switch>
+      {{ category }}
     </v-row>
     <v-divider />
     <v-text-field
@@ -63,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onBeforeMount, onMounted, ref } from 'vue';
 import VendorSelect from '@/components/VendorSelect.vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
@@ -72,6 +73,13 @@ import { useToolStore } from '@/stores/tool_store';
 const toolStore = useToolStore();
 
 const tool = ref<ToolDoc | ToolDoc_Vendor>({} as ToolDoc_Vendor);
+
+const category = ref<ToolCategory>('milling');
+
+onBeforeMount(() => {
+  const type = window.localStorage.getItem('type') as ToolCategory | null;
+  category.value = type ? type : 'milling';
+});
 
 onMounted(() => {
   const routeName = router.currentRoute.value.name;
@@ -100,7 +108,6 @@ const coatings = [
   'AlCrN',
   'ALUMASTAR',
   'HLUBE',
-  'IC08',
   'Bright',
   'V',
   'Nitride',
@@ -110,12 +117,19 @@ const coatings = [
   'TiAlN',
   'C3',
   'ALCR',
+  'IC08',
+  'IC10',
+  'IC907',
+  'IC807',
+  'IC808',
+  'IC808G',
+  'KC5025',
 ];
 
 async function save() {
   const routeName = router.currentRoute.value.name;
   if (routeName === 'createTool') {
-    await toolStore.add({ ...(tool.value as ToolDoc), category: 'milling' });
+    await toolStore.add({ ...(tool.value as ToolDoc), category: category.value });
   } else if (routeName === 'viewTool') {
     await toolStore.update(tool.value as ToolDoc_Vendor);
   }

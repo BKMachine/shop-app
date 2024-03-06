@@ -16,7 +16,7 @@
     <v-window-item value="turning">
       <ToolsDataTable
         title="Turning Tools"
-        :headers="millingHeaders"
+        :headers="turningHeaders"
         :items="toolStore.turningTools"
       />
     </v-window-item>
@@ -29,12 +29,12 @@ import ToolsDataTable from '@/components/ToolsDataTable.vue';
 import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
-const tab = ref('milling');
+const tab = ref<ToolCategory>('milling');
 
 onBeforeMount(() => {
   const type = window.localStorage.getItem('type');
   if (!type) window.localStorage.setItem('type', tab.value);
-  else tab.value = type;
+  else tab.value = type as ToolCategory;
 });
 
 function onChange() {
@@ -51,7 +51,7 @@ const millingHeaders = [
   },
   {
     title: 'Vendor',
-    key: '_vendor.name',
+    key: 'vendor.name',
   },
   {
     title: 'Item',
@@ -64,6 +64,28 @@ const millingHeaders = [
   {
     title: 'Flutes',
     key: 'flutes',
+  },
+];
+
+const turningHeaders = [
+  {
+    key: 'img',
+  },
+  {
+    title: 'Description',
+    key: 'description',
+  },
+  {
+    title: 'Coating',
+    key: 'coating',
+  },
+  {
+    title: 'Vendor',
+    key: 'vendor.name',
+  },
+  {
+    title: 'Item',
+    key: 'item',
   },
 ];
 </script>

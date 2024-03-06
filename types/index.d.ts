@@ -10,7 +10,7 @@ interface ToolDoc {
   barcode?: string;
   stock: number;
   img?: string;
-  category: 'milling' | 'turning';
+  category: ToolCategory;
   coating?: string;
   flutes?: number;
   autoReorder: boolean;
@@ -20,6 +20,8 @@ interface ToolDoc {
   techDataLink?: string;
   cost?: number;
 }
+
+type ToolCategory = 'milling' | 'turning';
 
 interface ToolDoc_Vendor extends ToolDoc {
   vendor?: VendorDoc;
@@ -42,4 +44,21 @@ interface SupplierDoc {
   name: string;
   logo?: string;
   homepage?: string;
+}
+
+interface SettingDoc {
+  _id: string;
+  name: string;
+  data: any;
+}
+
+interface SMTPSettingDoc extends SettingDoc {
+  name: 'smtp';
+  data: {
+    host: string;
+    port?: number;
+    username: string;
+    password: string;
+    to: string[];
+  };
 }
