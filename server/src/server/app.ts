@@ -1,22 +1,17 @@
 import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
+import favicon from 'serve-favicon';
 import * as logger from '../logger';
 import api from './api';
 
 const app = express();
 
+app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(format, { stream: logger.stream }));
 app.use(express.json());
-
-app.get('/favicon.ico', (req, res, next) => {
-  try {
-    res.status(200).sendFile(path.join(__dirname, 'favicon.ico'));
-  } catch (e) {
-    next(e);
-  }
-});
 
 app.use('/api', api);
 

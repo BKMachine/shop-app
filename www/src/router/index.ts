@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import SettingsView from '@/views/SettingsView.vue';
-import CreateToolView from '@/views/tools/CreateToolView.vue';
 import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
+import ToolView from '@/views/tools/ToolView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,12 +21,12 @@ const router = createRouter({
     {
       path: '/tools/create',
       name: 'createTool',
-      component: CreateToolView,
+      component: ToolView,
     },
     {
       path: '/tools/database/:id',
       name: 'viewTool',
-      component: CreateToolView,
+      component: ToolView,
     },
     {
       path: '/settings',
