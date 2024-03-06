@@ -26,7 +26,7 @@ RUN cd /app/www && \
     yarn build
 
 FROM builder
-COPY --from=builder_backend /app/server/dist ./cerver/dist
+COPY --from=builder_backend /app/server/dist ./server/dist
 COPY --from=builder_frontend /app/www/dist ./www/dist
 ENV NODE_ENV=production
 EXPOSE 3000
