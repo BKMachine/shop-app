@@ -1,7 +1,7 @@
 <template>
   <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:modelValue="onChange">
-    <v-tab value="milling" class="milling" @click="resetPage">Milling</v-tab>
-    <v-tab value="turning" class="turning" @click="resetPage">Turning</v-tab>
+    <v-tab value="milling" class="milling">Milling</v-tab>
+    <v-tab value="turning" class="turning">Turning</v-tab>
   </v-tabs>
 
   <v-window v-model="tab" class="mt-3">
