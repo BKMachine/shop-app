@@ -24,6 +24,11 @@ const router = createRouter({
       component: ToolView,
     },
     {
+      path: '/tools/:page',
+      name: 'toolsPage',
+      component: ToolsView,
+    },
+    {
       path: '/tools/database/:id',
       name: 'viewTool',
       component: ToolView,

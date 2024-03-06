@@ -127,6 +127,7 @@ const coatings = [
   'KCU10',
   'AH725',
   '1025',
+  'IC8250',
 ];
 
 async function save() {

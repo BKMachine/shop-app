@@ -84,6 +84,10 @@ const turningHeaders = [
     key: 'vendor.name',
   },
   {
+    title: 'Cutting Edges',
+    key: 'flutes',
+  },
+  {
     title: 'Item',
     key: 'item',
   },
