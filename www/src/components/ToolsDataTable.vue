@@ -59,7 +59,7 @@ function openTool(event: unknown, { item }: { item: ToolDoc }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
 
-function setPage(e: number) {
+function setPage() {
   router.push({ name: 'toolsPage', params: { page: page.value } });
 }
 

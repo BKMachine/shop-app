@@ -1,7 +1,7 @@
 <template>
   <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:modelValue="onChange">
-    <v-tab value="milling" class="milling">Milling</v-tab>
-    <v-tab value="turning" class="turning">Turning</v-tab>
+    <v-tab value="milling" class="milling" @click="resetPage">Milling</v-tab>
+    <v-tab value="turning" class="turning" @click="resetPage">Turning</v-tab>
   </v-tabs>
 
   <v-window v-model="tab" class="mt-3">
@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import { onBeforeMount, ref } from 'vue';
 import ToolsDataTable from '@/components/ToolsDataTable.vue';
+import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
@@ -39,6 +40,7 @@ onBeforeMount(() => {
 
 function onChange() {
   window.localStorage.setItem('type', tab.value);
+  router.push({ name: 'tools' });
 }
 
 const millingHeaders = [
