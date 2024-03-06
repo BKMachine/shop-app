@@ -2,6 +2,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only -r dotenv/config ./src",
     "build": "rimraf ./dist && tsc -p ./tsconfig.json",
+    "start": "cross-env NODE_ENV=production node -r dotenv/config ./dist/index.js",
     "prettier": "prettier --write \"**/*.{js,ts,md,*rc,json}\" --ignore-path ../.gitignore",
     "lint": "eslint --ext .js,.ts --ignore-path ../.gitignore --ignore-pattern '__tests__' ."
   },
