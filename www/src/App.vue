@@ -16,6 +16,9 @@
         <v-list-item prepend-icon="mdi-barcode" @click="scanTest"> Test </v-list-item>
       </v-list>
       <template v-slot:append>
+        <v-list-item prepend-icon="mdi-file-document-outline" link :to="{ name: 'toolReport' }">
+          Report
+        </v-list-item>
         <v-divider />
         <v-list-item prepend-icon="mdi-cog" link to="/settings">Settings</v-list-item>
       </template>

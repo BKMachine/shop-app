@@ -1,20 +1,34 @@
 <template>
-  <v-tabs v-model="tab" bg-color="primary" align-tabs="center" grow @update:modelValue="onChange">
-    <v-tab value="milling">Milling</v-tab>
-    <v-tab value="turning">Turning</v-tab>
+  <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:modelValue="onChange">
+    <v-tab value="milling" class="milling">Milling</v-tab>
+    <v-tab value="turning" class="turning">Turning</v-tab>
   </v-tabs>
 
   <v-window v-model="tab" class="mt-3">
-    <v-window-item value="milling"> <MillingToolsDataTable /> </v-window-item>
+    <v-window-item value="milling">
+      <ToolsDataTable
+        title="Milling Tools"
+        :headers="millingHeaders"
+        :items="toolStore.millingTools"
+      />
+    </v-window-item>
 
-    <v-window-item value="turning"> Turning </v-window-item>
+    <v-window-item value="turning">
+      <ToolsDataTable
+        title="Turning Tools"
+        :headers="millingHeaders"
+        :items="toolStore.turningTools"
+      />
+    </v-window-item>
   </v-window>
 </template>
 
 <script setup lang="ts">
 import { onBeforeMount, ref } from 'vue';
-import MillingToolsDataTable from '@/components/MillingToolsDataTable.vue';
+import ToolsDataTable from '@/components/ToolsDataTable.vue';
+import { useToolStore } from '@/stores/tool_store';
 
+const toolStore = useToolStore();
 const tab = ref('milling');
 
 onBeforeMount(() => {
@@ -26,6 +40,32 @@ onBeforeMount(() => {
 function onChange() {
   window.localStorage.setItem('type', tab.value);
 }
+
+const millingHeaders = [
+  {
+    key: 'img',
+  },
+  {
+    title: 'Description',
+    key: 'description',
+  },
+  {
+    title: 'Vendor',
+    key: '_vendor.name',
+  },
+  {
+    title: 'Item',
+    key: 'item',
+  },
+  {
+    title: 'Coating',
+    key: 'coating',
+  },
+  {
+    title: 'Flutes',
+    key: 'flutes',
+  },
+];
 </script>
 
 <style scoped></style>

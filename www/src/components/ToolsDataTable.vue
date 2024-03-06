@@ -1,14 +1,8 @@
 <template>
   <v-card>
     <v-card-title class="header">
-      <div>Milling Tools</div>
+      <div>{{ title }}</div>
       <div>
-        <v-btn
-          icon="mdi-file-document-outline"
-          class="mr-2"
-          link
-          :to="{ name: 'toolReport' }"
-        ></v-btn>
         <v-btn link :to="{ name: 'createTool' }" color="primary" prepend-icon="mdi-plus">
           Create New Tool
         </v-btn>
@@ -29,7 +23,7 @@
 
         <v-data-table
           :headers="headers"
-          :items="toolStore.millingTools"
+          :items="items"
           :search="search"
           :loading="toolStore.loading"
           @dblclick:row="openTool"
@@ -41,46 +35,21 @@
       </v-card>
     </v-card-text>
   </v-card>
-  <!--  <div class="header">
-  </div>
-  -->
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
-const toolStore = useToolStore();
+defineProps<{
+  title: string;
+  headers: { key: string; title?: string }[];
+  items: ToolDoc_Vendor[];
+}>();
 
+const toolStore = useToolStore();
 const search = ref('');
-const headers = computed(() => {
-  return [
-    {
-      key: 'img',
-    },
-    {
-      title: 'Description',
-      key: 'description',
-    },
-    {
-      title: 'Vendor',
-      key: '_vendor.name',
-    },
-    {
-      title: 'Item',
-      key: 'item',
-    },
-    {
-      title: 'Coating',
-      key: 'coating',
-    },
-    {
-      title: 'Flutes',
-      key: 'flutes',
-    },
-  ];
-});
 
 function openTool(event: unknown, { item }: { item: ToolDoc }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
