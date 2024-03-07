@@ -49,11 +49,12 @@ export const useToolStore = defineStore('tools', () => {
   }
 
   async function update(doc: ToolDoc_Vendor) {
-    const data: ToolDoc_VendorMap = {
+    const clone: ToolDoc_VendorMap = {
       ...doc,
       vendor: doc.vendor ? doc.vendor._id : undefined,
     };
-    await axios.put('/tools', { data }).then(({ data }: { data: ToolDoc }) => {
+    if (clone.reorderThreshold > 0 && clone.stock > clone.reorderThreshold) clone.onOrder = false;
+    await axios.put('/tools', { data: clone }).then(({ data }: { data: ToolDoc }) => {
       const index = rawTools.value.findIndex((x) => x._id === doc._id);
       if (index > -1) rawTools.value[index] = data;
     });
@@ -69,7 +70,6 @@ export const useToolStore = defineStore('tools', () => {
       stock: (tool.stock += num),
     };
     if (clone.stock < 0) throw Error('Stock cannot be less than 0');
-    if (num > 0 && clone.stock > clone.reorderThreshold) clone.onOrder = false;
     await update(clone);
   }
 
