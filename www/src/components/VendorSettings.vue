@@ -19,6 +19,13 @@
             </div>
           </div>
           <v-text-field v-model="editingItem.homepage" label="Homepage"></v-text-field>
+          <v-combobox v-model="editingItem.coatings" label="Tool Coatings" chips multiple>
+            <template v-slot:selection="{ attrs, item }">
+              <v-chip v-bind="attrs">
+                {{ item }}
+              </v-chip>
+            </template>
+          </v-combobox>
         </v-form>
       </v-card-text>
       <v-card-actions>

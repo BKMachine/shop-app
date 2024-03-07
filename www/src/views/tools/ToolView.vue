@@ -22,17 +22,25 @@
       >
         Product Page
       </v-btn>
-      <v-switch v-model="tool.autoReorder" label="Auto Reorder"></v-switch>
-      {{ category }}
+      <v-btn
+        color="blue"
+        prepend-icon="mdi-speedometer"
+        variant="elevated"
+        :disabled="!tool.techDataLink"
+        @click="openLink(tool.techDataLink)"
+      >
+        Tech Data
+      </v-btn>
+      <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="green"></v-switch>
     </v-row>
     <v-divider />
-    <v-text-field
-      v-model.number="tool.cost"
-      label="Cost"
-      prepend-inner-icon="mdi-currency-usd"
-    ></v-text-field>
     <v-row class="my-4">
       <v-col cols="12">
+        <v-text-field
+          v-model.number="tool.cost"
+          label="Cost"
+          prepend-inner-icon="mdi-currency-usd"
+        ></v-text-field>
         <v-text-field v-model="tool.description" label="Description"></v-text-field>
         <v-text-field
           v-model="tool.productLink"
@@ -54,7 +62,7 @@
         <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
         <v-text-field v-model="tool.img" label="Tool Image URL"></v-text-field>
         <v-select v-model="tool.coating" label="Coating" :items="coatings"></v-select>
-        <v-text-field v-model.number="tool.flutes" label="Flutes"></v-text-field>
+        <v-text-field v-model.number="tool.flutes" :label="fluteText"></v-text-field>
         <v-text-field v-model.number="tool.reorderQty" label="Reorder Qty"></v-text-field>
         <v-text-field v-model.number="tool.reorderThreshold" label="Min Stock Qty"></v-text-field>
       </v-col>
@@ -64,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, onMounted, ref } from 'vue';
+import { computed, onBeforeMount, onMounted, ref } from 'vue';
 import VendorSelect from '@/components/VendorSelect.vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
@@ -86,6 +94,12 @@ onMounted(() => {
   if (routeName === 'viewTool') fetchTool();
 });
 
+const coatings = computed(() => {
+  if (!tool.value.vendor) return [];
+  if (typeof tool.value.vendor === 'string') return [];
+  return tool.value.vendor.coatings;
+});
+
 function fetchTool() {
   const { id } = router.currentRoute.value.params;
   const match = toolStore.tools.find((x) => x._id === id);
@@ -103,32 +117,9 @@ function fetchTool() {
   }
 }
 
-const coatings = [
-  'AlTiN',
-  'AlCrN',
-  'ALUMASTAR',
-  'HLUBE',
-  'Bright',
-  'V',
-  'Nitride',
-  'APLUS',
-  'ZPLUS',
-  'ALtima',
-  'TiAlN',
-  'C3',
-  'ALCR',
-  'IC08',
-  'IC10',
-  'IC907',
-  'IC807',
-  'IC808',
-  'IC808G',
-  'KC5025',
-  'KCU10',
-  'AH725',
-  '1025',
-  'IC8250',
-];
+const fluteText = computed(() => {
+  return category.value === 'milling' ? 'Flutes' : 'Cutting Edges';
+});
 
 async function save() {
   const routeName = router.currentRoute.value.name;
