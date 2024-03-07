@@ -69,8 +69,10 @@ export const useToolStore = defineStore('tools', () => {
       stock: (tool.stock += num),
     };
     if (clone.stock < 0) throw Error('Stock cannot be less than 0');
+    if (num > 0 && clone.stock > clone.reorderThreshold) clone.onOrder = false;
     await update(clone);
   }
+
   return {
     rawTools,
     tools,

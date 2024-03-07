@@ -14,11 +14,12 @@ interface ToolDoc {
   coating?: string;
   flutes?: number;
   autoReorder: boolean;
-  reorderQty?: number;
-  reorderThreshold?: number;
+  reorderQty: number;
+  reorderThreshold: number;
   productLink?: string;
   techDataLink?: string;
   cost?: number;
+  onOrder: boolean;
 }
 
 type ToolCategory = 'milling' | 'turning';

@@ -6,9 +6,17 @@
       </span>
       <v-divider />
       <div v-for="(tool, j) in item[1]" :key="tool._id">
-        <span class="item"> {{ tool.item }} - Qty: {{ tool.reorderQty }} </span>
-        <span class="line"> - </span>
-        <span class="subtotal">{{ getCost(tool) }}</span>
+        <label>
+          <input
+            type="checkbox"
+            class="mr-2"
+            :checked="tool.onOrder"
+            @click="toggleOnOrder(tool)"
+          />
+          <span class="item"> {{ tool.item }} - Qty: {{ tool.reorderQty }} </span>
+          <span class="line"> - </span>
+          <span class="subtotal">{{ getCost(tool) }}</span>
+        </label>
         <div v-if="j === item[1].length - 1" class="space"></div>
       </div>
     </div>
@@ -20,6 +28,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import axios from '@/plugins/axios';
+import { useToolStore } from '@/stores/tool_store';
+
+const toolStore = useToolStore();
 
 const USDollar = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -83,6 +94,11 @@ onMounted(() => {
     tools.value = data;
   });
 });
+
+function toggleOnOrder(tool: ToolDoc_Vendor) {
+  tool.onOrder = !tool.onOrder;
+  toolStore.update(tool);
+}
 </script>
 
 <style scoped>

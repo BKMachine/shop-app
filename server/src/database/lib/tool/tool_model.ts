@@ -11,11 +11,12 @@ const schema = new Schema<ToolDoc>({
   coating: String,
   flutes: Number,
   autoReorder: { type: Boolean, default: false },
-  reorderQty: Number,
-  reorderThreshold: Number,
+  reorderQty: { type: Number, default: 0 },
+  reorderThreshold: { type: Number, default: 0 },
   productLink: String,
   techDataLink: String,
   cost: Number,
+  onOrder: { type: Boolean, default: false },
 });
 
 export default model<ToolDoc>('tools', schema);

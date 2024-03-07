@@ -32,6 +32,7 @@
         Tech Data
       </v-btn>
       <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="green"></v-switch>
+      <v-checkbox v-model="tool.onOrder" label="On Order" color="green"></v-checkbox>
     </v-row>
     <v-divider />
     <v-row class="my-4">
