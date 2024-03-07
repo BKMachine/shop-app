@@ -22,6 +22,7 @@
     </div>
     <br />
     <div class="bold">Total: {{ formatCost(total) }}</div>
+    <div class="bold">Un-Ordered Total: {{ formatCost(unOrderedTotal) }}</div>
   </v-container>
 </template>
 
@@ -86,6 +87,16 @@ const total = computed(() => {
     const cost = b.cost || 0;
     return qty * cost + a;
   }, 0);
+});
+
+const unOrderedTotal = computed(() => {
+  return tools.value
+    .filter((x) => !x.onOrder)
+    .reduce((a, b) => {
+      const qty = b.reorderQty || 0;
+      const cost = b.cost || 0;
+      return qty * cost + a;
+    }, 0);
 });
 
 onMounted(() => {
