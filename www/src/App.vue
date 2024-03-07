@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app v-cloak>
     <v-app-bar class="elevation-2">
       <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
       <v-app-bar-title>
@@ -38,6 +38,7 @@ import onScan from 'onscan.js';
 import { onBeforeMount, ref } from 'vue';
 import ScanDialog404 from '@/components/ScanDialog404.vue';
 import ScanDialogTool from '@/components/ScanDialogTool.vue';
+import { prefix } from '@/plugins/enums';
 import router from '@/router';
 import { useScannerStore } from '@/stores/scanner_store';
 import { useSupplierStore } from '@/stores/supplier_store';
@@ -52,6 +53,10 @@ const scannerStore = useScannerStore();
 // Hardware barcode scanner
 onScan.attachTo(document, { minLength: 5 });
 document.addEventListener('scan', function (e) {
+  // Do not respond to scanCodes with our custom internal scanCode prefix
+  if (e.detail.scanCode.startsWith(prefix)) return;
+  // Do not respond to scans if the scan dialog is already open
+  if (scannerStore.dialog === true) return;
   scannerStore.setStockAdjustment(0);
   scannerStore.scan(e.detail.scanCode);
 });
