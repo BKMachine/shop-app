@@ -1,87 +1,160 @@
 <template>
-  <v-container>
-    <v-row>
-      <div class="header">
-        <img class="tool-img" :src="tool.img" alt="" />
-        <div class="stock-container">
-          <div class="stock">
-            {{ tool.stock }}
-          </div>
-          <div>In Stock</div>
+  <v-container class="container">
+    <div class="title text-center">
+      <h1>{{ tool.description }}</h1>
+    </div>
+    <div class="d-flex align-center justify-space-between py-4">
+      <img class="tool-img" :src="tool.img" alt="" />
+      <div class="stock-container">
+        <div class="stock">
+          {{ tool.stock }}
         </div>
+        <div>In Stock</div>
       </div>
-    </v-row>
-    <v-row>
-      <v-btn color="green" variant="outlined" @click="save">Save</v-btn>
-      <v-btn
-        color="yellow"
-        prepend-icon="mdi-link"
-        variant="elevated"
-        :disabled="!tool.productLink"
-        @click="openLink(tool.productLink)"
-      >
-        Product Page
-      </v-btn>
-      <v-btn
-        color="blue"
-        prepend-icon="mdi-speedometer"
-        variant="elevated"
-        :disabled="!tool.techDataLink"
-        @click="openLink(tool.techDataLink)"
-      >
-        Tech Data
-      </v-btn>
-      <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="green"></v-switch>
-      <v-checkbox v-model="tool.onOrder" label="On Order" color="green"></v-checkbox>
-    </v-row>
-    <v-divider />
-    <v-row class="my-4">
-      <v-col cols="12">
-        <v-text-field
-          v-model.number="tool.cost"
-          label="Cost"
-          prepend-inner-icon="mdi-currency-usd"
-        ></v-text-field>
-        <v-text-field v-model="tool.description" label="Description"></v-text-field>
-        <v-text-field
-          v-model="tool.productLink"
-          label="Product Page Link"
-          append-inner-icon="mdi-link"
-        ></v-text-field>
-        <v-text-field
-          v-model="tool.techDataLink"
-          label="Speed & Feeds Link"
-          append-inner-icon="mdi-link"
-        ></v-text-field>
-        <VendorSelect v-model="tool.vendor" />
-        <v-text-field v-model="tool.item" label="EDP Order Number"></v-text-field>
-        <v-text-field
-          v-model="tool.barcode"
-          label="Barcode"
-          append-inner-icon="mdi-barcode"
-        ></v-text-field>
-        <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
-        <v-text-field v-model="tool.img" label="Tool Image URL"></v-text-field>
-        <v-select v-model="tool.coating" label="Coating" :items="coatings"></v-select>
-        <v-text-field v-model.number="tool.flutes" :label="fluteText"></v-text-field>
-        <v-text-field v-model.number="tool.reorderQty" label="Reorder Qty"></v-text-field>
-        <v-text-field v-model.number="tool.reorderThreshold" label="Min Stock Qty"></v-text-field>
-      </v-col>
-    </v-row>
-    <v-divider />
+    </div>
+    <v-tabs v-model="tab" class="mb-4" bg-color="#555555" color="yellow">
+      <v-tab value="general">General</v-tab>
+      <v-tab value="stock">Stock</v-tab>
+      <v-tab value="tech">Technical</v-tab>
+      <v-spacer></v-spacer>
+      <div class="d-flex align-center">
+        <v-btn
+          v-if="tool.productLink"
+          class="mr-2"
+          color="yellow"
+          prepend-icon="mdi-open-in-new"
+          density="comfortable"
+          variant="elevated"
+          @click="openLink(tool.productLink)"
+        >
+          Product Page
+        </v-btn>
+        <v-btn
+          v-if="tool.techDataLink"
+          class="mr-2"
+          color="blue"
+          prepend-icon="mdi-speedometer"
+          variant="elevated"
+          density="comfortable"
+          @click="openLink(tool.techDataLink)"
+        >
+          Tech Data
+        </v-btn>
+        <v-btn
+          color="green"
+          variant="elevated"
+          class="mr-2"
+          density="comfortable"
+          prepend-icon="mdi-content-save-outline"
+          :disabled="!toolIsAltered"
+          @click="save"
+        >
+          Save
+        </v-btn>
+      </div>
+    </v-tabs>
+    <v-form>
+      <v-window v-model="tab" class="tab-window">
+        <v-window-item value="general">
+          <v-text-field v-model="tool.description" label="Description"></v-text-field>
+          <div class="d-flex">
+            <v-text-field
+              v-model="tool.item"
+              class="mr-2"
+              label="Product Number"
+              append-inner-icon="mdi-barcode"
+            ></v-text-field>
+            <v-text-field
+              v-model="tool.barcode"
+              class="ml-2"
+              label="Barcode"
+              append-inner-icon="mdi-barcode"
+            ></v-text-field>
+          </div>
+          <div class="d-flex">
+            <v-select
+              v-model="tool.vendor"
+              label="Brand"
+              :items="vendorStore.vendors"
+              item-title="name"
+              item-value="_id"
+            >
+              <template v-slot:item="{ props, item }">
+                <v-list-item v-bind="props" title="">
+                  <template v-slot:prepend>
+                    <v-avatar rounded="0"
+                      ><v-img class="vendor-logo" :src="item.raw.logo"></v-img
+                    ></v-avatar>
+                  </template>
+
+                  {{ item.raw.name }}
+                </v-list-item>
+              </template>
+            </v-select>
+            <v-select
+              v-model="tool.coating"
+              label="Coating"
+              :items="coatings"
+              class="ml-2"
+            ></v-select>
+          </div>
+          <v-text-field
+            v-model="tool.productLink"
+            label="Product Page Link"
+            append-inner-icon="mdi-link"
+          ></v-text-field>
+          <v-text-field
+            v-model="tool.techDataLink"
+            label="Speed & Feeds Link"
+            append-inner-icon="mdi-link"
+          ></v-text-field>
+          <v-text-field
+            v-model="tool.img"
+            label="Tool Image URL"
+            append-inner-icon="mdi-image-outline"
+          ></v-text-field>
+        </v-window-item>
+
+        <v-window-item value="stock">
+          <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="green"></v-switch>
+          <v-checkbox v-model="tool.onOrder" label="On Order" color="green"></v-checkbox>
+          <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
+          <v-text-field
+            v-model.number="tool.cost"
+            label="Cost"
+            prepend-inner-icon="mdi-currency-usd"
+          ></v-text-field>
+          <v-text-field v-model.number="tool.reorderQty" label="Reorder Qty"></v-text-field>
+          <v-text-field v-model.number="tool.reorderThreshold" label="Min Stock Qty"></v-text-field>
+        </v-window-item>
+
+        <v-window-item value="tech">
+          <v-text-field v-model.number="tool.flutes" :label="fluteText"></v-text-field>
+        </v-window-item>
+      </v-window>
+    </v-form>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount, onMounted, ref } from 'vue';
-import VendorSelect from '@/components/VendorSelect.vue';
+import { isEqual } from 'lodash';
+import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref } from 'vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
+import { useVendorStore } from '@/stores/vendor_store';
 
 const toolStore = useToolStore();
+const vendorStore = useVendorStore();
 
-const tool = ref<ToolDoc | ToolDoc_Vendor>({} as ToolDoc_Vendor);
+const tab = ref('general');
+const tool = ref<ToolDoc | ToolDoc_Vendor>({
+  stock: 0,
+  reorderThreshold: 0,
+  reorderQty: 0,
+  autoReorder: false,
+} as ToolDoc_Vendor);
+const toolOriginal = ref<ToolDoc | ToolDoc_Vendor>({} as ToolDoc_Vendor);
 
 const category = ref<ToolCategory>('milling');
 
@@ -97,8 +170,9 @@ onMounted(() => {
 
 const coatings = computed(() => {
   if (!tool.value.vendor) return [];
-  if (typeof tool.value.vendor === 'string') return [];
-  return tool.value.vendor.coatings;
+  const vendor = vendorStore.vendors.find((x) => x._id === tool.value.vendor);
+  if (!vendor) return [];
+  return vendor.coatings;
 });
 
 function fetchTool() {
@@ -106,11 +180,13 @@ function fetchTool() {
   const match = toolStore.tools.find((x) => x._id === id);
   if (match) {
     tool.value = { ...match };
+    toolOriginal.value = { ...match };
   } else {
     axios
       .get(`/tools/${id}`)
       .then(({ data }: { data: ToolDoc_Vendor }) => {
-        tool.value = data;
+        tool.value = { ...data };
+        toolOriginal.value = { ...data };
       })
       .catch(() => {
         alert('Tool not found');
@@ -136,26 +212,40 @@ function openLink(link: string | undefined) {
   if (!link) return;
   window.open(link, '_blank');
 }
+
+const toolIsAltered = computed<boolean>(() => {
+  return !isEqual(tool.value, toolOriginal.value);
+});
+
+onBeforeUnmount((e) => {
+  if (toolIsAltered.value) {
+    console.log(e);
+  }
+});
 </script>
 
 <style scoped>
-.header {
-  height: 160px;
-  display: flex;
-  justify-content: space-between;
-  padding: 20px;
-}
 .stock-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  width: 120px;
-  height: 120px;
+  height: 100%;
   flex-direction: column;
 }
 .stock {
   font-weight: bolder;
   font-size: 3em;
+}
+.tool-img {
+  max-width: 400px;
+  max-height: 100px;
+}
+.title {
+  width: 100%;
+  border-bottom: 1px solid #d8d8d8;
+}
+.container {
+  height: 200px;
+  position: relative;
 }
 </style>
