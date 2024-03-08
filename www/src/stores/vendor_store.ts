@@ -29,18 +29,18 @@ export const useVendorStore = defineStore('vendors', () => {
     });
   }
 
-  async function update(doc: VendorDoc) {
-    if (doc.coatings)
-      doc.coatings = doc.coatings.sort((a, b) => {
+  async function update(vendor: VendorDoc) {
+    if (vendor.coatings)
+      vendor.coatings = vendor.coatings.sort((a, b) => {
         const c = a.toLowerCase();
         const d = b.toLowerCase();
         if (c < d) return -1;
         else if (c > d) return 1;
         else return 0;
       });
-    await axios.put('/vendors', { data: doc }).then(() => {
-      const i = _vendors.value.findIndex((x) => x._id === doc._id);
-      _vendors.value[i] = doc;
+    await axios.put('/vendors', { data: vendor }).then(() => {
+      const i = _vendors.value.findIndex((x) => x._id === vendor._id);
+      _vendors.value[i] = vendor;
     });
   }
 

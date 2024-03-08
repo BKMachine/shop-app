@@ -1,10 +1,9 @@
 import { Schema, model } from 'mongoose';
 
-const schema = new Schema<VendorDoc>({
+const schema = new Schema<CustomerDoc>({
   name: { type: String, unique: true, required: true },
   logo: String,
   homepage: String,
-  coatings: Array,
 });
 
-export default model<VendorDoc>('vendors', schema);
+export default model<CustomerDoc>('customers', schema);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import CustomerRoutes from './routes/customers';
 import SupplierRoutes from './routes/suppliers';
 import ToolRoutes from './routes/tools';
 import VendorRoutes from './routes/vendors';
@@ -19,6 +20,7 @@ router.get('/version', (req, res, next) => {
   }
 });
 
+router.use(CustomerRoutes);
 router.use(SupplierRoutes);
 router.use(VendorRoutes);
 router.use(ToolRoutes);

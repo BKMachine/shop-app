@@ -53,6 +53,13 @@ interface SettingDoc {
   data: any;
 }
 
+interface CustomerDoc {
+  _id: string;
+  name: string;
+  logo?: string;
+  homepage?: string;
+}
+
 interface SMTPSettingDoc extends SettingDoc {
   name: 'smtp';
   data: {

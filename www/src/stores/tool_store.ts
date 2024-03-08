@@ -48,14 +48,14 @@ export const useToolStore = defineStore('tools', () => {
     });
   }
 
-  async function update(doc: ToolDoc_Vendor) {
+  async function update(tool: ToolDoc_Vendor) {
     const clone: ToolDoc_VendorMap = {
-      ...doc,
-      vendor: doc.vendor ? doc.vendor._id : undefined,
+      ...tool,
+      vendor: tool.vendor ? tool.vendor._id : undefined,
     };
     if (clone.reorderThreshold > 0 && clone.stock > clone.reorderThreshold) clone.onOrder = false;
     await axios.put('/tools', { data: clone }).then(({ data }: { data: ToolDoc }) => {
-      const index = rawTools.value.findIndex((x) => x._id === doc._id);
+      const index = rawTools.value.findIndex((x) => x._id === tool._id);
       if (index > -1) rawTools.value[index] = data;
     });
   }

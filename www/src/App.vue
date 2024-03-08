@@ -40,15 +40,17 @@ import ScanDialog404 from '@/components/ScanDialog404.vue';
 import ScanDialogTool from '@/components/ScanDialogTool.vue';
 import { prefix } from '@/plugins/enums';
 import router from '@/router';
+import { useCustomerStore } from '@/stores/customer_store';
 import { useScannerStore } from '@/stores/scanner_store';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
-const supplierStore = useSupplierStore();
-const vendorStore = useVendorStore();
-const toolStore = useToolStore();
+const customerStore = useCustomerStore();
 const scannerStore = useScannerStore();
+const supplierStore = useSupplierStore();
+const toolStore = useToolStore();
+const vendorStore = useVendorStore();
 
 // Hardware barcode scanner
 onScan.attachTo(document, { minLength: 5 });
@@ -64,6 +66,7 @@ document.addEventListener('scan', function (e) {
 const drawer = ref(true);
 
 onBeforeMount(() => {
+  customerStore.fetch();
   supplierStore.fetch();
   vendorStore.fetch();
   toolStore.fetch();

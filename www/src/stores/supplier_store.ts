@@ -29,10 +29,10 @@ export const useSupplierStore = defineStore('suppliers', () => {
     });
   }
 
-  async function update(doc: SupplierDoc) {
-    await axios.put('/suppliers', { data: doc }).then(() => {
-      const i = _suppliers.value.findIndex((x) => x._id === doc._id);
-      _suppliers.value[i] = doc;
+  async function update(supplier: SupplierDoc) {
+    await axios.put('/suppliers', { data: supplier }).then(() => {
+      const i = _suppliers.value.findIndex((x) => x._id === supplier._id);
+      _suppliers.value[i] = supplier;
     });
   }
 

@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
 
 const schema = new Schema<SupplierDoc>({
-  name: { type: String, unique: true },
+  name: { type: String, unique: true, required: true },
   logo: String,
   homepage: String,
 });
