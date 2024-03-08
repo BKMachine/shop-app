@@ -138,7 +138,7 @@
 
 <script setup lang="ts">
 import { isEqual } from 'lodash';
-import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeMount, onMounted, ref } from 'vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
@@ -215,12 +215,6 @@ function openLink(link: string | undefined) {
 
 const toolIsAltered = computed<boolean>(() => {
   return !isEqual(tool.value, toolOriginal.value);
-});
-
-onBeforeUnmount((e) => {
-  if (toolIsAltered.value) {
-    console.log(e);
-  }
 });
 </script>
 
