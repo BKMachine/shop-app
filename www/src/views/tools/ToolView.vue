@@ -5,11 +5,17 @@
     </div>
     <div class="d-flex align-center justify-space-between py-4">
       <img class="tool-img" :src="tool.img" alt="" />
-      <div class="stock-container">
-        <div class="stock">
-          {{ tool.stock }}
+      <div class="d-flex">
+        <div class="d-flex align-center flex-column mr-6">
+          <div class="stock">
+            {{ tool.stock }}
+          </div>
+          <div>In Stock</div>
         </div>
-        <div>In Stock</div>
+        <div class="d-flex flex-column align-end justify-center">
+          <v-chip :class="{ active: tool.autoReorder }" class="mb-2">Auto Reorder</v-chip>
+          <v-chip :class="{ active: tool.onOrder }">On Order</v-chip>
+        </div>
       </div>
     </div>
     <v-tabs v-model="tab" class="mb-4" bg-color="#555555" color="yellow">
@@ -241,5 +247,9 @@ const toolIsAltered = computed<boolean>(() => {
 .container {
   height: 200px;
   position: relative;
+}
+.active {
+  background: #901394;
+  color: white;
 }
 </style>
