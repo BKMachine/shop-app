@@ -147,7 +147,7 @@
 
 <script setup lang="ts">
 import { isEqual } from 'lodash';
-import { computed, onBeforeMount, onMounted, ref } from 'vue';
+import { computed, onBeforeMount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
@@ -172,9 +172,14 @@ onBeforeMount(() => {
   category.value = type ? type : 'milling';
 });
 
+const id = computed(() => {
+  return router.currentRoute.value.params.id;
+});
+
 onMounted(() => {
   const routeName = router.currentRoute.value.name;
   if (routeName === 'viewTool') fetchTool();
+  watch(id, fetchTool);
 });
 
 const coatings = computed(() => {
