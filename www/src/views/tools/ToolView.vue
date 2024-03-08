@@ -6,15 +6,17 @@
     <div class="d-flex align-center justify-space-between py-4">
       <img class="tool-img" :src="tool.img" alt="" />
       <div class="d-flex">
-        <div class="d-flex align-center flex-column mr-6">
-          <div class="stock">
-            {{ tool.stock }}
+        <div class="d-flex align-center flex-column mr-4">
+          <div class="d-flex flex-column">
+            <div class="stock">{{ tool.stock }}</div>
+            <div>In Stock</div>
           </div>
-          <div>In Stock</div>
         </div>
         <div class="d-flex flex-column align-end justify-center">
-          <v-chip :class="{ active: tool.autoReorder }" class="mb-2">Auto Reorder</v-chip>
-          <v-chip :class="{ active: tool.onOrder }">On Order</v-chip>
+          <v-chip :class="{ active: tool.autoReorder }" class="mb-2" density="comfortable">
+            Auto Reorder
+          </v-chip>
+          <v-chip :class="{ active: tool.onOrder }" density="comfortable">On Order</v-chip>
         </div>
       </div>
     </div>
@@ -225,16 +227,10 @@ const toolIsAltered = computed<boolean>(() => {
 </script>
 
 <style scoped>
-.stock-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  flex-direction: column;
-}
 .stock {
   font-weight: bolder;
   font-size: 3em;
+  line-height: 0.8;
 }
 .tool-img {
   max-width: 400px;
