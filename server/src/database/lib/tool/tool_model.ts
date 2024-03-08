@@ -17,6 +17,7 @@ const schema = new Schema<ToolDoc>({
   techDataLink: String,
   cost: Number,
   onOrder: { type: Boolean, default: false },
+  orderedOn: Date,
 });
 
 export default model<ToolDoc>('tools', schema);

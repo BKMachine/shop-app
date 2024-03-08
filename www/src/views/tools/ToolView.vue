@@ -7,7 +7,7 @@
       <img class="tool-img" :src="tool.img" alt="" />
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
-          <div class="d-flex flex-column">
+          <div class="d-flex flex-column align-center">
             <div class="stock">{{ tool.stock }}</div>
             <div>In Stock</div>
           </div>
@@ -124,8 +124,9 @@
         </v-window-item>
 
         <v-window-item value="stock">
-          <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="green"></v-switch>
-          <v-checkbox v-model="tool.onOrder" label="On Order" color="green"></v-checkbox>
+          <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="#901394"></v-switch>
+          <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
+          <div v-if="tool.orderedOn">Last ordered on: {{ tool.orderedOn }}</div>
           <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
           <v-text-field
             v-model.number="tool.cost"

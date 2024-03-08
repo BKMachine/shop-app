@@ -20,6 +20,7 @@ interface ToolDoc {
   techDataLink?: string;
   cost?: number;
   onOrder: boolean;
+  orderedOn?: string;
 }
 
 type ToolCategory = 'milling' | 'turning';

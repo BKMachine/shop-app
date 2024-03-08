@@ -53,7 +53,6 @@ export const useToolStore = defineStore('tools', () => {
       ...tool,
       vendor: tool.vendor ? tool.vendor._id : undefined,
     };
-    if (clone.reorderThreshold > 0 && clone.stock > clone.reorderThreshold) clone.onOrder = false;
     await axios.put('/tools', { data: clone }).then(({ data }: { data: ToolDoc }) => {
       const index = rawTools.value.findIndex((x) => x._id === tool._id);
       if (index > -1) rawTools.value[index] = data;
