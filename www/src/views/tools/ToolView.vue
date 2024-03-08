@@ -10,6 +10,12 @@
           <div class="d-flex flex-column align-center">
             <div class="stock">{{ tool.stock }}</div>
             <div>In Stock</div>
+            <div class="location">
+              <span v-if="tool.location">
+                {{ tool.location }}
+              </span>
+              <span v-if="tool.position"> - {{ tool.position }}</span>
+            </div>
           </div>
         </div>
         <div class="d-flex flex-column align-end justify-center">
@@ -124,17 +130,41 @@
         </v-window-item>
 
         <v-window-item value="stock">
-          <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="#901394"></v-switch>
-          <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
-          <div v-if="tool.orderedOn">Last ordered on: {{ tool.orderedOn }}</div>
-          <v-text-field v-model.number="tool.stock" label="Stock Qty"></v-text-field>
-          <v-text-field
-            v-model.number="tool.cost"
-            label="Cost"
-            prepend-inner-icon="mdi-currency-usd"
-          ></v-text-field>
-          <v-text-field v-model.number="tool.reorderQty" label="Reorder Qty"></v-text-field>
-          <v-text-field v-model.number="tool.reorderThreshold" label="Min Stock Qty"></v-text-field>
+          <v-row>
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="tool.stock"
+                label="Stock Qty"
+                type="number"
+              ></v-text-field>
+              <v-combobox
+                v-model="tool.location"
+                label="Location"
+                :items="toolStore.locations"
+              ></v-combobox>
+              <v-text-field v-model="tool.position" label="Position"></v-text-field>
+            </v-col>
+            <v-col cols="6">
+              <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="#901394"></v-switch>
+              <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
+              <div v-if="tool.orderedOn">Last ordered on: {{ tool.orderedOn }}</div>
+              <v-text-field
+                v-model.number="tool.cost"
+                label="Cost"
+                prepend-inner-icon="mdi-currency-usd"
+              ></v-text-field>
+              <v-text-field
+                v-model.number="tool.reorderQty"
+                label="Reorder Qty"
+                type="number"
+              ></v-text-field>
+              <v-text-field
+                v-model.number="tool.reorderThreshold"
+                label="Min Stock Qty"
+                type="number"
+              ></v-text-field>
+            </v-col>
+          </v-row>
         </v-window-item>
 
         <v-window-item value="tech">
@@ -156,7 +186,7 @@ import { useVendorStore } from '@/stores/vendor_store';
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
-const tab = ref('general');
+const tab = ref<'general' | 'stock' | 'tech'>('stock');
 const tool = ref<ToolDoc | ToolDoc_Vendor>({
   stock: 0,
   reorderThreshold: 0,
@@ -253,5 +283,8 @@ const toolIsAltered = computed<boolean>(() => {
 .active {
   background: #901394;
   color: white;
+}
+.location {
+  font-size: 0.8em;
 }
 </style>

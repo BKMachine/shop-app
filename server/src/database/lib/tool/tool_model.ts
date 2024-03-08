@@ -18,6 +18,8 @@ const schema = new Schema<ToolDoc>({
   cost: Number,
   onOrder: { type: Boolean, default: false },
   orderedOn: Date,
+  location: String,
+  position: String,
 });
 
 export default model<ToolDoc>('tools', schema);

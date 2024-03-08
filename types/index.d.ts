@@ -21,6 +21,8 @@ interface ToolDoc {
   cost?: number;
   onOrder: boolean;
   orderedOn?: string;
+  location?: string;
+  position?: string;
 }
 
 type ToolCategory = 'milling' | 'turning';

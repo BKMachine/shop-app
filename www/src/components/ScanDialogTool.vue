@@ -4,10 +4,14 @@
       <img :src="tool.img" class="tool-img" alt="" />
     </v-avatar>
     <v-card class="card">
-      <v-card-title class="text-right">
+      <v-card-title class="text-right card-title">
         <div>{{ tool.item }}</div>
         <div>{{ tool.description }}</div>
         <div>{{ tool.stock }} in stock</div>
+        <div class="location">
+          <span v-if="tool.location">{{ tool.location }}</span>
+          <span v-if="tool.position"> - {{ tool.position }}</span>
+        </div>
       </v-card-title>
       <v-card-text class="card-body">
         <div class="mb-8">
@@ -248,5 +252,11 @@ function handleScan(e: ScanEvent) {
   bottom: -10px;
   left: 0;
   right: 0;
+}
+.location {
+  font-size: 0.8em;
+}
+.card-title {
+  line-height: 1.5;
 }
 </style>
