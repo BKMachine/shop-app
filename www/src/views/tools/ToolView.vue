@@ -137,11 +137,7 @@
                 label="Stock Qty"
                 type="number"
               ></v-text-field>
-              <v-combobox
-                v-model="tool.location"
-                label="Location"
-                :items="toolStore.locations"
-              ></v-combobox>
+              <v-combobox v-model="tool.location" label="Location"></v-combobox>
               <v-text-field v-model="tool.position" label="Position"></v-text-field>
             </v-col>
             <v-col cols="6">
