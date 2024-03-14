@@ -31,10 +31,22 @@ async function getAutoReorders() {
   }).populate('vendor');
 }
 
+async function pick(scanCode: string): Promise<{ status: number; message: string }> {
+  const tool = await Tool.findOne({
+    $or: [{ item: scanCode }, { barcode: scanCode }],
+  });
+  if (!tool) return { status: 404, message: 'Tool not found.' };
+  if (tool.stock <= 0) return { status: 400, message: 'Cannot pick a tool with 0 stock.' };
+  tool.stock--;
+  await tool.save();
+  return { status: 200, message: `Tool picked. ${tool.stock} remaining.` };
+}
+
 export default {
   list,
   findById,
   add,
   update,
   getAutoReorders,
+  pick,
 };

@@ -59,4 +59,18 @@ router.put('/tools', async (req, res, next) => {
   }
 });
 
+router.put('/tools/pick', async (req, res, next) => {
+  const { scanCode }: { scanCode: string | undefined } = req.body;
+  if (!scanCode) {
+    res.sendStatus(400);
+    return;
+  }
+  try {
+    const { status, message } = await Tools.pick(scanCode);
+    res.status(status).json({ message });
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;
