@@ -210,7 +210,8 @@ onMounted(() => {
 
 const coatings = computed(() => {
   if (!tool.value.vendor) return [];
-  const vendor = vendorStore.vendors.find((x) => x._id === tool.value.vendor);
+  const id = typeof tool.value.vendor === 'string' ? tool.value.vendor : tool.value.vendor?._id;
+  const vendor = vendorStore.vendors.find((x) => x._id === id);
   if (!vendor) return [];
   return vendor.coatings;
 });
