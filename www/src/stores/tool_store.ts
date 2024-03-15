@@ -68,11 +68,7 @@ export const useToolStore = defineStore('tools', () => {
   }
 
   async function update(tool: ToolDoc_Vendor) {
-    const clone: ToolDoc_VendorMap = {
-      ...tool,
-      vendor: tool.vendor ? tool.vendor._id : undefined,
-    };
-    await axios.put('/tools', { data: clone }).then(({ data }: { data: ToolDoc }) => {
+    await axios.put('/tools', { data: tool }).then(({ data }: { data: ToolDoc }) => {
       const index = rawTools.value.findIndex((x) => x._id === tool._id);
       if (index > -1) rawTools.value[index] = data;
     });

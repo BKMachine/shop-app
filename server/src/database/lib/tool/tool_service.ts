@@ -14,14 +14,18 @@ async function add(data: ToolDoc) {
   return doc;
 }
 
-async function update(doc: ToolDoc) {
-  const oldDoc = (await Tool.findById(doc._id)) as ToolDoc;
+async function update(doc: ToolDoc_Vendor) {
+  const newDoc = {
+    ...doc,
+    vendor: typeof doc.vendor === 'object' ? doc.vendor._id : doc.vendor,
+  };
+  const oldDoc = (await Tool.findById(newDoc._id)) as ToolDoc;
   if (!oldDoc) throw new Error('Missing Tool Document');
   // Set the orderedOn date if onOrder is newly set to true
-  if (doc.onOrder && !oldDoc.onOrder) doc.orderedOn = new Date().toISOString();
+  if (newDoc.onOrder && !oldDoc.onOrder) newDoc.orderedOn = new Date().toISOString();
   // Assume if the current stock is now greater than the reorderThreshold that the order has been fulfilled
-  if (doc.reorderThreshold > 0 && doc.stock > doc.reorderThreshold) doc.onOrder = false;
-  return Tool.findByIdAndUpdate(doc._id, doc, { new: true });
+  if (newDoc.reorderThreshold > 0 && newDoc.stock > newDoc.reorderThreshold) newDoc.onOrder = false;
+  return Tool.findByIdAndUpdate(newDoc._id, newDoc, { new: true });
 }
 
 async function getAutoReorders() {
