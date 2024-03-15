@@ -2,6 +2,7 @@
   <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:modelValue="onChange">
     <v-tab value="milling" class="milling">Milling</v-tab>
     <v-tab value="turning" class="turning">Turning</v-tab>
+    <v-tab value="other" class="other">Other</v-tab>
   </v-tabs>
 
   <v-window v-model="tab" class="mt-3">
@@ -19,6 +20,10 @@
         :headers="turningHeaders"
         :items="toolStore.turningTools"
       />
+    </v-window-item>
+
+    <v-window-item value="other">
+      <ToolsDataTable title="Other Tools" :headers="otherHeaders" :items="toolStore.otherTools" />
     </v-window-item>
   </v-window>
 </template>
@@ -88,6 +93,24 @@ const turningHeaders = [
   {
     title: 'Cutting Edges',
     key: 'flutes',
+  },
+  {
+    title: 'Item',
+    key: 'item',
+  },
+];
+
+const otherHeaders = [
+  {
+    key: 'img',
+  },
+  {
+    title: 'Description',
+    key: 'description',
+  },
+  {
+    title: 'Vendor',
+    key: 'vendor.name',
   },
   {
     title: 'Item',

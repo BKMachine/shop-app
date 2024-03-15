@@ -25,6 +25,10 @@ export const useToolStore = defineStore('tools', () => {
     return tools.value.filter((x) => x.category === 'turning');
   });
 
+  const otherTools = computed(() => {
+    return tools.value.filter((x) => x.category === 'other');
+  });
+
   const locations = computed(() => {
     return new Set(
       tools.value
@@ -93,6 +97,7 @@ export const useToolStore = defineStore('tools', () => {
     loading,
     millingTools,
     turningTools,
+    otherTools,
     locations,
     fetch,
     add,
