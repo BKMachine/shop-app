@@ -182,7 +182,7 @@ import { useVendorStore } from '@/stores/vendor_store';
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
-const tab = ref<'general' | 'stock' | 'tech'>('stock');
+const tab = ref<'general' | 'stock' | 'tech'>('general');
 const tool = ref<ToolDoc | ToolDoc_Vendor>({
   stock: 0,
   reorderThreshold: 0,
@@ -217,21 +217,15 @@ const coatings = computed(() => {
 
 function fetchTool() {
   const { id } = router.currentRoute.value.params;
-  const match = toolStore.tools.find((x) => x._id === id);
-  if (match) {
-    tool.value = { ...match };
-    toolOriginal.value = { ...match };
-  } else {
-    axios
-      .get(`/tools/${id}`)
-      .then(({ data }: { data: ToolDoc_Vendor }) => {
-        tool.value = { ...data };
-        toolOriginal.value = { ...data };
-      })
-      .catch(() => {
-        alert('Tool not found');
-      });
-  }
+  axios
+    .get(`/tools/${id}`)
+    .then(({ data }: { data: ToolDoc_Vendor }) => {
+      tool.value = { ...data };
+      toolOriginal.value = { ...data };
+    })
+    .catch(() => {
+      alert('Tool not found');
+    });
 }
 
 const fluteText = computed(() => {
