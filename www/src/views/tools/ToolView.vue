@@ -141,9 +141,34 @@
               <v-text-field v-model="tool.position" label="Position"></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="#901394"></v-switch>
-              <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
-              <div v-if="tool.orderedOn">Last ordered on: {{ tool.orderedOn }}</div>
+              <v-row>
+                <v-switch
+                  v-model="tool.autoReorder"
+                  label="Auto Reorder"
+                  color="#901394"
+                ></v-switch>
+                <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
+                <div v-if="tool.orderedOn">Last ordered on: {{ tool.orderedOn }}</div>
+              </v-row>
+              <v-select
+                v-model="tool.supplier"
+                label="Supplier"
+                :items="supplierStore.suppliers"
+                item-title="name"
+                item-value="_id"
+              >
+                <template v-slot:item="{ props, item }">
+                  <v-list-item v-bind="props" title="">
+                    <template v-slot:prepend>
+                      <v-avatar rounded="0"
+                        ><v-img class="vendor-logo" :src="item.raw.logo"></v-img
+                      ></v-avatar>
+                    </template>
+
+                    {{ item.raw.name }}
+                  </v-list-item>
+                </template>
+              </v-select>
               <v-text-field
                 v-model.number="tool.cost"
                 label="Cost"
@@ -176,20 +201,22 @@ import { isEqual } from 'lodash';
 import { computed, onBeforeMount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
+import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
+const supplierStore = useSupplierStore();
 
 const tab = ref<'general' | 'stock' | 'tech'>('general');
-const tool = ref<ToolDoc | ToolDoc_Vendor>({
+const tool = ref<ToolDoc | ToolDoc_Pop>({
   stock: 0,
   reorderThreshold: 0,
   reorderQty: 0,
   autoReorder: false,
-} as ToolDoc_Vendor);
-const toolOriginal = ref<ToolDoc | ToolDoc_Vendor>({} as ToolDoc_Vendor);
+} as ToolDoc_Pop);
+const toolOriginal = ref<ToolDoc | ToolDoc_Pop>({} as ToolDoc_Pop);
 
 const category = ref<ToolCategory>('milling');
 
@@ -220,7 +247,7 @@ function fetchTool() {
   const { id } = router.currentRoute.value.params;
   axios
     .get(`/tools/${id}`)
-    .then(({ data }: { data: ToolDoc_Vendor }) => {
+    .then(({ data }: { data: ToolDoc_Pop }) => {
       tool.value = { ...data };
       toolOriginal.value = { ...data };
     })
@@ -238,7 +265,7 @@ async function save() {
   if (routeName === 'createTool') {
     await toolStore.add({ ...(tool.value as ToolDoc), category: category.value });
   } else if (routeName === 'viewTool') {
-    await toolStore.update(tool.value as ToolDoc_Vendor);
+    await toolStore.update(tool.value as ToolDoc_Pop);
   }
   await router.push({ name: 'tools' });
 }

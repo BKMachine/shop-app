@@ -1,18 +1,21 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import axios from '@/plugins/axios';
+import { useSupplierStore } from '@/stores/supplier_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 export const useToolStore = defineStore('tools', () => {
   const vendorStore = useVendorStore();
+  const supplierStore = useSupplierStore();
 
   const rawTools = ref<ToolDoc[]>([]);
 
-  const tools = computed<ToolDoc_Vendor[]>(() => {
+  const tools = computed<ToolDoc_Pop[]>(() => {
     return rawTools.value.map((x) => {
       return {
         ...x,
         vendor: vendorStore.vendors.find((y) => y._id === x.vendor),
+        supplier: supplierStore.suppliers.find((y) => y._id === x.supplier),
       };
     });
   });
@@ -57,7 +60,7 @@ export const useToolStore = defineStore('tools', () => {
       });
   }
 
-  async function add(tool: ToolDoc_VendorMap) {
+  async function add(tool: ToolDoc) {
     const data = {
       ...tool,
       category: tool.category.toLowerCase(),
@@ -67,7 +70,7 @@ export const useToolStore = defineStore('tools', () => {
     });
   }
 
-  async function update(tool: ToolDoc_Vendor) {
+  async function update(tool: ToolDoc_Pop) {
     await axios.put('/tools', { data: tool }).then(({ data }: { data: ToolDoc }) => {
       const index = rawTools.value.findIndex((x) => x._id === tool._id);
       if (index > -1) rawTools.value[index] = data;
@@ -78,9 +81,8 @@ export const useToolStore = defineStore('tools', () => {
     const index = tools.value.findIndex((x) => x._id === id);
     const tool = tools.value[index];
     if (!tool) return;
-    const clone: ToolDoc_Vendor = {
+    const clone: ToolDoc_Pop = {
       ...tool,
-      vendor: tool.vendor,
       stock: (tool.stock += num),
     };
     if (clone.stock < 0) throw Error('Stock cannot be less than 0');

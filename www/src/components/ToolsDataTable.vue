@@ -48,7 +48,7 @@ import { useToolStore } from '@/stores/tool_store';
 defineProps<{
   title: string;
   headers: { key: string; title?: string }[];
-  items: ToolDoc_Vendor[];
+  items: ToolDoc_Pop[];
 }>();
 
 const toolStore = useToolStore();

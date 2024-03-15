@@ -6,6 +6,7 @@ interface ToolDoc {
   _id: string;
   description: string;
   vendor?: string;
+  supplier?: string;
   item?: string;
   barcode?: string;
   stock: number;
@@ -27,12 +28,9 @@ interface ToolDoc {
 
 type ToolCategory = 'milling' | 'turning' | 'other';
 
-interface ToolDoc_Vendor extends ToolDoc {
+interface ToolDoc_Pop extends ToolDoc {
   vendor?: VendorDoc;
-}
-
-interface ToolDoc_VendorMap extends ToolDoc {
-  vendor?: string;
+  supplier?: SupplierDoc;
 }
 
 interface VendorDoc {
@@ -50,26 +48,9 @@ interface SupplierDoc {
   homepage?: string;
 }
 
-interface SettingDoc {
-  _id: string;
-  name: string;
-  data: any;
-}
-
 interface CustomerDoc {
   _id: string;
   name: string;
   logo?: string;
   homepage?: string;
-}
-
-interface SMTPSettingDoc extends SettingDoc {
-  name: 'smtp';
-  data: {
-    host: string;
-    port?: number;
-    username: string;
-    password: string;
-    to: string[];
-  };
 }

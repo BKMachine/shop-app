@@ -3,6 +3,7 @@ import { Schema, Types, model } from 'mongoose';
 const schema = new Schema<ToolDoc>({
   description: { type: String, required: true },
   vendor: { type: Types.ObjectId, ref: 'vendors' },
+  supplier: { type: Types.ObjectId, ref: 'suppliers' },
   item: { type: String, unique: true },
   barcode: { type: String, unique: true },
   stock: { type: Number, default: 0 },

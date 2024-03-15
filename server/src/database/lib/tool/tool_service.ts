@@ -14,10 +14,11 @@ async function add(data: ToolDoc) {
   return doc;
 }
 
-async function update(doc: ToolDoc_Vendor) {
+async function update(doc: ToolDoc_Pop) {
   const newDoc = {
     ...doc,
     vendor: typeof doc.vendor === 'object' ? doc.vendor._id : doc.vendor,
+    supplier: typeof doc.supplier === 'object' ? doc.supplier._id : doc.supplier,
   };
   const oldDoc = (await Tool.findById(newDoc._id)) as ToolDoc;
   if (!oldDoc) throw new Error('Missing Tool Document');

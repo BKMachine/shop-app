@@ -38,18 +38,18 @@ const USDollar = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 });
 
-const tools = ref<ToolDoc_Vendor[]>([]);
+const tools = ref<ToolDoc_Pop[]>([]);
 
 function formatCost(cost: number): string {
   return USDollar.format(cost);
 }
 
-function getCost(tool: ToolDoc_Vendor): string {
+function getCost(tool: ToolDoc_Pop): string {
   if (!tool.cost || !tool.reorderQty) return formatCost(0);
   return formatCost(tool.cost * tool.reorderQty);
 }
 
-type Item = [brand: string, matches: ToolDoc_Vendor[]];
+type Item = [brand: string, matches: ToolDoc_Pop[]];
 const items = computed<Item[]>(() => {
   const brands: Set<string> = new Set(
     tools.value
@@ -101,12 +101,12 @@ const unOrderedTotal = computed(() => {
 
 onMounted(() => {
   tools.value = [];
-  axios.get('/tools/reorders').then(({ data }: { data: ToolDoc_Vendor[] }) => {
+  axios.get('/tools/reorders').then(({ data }: { data: ToolDoc_Pop[] }) => {
     tools.value = data;
   });
 });
 
-function toggleOnOrder(tool: ToolDoc_Vendor) {
+function toggleOnOrder(tool: ToolDoc_Pop) {
   tool.onOrder = !tool.onOrder;
   toolStore.update(tool);
 }
