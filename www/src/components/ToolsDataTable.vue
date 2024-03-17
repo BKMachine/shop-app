@@ -27,7 +27,7 @@
           :items="items"
           :search="search"
           :loading="toolStore.loading"
-          @dblclick:row="openTool"
+          @click:row="openTool"
           @update:page="setPage"
           @update:items-per-page="setPage"
         >
