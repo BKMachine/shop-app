@@ -13,7 +13,6 @@
       <v-list>
         <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }"> Tools </v-list-item>
-        <v-list-item prepend-icon="mdi-barcode" @click="scanTest"> Test </v-list-item>
       </v-list>
       <template v-slot:append>
         <v-list-item prepend-icon="mdi-file-document-outline" link :to="{ name: 'toolReport' }">
@@ -71,11 +70,6 @@ onBeforeMount(() => {
   vendorStore.fetch();
   toolStore.fetch();
 });
-
-function scanTest() {
-  scannerStore.setStockAdjustment(0);
-  scannerStore.scan('62147');
-}
 </script>
 
 <style scoped>

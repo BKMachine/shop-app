@@ -2,11 +2,13 @@ import { Server } from 'http';
 import { HttpTerminator, createHttpTerminator } from 'http-terminator';
 import logger from '../logger';
 import app from './app';
+import sockets from './sockets';
 
 let httpTerminator: HttpTerminator;
 
 export function start(): void {
   const server = new Server(app);
+  sockets(server);
   const port = process.env.PORT || 3000;
   httpTerminator = createHttpTerminator({ server });
   server.listen(port);

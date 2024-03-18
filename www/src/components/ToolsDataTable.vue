@@ -18,6 +18,7 @@
             single-line
             variant="outlined"
             hide-details
+            clearable
           ></v-text-field>
         </template>
 

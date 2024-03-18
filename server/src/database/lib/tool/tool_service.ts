@@ -1,4 +1,5 @@
 import Tool from './tool_model';
+import { emit } from '../../../server/sockets';
 
 async function list() {
   return Tool.find({});
@@ -26,7 +27,9 @@ async function update(doc: ToolDoc_Pop) {
   if (newDoc.onOrder && !oldDoc.onOrder) newDoc.orderedOn = new Date().toISOString();
   // Assume if the current stock is now greater than the reorderThreshold that the order has been fulfilled
   if (newDoc.reorderThreshold > 0 && newDoc.stock > newDoc.reorderThreshold) newDoc.onOrder = false;
-  return Tool.findByIdAndUpdate(newDoc._id, newDoc, { new: true });
+  const updatedTool = await Tool.findByIdAndUpdate(newDoc._id, newDoc, { new: true });
+  emit('tool', updatedTool);
+  return updatedTool;
 }
 
 async function getAutoReorders() {

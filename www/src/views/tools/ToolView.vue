@@ -231,8 +231,14 @@ const id = computed(() => {
 
 onMounted(() => {
   const routeName = router.currentRoute.value.name;
+  const routeParams = router.currentRoute.value.params;
   if (routeName === 'viewTool') fetchTool();
   watch(id, fetchTool);
+  watch(toolStore.rawTools, () => {
+    if (routeName !== 'viewTool') return;
+    const match = toolStore.rawTools.find((x) => x._id === routeParams.id);
+    if (match) tool.value = match;
+  });
 });
 
 const coatings = computed(() => {

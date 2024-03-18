@@ -1,16 +1,25 @@
 import './assets/style.css';
 
+import { io } from 'socket.io-client';
 import { createApp } from 'vue';
 import App from './App.vue';
 import { registerPlugins } from './plugins';
 import axios from '@/plugins/axios';
+import { useToolStore } from '@/stores/tool_store';
 
 const app = createApp(App);
 registerPlugins(app);
 app.mount('#app');
 
-let version: string;
+const toolStore = useToolStore();
+const socket = io();
 
+socket.on('tool', (tool: ToolDoc) => {
+  console.log('SOCKET_tool');
+  toolStore.SOCKET_tool(tool);
+});
+
+let version: string;
 async function getVersion() {
   axios.get('/version').then(({ data }) => {
     if (!version) version = data;

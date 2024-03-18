@@ -89,6 +89,11 @@ export const useToolStore = defineStore('tools', () => {
     await update(clone);
   }
 
+  function SOCKET_tool(tool: ToolDoc) {
+    const index = rawTools.value.findIndex((x) => x._id === tool._id);
+    if (index > -1) rawTools.value[index] = tool;
+  }
+
   return {
     rawTools,
     tools,
@@ -101,5 +106,6 @@ export const useToolStore = defineStore('tools', () => {
     add,
     update,
     adjustStock,
+    SOCKET_tool,
   };
 });
