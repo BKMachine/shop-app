@@ -1,5 +1,5 @@
-import Tool from './tool_model';
 import { emit } from '../../../server/sockets';
+import Tool from './tool_model';
 
 async function list() {
   return Tool.find({});
