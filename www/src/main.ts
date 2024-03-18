@@ -15,7 +15,6 @@ const toolStore = useToolStore();
 const socket = io();
 
 socket.on('tool', (tool: ToolDoc) => {
-  console.log('SOCKET_tool');
   toolStore.SOCKET_tool(tool);
 });
 
