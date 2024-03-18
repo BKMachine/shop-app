@@ -47,6 +47,7 @@ async function pick(scanCode: string): Promise<{ status: number; message: string
   if (tool.stock <= 0) return { status: 400, message: 'Cannot pick a tool with 0 stock.' };
   tool.stock--;
   await tool.save();
+  emit('tool', tool);
   return { status: 200, message: `Tool picked. ${tool.stock} remaining.` };
 }
 
