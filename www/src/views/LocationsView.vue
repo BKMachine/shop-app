@@ -2,7 +2,12 @@
   <v-row>
     <v-col cols="12">
       <v-card>
-        <v-card-title class="header my-4"> Stock by location </v-card-title>
+        <v-card-title class="header my-4">
+          Stock by location
+          <span v-if="tools.length && location">
+            - {{ tools.length }} result{{ tools.length === 1 ? '' : 's' }}
+          </span>
+        </v-card-title>
         <v-card-text
           ><v-row>
             <v-col cols="6">
@@ -10,11 +15,16 @@
                 v-model="location"
                 :items="toolStore.locations"
                 label="Location"
-                @update:modelValue="position = ''"
+                @update:modelValue="updateLocation"
               ></v-select>
             </v-col>
             <v-col cols="6">
-              <v-select v-model="position" :items="positions" label="Position"></v-select>
+              <v-select
+                v-model="position"
+                :items="positions"
+                label="Position"
+                @update:modelValue="updateQueryString"
+              ></v-select>
             </v-col>
           </v-row>
           <v-data-table-virtual
@@ -40,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
@@ -95,6 +105,24 @@ const headers = [
 function openTool(event: unknown, { item }: { item: ToolDoc }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
+
+function updateQueryString() {
+  router.push({
+    name: 'locations',
+    query: { loc: location.value, pos: position.value },
+  });
+}
+
+function updateLocation() {
+  position.value = '';
+  updateQueryString();
+}
+
+onMounted(() => {
+  const { loc, pos } = router.currentRoute.value.query;
+  if (loc) location.value = loc as string;
+  if (pos) position.value = pos as string;
+});
 </script>
 
 <style scoped>
