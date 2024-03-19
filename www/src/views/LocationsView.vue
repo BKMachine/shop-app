@@ -50,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { uniq } from 'lodash';
 import { computed, onMounted, ref } from 'vue';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
@@ -61,9 +62,11 @@ const position = ref('');
 
 const positions = computed(() => {
   if (!location.value) return [];
-  return toolStore.tools
-    .filter((x) => x.position && x.location === location.value)
-    .map((x) => x.position);
+  return uniq(
+    toolStore.tools
+      .filter((x) => x.position && x.location === location.value)
+      .map((x) => x.position),
+  );
 });
 
 const tools = computed(() => {
