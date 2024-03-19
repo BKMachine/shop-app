@@ -51,6 +51,8 @@ function onChange() {
 const millingHeaders = [
   {
     key: 'img',
+    width: 150,
+    sortable: false,
   },
   {
     title: 'Description',
@@ -77,6 +79,8 @@ const millingHeaders = [
 const turningHeaders = [
   {
     key: 'img',
+    width: 150,
+    sortable: false,
   },
   {
     title: 'Description',
@@ -103,6 +107,8 @@ const turningHeaders = [
 const otherHeaders = [
   {
     key: 'img',
+    width: 150,
+    sortable: false,
   },
   {
     title: 'Description',

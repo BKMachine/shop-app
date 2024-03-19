@@ -13,6 +13,9 @@
       <v-list>
         <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }"> Tools </v-list-item>
+        <v-list-item prepend-icon="mdi-map-marker" link :to="{ name: 'locations' }">
+          Locations
+        </v-list-item>
       </v-list>
       <template v-slot:append>
         <v-list-item prepend-icon="mdi-file-document-outline" link :to="{ name: 'toolReport' }">

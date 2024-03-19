@@ -33,7 +33,7 @@
           @update:items-per-page="setPage"
         >
           <template v-slot:[`item.img`]="{ item }">
-            <v-img :src="item.img"></v-img>
+            <v-img :src="item.img" class="tool-img"></v-img>
           </template>
         </v-data-table>
       </v-card>
