@@ -60,17 +60,21 @@
           class="mr-2"
           density="comfortable"
           prepend-icon="mdi-content-save-outline"
-          :disabled="!toolIsAltered"
+          :disabled="!toolIsAltered || !valid"
           @click="save"
         >
           Save
         </v-btn>
       </div>
     </v-tabs>
-    <v-form>
+    <v-form v-model="valid">
       <v-window v-model="tab" class="tab-window">
         <v-window-item value="general">
-          <v-text-field v-model="tool.description" label="Description"></v-text-field>
+          <v-text-field
+            v-model="tool.description"
+            label="Description"
+            :rules="[rules.required]"
+          ></v-text-field>
           <div class="d-flex">
             <v-text-field
               v-model="tool.item"
@@ -83,6 +87,7 @@
               class="ml-2"
               label="Barcode"
               append-inner-icon="mdi-barcode"
+              :rules="[rules.barcode]"
             ></v-text-field>
           </div>
           <div class="d-flex">
@@ -136,19 +141,29 @@
                 v-model.number="tool.stock"
                 label="Stock Qty"
                 type="number"
+                min="0"
+                @update:modelValue="checkNumber($event, 'stock')"
               ></v-text-field>
-              <v-combobox v-model="tool.location" label="Location"></v-combobox>
+              <v-combobox
+                v-model="tool.location"
+                :items="toolStore.locations"
+                label="Location"
+              ></v-combobox>
               <v-text-field v-model="tool.position" label="Position"></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-row>
-                <v-switch
-                  v-model="tool.autoReorder"
-                  label="Auto Reorder"
-                  color="#901394"
-                ></v-switch>
-                <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
-                <div v-if="tool.orderedOn">Last ordered on: {{ tool.orderedOn }}</div>
+              <v-row class="d-flex flex-row">
+                <v-col cols="12">
+                  <v-switch
+                    v-model="tool.autoReorder"
+                    label="Auto Reorder"
+                    color="#901394"
+                  ></v-switch>
+                  <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
+                  <v-sheet v-if="tool.orderedOn" class="ordered-date">
+                    Last ordered on: {{ formattedOrderedOn }}
+                  </v-sheet>
+                </v-col>
               </v-row>
               <v-select
                 v-model="tool.supplier"
@@ -173,23 +188,34 @@
                 v-model.number="tool.cost"
                 label="Cost"
                 prepend-inner-icon="mdi-currency-usd"
+                @update:modelValue="checkNumber($event, 'cost')"
               ></v-text-field>
               <v-text-field
                 v-model.number="tool.reorderQty"
                 label="Reorder Qty"
                 type="number"
+                min="0"
+                @update:modelValue="checkNumber($event, 'reorderQty')"
               ></v-text-field>
               <v-text-field
                 v-model.number="tool.reorderThreshold"
                 label="Min Stock Qty"
                 type="number"
+                min="0"
+                @update:modelValue="checkNumber($event, 'reorderThreshold')"
               ></v-text-field>
             </v-col>
           </v-row>
         </v-window-item>
 
         <v-window-item value="tech">
-          <v-text-field v-model.number="tool.flutes" :label="fluteText"></v-text-field>
+          <v-text-field
+            v-model.number="tool.flutes"
+            :label="fluteText"
+            type="number"
+            min="0"
+            @update:modelValue="checkNumber($event, 'flutes')"
+          ></v-text-field>
         </v-window-item>
       </v-window>
     </v-form>
@@ -198,6 +224,8 @@
 
 <script setup lang="ts">
 import { isEqual } from 'lodash';
+import { DateTime } from 'luxon';
+// import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeMount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
@@ -205,11 +233,12 @@ import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
+// const toast = useToast();
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 const supplierStore = useSupplierStore();
 
-const tab = ref<'general' | 'stock' | 'tech'>('general');
+const tab = ref<'general' | 'stock' | 'tech'>('stock');
 const tool = ref<ToolDoc | ToolDoc_Pop>({
   stock: 0,
   reorderThreshold: 0,
@@ -217,6 +246,7 @@ const tool = ref<ToolDoc | ToolDoc_Pop>({
   autoReorder: false,
 } as ToolDoc_Pop);
 const toolOriginal = ref<ToolDoc | ToolDoc_Pop>({} as ToolDoc_Pop);
+const valid = ref(false);
 
 const category = ref<ToolCategory>('milling');
 
@@ -237,7 +267,10 @@ onMounted(() => {
   watch(toolStore.rawTools, () => {
     if (routeName !== 'viewTool') return;
     const match = toolStore.rawTools.find((x) => x._id === routeParams.id);
-    if (match) tool.value = match;
+    if (match) {
+      tool.value = { ...match };
+      toolOriginal.value = { ...match };
+    }
   });
 });
 
@@ -273,7 +306,9 @@ async function save() {
   } else if (routeName === 'viewTool') {
     await toolStore.update(tool.value as ToolDoc_Pop);
   }
-  await router.push({ name: 'tools' });
+  // await router.push({ name: 'tools' });
+  // toast.add({ severity: 'info', summary: 'Info', detail: 'Message Content', life: 3000 });
+  fetchTool();
 }
 
 function openLink(link: string | undefined) {
@@ -284,6 +319,28 @@ function openLink(link: string | undefined) {
 const toolIsAltered = computed<boolean>(() => {
   return !isEqual(tool.value, toolOriginal.value);
 });
+
+const formattedOrderedOn = computed(() => {
+  if (!tool.value.orderedOn) return '';
+  const time = DateTime.fromISO(tool.value.orderedOn);
+  return time.toLocaleString();
+});
+
+const rules: Rules = {
+  required: (val) => !!val || 'Required',
+  barcode: (val) => {
+    if (!tool.value.item) return true;
+    return val !== tool.value.item || 'Not needed if the same as Product Number';
+  },
+};
+
+function checkNumber(val: string, key: keyof ToolDoc) {
+  if (!val) return;
+  const num = parseInt(val);
+  if (isNaN(num) || num < 0) {
+    tool.value[key] = 0 as never;
+  }
+}
 </script>
 
 <style scoped>
@@ -310,5 +367,8 @@ const toolIsAltered = computed<boolean>(() => {
 }
 .location {
   font-size: 0.8em;
+}
+.ordered-date {
+  margin: auto;
 }
 </style>

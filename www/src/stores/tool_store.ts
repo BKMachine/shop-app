@@ -1,3 +1,4 @@
+import { uniq } from 'lodash';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import axios from '@/plugins/axios';
@@ -33,7 +34,7 @@ export const useToolStore = defineStore('tools', () => {
   });
 
   const locations = computed(() => {
-    return new Set(
+    return uniq(
       tools.value
         .filter((x) => x.location)
         .map((x) => x.location)
