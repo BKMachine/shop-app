@@ -1,5 +1,8 @@
 <template>
-  <v-container class="container">
+  <div v-if="loading" class="d-flex justify-center align-center loading">
+    <v-progress-circular indeterminate color="primary" size="150"></v-progress-circular>
+  </div>
+  <v-container v-else class="container">
     <div class="title text-center">
       <h1>{{ tool.description }}</h1>
     </div>
@@ -225,7 +228,6 @@
 <script setup lang="ts">
 import { isEqual } from 'lodash';
 import { DateTime } from 'luxon';
-// import { useToast } from 'primevue/usetoast';
 import { computed, onBeforeMount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
@@ -233,7 +235,6 @@ import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
-// const toast = useToast();
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 const supplierStore = useSupplierStore();
@@ -263,7 +264,9 @@ onMounted(() => {
   const routeName = router.currentRoute.value.name;
   const routeParams = router.currentRoute.value.params;
   if (routeName === 'viewTool') fetchTool();
-  watch(id, fetchTool);
+  watch(id, () => {
+    fetchTool();
+  });
   watch(toolStore.rawTools, () => {
     if (routeName !== 'viewTool') return;
     const match = toolStore.rawTools.find((x) => x._id === routeParams.id);
@@ -282,8 +285,11 @@ const coatings = computed(() => {
   return vendor.coatings;
 });
 
-function fetchTool() {
+const loading = ref(false);
+
+function fetchTool(showSpinner: boolean = true) {
   const { id } = router.currentRoute.value.params;
+  if (showSpinner) loading.value = true;
   axios
     .get(`/tools/${id}`)
     .then(({ data }: { data: ToolDoc_Pop }) => {
@@ -292,6 +298,9 @@ function fetchTool() {
     })
     .catch(() => {
       alert('Tool not found');
+    })
+    .finally(() => {
+      loading.value = false;
     });
 }
 
@@ -306,9 +315,7 @@ async function save() {
   } else if (routeName === 'viewTool') {
     await toolStore.update(tool.value as ToolDoc_Pop);
   }
-  // await router.push({ name: 'tools' });
-  // toast.add({ severity: 'info', summary: 'Info', detail: 'Message Content', life: 3000 });
-  fetchTool();
+  fetchTool(false);
 }
 
 function openLink(link: string | undefined) {
@@ -370,5 +377,8 @@ function checkNumber(val: string, key: keyof ToolDoc) {
 }
 .ordered-date {
   margin: auto;
+}
+.loading {
+  height: 100%;
 }
 </style>
