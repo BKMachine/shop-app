@@ -152,7 +152,11 @@
                 :items="toolStore.locations"
                 label="Location"
               ></v-combobox>
-              <v-text-field v-model="tool.position" label="Position"></v-text-field>
+              <v-text-field
+                v-model="tool.position"
+                label="Position"
+                @update:modelValue="tool.position = tool.position.toUpperCase()"
+              ></v-text-field>
             </v-col>
             <v-col cols="6">
               <v-row class="d-flex flex-row">
