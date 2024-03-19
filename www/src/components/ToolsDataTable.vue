@@ -61,7 +61,7 @@ function openTool(event: unknown, { item }: { item: ToolDoc }) {
 }
 
 function setPage() {
-  if (page.value === 1) return;
+  if (!toolStore.tools.length) return;
   router.push({ name: 'tools', query: { page: page.value } });
 }
 
@@ -69,11 +69,13 @@ onMounted(() => {
   getPage();
 });
 
-const loading = computed(() => {
-  return toolStore.loading;
-});
+const loading = computed(() => toolStore.loading);
+const query = computed(() => router.currentRoute.value.query);
 watch(loading, () => {
   if (!loading.value) getPage();
+});
+watch(query, () => {
+  getPage();
 });
 
 function getPage() {
