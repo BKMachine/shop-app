@@ -155,7 +155,7 @@
               <v-text-field
                 v-model="tool.position"
                 label="Position"
-                @update:modelValue="tool.position = tool.position.toUpperCase()"
+                @update:modelValue="tool.position = tool.position?.toUpperCase()"
               ></v-text-field>
             </v-col>
             <v-col cols="6">
