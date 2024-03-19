@@ -61,25 +61,27 @@ function openTool(event: unknown, { item }: { item: ToolDoc }) {
 }
 
 function setPage() {
-  router.push({ name: 'toolsPage', params: { page: page.value } });
+  if (page.value === 1) return;
+  router.push({ name: 'tools', query: { page: page.value } });
 }
 
-const thing = computed(() => {
-  return router.currentRoute.value.params;
-});
-
-watch(thing, () => {
-  selectPage();
-});
-
 onMounted(() => {
-  selectPage();
+  getPage();
 });
 
-function selectPage() {
-  const p = router.currentRoute.value.params.page;
-  const pageNum = parseInt((p as string) || '0');
-  if (pageNum !== page.value) page.value = Math.max(pageNum, 1);
+const loading = computed(() => {
+  return toolStore.loading;
+});
+watch(loading, () => {
+  if (!loading.value) getPage();
+});
+
+function getPage() {
+  const p = router.currentRoute.value.query.page;
+  const pageNum = parseInt(p as string) || 1;
+  if (!isNaN(pageNum) && pageNum !== page.value) {
+    page.value = pageNum;
+  }
 }
 </script>
 
