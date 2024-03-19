@@ -239,7 +239,7 @@ const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 const supplierStore = useSupplierStore();
 
-const tab = ref<'general' | 'stock' | 'tech'>('stock');
+const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'stock');
 const tool = ref<ToolDoc | ToolDoc_Pop>({
   stock: 0,
   reorderThreshold: 0,
