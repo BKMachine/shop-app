@@ -8,6 +8,7 @@
   <v-window v-model="tab" class="mt-3">
     <v-window-item value="milling">
       <ToolsDataTable
+        v-if="tab === 'milling'"
         title="Milling Tools"
         :headers="millingHeaders"
         :items="toolStore.millingTools"
@@ -16,6 +17,7 @@
 
     <v-window-item value="turning">
       <ToolsDataTable
+        v-if="tab === 'turning'"
         title="Turning Tools"
         :headers="turningHeaders"
         :items="toolStore.turningTools"
@@ -23,7 +25,12 @@
     </v-window-item>
 
     <v-window-item value="other">
-      <ToolsDataTable title="Other Tools" :headers="otherHeaders" :items="toolStore.otherTools" />
+      <ToolsDataTable
+        v-if="tab === 'other'"
+        title="Other Tools"
+        :headers="otherHeaders"
+        :items="toolStore.otherTools"
+      />
     </v-window-item>
   </v-window>
 </template>
@@ -31,7 +38,6 @@
 <script setup lang="ts">
 import { onBeforeMount, ref } from 'vue';
 import ToolsDataTable from '@/components/ToolsDataTable.vue';
-import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
@@ -45,7 +51,7 @@ onBeforeMount(() => {
 
 function onChange() {
   window.localStorage.setItem('type', tab.value);
-  router.push({ name: 'tools' });
+  toolStore.setTabChange(true);
 }
 
 const millingHeaders = [

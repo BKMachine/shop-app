@@ -22,7 +22,9 @@
           ></v-text-field>
         </template>
 
-        <v-data-table-virtual
+        <v-data-table
+          v-model:page="page"
+          v-model:items-per-page="itemsPerPage"
           :headers="headers"
           :items="items"
           :search="search"
@@ -32,14 +34,14 @@
           <template v-slot:[`item.img`]="{ item }">
             <v-img :src="item.img" class="tool-img"></v-img>
           </template>
-        </v-data-table-virtual>
+        </v-data-table>
       </v-card>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
@@ -51,10 +53,42 @@ defineProps<{
 
 const toolStore = useToolStore();
 const search = ref('');
+const page = ref(1);
+const itemsPerPage = ref(10);
 
 function openTool(event: unknown, { item }: { item: ToolDoc }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
+
+watch(page, () => {
+  if (page.value === 1) router.push({ name: 'tools' });
+  else router.push({ name: 'tools', query: { page: page.value } });
+});
+
+watch(itemsPerPage, () => {
+  localStorage.setItem('ipp', itemsPerPage.value.toString());
+});
+
+onMounted(() => {
+  // Do items per page before page number
+  const ipp = localStorage.getItem('ipp');
+  if (ipp) {
+    const ippNum = parseInt(ipp);
+    if (!isNaN(ippNum)) itemsPerPage.value = ippNum;
+  }
+
+  const tabChanged = toolStore.tabChange;
+  if (tabChanged) {
+    router.push({ name: 'tools' });
+    toolStore.setTabChange(false);
+  } else {
+    const query = router.currentRoute.value.query;
+    if (query.page) {
+      const pageNum = parseInt(query.page as string);
+      if (!isNaN(pageNum)) page.value = pageNum;
+    }
+  }
+});
 </script>
 
 <style scoped>

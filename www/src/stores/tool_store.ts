@@ -61,6 +61,12 @@ export const useToolStore = defineStore('tools', () => {
       });
   }
 
+  const tabChange = ref(false);
+
+  function setTabChange(bool: boolean) {
+    tabChange.value = bool;
+  }
+
   async function add(tool: ToolDoc) {
     const data = {
       ...tool,
@@ -103,10 +109,12 @@ export const useToolStore = defineStore('tools', () => {
     turningTools,
     otherTools,
     locations,
+    tabChange,
     fetch,
     add,
     update,
     adjustStock,
     SOCKET_tool,
+    setTabChange,
   };
 });
