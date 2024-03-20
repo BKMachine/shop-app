@@ -319,7 +319,7 @@ async function save() {
   } else if (routeName === 'viewTool') {
     await toolStore.update(tool.value as ToolDoc_Pop);
   }
-  fetchTool(false);
+  router.back();
 }
 
 function openLink(link: string | undefined) {
