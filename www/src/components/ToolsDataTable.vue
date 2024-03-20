@@ -32,7 +32,7 @@
           @click:row="openTool"
         >
           <template v-slot:[`item.img`]="{ item }">
-            <v-img :src="item.img" class="tool-img"></v-img>
+            <v-img :id="item._id" :src="item.img" class="tool-img"></v-img>
           </template>
         </v-data-table>
       </v-card>
@@ -88,6 +88,19 @@ onMounted(() => {
       if (!isNaN(pageNum)) page.value = pageNum;
     }
   }
+
+  setTimeout(() => {
+    if (toolStore.lastId) {
+      const el = document.getElementById(toolStore.lastId);
+      if (el) {
+        const parent = el.parentElement?.parentElement;
+        if (parent) {
+          parent.classList.add('highlighted');
+        }
+      }
+      toolStore.setLastId(null);
+    }
+  }, 100);
 });
 </script>
 
@@ -96,5 +109,11 @@ onMounted(() => {
   display: flex;
   width: 100%;
   justify-content: space-between;
+}
+</style>
+
+<style>
+.highlighted {
+  background: #efefef !important;
 }
 </style>

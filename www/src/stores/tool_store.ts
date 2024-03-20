@@ -67,6 +67,12 @@ export const useToolStore = defineStore('tools', () => {
     tabChange.value = bool;
   }
 
+  const lastId = ref<string | null>(null);
+
+  function setLastId(id: string | null) {
+    lastId.value = id;
+  }
+
   async function add(tool: ToolDoc) {
     const data = {
       ...tool,
@@ -110,11 +116,13 @@ export const useToolStore = defineStore('tools', () => {
     otherTools,
     locations,
     tabChange,
+    lastId,
     fetch,
     add,
     update,
     adjustStock,
     SOCKET_tool,
     setTabChange,
+    setLastId,
   };
 });

@@ -232,7 +232,7 @@
 <script setup lang="ts">
 import { isEqual } from 'lodash';
 import { DateTime } from 'luxon';
-import { computed, onBeforeMount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
@@ -319,8 +319,16 @@ async function save() {
   } else if (routeName === 'viewTool') {
     await toolStore.update(tool.value as ToolDoc_Pop);
   }
+  exit();
+}
+
+function exit() {
   router.back();
 }
+
+onBeforeUnmount(() => {
+  toolStore.setLastId(tool.value._id);
+});
 
 function openLink(link: string | undefined) {
   if (!link) return;
