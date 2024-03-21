@@ -225,6 +225,7 @@ function handleScan(e: ScanEvent) {
 }
 .avatar img {
   width: 90%;
+  max-height: 90%;
 }
 .stock-adjust-container {
   display: flex;
