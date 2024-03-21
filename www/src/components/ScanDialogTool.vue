@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-avatar class="avatar" size="150">
-      <img :src="tool.img" class="tool-img" alt="" />
+      <img :src="tool.img" alt="" />
     </v-avatar>
     <v-card class="card">
       <v-card-title class="text-right card-title">
@@ -223,7 +223,7 @@ function handleScan(e: ScanEvent) {
   border: 2px solid #545454;
   background: white;
 }
-.tool-img {
+.avatar img {
   width: 90%;
 }
 .stock-adjust-container {
