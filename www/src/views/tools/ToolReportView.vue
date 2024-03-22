@@ -6,17 +6,13 @@
       </span>
       <v-divider />
       <div v-for="(tool, j) in item[1]" :key="tool._id">
-        <label>
-          <input
-            type="checkbox"
-            class="mr-2"
-            :checked="tool.onOrder"
-            @click="toggleOnOrder(tool)"
-          />
-          <span class="item"> {{ tool.item }} - Qty: {{ tool.reorderQty }} </span>
-          <span class="line"> - </span>
-          <span class="subtotal">{{ getCost(tool) }}</span>
-        </label>
+        <input type="checkbox" class="mr-2" :checked="tool.onOrder" @click="toggleOnOrder(tool)" />
+        <span class="item"> {{ tool.item }} - Qty: {{ tool.reorderQty }} </span>
+        <span class="line"> - </span>
+        <span class="subtotal">{{ getCost(tool) }}</span>
+        <span
+          ><v-icon icon="mdi-open-in-app" size="16" class="ml-2" @click="open(tool)"></v-icon
+        ></span>
         <div v-if="j === item[1].length - 1" class="space"></div>
       </div>
     </div>
@@ -29,6 +25,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import axios from '@/plugins/axios';
+import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
@@ -109,6 +106,10 @@ onMounted(() => {
 function toggleOnOrder(tool: ToolDoc_Pop) {
   tool.onOrder = !tool.onOrder;
   toolStore.update(tool);
+}
+
+function open(tool: ToolDoc_Pop) {
+  router.push({ name: 'viewTool', params: { id: tool._id } });
 }
 </script>
 
