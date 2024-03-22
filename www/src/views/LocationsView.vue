@@ -7,6 +7,7 @@
           <span v-if="tools.length && location">
             - {{ tools.length }} result{{ tools.length === 1 ? '' : 's' }}
           </span>
+          <v-btn @click="print"><v-icon></v-icon>Print</v-btn>
         </v-card-title>
         <v-card-text
           ><v-row>
@@ -47,11 +48,20 @@
       </v-card>
     </v-col>
   </v-row>
+  <v-dialog v-model="showLabel">
+    <v-card>
+      <v-card-title>Label Preview</v-card-title>
+      <v-card-text>
+        <v-img :src="imageData" class="label"></v-img>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
 import { uniq } from 'lodash';
 import { computed, onMounted, ref } from 'vue';
+import printer from '@/plugins/printer';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
@@ -126,11 +136,28 @@ onMounted(() => {
   if (loc) location.value = loc as string;
   if (pos) position.value = pos as string;
 });
+
+function print() {
+  printer.print(`${location.value} - ${position.value}`).then(({ data }) => {
+    console.log(data);
+    imageData.value = `data:image/png;base64,${data}`;
+    showLabel.value = true;
+  });
+}
+
+const showLabel = ref(false);
+const imageData = ref('');
 </script>
 
 <style scoped>
 .stock {
   font-weight: bolder;
   font-size: 1.1em;
+}
+.label {
+  height: 100px;
+  border: 1px solid black;
+  border-radius: 10px;
+  width: 400px;
 }
 </style>

@@ -27,9 +27,14 @@ router.use(VendorRoutes);
 router.use(ToolRoutes);
 
 router.post('/print', async (req, res, next) => {
+  const { text } = req.body;
+  if (!text) {
+    res.sendStatus(400);
+    return;
+  }
   try {
-    await DymoService();
-    res.sendStatus(204);
+    const imageData = await DymoService(text);
+    res.status(200).send(imageData);
   } catch (e) {
     next(e);
   }
