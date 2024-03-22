@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import DymoService from '../../services/dymo_service';
 import CustomerRoutes from './routes/customers';
 import SupplierRoutes from './routes/suppliers';
 import ToolRoutes from './routes/tools';
@@ -24,5 +25,14 @@ router.use(CustomerRoutes);
 router.use(SupplierRoutes);
 router.use(VendorRoutes);
 router.use(ToolRoutes);
+
+router.post('/print', async (req, res, next) => {
+  try {
+    await DymoService();
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+});
 
 export default router;
