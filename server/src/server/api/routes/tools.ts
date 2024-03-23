@@ -66,8 +66,8 @@ router.put('/tools/pick', async (req, res, next) => {
     return;
   }
   try {
-    const { status, message } = await Tools.pick(scanCode);
-    res.status(status).json({ message });
+    const { status, tool } = await Tools.pick(scanCode);
+    res.status(status).json(tool);
   } catch (e) {
     next(e);
   }

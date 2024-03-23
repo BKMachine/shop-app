@@ -36,19 +36,23 @@ async function getAutoReorders() {
   return Tool.find({
     $expr: { $lte: ['$stock', '$reorderThreshold'] },
     autoReorder: true,
-  }).populate('vendor');
+  })
+    .populate('vendor')
+    .populate('supplier');
 }
 
-async function pick(scanCode: string): Promise<{ status: number; message: string }> {
+async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc_Pop | null }> {
   const tool = await Tool.findOne({
     $or: [{ item: scanCode }, { barcode: scanCode }],
-  });
-  if (!tool) return { status: 404, message: 'Tool not found.' };
-  if (tool.stock <= 0) return { status: 400, message: 'Cannot pick a tool with 0 stock.' };
+  })
+    .populate('vendor')
+    .populate('supplier');
+  if (!tool) return { status: 404, tool: null };
+  if (tool.stock <= 0) return { status: 400, tool: null };
   tool.stock--;
   await tool.save();
   emit('tool', tool);
-  return { status: 200, message: `Tool picked. ${tool.stock} remaining.` };
+  return { status: 200, tool: tool as ToolDoc_Pop };
 }
 
 export default {
