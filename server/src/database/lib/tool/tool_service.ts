@@ -42,17 +42,17 @@ async function getAutoReorders() {
 }
 
 async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc_Pop | null }> {
-  const tool = await Tool.findOne({
+  const tool = (await Tool.findOne({
     $or: [{ item: scanCode }, { barcode: scanCode }],
   })
     .populate('vendor')
-    .populate('supplier');
+    .populate('supplier')) as ToolDoc_Pop | null;
   if (!tool) return { status: 404, tool: null };
-  if (tool.stock <= 0) return { status: 400, tool: null };
+  if (tool.stock <= 0) return { status: 400, tool: tool };
   tool.stock--;
   await tool.save();
   emit('tool', tool);
-  return { status: 200, tool: tool as ToolDoc_Pop };
+  return { status: 200, tool: tool };
 }
 
 export default {
