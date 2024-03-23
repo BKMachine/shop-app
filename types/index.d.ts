@@ -29,8 +29,8 @@ interface ToolDoc {
 type ToolCategory = 'milling' | 'turning' | 'other';
 
 interface ToolDoc_Pop extends ToolDoc {
-  vendor?: VendorDoc;
-  supplier?: SupplierDoc;
+  vendor?: VendorDoc | string;
+  supplier?: SupplierDoc | string;
 }
 
 interface VendorDoc {
