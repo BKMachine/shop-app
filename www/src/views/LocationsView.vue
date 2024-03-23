@@ -139,7 +139,7 @@ onMounted(() => {
 
 function print() {
   printer.print(`${location.value} - ${position.value}`).then(({ data }) => {
-    console.log(data);
+    // console.log(data);
     imageData.value = `data:image/png;base64,${data}`;
     showLabel.value = true;
   });
