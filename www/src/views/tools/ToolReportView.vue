@@ -50,7 +50,9 @@ type Item = [brand: string, matches: ToolDoc_Pop[]];
 const items = computed<Item[]>(() => {
   const brands: Set<string> = new Set(
     tools.value
-      .map((x) => x.vendor?.name || 'No Brand')
+      .map((x) => {
+        return typeof x.vendor === 'object' ? x.vendor.name : 'No Brand';
+      })
       .sort((a, b) => {
         const c = a.toLowerCase();
         const d = b.toLowerCase();
@@ -63,7 +65,7 @@ const items = computed<Item[]>(() => {
   brands.forEach((brand) => {
     const matches = tools.value
       .filter((x) => {
-        const name = x.vendor?.name || 'No Brand';
+        const name = typeof x.vendor === 'object' ? x.vendor.name : 'No Brand';
         return name.toLowerCase() === brand.toLowerCase();
       })
       .sort((a, b) => {
