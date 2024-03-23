@@ -24,8 +24,12 @@ router.get('/tools/reorders', async (req, res, next) => {
 router.get('/tools/:id', async (req, res, next) => {
   const { id } = req.params;
   try {
-    const result = await Tools.findById(id);
-    res.status(200).json(result);
+    const tool = await Tools.findById(id);
+    if (!tool) {
+      res.sendStatus(404);
+      return;
+    }
+    res.status(200).json(tool);
   } catch (e) {
     next(e);
   }
@@ -68,6 +72,20 @@ router.put('/tools/pick', async (req, res, next) => {
   try {
     const { status, tool } = await Tools.pick(scanCode);
     res.status(status).json(tool);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/tools/info/:scanCode', async (req, res, next) => {
+  const { scanCode } = req.params;
+  try {
+    const tool = await Tools.findByScanCode(scanCode);
+    if (!tool) {
+      res.sendStatus(404);
+      return;
+    }
+    res.status(200).json(tool);
   } catch (e) {
     next(e);
   }

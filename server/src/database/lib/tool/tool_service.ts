@@ -6,7 +6,15 @@ async function list() {
 }
 
 async function findById(id: string) {
-  return Tool.findById(id).populate('vendor');
+  return Tool.findById(id).populate('vendor').populate('supplier');
+}
+
+async function findByScanCode(scanCode: string) {
+  return Tool.findOne({
+    $or: [{ item: scanCode }, { barcode: scanCode }],
+  })
+    .populate('vendor')
+    .populate('supplier');
 }
 
 async function add(data: ToolDoc) {
@@ -63,6 +71,7 @@ function updateChecks(tool: ToolDoc_Pop) {
 export default {
   list,
   findById,
+  findByScanCode,
   add,
   update,
   getAutoReorders,
