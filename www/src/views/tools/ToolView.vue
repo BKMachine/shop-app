@@ -96,6 +96,7 @@
           <div class="d-flex">
             <v-select
               v-model="tool.vendor"
+              class="vendor"
               label="Brand"
               :items="vendorStore.vendors"
               item-title="name"
@@ -115,9 +116,9 @@
             </v-select>
             <v-select
               v-model="tool.coating"
+              class="supplier ml-2"
               label="Coating"
               :items="coatings"
-              class="ml-2"
             ></v-select>
           </div>
           <v-text-field
@@ -138,6 +139,15 @@
         </v-window-item>
 
         <v-window-item value="stock">
+          <div class="d-flex align-center">
+            <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="#901394"></v-switch>
+            <v-checkbox
+              v-model="tool.onOrder"
+              :label="formattedOrderedOn"
+              color="#901394"
+              @click="tool.orderedOn = undefined"
+            ></v-checkbox>
+          </div>
           <v-row>
             <v-col cols="6">
               <v-text-field
@@ -159,19 +169,6 @@
               ></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-row class="d-flex flex-row">
-                <v-col cols="12">
-                  <v-switch
-                    v-model="tool.autoReorder"
-                    label="Auto Reorder"
-                    color="#901394"
-                  ></v-switch>
-                  <v-checkbox v-model="tool.onOrder" label="On Order" color="#901394"></v-checkbox>
-                  <v-sheet v-if="tool.orderedOn" class="ordered-date">
-                    Last ordered on: {{ formattedOrderedOn }}
-                  </v-sheet>
-                </v-col>
-              </v-row>
               <v-select
                 v-model="tool.supplier"
                 label="Supplier"
@@ -197,20 +194,26 @@
                 prepend-inner-icon="mdi-currency-usd"
                 @update:modelValue="checkNumber($event, 'cost')"
               ></v-text-field>
-              <v-text-field
-                v-model.number="tool.reorderQty"
-                label="Reorder Qty"
-                type="number"
-                min="0"
-                @update:modelValue="checkNumber($event, 'reorderQty')"
-              ></v-text-field>
-              <v-text-field
-                v-model.number="tool.reorderThreshold"
-                label="Min Stock Qty"
-                type="number"
-                min="0"
-                @update:modelValue="checkNumber($event, 'reorderThreshold')"
-              ></v-text-field>
+              <v-row>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="tool.reorderQty"
+                    label="Reorder Qty"
+                    type="number"
+                    min="0"
+                    @update:modelValue="checkNumber($event, 'reorderQty')"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="tool.reorderThreshold"
+                    label="Min Stock Qty"
+                    type="number"
+                    min="0"
+                    @update:modelValue="checkNumber($event, 'reorderThreshold')"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
             </v-col>
           </v-row>
         </v-window-item>
@@ -340,9 +343,9 @@ const toolIsAltered = computed<boolean>(() => {
 });
 
 const formattedOrderedOn = computed(() => {
-  if (!tool.value.orderedOn) return '';
+  if (!tool.value.orderedOn || !tool.value.onOrder) return 'On Order';
   const time = DateTime.fromISO(tool.value.orderedOn);
-  return time.toLocaleString();
+  return `On Order: ${time.toLocaleString()}`;
 });
 
 const rules: Rules = {
@@ -387,10 +390,11 @@ function checkNumber(val: string, key: keyof ToolDoc) {
 .location {
   font-size: 0.8em;
 }
-.ordered-date {
-  margin: auto;
-}
 .loading {
   height: 100%;
+}
+.vendor,
+.supplier {
+  width: 50%;
 }
 </style>
