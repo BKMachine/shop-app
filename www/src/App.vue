@@ -13,6 +13,7 @@
       <v-list>
         <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }"> Tools </v-list-item>
+        <v-list-item prepend-icon="mdi-dots-triangle"> Parts </v-list-item>
         <v-list-item prepend-icon="mdi-map-marker" link :to="{ name: 'locations' }">
           Locations
         </v-list-item>
@@ -54,11 +55,32 @@ const supplierStore = useSupplierStore();
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
+const mappedCodes: { [key: string]: string } = {
+  ' ': ' ',
+  ':': ':',
+  '-': '-',
+  '|': '|',
+};
+
 // Hardware barcode scanner
-onScan.attachTo(document, { minLength: 5 });
+onScan.attachTo(document, {
+  minLength: 5,
+  keyCodeMapper: function (e: KeyboardEvent) {
+    return mappedCodes[e.key] || onScan.decodeKeyEvent(e);
+  },
+});
+
 document.addEventListener('scan', function (e) {
+  // Handle scanCodes from a QRCode starting with URL:
+  if (e.detail.scanCode.startsWith('Loc:')) {
+    const [location, position] = e.detail.scanCode.replace('Loc:', '').split(' | ');
+    router.push({ name: 'locations', query: { loc: location, pos: position } });
+    return;
+  }
+
   // Do not respond to scanCodes with our custom internal scanCode prefix
   if (e.detail.scanCode.startsWith(prefix)) return;
+
   // Do not respond to scans if the scan dialog is already open
   if (scannerStore.dialog === true) return;
   scannerStore.setStockAdjustment(0);

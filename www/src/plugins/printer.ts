@@ -1,9 +1,9 @@
 import axios from './axios';
 
-function print(text: string) {
-  return axios.post('/print', { text });
+function printLocation(data: { loc: string; pos: string }) {
+  return axios.post('/print/location', { ...data });
 }
 
 export default {
-  print,
+  printLocation,
 };

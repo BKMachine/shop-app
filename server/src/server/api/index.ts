@@ -26,14 +26,14 @@ router.use(SupplierRoutes);
 router.use(VendorRoutes);
 router.use(ToolRoutes);
 
-router.post('/print', async (req, res, next) => {
-  const { text } = req.body;
-  if (!text) {
+router.post('/print/location', async (req, res, next) => {
+  const { loc, pos } = req.body;
+  if (!loc || !pos) {
     res.sendStatus(400);
     return;
   }
   try {
-    const imageData = await DymoService(text);
+    const imageData = await DymoService({ loc, pos });
     res.status(200).send(imageData);
   } catch (e) {
     next(e);
