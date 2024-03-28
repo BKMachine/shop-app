@@ -10,7 +10,7 @@
         <div>{{ tool.stock }} in stock</div>
         <div class="location">
           <span v-if="tool.location">{{ tool.location }}</span>
-          <span v-if="tool.position"> - {{ tool.position }}</span>
+          <span v-if="tool.position"> | {{ tool.position }}</span>
         </div>
       </v-card-title>
       <v-card-text class="card-body">
