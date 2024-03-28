@@ -3,7 +3,7 @@ import path from 'path';
 import axios from 'axios';
 
 async function printLocationLabel(data: { loc: string; pos: string }) {
-  const locationLabelXml = fs.readFileSync(path.join(__dirname, 'label_location.xml'), {
+  const locationLabelXml = fs.readFileSync(path.join(__dirname, 'labels', 'label_location.xml'), {
     encoding: 'utf-8',
   });
   const qrCode = `Loc:${data.loc} | ${data.pos}`;
