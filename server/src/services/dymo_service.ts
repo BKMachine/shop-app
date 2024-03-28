@@ -4,7 +4,7 @@ import axios from 'axios';
 
 async function printLocationLabel(data: { loc: string; pos: string }) {
   const locationLabelXml = fs.readFileSync(
-    path.join(process.cwd(), 'public', 'label_location.xml'),
+    path.join(__dirname, '../../public', '/label_location.xml'),
     {
       encoding: 'utf-8',
     },
