@@ -17,7 +17,7 @@
               <span v-if="tool.location">
                 {{ tool.location }}
               </span>
-              <span v-if="tool.position"> - {{ tool.position }}</span>
+              <span v-if="tool.position"> | {{ tool.position }}</span>
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@
                 label="Stock Qty"
                 type="number"
                 min="0"
-                @update:modelValue="checkNumber($event, 'stock')"
+                @keydown="isNumber($event)"
               ></v-text-field>
               <v-combobox
                 v-model="tool.location"
@@ -192,7 +192,7 @@
                 v-model.number="tool.cost"
                 label="Cost"
                 prepend-inner-icon="mdi-currency-usd"
-                @update:modelValue="checkNumber($event, 'cost')"
+                @keydown="isNumber($event)"
               ></v-text-field>
               <v-row>
                 <v-col cols="6">
@@ -201,7 +201,7 @@
                     label="Reorder Qty"
                     type="number"
                     min="0"
-                    @update:modelValue="checkNumber($event, 'reorderQty')"
+                    @keydown="isNumber($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6">
@@ -210,7 +210,7 @@
                     label="Min Stock Qty"
                     type="number"
                     min="0"
-                    @update:modelValue="checkNumber($event, 'reorderThreshold')"
+                    @keydown="isNumber($event)"
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -224,7 +224,7 @@
             :label="fluteText"
             type="number"
             min="0"
-            @update:modelValue="checkNumber($event, 'flutes')"
+            @keydown="isNumber($event)"
           ></v-text-field>
         </v-window-item>
       </v-window>
@@ -356,11 +356,12 @@ const rules: Rules = {
   },
 };
 
-function checkNumber(val: string, key: keyof ToolDoc) {
-  if (!val) return;
-  const num = parseInt(val);
-  if (isNaN(num) || num < 0) {
-    tool.value[key] = 0 as never;
+function isNumber(evt: KeyboardEvent) {
+  const keysAllowed: string[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'];
+  const keyPressed: string = evt.key;
+
+  if (!keysAllowed.includes(keyPressed)) {
+    evt.preventDefault();
   }
 }
 </script>
