@@ -30,6 +30,13 @@ if (process.env.NODE_ENV !== 'production') {
       format: combine(timestamp(), colorize(), myFormat),
     }),
   );
+} else {
+  logger.add(
+    new transports.Console({
+      level: 'info',
+      format: combine(timestamp(), myFormat),
+    }),
+  );
 }
 
 class MyStream {
