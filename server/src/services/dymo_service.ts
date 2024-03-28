@@ -3,9 +3,12 @@ import path from 'path';
 import axios from 'axios';
 
 async function printLocationLabel(data: { loc: string; pos: string }) {
-  const locationLabelXml = fs.readFileSync(path.join(__dirname, 'labels', 'label_location.xml'), {
-    encoding: 'utf-8',
-  });
+  const locationLabelXml = fs.readFileSync(
+    path.join(process.cwd(), 'public', 'label_location.xml'),
+    {
+      encoding: 'utf-8',
+    },
+  );
   const qrCode = `Loc:${data.loc} | ${data.pos}`;
   const label = locationLabelXml.replaceAll('$POSITION', data.pos).replaceAll('$QRCODE', qrCode);
   return print('DYMO LabelWriter Wireless 1', label);
