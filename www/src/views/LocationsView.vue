@@ -2,15 +2,18 @@
   <v-row>
     <v-col cols="12">
       <v-card>
-        <v-card-title class="header my-4">
-          Stock by location
-          <span v-if="tools.length && location">
+        <v-card-title class="header my-4 d-flex">
+          Stock by Location
+          <div v-if="tools.length && location">
             - {{ tools.length }} result{{ tools.length === 1 ? '' : 's' }}
-          </span>
-          <v-btn @click="print"><v-icon></v-icon>Print</v-btn>
+          </div>
+          <v-spacer />
+          <v-btn :disabled="!printEnabled" :color="printColor" @click="print">
+            <v-icon icon="mdi-printer-outline"></v-icon>
+          </v-btn>
         </v-card-title>
-        <v-card-text
-          ><v-row>
+        <v-card-text>
+          <v-row>
             <v-col cols="6">
               <v-select
                 v-model="location"
@@ -29,6 +32,7 @@
             </v-col>
           </v-row>
           <v-data-table-virtual
+            v-if="tools.length"
             :headers="headers"
             :items="tools"
             :loading="toolStore.loading"
@@ -48,14 +52,6 @@
       </v-card>
     </v-col>
   </v-row>
-  <v-dialog v-model="showLabel">
-    <v-card>
-      <v-card-title>Label Preview</v-card-title>
-      <v-card-text>
-        <v-img :src="imageData" class="label"></v-img>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -137,27 +133,34 @@ onMounted(() => {
   if (pos) position.value = pos as string;
 });
 
-function print() {
-  printer.print(`${location.value} - ${position.value}`).then(({ data }) => {
-    // console.log(data);
-    imageData.value = `data:image/png;base64,${data}`;
-    showLabel.value = true;
-  });
+async function print() {
+  await printer
+    .printLocation({ loc: location.value, pos: position.value })
+    .then(() => {
+      flashPrintColor('#57a03c');
+    })
+    .catch(() => {
+      flashPrintColor('#be3c3c');
+    });
 }
 
-const showLabel = ref(false);
-const imageData = ref('');
+const printColorIdle = '#aa60c3';
+const printColor = ref(printColorIdle);
+function flashPrintColor(color: string) {
+  printColor.value = color;
+  setTimeout(() => {
+    printColor.value = printColorIdle;
+  }, 1500);
+}
+
+const printEnabled = computed(() => {
+  return location.value && position.value;
+});
 </script>
 
 <style scoped>
 .stock {
   font-weight: bolder;
   font-size: 1.1em;
-}
-.label {
-  height: 100px;
-  border: 1px solid black;
-  border-radius: 10px;
-  width: 400px;
 }
 </style>

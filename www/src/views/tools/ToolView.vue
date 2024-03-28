@@ -165,7 +165,9 @@
               <v-text-field
                 v-model="tool.position"
                 label="Position"
+                append-inner-icon="mdi-map-marker"
                 @update:modelValue="tool.position = tool.position?.toUpperCase()"
+                @click:append-inner="gotoLocation"
               ></v-text-field>
             </v-col>
             <v-col cols="6">
@@ -363,6 +365,11 @@ function isNumber(evt: KeyboardEvent) {
   if (!keysAllowed.includes(keyPressed)) {
     evt.preventDefault();
   }
+}
+
+function gotoLocation() {
+  if (!tool.value.location || !tool.value.position) return;
+  router.push({ name: 'locations', query: { loc: tool.value.location, pos: tool.value.position } });
 }
 </script>
 
