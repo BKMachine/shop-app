@@ -33,8 +33,8 @@ router.post('/print/location', async (req, res, next) => {
     return;
   }
   try {
-    await DymoService.printLocationLabel({ loc, pos });
-    res.sendStatus(204);
+    const data = await DymoService.printLocationLabel({ loc, pos });
+    res.status(200).json(data);
   } catch (e) {
     next(e);
   }
