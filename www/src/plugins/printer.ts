@@ -1,8 +1,9 @@
 import axios from './axios';
 
-function printLocation(data: { loc: string; pos: string }) {
-  axios.post('/print/location', { ...data }).then(async ({ data }) => {
-    await print(data.printerName, data.label);
+async function printLocation(data: { loc: string; pos: string }) {
+  return axios.post('/print/location', { ...data }).then(async (response) => {
+    const { printerName, label } = response.data;
+    return await print(printerName, label);
   });
 }
 
