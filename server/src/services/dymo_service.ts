@@ -1,21 +1,26 @@
 import fs from 'fs';
 import path from 'path';
-import Dymo from 'dymojs';
+import axios from 'axios';
 
-const dymo = new Dymo();
-
-async function printLocationLabel(data: { loc: string; pos: string }): Promise<boolean> {
+async function printLocationLabel(data: { loc: string; pos: string }) {
   const locationLabelXml = fs.readFileSync(path.join(__dirname, 'label_location.xml'), {
     encoding: 'utf-8',
   });
   const qrCode = `Loc:${data.loc} | ${data.pos}`;
   const label = locationLabelXml.replaceAll('$POSITION', data.pos).replaceAll('$QRCODE', qrCode);
-  try {
-    dymo.print('DYMO LabelWriter Wireless 1', label);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  return print('DYMO LabelWriter Wireless 1', label);
+}
+
+async function print(printerName: string, labelXml: string, labelSetXml = '') {
+  const hostname = '127.0.0.1';
+  const port = 41951;
+  const label = `printerName=${encodeURIComponent(printerName)}&printParamsXml=&labelXml=${encodeURIComponent(labelXml)}&labelSetXml=${encodeURIComponent(labelSetXml)}`;
+  if (typeof process !== 'undefined' && process.env) process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  return axios.post(`https://${hostname}:${port}/DYMO/DLS/Printing/PrintLabel`, label, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  });
 }
 
 export default {
