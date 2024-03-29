@@ -166,7 +166,7 @@ function flashPrintColor(color: string) {
   printColor.value = color;
   setTimeout(() => {
     printColor.value = printColorIdle;
-  }, 1500);
+  }, 500);
 }
 
 const printEnabled = computed(() => {
