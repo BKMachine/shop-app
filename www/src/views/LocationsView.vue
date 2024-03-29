@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { uniq } from 'lodash';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import printer from '@/plugins/printer';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
@@ -134,11 +134,18 @@ function updateLocation() {
   updateQueryString();
 }
 
-onMounted(() => {
+const query = computed(() => {
+  return router.currentRoute.value.query;
+});
+
+onMounted(setSelectFields);
+watch(query, setSelectFields);
+
+function setSelectFields() {
   const { loc, pos } = router.currentRoute.value.query;
   if (loc) location.value = loc as string;
   if (pos) position.value = pos as string;
-});
+}
 
 async function print() {
   await printer
