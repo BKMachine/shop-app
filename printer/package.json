@@ -3,6 +3,7 @@
     "start": "node ./index.mjs",
     "service:install": "node service_install.js",
     "service:uninstall": "node service_uninstall.js",
+    "build": "yarn service:uninstall && yarn service:install",
     "prettier": "prettier --write \"**/*.{js,mjs}\" --ignore-path ../.gitignore"
   },
   "dependencies": {
