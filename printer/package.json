@@ -3,9 +3,10 @@
     "start": "node ./index.mjs",
     "service:install": "node service_install.js",
     "service:uninstall": "node service_uninstall.js",
-    "prettier": "prettier --write \"**/*.{js}\" --ignore-path ../.gitignore"
+    "prettier": "prettier --write \"**/*.{js,mjs}\" --ignore-path ../.gitignore"
   },
   "dependencies": {
+    "dymojs": "^1.2.0",
     "express": "^4.18.3",
     "morgan": "^1.10.0"
   },

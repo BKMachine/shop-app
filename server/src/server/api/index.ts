@@ -27,14 +27,14 @@ router.use(VendorRoutes);
 router.use(ToolRoutes);
 
 router.post('/print/location', async (req, res, next) => {
-  const { loc, pos } = req.body;
+  const { loc, pos }: PrintLocationBody = req.body;
   if (!loc || !pos) {
     res.sendStatus(400);
     return;
   }
   try {
-    const data = await DymoService.printLocationLabel({ loc, pos });
-    res.status(200).json(data);
+    await DymoService.printLocationLabel({ loc, pos });
+    res.sendStatus(204);
   } catch (e) {
     next(e);
   }
