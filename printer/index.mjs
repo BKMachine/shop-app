@@ -3,7 +3,8 @@ import morgan from 'morgan';
 
 const app = express();
 
-app.use(morgan('combined'))
+app.use(morgan('combined'));
+app.use(express.json());
 
 app.get('/', (req, res, next) => {
   res.status(200).json({ message: 'Printer Proxy' });

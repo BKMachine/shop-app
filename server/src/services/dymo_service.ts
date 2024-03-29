@@ -1,7 +1,16 @@
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
 
-async function printLocationLabel(data: { loc: string; pos: string }) {
+const hostname = 'thor.bkmachine.lan';
+const port = 3005;
+const baseUrl = `http://${hostname}:${port}`;
+
+const thor = axios.create({
+  baseURL: baseUrl,
+});
+
+async function printLocationLabel(data: PrintLocationBody) {
   const locationLabelXml = fs.readFileSync(
     path.join(__dirname, '../../public', '/label_location.xml'),
     {
@@ -10,7 +19,11 @@ async function printLocationLabel(data: { loc: string; pos: string }) {
   );
   const qrCode = `Loc:${data.loc} | ${data.pos}`;
   const label = locationLabelXml.replaceAll('$POSITION', data.pos).replaceAll('$QRCODE', qrCode);
-  return { printerName: 'DYMO LabelWriter Wireless 1', label };
+  const body: PrintRequest = {
+    printerName: 'DYMO Wireless 1',
+    labelXml: label,
+  };
+  return thor.post('/print', body);
 }
 
 export default {

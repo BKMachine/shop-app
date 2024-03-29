@@ -54,3 +54,13 @@ interface CustomerDoc {
   logo?: string;
   homepage?: string;
 }
+
+interface PrintLocationBody {
+  loc: string;
+  pos: string;
+}
+
+interface PrintRequest {
+  printerName: string;
+  labelXml: string;
+}
