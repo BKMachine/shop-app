@@ -1,6 +1,9 @@
 import express from 'express';
+import morgan from 'morgan';
 
 const app = express();
+
+app.use(morgan('combined'))
 
 app.get('/', (req, res, next) => {
   res.status(200).json({ message: 'Printer Proxy' });
@@ -20,7 +23,9 @@ app.post('/print', async (req, res, next) => {
   }
 });
 
-app.listen(process.env.PORT || 3005);
+const port = process.env.PORT || 3005;
+app.listen(port);
+console.log(`Listening on port: ${port}` )
 
 async function print(printerName, labelXml, labelSetXml = '') {
     const hostname = '127.0.0.1';

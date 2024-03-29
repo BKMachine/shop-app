@@ -4386,6 +4386,7 @@ __metadata:
     "@types/express": "npm:^4.17.21"
     "@types/node": "npm:^20.11.29"
     express: "npm:^4.18.3"
+    morgan: "npm:^1.10.0"
     node-windows: "npm:^1.0.0-beta.8"
     prettier: "npm:^3.2.5"
   languageName: unknown
