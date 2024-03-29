@@ -18,7 +18,12 @@
               <img :src="editingItem.logo" alt="" />
             </div>
           </div>
-          <v-text-field v-model="editingItem.homepage" label="Homepage"></v-text-field>
+          <v-text-field
+            v-model="editingItem.homepage"
+            label="Homepage"
+            append-inner-icon="mdi-open-in-new"
+            @click:append-inner="open"
+          ></v-text-field>
           <v-combobox v-model="editingItem.coatings" label="Tool Coatings" chips multiple>
             <template v-slot:selection="{ item }">
               <v-chip>
@@ -95,6 +100,10 @@ async function save() {
     await vendorStore.update(editingItem.value);
   }
   dialog.value = false;
+}
+
+function open() {
+  window.open(editingItem.value.homepage, '_blank');
 }
 </script>
 

@@ -19,6 +19,7 @@
                 v-model="location"
                 :items="toolStore.locations"
                 label="Location"
+                clearable
                 @update:modelValue="updateLocation"
               ></v-select>
             </v-col>
@@ -27,6 +28,7 @@
                 v-model="position"
                 :items="positions"
                 label="Position"
+                clearable
                 @update:modelValue="updateQueryString"
               ></v-select>
             </v-col>

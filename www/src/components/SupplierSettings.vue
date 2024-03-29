@@ -18,7 +18,12 @@
               <img :src="editingItem.logo" alt="" />
             </div>
           </div>
-          <v-text-field v-model="editingItem.homepage" label="Homepage"></v-text-field>
+          <v-text-field
+            v-model="editingItem.homepage"
+            label="Homepage"
+            append-inner-icon="mdi-open-in-new"
+            @click:append-inner="open"
+          ></v-text-field>
         </v-form>
       </v-card-text>
       <v-card-actions>
@@ -88,6 +93,10 @@ async function save() {
     await supplierStore.update(editingItem.value);
   }
   dialog.value = false;
+}
+
+function open() {
+  window.open(editingItem.value.homepage, '_blank');
 }
 </script>
 
