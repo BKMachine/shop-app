@@ -1,7 +1,8 @@
 {
   "scripts": {
     "start": "node ./index.mjs",
-    "install": "node ./service.js",
+    "service:install": "node service_install.js",
+    "service:uninstall": "node service_uninstall.js",
     "prettier": "prettier --write \"**/*.{js}\" --ignore-path ../.gitignore"
   },
   "dependencies": {
