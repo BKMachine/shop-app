@@ -71,7 +71,14 @@ const positions = computed(() => {
   return uniq(
     toolStore.tools
       .filter((x) => x.position && x.location === location.value)
-      .map((x) => x.position),
+      .map((x) => x.position)
+      .sort((a, b) => {
+        const c = (a as string).toLowerCase();
+        const d = (b as string).toLowerCase();
+        if (c < d) return -1;
+        else if (c > d) return 1;
+        else return 0;
+      }),
   );
 });
 
