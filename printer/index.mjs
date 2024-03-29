@@ -1,3 +1,5 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import express from 'express';
 import morgan from 'morgan';
 
@@ -32,7 +34,6 @@ async function print(printerName, labelXml, labelSetXml = '') {
     const hostname = '127.0.0.1';
     const port = 41951;
     const label = `printerName=${encodeURIComponent(printerName)}&printParamsXml=&labelXml=${encodeURIComponent(labelXml)}&labelSetXml=${encodeURIComponent(labelSetXml)}`;
-    if (typeof process !== 'undefined' && process.env) process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
     const url = `https://${hostname}:${port}/DYMO/DLS/Printing/PrintLabel`
     const requestOptions = {
