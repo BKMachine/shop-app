@@ -11,6 +11,7 @@ const thor = axios.create({
 });
 
 async function printLocationLabel(data: PrintLocationBody) {
+  if (!data.loc || !data.pos) throw new Error('Missing location data.');
   const locationLabelXml = fs.readFileSync(
     path.join(__dirname, '../../public', '/label_location.xml'),
     {
