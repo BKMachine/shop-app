@@ -35,9 +35,9 @@
 </template>
 
 <script setup lang="ts">
-import CustomerSettings from '@/components/CustomerSettings.vue';
-import SupplierSettings from '@/components/SupplierSettings.vue';
-import VendorSettings from '@/components/VendorSettings.vue';
+import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
+import SupplierSettings from '@/components/settings/SettingsSupplier.vue';
+import VendorSettings from '@/components/settings/SettingsVendor.vue';
 </script>
 
 <style scoped></style>

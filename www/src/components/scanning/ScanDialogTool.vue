@@ -16,22 +16,12 @@
       <v-card-text class="card-body">
         <div class="mb-8">
           <v-btn class="v-arrow-select" :disabled="tool.stock === 0" @click="pickTool">
-            <div class="barcode-container">
-              <div>Pick Tool</div>
-              <div class="barcode">
-                <BarcodeGenerator :code="scanCodes.PICK_TOOL" :showText="false" />
-              </div>
-            </div>
+            Pick Tool
           </v-btn>
         </div>
         <div class="mb-8">
           <v-btn class="v-arrow-select" @click="adjustStock(scannerStore.stockAdjustment)">
-            <div class="barcode-container">
-              <div>Adjust Stock</div>
-              <div class="barcode">
-                <BarcodeGenerator :code="scanCodes.ADJUST_STOCK" :showText="false" />
-              </div>
-            </div>
+            Adjust Stock
           </v-btn>
           <div class="stock-adjust-container mt-2">
             <v-btn class="h-arrow-select" icon="mdi-minus" @mousedown.left="arrowLeft"></v-btn>
@@ -40,14 +30,7 @@
           </div>
         </div>
         <div>
-          <v-btn class="v-arrow-select" @click="openDetails">
-            <div class="barcode-container">
-              <div>View Details</div>
-              <div class="barcode">
-                <BarcodeGenerator :code="scanCodes.VIEW_DETAILS" :showText="false" />
-              </div>
-            </div>
-          </v-btn>
+          <v-btn class="v-arrow-select" @click="openDetails"> View Details </v-btn>
         </div>
       </v-card-text>
     </v-card>
@@ -55,10 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ScanEvent } from 'onscan.js';
 import { computed, onMounted, onUnmounted } from 'vue';
-import BarcodeGenerator from '@/components/BarcodeGenerator.vue';
-import { prefix, scanCodes } from '@/plugins/enums';
 import router from '@/router';
 import { useScannerStore } from '@/stores/scanner_store';
 import { useToolStore } from '@/stores/tool_store';
@@ -76,13 +56,12 @@ const tool = computed(() => {
 });
 
 let vButtons: NodeListOf<HTMLElement>;
-let hButtons: NodeListOf<HTMLElement>;
+// let hButtons: NodeListOf<HTMLElement>;
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
-  document.addEventListener('scan', handleScan);
   vButtons = document.querySelectorAll('.v-arrow-select');
-  hButtons = document.querySelectorAll('.h-arrow-select');
+  // hButtons = document.querySelectorAll('.h-arrow-select');
   let buttonToFocus = vButtons[0];
   if (buttonToFocus.getAttribute('disabled') === '') buttonToFocus = vButtons[1];
   buttonToFocus.focus();
@@ -90,7 +69,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
-  document.removeEventListener('scan', handleScan);
 });
 
 function pickTool() {
@@ -165,26 +143,6 @@ function arrowLeft(e: MouseEvent) {
   (vButtons[1] as HTMLElement).focus();
   scannerStore.decrementStockAdjustment();
 }
-
-// Hardware barcode scanner
-function handleScan(e: ScanEvent) {
-  // Do not respond to scanCodes without our custom internal scanCode prefix
-  if (!e.detail.scanCode.startsWith(prefix)) return;
-  const code = e.detail.scanCode.replace(prefix, '');
-  const index = code ? parseInt(code) : null;
-  if (!index) return;
-  switch (index) {
-    case scanCodes.PICK_TOOL:
-      pickTool();
-      break;
-    case scanCodes.ADJUST_STOCK:
-      adjustStock(scannerStore.stockAdjustment);
-      break;
-    case scanCodes.VIEW_DETAILS:
-      openDetails();
-      break;
-  }
-}
 </script>
 
 <style scoped>
@@ -243,16 +201,6 @@ function handleScan(e: ScanEvent) {
   flex-grow: 1;
   text-align: center;
   font-size: 2em;
-}
-.barcode-container {
-  display: flex;
-  flex-direction: column;
-}
-.barcode {
-  position: absolute;
-  bottom: -10px;
-  left: 0;
-  right: 0;
 }
 .location {
   font-size: 0.8em;

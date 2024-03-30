@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <SettingsTiles :items="vendorStore.vendors" @create="create" @edit="edit"></SettingsTiles>
+    <SettingsTiles :items="supplierStore.suppliers" @create="create" @edit="edit"></SettingsTiles>
   </div>
   <v-dialog v-model="dialog" class="dialog">
     <v-card>
@@ -24,13 +24,6 @@
             append-inner-icon="mdi-open-in-new"
             @click:append-inner="open"
           ></v-text-field>
-          <v-combobox v-model="editingItem.coatings" label="Tool Coatings" chips multiple>
-            <template v-slot:selection="{ item }">
-              <v-chip>
-                {{ item }}
-              </v-chip>
-            </template>
-          </v-combobox>
         </v-form>
       </v-card-text>
       <v-card-actions>
@@ -46,20 +39,20 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import SettingsTiles from '@/components/SettingsTiles.vue';
-import { useVendorStore } from '@/stores/vendor_store';
+import SettingsTiles from '@/components/settings/SettingsTiles.vue';
+import { useSupplierStore } from '@/stores/supplier_store';
 
-const vendorStore = useVendorStore();
+const supplierStore = useSupplierStore();
 const dialog = ref(false);
 const editingIndex = ref(-1);
-const editingItem = ref<VendorDoc>({} as VendorDoc);
+const editingItem = ref<SupplierDoc>({} as SupplierDoc);
 const valid = ref(true);
 
 const isEditing = computed(() => editingIndex.value > -1);
 
 const cardTitle = computed(() => {
   const prefix = isEditing.value ? 'Edit' : 'Add';
-  return prefix + ' Vendor';
+  return prefix + ' Supplier';
 });
 
 const actionText = computed(() => {
@@ -68,13 +61,13 @@ const actionText = computed(() => {
 
 function create() {
   editingIndex.value = -1;
-  editingItem.value = {} as VendorDoc;
+  editingItem.value = {} as SupplierDoc;
   dialog.value = true;
 }
 
 function edit(i: number) {
   editingIndex.value = i;
-  editingItem.value = { ...vendorStore.vendors[editingIndex.value] };
+  editingItem.value = { ...supplierStore.suppliers[editingIndex.value] };
   dialog.value = true;
 }
 
@@ -83,7 +76,7 @@ async function close() {
 }
 
 const names = computed(() => {
-  return vendorStore.vendors.map((x) => x.name.toLowerCase());
+  return supplierStore.suppliers.map((x) => x.name.toLowerCase());
 });
 
 const rules: Rules = {
@@ -95,9 +88,9 @@ const rules: Rules = {
 
 async function save() {
   if (editingIndex.value === -1) {
-    await vendorStore.add(editingItem.value);
+    await supplierStore.add(editingItem.value);
   } else {
-    await vendorStore.update(editingItem.value);
+    await supplierStore.update(editingItem.value);
   }
   dialog.value = false;
 }

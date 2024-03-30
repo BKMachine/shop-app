@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <SettingsTiles :items="supplierStore.suppliers" @create="create" @edit="edit"></SettingsTiles>
+    <SettingsTiles :items="customerStore.customers" @create="create" @edit="edit"></SettingsTiles>
   </div>
   <v-dialog v-model="dialog" class="dialog">
     <v-card>
@@ -39,20 +39,20 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import SettingsTiles from '@/components/SettingsTiles.vue';
-import { useSupplierStore } from '@/stores/supplier_store';
+import SettingsTiles from '@/components/settings/SettingsTiles.vue';
+import { useCustomerStore } from '@/stores/customer_store';
 
-const supplierStore = useSupplierStore();
+const customerStore = useCustomerStore();
 const dialog = ref(false);
 const editingIndex = ref(-1);
-const editingItem = ref<SupplierDoc>({} as SupplierDoc);
+const editingItem = ref<CustomerDoc>({} as CustomerDoc);
 const valid = ref(true);
 
 const isEditing = computed(() => editingIndex.value > -1);
 
 const cardTitle = computed(() => {
   const prefix = isEditing.value ? 'Edit' : 'Add';
-  return prefix + ' Supplier';
+  return prefix + ' Customer';
 });
 
 const actionText = computed(() => {
@@ -61,13 +61,13 @@ const actionText = computed(() => {
 
 function create() {
   editingIndex.value = -1;
-  editingItem.value = {} as SupplierDoc;
+  editingItem.value = {} as CustomerDoc;
   dialog.value = true;
 }
 
 function edit(i: number) {
   editingIndex.value = i;
-  editingItem.value = { ...supplierStore.suppliers[editingIndex.value] };
+  editingItem.value = { ...customerStore.customers[editingIndex.value] };
   dialog.value = true;
 }
 
@@ -76,7 +76,7 @@ async function close() {
 }
 
 const names = computed(() => {
-  return supplierStore.suppliers.map((x) => x.name.toLowerCase());
+  return customerStore.customers.map((x) => x.name.toLowerCase());
 });
 
 const rules: Rules = {
@@ -88,9 +88,9 @@ const rules: Rules = {
 
 async function save() {
   if (editingIndex.value === -1) {
-    await supplierStore.add(editingItem.value);
+    await customerStore.add(editingItem.value);
   } else {
-    await supplierStore.update(editingItem.value);
+    await customerStore.update(editingItem.value);
   }
   dialog.value = false;
 }

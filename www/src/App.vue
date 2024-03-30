@@ -39,9 +39,8 @@
 <script setup lang="ts">
 import onScan from 'onscan.js';
 import { onBeforeMount, ref } from 'vue';
-import ScanDialog404 from '@/components/ScanDialog404.vue';
-import ScanDialogTool from '@/components/ScanDialogTool.vue';
-import { prefix } from '@/plugins/enums';
+import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
+import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useScannerStore } from '@/stores/scanner_store';
@@ -71,18 +70,14 @@ onScan.attachTo(document, {
 });
 
 document.addEventListener('scan', function (e) {
-  // Handle scanCodes from a QRCode starting with URL:
+  // Handle Location scans from a QRCode starting with Loc:
   if (e.detail.scanCode.startsWith('Loc:')) {
     const [location, position] = e.detail.scanCode.replace('Loc:', '').split(' | ');
     router.push({ name: 'locations', query: { loc: location, pos: position } });
     return;
   }
 
-  // Do not respond to scanCodes with our custom internal scanCode prefix
-  if (e.detail.scanCode.startsWith(prefix)) return;
-
-  // Do not respond to scans if the scan dialog is already open
-  if (scannerStore.dialog === true) return;
+  // Handle Tool scans from tool sleeve barcodes
   scannerStore.setStockAdjustment(0);
   scannerStore.scan(e.detail.scanCode);
 });
