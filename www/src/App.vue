@@ -19,6 +19,9 @@
         </v-list-item>
       </v-list>
       <template v-slot:append>
+        <v-list-item prepend-icon="mdi-barcode-scan" @click="scannerStore.scan('120850')">
+          Test
+        </v-list-item>
         <v-list-item prepend-icon="mdi-file-document-outline" link :to="{ name: 'toolReport' }">
           Report
         </v-list-item>
