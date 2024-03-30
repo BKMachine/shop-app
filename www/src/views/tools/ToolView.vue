@@ -240,14 +240,19 @@
         </v-window-item>
 
         <v-window-item value="tech">
-          <v-text-field
-            v-model.number="tool.flutes"
-            :label="fluteText"
-            type="number"
-            min="0"
-            @keydown="isNumber($event)"
-          />
-          <v-select v-model="tool.type" :items="types" />
+          <v-row no-gutters>
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="tool.flutes"
+                class="mr-2"
+                :label="fluteText"
+                type="number"
+                min="0"
+                @keydown="isNumber($event)"
+              />
+            </v-col>
+            <v-col cols="6"> </v-col>
+          </v-row>
         </v-window-item>
       </v-window>
     </v-form>
@@ -278,7 +283,7 @@ const tool = ref<ToolDoc | ToolDoc_Pop>({
 const toolOriginal = ref<ToolDoc | ToolDoc_Pop>({} as ToolDoc_Pop);
 
 const category = ref<ToolCategory>('milling');
-const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'stock');
+const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'tech');
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);
