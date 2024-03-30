@@ -51,9 +51,7 @@ const stockAdjustText = computed(() => {
   else return scannerStore.stockAdjustment;
 });
 
-const tool = computed(() => {
-  return scannerStore.getTool() as ToolDoc;
-});
+const tool = computed(() => scannerStore.tool);
 
 let vButtons: NodeListOf<HTMLElement>;
 // let hButtons: NodeListOf<HTMLElement>;

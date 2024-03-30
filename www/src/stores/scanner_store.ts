@@ -1,29 +1,32 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { useToolStore } from '@/stores/tool_store';
+import axios from '@/plugins/axios';
 
 export const useScannerStore = defineStore('scanner', () => {
-  const toolStore = useToolStore();
-
   const dialog = ref(false);
   const code = ref<string>('');
   const type = ref<'404' | 'tool'>('404');
   const stockAdjustment = ref(0);
+  const tool = ref<ToolDoc_Pop>({} as ToolDoc_Pop);
 
   function showDialog(bool: boolean) {
     dialog.value = bool;
   }
 
-  function scan(scanCode: string) {
+  async function scan(scanCode: string) {
     code.value = scanCode;
-    const tool = getTool();
-    if (tool) type.value = 'tool';
-    else type.value = '404';
-    showDialog(true);
-  }
-
-  function getTool() {
-    return toolStore.tools.find((x) => x.item === code.value || x.barcode === code.value);
+    axios
+      .get(`/tools/info/${scanCode}`)
+      .then(({ data }) => {
+        type.value = 'tool';
+        tool.value = data;
+      })
+      .catch(() => {
+        type.value = '404';
+      })
+      .finally(() => {
+        showDialog(true);
+      });
   }
 
   function setStockAdjustment(num: number) {
@@ -43,9 +46,9 @@ export const useScannerStore = defineStore('scanner', () => {
     code,
     type,
     stockAdjustment,
+    tool,
     showDialog,
     scan,
-    getTool,
     setStockAdjustment,
     incrementStockAdjustment,
     decrementStockAdjustment,
