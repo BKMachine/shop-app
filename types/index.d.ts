@@ -56,8 +56,8 @@ interface CustomerDoc {
 }
 
 interface PrintLocationBody {
-  loc: string;
-  pos: string;
+  loc?: string;
+  pos?: string;
 }
 
 interface PrintRequest {

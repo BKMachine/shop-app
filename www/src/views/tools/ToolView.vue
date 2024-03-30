@@ -33,7 +33,7 @@
       <v-tab value="general">General</v-tab>
       <v-tab value="stock">Stock</v-tab>
       <v-tab value="tech">Technical</v-tab>
-      <v-spacer></v-spacer>
+      <v-spacer />
       <div class="d-flex align-center">
         <v-btn
           v-if="tool.productLink"
@@ -73,25 +73,21 @@
     <v-form v-model="valid">
       <v-window v-model="tab" class="tab-window">
         <v-window-item value="general">
-          <v-text-field
-            v-model="tool.description"
-            label="Description"
-            :rules="[rules.required]"
-          ></v-text-field>
+          <v-text-field v-model="tool.description" label="Description" :rules="[rules.required]" />
           <div class="d-flex">
             <v-text-field
               v-model="tool.item"
               class="mr-2"
               label="Product Number"
               append-inner-icon="mdi-barcode"
-            ></v-text-field>
+            />
             <v-text-field
               v-model="tool.barcode"
               class="ml-2"
               label="Barcode"
               append-inner-icon="mdi-barcode"
               :rules="[rules.barcode]"
-            ></v-text-field>
+            />
           </div>
           <div class="d-flex">
             <v-select
@@ -105,11 +101,10 @@
               <template v-slot:item="{ props, item }">
                 <v-list-item v-bind="props" title="">
                   <template v-slot:prepend>
-                    <v-avatar rounded="0"
-                      ><v-img class="vendor-logo" :src="item.raw.logo"></v-img
-                    ></v-avatar>
+                    <v-avatar rounded="0">
+                      <v-img class="vendor-logo" :src="item.raw.logo"></v-img>
+                    </v-avatar>
                   </template>
-
                   {{ item.raw.name }}
                 </v-list-item>
               </template>
@@ -119,23 +114,23 @@
               class="supplier ml-2"
               label="Coating"
               :items="coatings"
-            ></v-select>
+            />
           </div>
           <v-text-field
             v-model="tool.productLink"
             label="Product Page Link"
             append-inner-icon="mdi-link"
-          ></v-text-field>
+          />
           <v-text-field
             v-model="tool.techDataLink"
             label="Speed & Feeds Link"
             append-inner-icon="mdi-link"
-          ></v-text-field>
+          />
           <v-text-field
             v-model="tool.img"
             label="Tool Image URL"
             append-inner-icon="mdi-image-outline"
-          ></v-text-field>
+          />
         </v-window-item>
 
         <v-window-item value="stock">
@@ -146,7 +141,7 @@
               :label="formattedOrderedOn"
               color="#901394"
               @click="tool.orderedOn = undefined"
-            ></v-checkbox>
+            />
           </div>
           <v-row>
             <v-col cols="6">
@@ -156,19 +151,23 @@
                 type="number"
                 min="0"
                 @keydown="isNumber($event)"
-              ></v-text-field>
-              <v-combobox
-                v-model="tool.location"
-                :items="toolStore.locations"
-                label="Location"
-              ></v-combobox>
+              />
+              <v-combobox v-model="tool.location" :items="toolStore.locations" label="Location" />
               <v-text-field
                 v-model="tool.position"
                 label="Position"
-                append-inner-icon="mdi-map-marker"
                 @update:modelValue="tool.position = tool.position?.toUpperCase()"
-                @click:append-inner="gotoLocation"
-              ></v-text-field>
+              >
+                <template v-slot:append-inner>
+                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation"></v-icon>
+                  <v-icon
+                    v-if="tool.location && tool.position"
+                    icon="mdi-printer-outline"
+                    class="ml-2"
+                    @click="printLocation"
+                  />
+                </template>
+              </v-text-field>
             </v-col>
             <v-col cols="6">
               <v-select
@@ -181,11 +180,10 @@
                 <template v-slot:item="{ props, item }">
                   <v-list-item v-bind="props" title="">
                     <template v-slot:prepend>
-                      <v-avatar rounded="0"
-                        ><v-img class="vendor-logo" :src="item.raw.logo"></v-img
-                      ></v-avatar>
+                      <v-avatar rounded="0">
+                        <v-img class="vendor-logo" :src="item.raw.logo"></v-img>
+                      </v-avatar>
                     </template>
-
                     {{ item.raw.name }}
                   </v-list-item>
                 </template>
@@ -195,7 +193,7 @@
                 label="Cost"
                 prepend-inner-icon="mdi-currency-usd"
                 @keydown="isNumber($event)"
-              ></v-text-field>
+              />
               <v-row>
                 <v-col cols="6">
                   <v-text-field
@@ -204,7 +202,7 @@
                     type="number"
                     min="0"
                     @keydown="isNumber($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
                 <v-col cols="6">
                   <v-text-field
@@ -213,7 +211,7 @@
                     type="number"
                     min="0"
                     @keydown="isNumber($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
             </v-col>
@@ -227,7 +225,7 @@
             type="number"
             min="0"
             @keydown="isNumber($event)"
-          ></v-text-field>
+          />
         </v-window-item>
       </v-window>
     </v-form>
@@ -239,6 +237,7 @@ import { isEqual } from 'lodash';
 import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
+import printer from '@/plugins/printer';
 import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
@@ -370,6 +369,10 @@ function isNumber(evt: KeyboardEvent) {
 function gotoLocation() {
   if (!tool.value.location || !tool.value.position) return;
   router.push({ name: 'locations', query: { loc: tool.value.location, pos: tool.value.position } });
+}
+
+function printLocation() {
+  printer.printLocation({ loc: tool.value.location, pos: tool.value.position });
 }
 </script>
 
