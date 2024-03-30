@@ -64,7 +64,7 @@
           density="comfortable"
           prepend-icon="mdi-content-save-outline"
           :disabled="!toolIsAltered || !valid"
-          @click="save"
+          @click="saveTool"
         >
           Save
         </v-btn>
@@ -73,68 +73,83 @@
     <v-form v-model="valid">
       <v-window v-model="tab" class="tab-window">
         <v-window-item value="general">
-          <v-text-field v-model="tool.description" label="Description" :rules="[rules.required]" />
-          <div class="d-flex">
+          <v-row no-gutters>
             <v-text-field
-              v-model="tool.item"
-              class="mr-2"
-              label="Product Number"
-              append-inner-icon="mdi-barcode"
+              v-model="tool.description"
+              label="Description"
+              :rules="[rules.required]"
             />
+          </v-row>
+          <v-row no-gutters>
+            <v-col cols="6">
+              <v-text-field
+                v-model="tool.item"
+                class="mr-2"
+                label="Product Number"
+                append-inner-icon="mdi-barcode"
+              />
+            </v-col>
+            <v-col cols="6">
+              <v-text-field
+                v-model="tool.barcode"
+                class="ml-2"
+                label="Barcode"
+                append-inner-icon="mdi-barcode"
+                :rules="[rules.barcode]"
+              />
+            </v-col>
+          </v-row>
+          <v-row no-gutters>
+            <v-col cols="6">
+              <v-select
+                v-model="tool.vendor"
+                class="mr-2"
+                label="Brand"
+                :items="vendorStore.vendors"
+                item-title="name"
+                item-value="_id"
+              >
+                <template v-slot:item="{ props, item }">
+                  <v-list-item v-bind="props" title="">
+                    <template v-slot:prepend>
+                      <v-avatar rounded="0">
+                        <v-img class="vendor-logo" :src="item.raw.logo"></v-img>
+                      </v-avatar>
+                    </template>
+                    {{ item.raw.name }}
+                  </v-list-item>
+                </template>
+              </v-select>
+            </v-col>
+            <v-col cols="6">
+              <v-select v-model="tool.coating" class="ml-2" label="Coating" :items="coatings" />
+            </v-col>
+          </v-row>
+          <v-row no-gutters>
             <v-text-field
-              v-model="tool.barcode"
-              class="ml-2"
-              label="Barcode"
-              append-inner-icon="mdi-barcode"
-              :rules="[rules.barcode]"
+              v-model="tool.productLink"
+              label="Product Page Link"
+              append-inner-icon="mdi-link"
             />
-          </div>
-          <div class="d-flex">
-            <v-select
-              v-model="tool.vendor"
-              class="vendor"
-              label="Brand"
-              :items="vendorStore.vendors"
-              item-title="name"
-              item-value="_id"
-            >
-              <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props" title="">
-                  <template v-slot:prepend>
-                    <v-avatar rounded="0">
-                      <v-img class="vendor-logo" :src="item.raw.logo"></v-img>
-                    </v-avatar>
-                  </template>
-                  {{ item.raw.name }}
-                </v-list-item>
-              </template>
-            </v-select>
-            <v-select
-              v-model="tool.coating"
-              class="supplier ml-2"
-              label="Coating"
-              :items="coatings"
+          </v-row>
+          <v-row no-gutters>
+            <v-text-field
+              v-model="tool.techDataLink"
+              label="Speed & Feeds Link"
+              append-inner-icon="mdi-link"
             />
-          </div>
-          <v-text-field
-            v-model="tool.productLink"
-            label="Product Page Link"
-            append-inner-icon="mdi-link"
-          />
-          <v-text-field
-            v-model="tool.techDataLink"
-            label="Speed & Feeds Link"
-            append-inner-icon="mdi-link"
-          />
-          <v-text-field
-            v-model="tool.img"
-            label="Tool Image URL"
-            append-inner-icon="mdi-image-outline"
-          />
+          </v-row>
+          <v-row no-gutters>
+            <v-text-field
+              v-model="tool.img"
+              label="Tool Image URL"
+              append-inner-icon="mdi-image-outline"
+            />
+          </v-row>
         </v-window-item>
 
         <v-window-item value="stock">
-          <div class="d-flex align-center">
+          <v-row no-gutters>
             <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="#901394"></v-switch>
             <v-checkbox
               v-model="tool.onOrder"
@@ -142,36 +157,39 @@
               color="#901394"
               @click="tool.orderedOn = undefined"
             />
-          </div>
-          <v-row>
+          </v-row>
+          <v-row no-gutters>
             <v-col cols="6">
               <v-text-field
                 v-model.number="tool.stock"
+                class="mr-2"
                 label="Stock Qty"
                 type="number"
                 min="0"
                 @keydown="isNumber($event)"
               />
-              <v-combobox v-model="tool.location" :items="toolStore.locations" label="Location" />
+              <v-combobox
+                v-model="tool.location"
+                class="mr-2"
+                :items="toolStore.locations"
+                label="Location"
+              />
               <v-text-field
                 v-model="tool.position"
+                class="mr-2"
                 label="Position"
                 @update:modelValue="tool.position = tool.position?.toUpperCase()"
               >
                 <template v-slot:append-inner>
                   <v-icon icon="mdi-map-marker-outline" @click="gotoLocation"></v-icon>
-                  <v-icon
-                    v-if="tool.location && tool.position"
-                    icon="mdi-printer-outline"
-                    class="ml-2"
-                    @click="printLocation"
-                  />
+                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printLocation" />
                 </template>
               </v-text-field>
             </v-col>
             <v-col cols="6">
               <v-select
                 v-model="tool.supplier"
+                class="ml-2"
                 label="Supplier"
                 :items="supplierStore.suppliers"
                 item-title="name"
@@ -190,14 +208,16 @@
               </v-select>
               <v-text-field
                 v-model.number="tool.cost"
+                class="ml-2"
                 label="Cost"
                 prepend-inner-icon="mdi-currency-usd"
                 @keydown="isNumber($event)"
               />
-              <v-row>
+              <v-row no-gutters>
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="tool.reorderQty"
+                    class="mx-2"
                     label="Reorder Qty"
                     type="number"
                     min="0"
@@ -207,6 +227,7 @@
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="tool.reorderThreshold"
+                    class="ml-2"
                     label="Min Stock Qty"
                     type="number"
                     min="0"
@@ -226,6 +247,7 @@
             min="0"
             @keydown="isNumber($event)"
           />
+          <v-select v-model="tool.type" :items="types" />
         </v-window-item>
       </v-window>
     </v-form>
@@ -247,7 +269,6 @@ const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 const supplierStore = useSupplierStore();
 
-const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'stock');
 const tool = ref<ToolDoc | ToolDoc_Pop>({
   stock: 0,
   reorderThreshold: 0,
@@ -255,45 +276,49 @@ const tool = ref<ToolDoc | ToolDoc_Pop>({
   autoReorder: false,
 } as ToolDoc_Pop);
 const toolOriginal = ref<ToolDoc | ToolDoc_Pop>({} as ToolDoc_Pop);
-const valid = ref(false);
 
 const category = ref<ToolCategory>('milling');
+const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'stock');
+const id = computed(() => router.currentRoute.value.params.id);
+const valid = ref(false);
+const loading = ref(false);
+const saveFlag = ref(false);
 
 onBeforeMount(() => {
+  // Get tool category from local storage to determine which tab to show
   const type = window.localStorage.getItem('type') as ToolCategory | null;
+  // Default to milling tab
   category.value = type ? type : 'milling';
-});
-
-const id = computed(() => {
-  return router.currentRoute.value.params.id;
 });
 
 onMounted(() => {
   const routeName = router.currentRoute.value.name;
   const routeParams = router.currentRoute.value.params;
+
+  // Fetch the tool from the DB if we are viewing a tool and not creating a new tool
   if (routeName === 'viewTool') fetchTool();
-  watch(id, () => {
-    fetchTool();
-  });
-  watch(toolStore.rawTools, () => {
+
+  // Fetch the tool from the DB if the route changes
+  watch(id, () => fetchTool());
+
+  // Update tool if changed from another user
+  watch(toolStore.trigger, () => {
     if (routeName !== 'viewTool') return;
     const match = toolStore.rawTools.find((x) => x._id === routeParams.id);
-    if (match) {
-      tool.value = { ...match };
-      toolOriginal.value = { ...match };
+    if (!match) return;
+    // Alert user tool has updated if not the user that did the update
+    if (!isEqual(tool.value, toolOriginal.value) && saveFlag.value === false) {
+      alert('Tool was updated. Local changes will be lost.');
     }
+    tool.value = { ...match };
+    toolOriginal.value = { ...match };
   });
 });
 
-const coatings = computed(() => {
-  if (!tool.value.vendor) return [];
-  const id = typeof tool.value.vendor === 'string' ? tool.value.vendor : tool.value.vendor?._id;
-  const vendor = vendorStore.vendors.find((x) => x._id === id);
-  if (!vendor) return [];
-  return vendor.coatings;
+onBeforeUnmount(() => {
+  // Store the tool we were viewing to slightly highlight the row in the tool list
+  toolStore.setLastId(tool.value._id);
 });
-
-const loading = ref(false);
 
 function fetchTool(showSpinner: boolean = true) {
   const { id } = router.currentRoute.value.params;
@@ -305,49 +330,33 @@ function fetchTool(showSpinner: boolean = true) {
       toolOriginal.value = { ...data };
     })
     .catch(() => {
-      alert('Tool not found');
+      alert('Tool not found.');
     })
     .finally(() => {
       loading.value = false;
     });
 }
 
-const fluteText = computed(() => {
-  return category.value === 'milling' ? 'Flutes' : 'Cutting Edges';
-});
-
-async function save() {
+async function saveTool() {
   const routeName = router.currentRoute.value.name;
+  saveFlag.value = true;
   if (routeName === 'createTool') {
     await toolStore.add({ ...(tool.value as ToolDoc), category: category.value });
   } else if (routeName === 'viewTool') {
     await toolStore.update(tool.value as ToolDoc_Pop);
   }
-  exit();
-}
-
-function exit() {
+  saveFlag.value = false;
   router.back();
 }
-
-onBeforeUnmount(() => {
-  toolStore.setLastId(tool.value._id);
-});
 
 function openLink(link: string | undefined) {
   if (!link) return;
   window.open(link, '_blank');
 }
 
-const toolIsAltered = computed<boolean>(() => {
-  return !isEqual(tool.value, toolOriginal.value);
-});
+/* FORM VALIDATION */
 
-const formattedOrderedOn = computed(() => {
-  if (!tool.value.orderedOn || !tool.value.onOrder) return 'On Order';
-  const time = DateTime.fromISO(tool.value.orderedOn);
-  return `On Order: ${time.toLocaleString()}`;
-});
+const toolIsAltered = computed<boolean>(() => !isEqual(tool.value, toolOriginal.value));
 
 const rules: Rules = {
   required: (val) => !!val || 'Required',
@@ -366,6 +375,24 @@ function isNumber(evt: KeyboardEvent) {
   }
 }
 
+/* GENERAL TAB LOGIC */
+
+const coatings = computed(() => {
+  if (!tool.value.vendor) return [];
+  const id = typeof tool.value.vendor === 'string' ? tool.value.vendor : tool.value.vendor?._id;
+  const vendor = vendorStore.vendors.find((x) => x._id === id);
+  if (!vendor) return [];
+  return vendor.coatings;
+});
+
+/* STOCK TAB LOGIC */
+
+const formattedOrderedOn = computed(() => {
+  if (!tool.value.orderedOn || !tool.value.onOrder) return 'On Order';
+  const time = DateTime.fromISO(tool.value.orderedOn);
+  return `On Order: ${time.toLocaleString()}`;
+});
+
 function gotoLocation() {
   if (!tool.value.location || !tool.value.position) return;
   router.push({ name: 'locations', query: { loc: tool.value.location, pos: tool.value.position } });
@@ -374,6 +401,12 @@ function gotoLocation() {
 function printLocation() {
   printer.printLocation({ loc: tool.value.location, pos: tool.value.position });
 }
+
+/* TECHNICAL TAB LOGIC */
+
+const fluteText = computed(() => {
+  return category.value === 'milling' ? 'Flutes' : 'Cutting Edges';
+});
 </script>
 
 <style scoped>
@@ -403,9 +436,5 @@ function printLocation() {
 }
 .loading {
   height: 100%;
-}
-.vendor,
-.supplier {
-  width: 50%;
 }
 </style>

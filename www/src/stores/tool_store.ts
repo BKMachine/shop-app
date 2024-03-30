@@ -102,9 +102,14 @@ export const useToolStore = defineStore('tools', () => {
     await update(clone);
   }
 
+  const trigger = ref({ tool: 0 });
+
   function SOCKET_tool(tool: ToolDoc) {
     const index = rawTools.value.findIndex((x) => x._id === tool._id);
-    if (index > -1) rawTools.value[index] = tool;
+    if (index > -1) {
+      rawTools.value[index] = tool;
+      trigger.value.tool++;
+    }
   }
 
   return {
@@ -117,6 +122,7 @@ export const useToolStore = defineStore('tools', () => {
     locations,
     tabChange,
     lastId,
+    trigger,
     fetch,
     add,
     update,
