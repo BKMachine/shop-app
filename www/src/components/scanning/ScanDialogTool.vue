@@ -14,7 +14,7 @@
         </div>
       </v-card-title>
       <v-card-text class="card-body">
-        <div class="mb-8">
+        <div class="mb-8 mt-2">
           <v-btn class="v-arrow-select" :disabled="tool.stock === 0" @click="pickTool">
             Pick Tool
           </v-btn>
@@ -182,7 +182,7 @@ function arrowLeft(e: MouseEvent) {
   background: white;
 }
 .avatar img {
-  width: 90%;
+  max-width: 90%;
   max-height: 90%;
 }
 .stock-adjust-container {
