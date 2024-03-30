@@ -1,4 +1,4 @@
-import { uniq } from 'lodash';
+import uniq from 'lodash/uniq';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import axios from '@/plugins/axios';

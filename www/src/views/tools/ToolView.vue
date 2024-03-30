@@ -255,7 +255,7 @@
 </template>
 
 <script setup lang="ts">
-import { isEqual } from 'lodash';
+import isEqual from 'lodash/isEqual';
 import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
