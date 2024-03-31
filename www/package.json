@@ -46,6 +46,7 @@
     "typescript": "~5.4.2",
     "vite": "^5.1.6",
     "vite-plugin-vuetify": "^2.0.3",
+    "vue-toast-notification": "^3",
     "vue-tsc": "^2.0.6"
   }
 }
