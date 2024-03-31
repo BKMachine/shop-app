@@ -24,9 +24,9 @@
             Adjust Stock
           </v-btn>
           <div class="stock-adjust-container mt-2">
-            <v-btn class="h-arrow-select" icon="mdi-minus" @mousedown.left="arrowLeft"></v-btn>
+            <v-btn class="h-arrow-select" icon="mdi-minus" @mousedown.left="arrowLeft" />
             <div class="stack-adjust-number">{{ stockAdjustText }}</div>
-            <v-btn class="h-arrow-select" icon="mdi-plus" @mousedown.left="arrowRight"></v-btn>
+            <v-btn class="h-arrow-select" icon="mdi-plus" @mousedown.left="arrowRight" />
           </div>
         </div>
         <div>
@@ -46,15 +46,10 @@ import { useToolStore } from '@/stores/tool_store';
 const toolStore = useToolStore();
 const scannerStore = useScannerStore();
 
-const stockAdjustText = computed(() => {
-  if (scannerStore.stockAdjustment > 0) return `+${scannerStore.stockAdjustment}`;
-  else return scannerStore.stockAdjustment;
-});
-
-const tool = computed(() => scannerStore.tool);
-
 let vButtons: NodeListOf<HTMLElement>;
 // let hButtons: NodeListOf<HTMLElement>;
+
+const tool = computed(() => scannerStore.tool);
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
@@ -67,6 +62,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
+});
+
+const stockAdjustText = computed(() => {
+  if (scannerStore.stockAdjustment > 0) return `+${scannerStore.stockAdjustment}`;
+  else return scannerStore.stockAdjustment;
 });
 
 function pickTool() {
