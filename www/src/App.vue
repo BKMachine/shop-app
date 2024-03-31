@@ -1,10 +1,10 @@
 <template>
   <v-app v-cloak>
     <v-app-bar class="elevation-2">
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
       <v-app-bar-title>
         <v-avatar size="48" class="pointer" @click="router.push({ name: 'home' })">
-          <v-img src="@/assets/img/bk_logo.png"></v-img>
+          <v-img src="@/assets/img/bk_logo.png" />
         </v-avatar>
         BK Machine
       </v-app-bar-title>
@@ -57,6 +57,8 @@ const supplierStore = useSupplierStore();
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
+// onscan.js by default ignores chars other than alphanumeric
+// mappedCodes are chars we do want included in scans
 const mappedCodes: { [key: string]: string } = {
   ' ': ' ',
   ':': ':',
@@ -67,12 +69,12 @@ const mappedCodes: { [key: string]: string } = {
 // Hardware barcode scanner
 onScan.attachTo(document, {
   minLength: 5,
-  keyCodeMapper: function (e: KeyboardEvent) {
+  keyCodeMapper: (e: KeyboardEvent) => {
     return mappedCodes[e.key] || onScan.decodeKeyEvent(e);
   },
 });
 
-document.addEventListener('scan', function (e) {
+document.addEventListener('scan', (e) => {
   // Handle Location scans from a QRCode starting with Loc:
   if (e.detail.scanCode.startsWith('Loc:')) {
     const [location, position] = e.detail.scanCode.replace('Loc:', '').split(' | ');
@@ -81,7 +83,6 @@ document.addEventListener('scan', function (e) {
   }
 
   // Handle Tool scans from tool sleeve barcodes
-  scannerStore.setStockAdjustment(0);
   scannerStore.scan(e.detail.scanCode);
 });
 

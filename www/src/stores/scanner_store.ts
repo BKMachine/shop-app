@@ -15,6 +15,7 @@ export const useScannerStore = defineStore('scanner', () => {
 
   async function scan(scanCode: string) {
     code.value = scanCode;
+    setStockAdjustment(0);
     axios
       .get(`/tools/info/${scanCode}`)
       .then(({ data }) => {

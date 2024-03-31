@@ -11,13 +11,17 @@ const app = createApp(App);
 registerPlugins(app);
 app.mount('#app');
 
+// Socket connection to backend for app updates
 const toolStore = useToolStore();
 const socket = io();
 
+// Tool updated or added
 socket.on('tool', (tool: ToolDoc) => {
   toolStore.SOCKET_tool(tool);
 });
 
+// Poll the backend server for version UUID
+// and refresh the page on new build
 let version: string;
 async function getVersion() {
   axios.get('/version').then(({ data }) => {
