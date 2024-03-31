@@ -4,6 +4,8 @@ import ToastPlugin, { useToast } from 'vue-toast-notification';
 
 export default ToastPlugin;
 
+// https://www.npmjs.com/package/vue-toast-notification
+
 const $toast = useToast({
   position: 'top-right',
   duration: 3000,
