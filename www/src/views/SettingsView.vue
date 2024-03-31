@@ -3,7 +3,7 @@
     <v-expansion-panels>
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2">mdi-account-multiple-outline</v-icon>
+          <v-icon class="mr-2" icon="mdi-account-multiple-outline" />
           Customers
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -13,7 +13,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2">mdi-truck-delivery-outline</v-icon>
+          <v-icon class="mr-2" icon="mdi-truck-delivery-outline" />
           Suppliers
         </v-expansion-panel-title>
         <v-expansion-panel-text>
@@ -23,7 +23,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2">mdi-package-variant-closed</v-icon>
+          <v-icon class="mr-2" icon="mdi-package-variant-closed" />
           Vendors
         </v-expansion-panel-title>
         <v-expansion-panel-text>

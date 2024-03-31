@@ -15,11 +15,11 @@
             v-model="search"
             label="Search"
             prepend-inner-icon="mdi-magnify"
-            single-line
             variant="outlined"
+            single-line
             hide-details
             clearable
-          ></v-text-field>
+          />
         </template>
 
         <v-data-table
@@ -100,7 +100,7 @@ onMounted(() => {
       }
       toolStore.setLastId(null);
     }
-  }, 100);
+  }, 150);
 });
 </script>
 

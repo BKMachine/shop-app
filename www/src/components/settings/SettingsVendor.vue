@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <SettingsTiles :items="vendorStore.vendors" @create="create" @edit="edit"></SettingsTiles>
+    <SettingsTiles :items="vendorStore.vendors" @create="create" @edit="edit" />
   </div>
   <v-dialog v-model="dialog" class="dialog">
     <v-card>
@@ -11,9 +11,9 @@
             v-model="editingItem.name"
             label="Name"
             :rules="[rules.required, rules.counter, rules.unique]"
-          ></v-text-field>
+          />
           <div class="logo-container">
-            <v-text-field v-model="editingItem.logo" label="Logo URL"></v-text-field>
+            <v-text-field v-model="editingItem.logo" label="Logo URL" />
             <div class="logo-preview ml-3 elevation-1">
               <img :src="editingItem.logo" alt="" />
             </div>
@@ -23,12 +23,10 @@
             label="Homepage"
             append-inner-icon="mdi-open-in-new"
             @click:append-inner="open"
-          ></v-text-field>
+          />
           <v-combobox v-model="editingItem.coatings" label="Tool Coatings" chips multiple>
             <template v-slot:selection="{ item }">
-              <v-chip>
-                {{ item }}
-              </v-chip>
+              <v-chip>{{ item }}</v-chip>
             </template>
           </v-combobox>
         </v-form>
@@ -36,9 +34,9 @@
       <v-card-actions>
         <v-spacer />
         <v-btn color="red" variant="elevated" @click="close">Cancel</v-btn>
-        <v-btn color="green" variant="elevated" :disabled="!valid" @click="save">{{
-          actionText
-        }}</v-btn>
+        <v-btn color="green" variant="elevated" :disabled="!valid" @click="save">
+          {{ actionText }}
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

@@ -9,7 +9,7 @@
           </div>
           <v-spacer />
           <v-btn :disabled="!printEnabled" :color="printColor" @click="print">
-            <v-icon icon="mdi-printer-outline"></v-icon>
+            <v-icon icon="mdi-printer-outline" />
           </v-btn>
         </v-card-title>
         <v-card-text>
@@ -21,7 +21,7 @@
                 label="Location"
                 clearable
                 @update:modelValue="updateLocation"
-              ></v-select>
+              />
             </v-col>
             <v-col cols="6">
               <v-select
@@ -30,7 +30,7 @@
                 label="Position"
                 clearable
                 @update:modelValue="updateQueryString"
-              ></v-select>
+              />
             </v-col>
           </v-row>
           <v-data-table-virtual
@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { uniq } from 'lodash';
+import uniq from 'lodash/uniq';
 import { computed, onMounted, ref, watch } from 'vue';
 import printer from '@/plugins/printer';
 import router from '@/router';

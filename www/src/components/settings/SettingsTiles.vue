@@ -5,7 +5,7 @@
     class="tile elevation-2"
     @click="$emit('edit', index)"
   >
-    <v-img v-if="item.logo" :src="item.logo" class="logo"></v-img>
+    <v-img v-if="item.logo" :src="item.logo" class="logo" />
     <span v-else>{{ item.name }}</span>
     <v-tooltip activator="parent" open-delay="500" location="top" offset="-20">
       {{ item.name }}
@@ -13,7 +13,7 @@
   </v-btn>
 
   <v-btn class="tile elevation-2" color="blue-lighten-2" @click="$emit('create')">
-    <v-icon size="36">mdi-plus</v-icon>
+    <v-icon size="36" icon="mdi-plus" />
   </v-btn>
 </template>
 
