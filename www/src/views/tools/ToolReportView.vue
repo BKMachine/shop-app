@@ -1,5 +1,11 @@
 <template>
   <v-container>
+    <v-row>
+      <v-spacer />
+      <v-btn class="my-5" @click="mail">
+        <v-icon icon="mdi-email-outline" />
+      </v-btn>
+    </v-row>
     <div v-for="(item, i) in items" :key="i">
       <span class="bold">
         {{ item[0] }}
@@ -112,6 +118,11 @@ function toggleOnOrder(tool: ToolDoc_Pop) {
 
 function open(tool: ToolDoc_Pop) {
   router.push({ name: 'viewTool', params: { id: tool._id } });
+}
+
+function mail() {
+  axios.get('/mail/reorders');
+  // this.$toast.success('Email Sent', { position: 'bottom', duration: 3000 });
 }
 </script>
 

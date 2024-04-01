@@ -659,6 +659,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/luxon@npm:~3.3.0":
+  version: 3.3.8
+  resolution: "@types/luxon@npm:3.3.8"
+  checksum: 10c0/f2ffa31364eb94ca0474a196f533d301025a203bb2758ce0cf209f338cece0af169edea230b5c0b1a68a71adb02f369faa5ec0bd824deb8f0a08cac6803b1b06
+  languageName: node
+  linkType: hard
+
 "@types/mime@npm:*":
   version: 3.0.4
   resolution: "@types/mime@npm:3.0.4"
@@ -706,6 +713,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~5.26.4"
   checksum: 10c0/b839bad64b2d0e2b4a2d09a53c019ac06c732ac66ea88f3a86a9d2f28a789caf8fd56b888f577183459733abfa1b77e4bf6986cde18b2ec63e1939427aa0d387
+  languageName: node
+  linkType: hard
+
+"@types/nodemailer@npm:^6.4.14":
+  version: 6.4.14
+  resolution: "@types/nodemailer@npm:6.4.14"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/b5958843576cde76dc532aa7b726182fef8b466fa9fcaf1aa03f89f02e896bec4e28b593ffa1a289a46bd0b7fdf34da0640ab7ef8f0811948016f58f77e16307
   languageName: node
   linkType: hard
 
@@ -1753,6 +1769,16 @@ __metadata:
   version: 1.1.1
   resolution: "create-require@npm:1.1.1"
   checksum: 10c0/157cbc59b2430ae9a90034a5f3a1b398b6738bf510f713edc4d4e45e169bc514d3d99dd34d8d01ca7ae7830b5b8b537e46ae8f3c8f932371b0875c0151d7ec91
+  languageName: node
+  linkType: hard
+
+"cron@npm:^3.1.6":
+  version: 3.1.6
+  resolution: "cron@npm:3.1.6"
+  dependencies:
+    "@types/luxon": "npm:~3.3.0"
+    luxon: "npm:~3.4.0"
+  checksum: 10c0/f8328ce1052531bc14372acbfbddb38db33b30b29ac878d574b317779160b2947c9315c81dccb8a33724418cd86440a92269055037c96a2e917c867d57274009
   languageName: node
   linkType: hard
 
@@ -3560,7 +3586,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"luxon@npm:^3.4.4":
+"luxon@npm:^3.4.4, luxon@npm:~3.4.0":
   version: 3.4.4
   resolution: "luxon@npm:3.4.4"
   checksum: 10c0/02e26a0b039c11fd5b75e1d734c8f0332c95510f6a514a9a0991023e43fb233884da02d7f966823ffb230632a733fc86d4a4b1e63c3fbe00058b8ee0f8c728af
@@ -3984,6 +4010,13 @@ __metadata:
     xml: "npm:1.0.1"
     yargs: "npm:^17.5.1"
   checksum: 10c0/666e0a56a86fefda19df85d448529d42f8095d7c888525659728870738485e73d67a5ee4a3a8356a6972fb0ad5f96ba8f34bdeed2fbad404362bb2cee85cb231
+  languageName: node
+  linkType: hard
+
+"nodemailer@npm:^6.9.13":
+  version: 6.9.13
+  resolution: "nodemailer@npm:6.9.13"
+  checksum: 10c0/4d6899f45abb7760a7d3b4d1046de7e08e80a471b84d1f09065a25941ded482e7f9877be248550e681e0270383cb9299f6caded507cbc0e917341bb137cc94a4
   languageName: node
   linkType: hard
 
@@ -4822,6 +4855,7 @@ __metadata:
     "@types/node": "npm:^20.11.29"
     "@typescript-eslint/eslint-plugin": "npm:^7.3.1"
     "@typescript-eslint/parser": "npm:^7.3.1"
+    cron: "npm:^3.1.6"
     cross-env: "npm:^7.0.3"
     dotenv: "npm:^16.4.5"
     eslint: "npm:^8.57.0"
@@ -5963,6 +5997,7 @@ __metadata:
     "@types/lodash": "npm:^4.17.0"
     "@types/luxon": "npm:^3.4.2"
     "@types/node": "npm:^20.11.29"
+    "@types/nodemailer": "npm:^6.4.14"
     "@types/onscan.js": "npm:^1.5.6"
     "@types/uuid": "npm:^9.0.8"
     "@vitejs/plugin-vue": "npm:^5.0.4"
@@ -5979,6 +6014,7 @@ __metadata:
     jsbarcode: "npm:^3.11.6"
     lodash: "npm:^4.17.21"
     luxon: "npm:^3.4.4"
+    nodemailer: "npm:^6.9.13"
     npm-run-all2: "npm:^6.1.2"
     onscan.js: "npm:^1.5.2"
     pinia: "npm:^2.1.7"

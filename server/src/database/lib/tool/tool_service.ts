@@ -1,15 +1,15 @@
 import { emit } from '../../../server/sockets';
 import Tool from './tool_model';
 
-async function list() {
+async function list(): Promise<ToolDoc[]> {
   return Tool.find({});
 }
 
-async function findById(id: string) {
+async function findById(id: string): Promise<ToolDoc_Pop | null> {
   return Tool.findById(id).populate('vendor').populate('supplier');
 }
 
-async function findByScanCode(scanCode: string) {
+async function findByScanCode(scanCode: string): Promise<ToolDoc_Pop | null> {
   return Tool.findOne({
     $or: [{ item: scanCode }, { barcode: scanCode }],
   })
@@ -17,7 +17,7 @@ async function findByScanCode(scanCode: string) {
     .populate('supplier');
 }
 
-async function getAutoReorders() {
+async function getAutoReorders(): Promise<ToolReorders[]> {
   return Tool.find({
     $expr: { $lte: ['$stock', '$reorderThreshold'] },
     autoReorder: true,
@@ -26,14 +26,14 @@ async function getAutoReorders() {
     .populate('supplier');
 }
 
-async function add(data: ToolDoc) {
+async function add(data: ToolDoc): Promise<ToolDoc> {
   const doc = new Tool(data);
   await doc.save();
   emit('tool', doc);
   return doc;
 }
 
-async function update(doc: ToolDoc_Pop) {
+async function update(doc: ToolDoc_Pop): Promise<ToolDoc | null> {
   const newDoc: ToolDoc_Pop = {
     ...doc,
     vendor: typeof doc.vendor === 'object' ? doc.vendor._id : doc.vendor,

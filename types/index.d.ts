@@ -64,3 +64,9 @@ interface PrintRequest {
   printerName: string;
   labelXml: string;
 }
+
+interface ToolReorders extends ToolDoc_Pop {
+  item: string;
+  vendor: VendorDoc;
+  supplier: SupplierDoc;
+}
