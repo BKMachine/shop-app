@@ -279,6 +279,7 @@ const tool = ref<ToolDoc | ToolDoc_Pop>({
   reorderThreshold: 0,
   reorderQty: 0,
   autoReorder: false,
+  flutes: 0,
 } as ToolDoc_Pop);
 const toolOriginal = ref<ToolDoc | ToolDoc_Pop>({} as ToolDoc_Pop);
 
