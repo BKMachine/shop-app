@@ -29,6 +29,7 @@ const scannerStore = useScannerStore();
 function copyToClipboard() {
   navigator.clipboard.writeText(scannerStore.code);
   toastSuccess('Copied to clipboard');
+  scannerStore.showDialog(false);
 }
 </script>
 
