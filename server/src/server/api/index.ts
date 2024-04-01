@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import DymoService from '../../services/dymo_service';
+import SMTPService from '../../services/smtp_service';
 import CustomerRoutes from './routes/customers';
 import SupplierRoutes from './routes/suppliers';
 import ToolRoutes from './routes/tools';
@@ -40,4 +41,12 @@ router.post('/print/location', async (req, res, next) => {
   }
 });
 
+router.get('/mail/reorders', async (req, res, next) => {
+  try {
+    await SMTPService.reorders();
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+});
 export default router;
