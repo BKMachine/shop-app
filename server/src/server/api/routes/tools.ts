@@ -77,6 +77,20 @@ router.put('/tools/pick', async (req, res, next) => {
   }
 });
 
+router.put('/tools/stock', async (req, res, next) => {
+  const { id, amount }: { id: string; amount: number } = req.body;
+  if (!id || !amount) {
+    res.sendStatus(400);
+    return;
+  }
+  try {
+    const { status, tool } = await Tools.stock(id, amount);
+    res.status(status).json(tool);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/tools/info/:scanCode', async (req, res, next) => {
   const { scanCode } = req.params;
   try {

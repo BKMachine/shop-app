@@ -64,6 +64,19 @@ async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc_P
   return { status: 200, tool: tool };
 }
 
+async function stock(
+  id: string,
+  amount: number,
+): Promise<{ status: number; tool: ToolDoc_Pop | null }> {
+  const tool = await Tool.findById(id).populate('vendor').populate('supplier');
+  if (!tool) return { status: 404, tool: null };
+  if (tool.stock + amount < 0) return { status: 400, tool: tool };
+  tool.stock += amount;
+  await tool.save();
+  emit('tool', tool);
+  return { status: 200, tool: tool };
+}
+
 export default {
   list,
   findById,
@@ -72,4 +85,5 @@ export default {
   update,
   getAutoReorders,
   pick,
+  stock,
 };
