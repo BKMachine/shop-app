@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-title class="header">
-      <div>{{ title }}</div>
+      <div>{{ resultsTitle }}</div>
       <div>
         <v-btn link :to="{ name: 'createTool' }" color="primary" prepend-icon="mdi-plus">
           Create New Tool
@@ -102,6 +102,12 @@ const page = ref(1);
 const itemsPerPage = ref(10);
 const cuttingDia = ref<number>();
 const minFluteLength = ref<number>();
+const resultsTitle = computed(() => {
+  let title = props.title;
+  if (props.items.length !== filteredItems.value.length)
+    title += ` - ${filteredItems.value.length} results`;
+  return `${title}`;
+});
 
 const filteredItems = computed(() => {
   if (props.category === 'milling') {
