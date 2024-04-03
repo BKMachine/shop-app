@@ -24,6 +24,8 @@ interface ToolDoc {
   orderedOn?: string;
   location?: string;
   position?: string;
+  cuttingDia?: number;
+  fluteLength?: number;
 }
 
 type ToolCategory = 'milling' | 'turning' | 'other';

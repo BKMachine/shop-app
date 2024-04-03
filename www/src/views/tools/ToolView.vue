@@ -251,7 +251,30 @@
                 @keydown="isNumber($event)"
               />
             </v-col>
-            <v-col cols="6"> </v-col>
+            <v-col cols="6">
+              <v-row no-gutters>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="tool.cuttingDia"
+                    class="mx-2"
+                    label="Cutting Dia"
+                    :rules="[]"
+                    min="0"
+                    @keydown="isNumber($event)"
+                  />
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="tool.fluteLength"
+                    label="Flute Length"
+                    class="ml-2"
+                    :rules="[]"
+                    min="0"
+                    @keydown="isNumber($event)"
+                  />
+                </v-col>
+              </v-row>
+            </v-col>
           </v-row>
         </v-window-item>
       </v-window>
@@ -265,6 +288,7 @@ import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
+import { isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
@@ -371,15 +395,6 @@ const rules: Rules = {
     return val !== tool.value.item || 'Not needed if the same as Product Number';
   },
 };
-
-function isNumber(evt: KeyboardEvent) {
-  const keysAllowed: string[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'];
-  const keyPressed: string = evt.key;
-
-  if (!keysAllowed.includes(keyPressed)) {
-    evt.preventDefault();
-  }
-}
 
 /* GENERAL TAB LOGIC */
 

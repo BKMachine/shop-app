@@ -11,22 +11,65 @@
     <v-card-text>
       <v-card flat>
         <template v-slot:text>
-          <v-text-field
-            v-model="search"
-            label="Search"
-            prepend-inner-icon="mdi-magnify"
-            variant="outlined"
-            single-line
-            hide-details
-            clearable
-          />
+          <div v-if="category === 'milling'">
+            <v-row>
+              <v-col cols="8">
+                <v-text-field
+                  v-model="search"
+                  class="milling-search"
+                  label="Search"
+                  prepend-inner-icon="mdi-magnify"
+                  variant="outlined"
+                  single-line
+                  hide-details
+                  clearable
+                />
+              </v-col>
+              <v-col cols="4">
+                <v-row>
+                  <v-col cols="6">
+                    <v-text-field
+                      v-model.number="cuttingDia"
+                      label="Cutting Dia"
+                      :rules="[]"
+                      min="0"
+                      clearable
+                      @keydown="isNumber($event)"
+                    />
+                  </v-col>
+                  <v-col cols="6">
+                    <v-text-field
+                      v-model.number="minFluteLength"
+                      label="Min Flute Length"
+                      :rules="[]"
+                      min="0"
+                      clearable
+                      @keydown="isNumber($event)"
+                    />
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+            <v-row> </v-row>
+          </div>
+          <div v-else>
+            <v-text-field
+              v-model="search"
+              label="Search"
+              prepend-inner-icon="mdi-magnify"
+              variant="outlined"
+              single-line
+              hide-details
+              clearable
+            />
+          </div>
         </template>
 
         <v-data-table
           v-model:page="page"
           v-model:items-per-page="itemsPerPage"
           :headers="headers"
-          :items="items"
+          :items="filteredItems"
           :search="search"
           :loading="toolStore.loading"
           @click:row="openTool"
@@ -41,20 +84,47 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
-defineProps<{
+const props = defineProps<{
   title: string;
   headers: { key: string; title?: string }[];
   items: ToolDoc_Pop[];
+  category: ToolCategory;
 }>();
 
 const toolStore = useToolStore();
 const search = ref('');
 const page = ref(1);
 const itemsPerPage = ref(10);
+const cuttingDia = ref<number>();
+const minFluteLength = ref<number>();
+
+const filteredItems = computed(() => {
+  if (props.category === 'milling') {
+    return [...props.items]
+      .filter((x) => {
+        if (cuttingDia.value && x.cuttingDia) {
+          if (
+            cuttingDia.value > 0 &&
+            x.cuttingDia.toString().startsWith(cuttingDia.value.toString())
+          )
+            return true;
+        }
+        return !cuttingDia.value;
+      })
+      .filter((x) => {
+        if (minFluteLength.value && x.fluteLength) {
+          if (minFluteLength.value > 0 && minFluteLength.value <= x.fluteLength) return true;
+        }
+        return !minFluteLength.value;
+      });
+  }
+  return props.items;
+});
 
 function openTool(event: unknown, { item }: { item: ToolDoc }) {
   router.push({ name: 'viewTool', params: { id: item._id } });

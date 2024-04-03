@@ -12,6 +12,7 @@
         title="Milling Tools"
         :headers="millingHeaders"
         :items="toolStore.millingTools"
+        :category="tab"
       />
     </v-window-item>
 
@@ -21,6 +22,7 @@
         title="Turning Tools"
         :headers="turningHeaders"
         :items="toolStore.turningTools"
+        :category="tab"
       />
     </v-window-item>
 
@@ -30,6 +32,7 @@
         title="Other Tools"
         :headers="otherHeaders"
         :items="toolStore.otherTools"
+        :category="tab"
       />
     </v-window-item>
   </v-window>

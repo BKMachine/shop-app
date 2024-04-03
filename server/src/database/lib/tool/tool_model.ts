@@ -21,6 +21,8 @@ const schema = new Schema<ToolDoc>({
   orderedOn: Date,
   location: String,
   position: String,
+  cuttingDia: Number,
+  fluteLength: Number,
 });
 
 export default model<ToolDoc>('tools', schema);
