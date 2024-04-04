@@ -80,8 +80,8 @@ const millingHeaders = [
     key: 'coating',
   },
   {
-    title: 'Flutes',
-    key: 'flutes',
+    title: 'Location',
+    key: 'location',
   },
 ];
 
@@ -104,12 +104,16 @@ const turningHeaders = [
     key: 'vendor.name',
   },
   {
+    title: 'Item',
+    key: 'item',
+  },
+  {
     title: 'Cutting Edges',
     key: 'flutes',
   },
   {
-    title: 'Item',
-    key: 'item',
+    title: 'Location',
+    key: 'location',
   },
 ];
 
@@ -130,6 +134,10 @@ const otherHeaders = [
   {
     title: 'Item',
     key: 'item',
+  },
+  {
+    title: 'Location',
+    key: 'location',
   },
 ];
 </script>

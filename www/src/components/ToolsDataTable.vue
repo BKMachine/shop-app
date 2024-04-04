@@ -77,6 +77,9 @@
           <template v-slot:[`item.img`]="{ item }">
             <v-img :id="item._id" :src="item.img" class="tool-img"></v-img>
           </template>
+          <template v-slot:[`item.location`]="{ item }">
+            {{ location(item) }}
+          </template>
         </v-data-table>
       </v-card>
     </v-card-text>
@@ -178,6 +181,12 @@ onMounted(() => {
     }
   }, 150);
 });
+
+function location(tool: ToolDoc_Pop): string {
+  let text = tool.location || '';
+  if (tool.position) text += ' - ' + tool.position;
+  return text;
+}
 </script>
 
 <style scoped>
