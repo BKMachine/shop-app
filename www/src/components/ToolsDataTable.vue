@@ -29,20 +29,16 @@
                 <v-row>
                   <v-col cols="6">
                     <v-text-field
-                      v-model.number="cuttingDia"
+                      v-model="cuttingDia"
                       label="Cutting Dia"
-                      :rules="[]"
-                      min="0"
                       clearable
                       @keydown="isNumber($event)"
                     />
                   </v-col>
                   <v-col cols="6">
                     <v-text-field
-                      v-model.number="minFluteLength"
+                      v-model="minFluteLength"
                       label="Min Flute Length"
-                      :rules="[]"
-                      min="0"
                       clearable
                       @keydown="isNumber($event)"
                     />
@@ -103,8 +99,8 @@ const toolStore = useToolStore();
 const search = ref('');
 const page = ref(1);
 const itemsPerPage = ref(10);
-const cuttingDia = ref<number>();
-const minFluteLength = ref<number>();
+const cuttingDia = ref<string>();
+const minFluteLength = ref<string>();
 const resultsTitle = computed(() => {
   let title = props.title;
   if (props.items.length !== filteredItems.value.length)
@@ -112,22 +108,29 @@ const resultsTitle = computed(() => {
   return `${title}`;
 });
 
-const filteredItems = computed(() => {
+const filteredItems = computed<ToolDoc_Pop[]>(() => {
   if (props.category === 'milling') {
+    let cuttingDiaNum: number;
+    let minFluteLengthNum: number;
+    try {
+      if (cuttingDia.value) cuttingDiaNum = parseFloat(cuttingDia.value);
+      if (minFluteLength.value) minFluteLengthNum = parseFloat(minFluteLength.value);
+    } catch (e) {
+      return props.items;
+    }
     return [...props.items]
       .filter((x) => {
-        if (cuttingDia.value && x.cuttingDia) {
-          if (
-            cuttingDia.value > 0 &&
-            x.cuttingDia.toString().startsWith(cuttingDia.value.toString())
-          )
+        if (Number.isNaN(cuttingDiaNum)) return cuttingDia.value;
+        if (cuttingDiaNum && x.cuttingDia) {
+          if (cuttingDiaNum > 0 && x.cuttingDia.toString().startsWith(cuttingDiaNum.toString()))
             return true;
         }
         return !cuttingDia.value;
       })
       .filter((x) => {
+        if (Number.isNaN(minFluteLengthNum)) return minFluteLength.value;
         if (minFluteLength.value && x.fluteLength) {
-          if (minFluteLength.value > 0 && minFluteLength.value <= x.fluteLength) return true;
+          if (minFluteLengthNum > 0 && minFluteLengthNum <= x.fluteLength) return true;
         }
         return !minFluteLength.value;
       });
