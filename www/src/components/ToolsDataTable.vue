@@ -13,7 +13,7 @@
         <template v-slot:text>
           <div v-if="category === 'milling'">
             <v-row>
-              <v-col cols="8">
+              <v-col cols="6">
                 <v-text-field
                   v-model="search"
                   class="milling-search"
@@ -25,9 +25,12 @@
                   clearable
                 />
               </v-col>
-              <v-col cols="4">
+              <v-col cols="6">
                 <v-row>
-                  <v-col cols="6">
+                  <v-col cols="4">
+                    <v-select v-model="toolType" label="Tool Type" :items="types" clearable />
+                  </v-col>
+                  <v-col cols="4">
                     <v-text-field
                       v-model="cuttingDia"
                       label="Cutting Dia"
@@ -35,7 +38,7 @@
                       @keydown="isNumber($event)"
                     />
                   </v-col>
-                  <v-col cols="6">
+                  <v-col cols="4">
                     <v-text-field
                       v-model="minFluteLength"
                       label="Min Flute Length"
@@ -83,7 +86,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
@@ -93,19 +97,31 @@ const props = defineProps<{
   headers: { key: string; title?: string }[];
   items: ToolDoc[];
   category: ToolCategory;
+  search: string;
 }>();
 
+const emits = defineEmits(['updateSearch']);
+
 const toolStore = useToolStore();
-const search = ref('');
+const search = ref<string>(props.search);
 const page = ref(1);
 const itemsPerPage = ref(10);
 const cuttingDia = ref<string>();
 const minFluteLength = ref<string>();
+const toolType = ref<string>();
 const resultsTitle = computed(() => {
   let title = props.title;
   if (props.items.length !== filteredItems.value.length)
     title += ` - ${filteredItems.value.length} results`;
   return `${title}`;
+});
+
+const types = computed<string[]>(() => {
+  return toolTypes[props.category];
+});
+
+watch(search, () => {
+  emits('updateSearch', search.value);
 });
 
 const filteredItems = computed<ToolDoc[]>(() => {
@@ -119,6 +135,12 @@ const filteredItems = computed<ToolDoc[]>(() => {
       return props.items;
     }
     return [...props.items]
+      .filter((x) => {
+        if (toolType.value) {
+          if (toolType.value === x.toolType) return true;
+        }
+        return !toolType.value;
+      })
       .filter((x) => {
         if (Number.isNaN(cuttingDiaNum)) return cuttingDia.value;
         if (cuttingDiaNum && x.cuttingDia) {

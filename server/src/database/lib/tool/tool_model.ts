@@ -23,6 +23,7 @@ const schema = new Schema<ToolDoc>({
   position: String,
   cuttingDia: Number,
   fluteLength: Number,
+  toolType: String,
 });
 
 export default model<ToolDoc>('tools', schema);
