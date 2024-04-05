@@ -298,14 +298,14 @@ const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 const supplierStore = useSupplierStore();
 
-const tool = ref<ToolDoc | ToolDoc_Pop>({
+const tool = ref<ToolDoc>({
   stock: 0,
   reorderThreshold: 0,
   reorderQty: 0,
   autoReorder: false,
   flutes: 0,
-} as ToolDoc_Pop);
-const toolOriginal = ref<ToolDoc | ToolDoc_Pop>({} as ToolDoc_Pop);
+} as ToolDoc);
+const toolOriginal = ref<ToolDoc>({} as ToolDoc);
 
 const category = ref<ToolCategory>('milling');
 const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'tech');
@@ -355,7 +355,7 @@ function fetchTool(showSpinner: boolean = true) {
   if (showSpinner) loading.value = true;
   axios
     .get(`/tools/${id}`)
-    .then(({ data }: { data: ToolDoc_Pop }) => {
+    .then(({ data }: { data: ToolDoc }) => {
       tool.value = { ...data };
       toolOriginal.value = { ...data };
     })
@@ -371,9 +371,9 @@ async function saveTool() {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
   if (routeName === 'createTool') {
-    await toolStore.add({ ...(tool.value as ToolDoc), category: category.value });
+    await toolStore.add({ ...tool.value, category: category.value });
   } else if (routeName === 'viewTool') {
-    await toolStore.update(tool.value as ToolDoc_Pop);
+    await toolStore.update(tool.value);
   }
   saveFlag.value = false;
   router.back();

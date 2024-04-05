@@ -91,7 +91,7 @@ import { useToolStore } from '@/stores/tool_store';
 const props = defineProps<{
   title: string;
   headers: { key: string; title?: string }[];
-  items: ToolDoc_Pop[];
+  items: ToolDoc[];
   category: ToolCategory;
 }>();
 
@@ -108,7 +108,7 @@ const resultsTitle = computed(() => {
   return `${title}`;
 });
 
-const filteredItems = computed<ToolDoc_Pop[]>(() => {
+const filteredItems = computed<ToolDoc[]>(() => {
   if (props.category === 'milling') {
     let cuttingDiaNum: number;
     let minFluteLengthNum: number;
@@ -185,7 +185,7 @@ onMounted(() => {
   }, 150);
 });
 
-function location(tool: ToolDoc_Pop): string {
+function location(tool: ToolDoc): string {
   let text = tool.location || '';
   if (tool.position) text += ' - ' + tool.position;
   return text;

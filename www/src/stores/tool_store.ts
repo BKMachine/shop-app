@@ -11,7 +11,7 @@ export const useToolStore = defineStore('tools', () => {
 
   const rawTools = ref<ToolDoc[]>([]);
 
-  const tools = computed<ToolDoc_Pop[]>(() => {
+  const tools = computed<ToolDoc[]>(() => {
     return rawTools.value.map((x) => {
       return {
         ...x,
@@ -83,7 +83,7 @@ export const useToolStore = defineStore('tools', () => {
     });
   }
 
-  async function update(tool: ToolDoc_Pop) {
+  async function update(tool: ToolDoc) {
     await axios.put('/tools', { data: tool }).then(({ data }: { data: ToolDoc }) => {
       const index = rawTools.value.findIndex((x) => x._id === tool._id);
       if (index > -1) rawTools.value[index] = data;
@@ -94,7 +94,7 @@ export const useToolStore = defineStore('tools', () => {
     const index = tools.value.findIndex((x) => x._id === id);
     const tool = tools.value[index];
     if (!tool) return;
-    const clone: ToolDoc_Pop = {
+    const clone: ToolDoc = {
       ...tool,
       stock: (tool.stock += num),
     };

@@ -50,7 +50,7 @@ router.post('/tools', async (req, res, next) => {
 });
 
 router.put('/tools', async (req, res, next) => {
-  const { data }: { data: ToolDoc_Pop | undefined } = req.body;
+  const { data }: { data: ToolDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
     return;

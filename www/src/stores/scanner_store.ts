@@ -7,7 +7,7 @@ export const useScannerStore = defineStore('scanner', () => {
   const code = ref<string>('');
   const type = ref<'404' | 'tool'>('404');
   const stockAdjustment = ref(0);
-  const tool = ref<ToolDoc_Pop>({} as ToolDoc_Pop);
+  const tool = ref<ToolDoc>({} as ToolDoc);
 
   function showDialog(bool: boolean) {
     dialog.value = bool;

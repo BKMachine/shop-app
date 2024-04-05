@@ -5,11 +5,11 @@ async function list(): Promise<ToolDoc[]> {
   return Tool.find({});
 }
 
-async function findById(id: string): Promise<ToolDoc_Pop | null> {
+async function findById(id: string): Promise<ToolDoc | null> {
   return Tool.findById(id).populate('vendor').populate('supplier');
 }
 
-async function findByScanCode(scanCode: string): Promise<ToolDoc_Pop | null> {
+async function findByScanCode(scanCode: string): Promise<ToolDoc | null> {
   return Tool.findOne({
     $or: [{ item: scanCode }, { barcode: scanCode }],
   })
@@ -17,7 +17,7 @@ async function findByScanCode(scanCode: string): Promise<ToolDoc_Pop | null> {
     .populate('supplier');
 }
 
-async function getAutoReorders(): Promise<ToolReorders[]> {
+async function getAutoReorders(): Promise<ToolDocReorders[]> {
   return Tool.find({
     $expr: { $lte: ['$stock', '$reorderThreshold'] },
     autoReorder: true,
@@ -33,8 +33,8 @@ async function add(data: ToolDoc): Promise<ToolDoc> {
   return doc;
 }
 
-async function update(doc: ToolDoc_Pop): Promise<ToolDoc | null> {
-  const newDoc: ToolDoc_Pop = {
+async function update(doc: ToolDoc): Promise<ToolDoc | null> {
+  const newDoc: ToolDoc = {
     ...doc,
     vendor: typeof doc.vendor === 'object' ? doc.vendor._id : doc.vendor,
     supplier: typeof doc.supplier === 'object' ? doc.supplier._id : doc.supplier,
@@ -50,7 +50,7 @@ async function update(doc: ToolDoc_Pop): Promise<ToolDoc | null> {
   return updatedTool;
 }
 
-async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc_Pop | null }> {
+async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc | null }> {
   const tool = await Tool.findOne({
     $or: [{ item: scanCode }, { barcode: scanCode }],
   })
@@ -67,7 +67,7 @@ async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc_P
 async function stock(
   id: string,
   amount: number,
-): Promise<{ status: number; tool: ToolDoc_Pop | null }> {
+): Promise<{ status: number; tool: ToolDoc | null }> {
   const tool = await Tool.findById(id).populate('vendor').populate('supplier');
   if (!tool) return { status: 404, tool: null };
   if (tool.stock + amount < 0) return { status: 400, tool: tool };
