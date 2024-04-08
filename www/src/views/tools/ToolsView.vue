@@ -13,6 +13,8 @@
         :headers="millingHeaders"
         :items="toolStore.millingTools"
         :category="tab"
+        :search="search"
+        @updateSearch="updateSearch"
       />
     </v-window-item>
 
@@ -23,6 +25,8 @@
         :headers="turningHeaders"
         :items="toolStore.turningTools"
         :category="tab"
+        :search="search"
+        @updateSearch="updateSearch"
       />
     </v-window-item>
 
@@ -33,6 +37,8 @@
         :headers="otherHeaders"
         :items="toolStore.otherTools"
         :category="tab"
+        :search="search"
+        @updateSearch="updateSearch"
       />
     </v-window-item>
   </v-window>
@@ -45,12 +51,17 @@ import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 const tab = ref<ToolCategory>('milling');
+const search = ref<string>('');
 
 onBeforeMount(() => {
   const type = window.localStorage.getItem('type');
   if (!type) window.localStorage.setItem('type', tab.value);
   else tab.value = type as ToolCategory;
 });
+
+function updateSearch(text: string) {
+  search.value = text;
+}
 
 function onChange() {
   window.localStorage.setItem('type', tab.value);

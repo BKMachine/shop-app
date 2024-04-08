@@ -240,40 +240,34 @@
         </v-window-item>
 
         <v-window-item value="tech">
-          <v-row no-gutters>
-            <v-col cols="6">
+          <v-row>
+            <v-col col="3">
+              <v-select v-model="tool.toolType" :items="types" label="Tool Type" />
+            </v-col>
+            <v-col cols="3">
               <v-text-field
                 v-model.number="tool.flutes"
-                class="mr-2"
                 :label="fluteText"
                 type="number"
                 min="0"
                 @keydown="isNumber($event)"
               />
             </v-col>
-            <v-col cols="6">
-              <v-row no-gutters>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model.number="tool.cuttingDia"
-                    class="mx-2"
-                    label="Cutting Dia"
-                    :rules="[]"
-                    min="0"
-                    @keydown="isNumber($event)"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model.number="tool.fluteLength"
-                    label="Flute Length"
-                    class="ml-2"
-                    :rules="[]"
-                    min="0"
-                    @keydown="isNumber($event)"
-                  />
-                </v-col>
-              </v-row>
+            <v-col cols="3">
+              <v-text-field
+                v-model.number="tool.cuttingDia"
+                label="Cutting Dia"
+                min="0"
+                @keydown="isNumber($event)"
+              />
+            </v-col>
+            <v-col cols="3">
+              <v-text-field
+                v-model.number="tool.fluteLength"
+                label="Flute Length"
+                min="0"
+                @keydown="isNumber($event)"
+              />
             </v-col>
           </v-row>
         </v-window-item>
@@ -288,6 +282,7 @@ import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
+import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
@@ -298,14 +293,14 @@ const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 const supplierStore = useSupplierStore();
 
-const tool = ref<ToolDoc | ToolDoc_Pop>({
+const tool = ref<ToolDoc>({
   stock: 0,
   reorderThreshold: 0,
   reorderQty: 0,
   autoReorder: false,
   flutes: 0,
-} as ToolDoc_Pop);
-const toolOriginal = ref<ToolDoc | ToolDoc_Pop>({} as ToolDoc_Pop);
+} as ToolDoc);
+const toolOriginal = ref<ToolDoc>({} as ToolDoc);
 
 const category = ref<ToolCategory>('milling');
 const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'tech');
@@ -355,7 +350,7 @@ function fetchTool(showSpinner: boolean = true) {
   if (showSpinner) loading.value = true;
   axios
     .get(`/tools/${id}`)
-    .then(({ data }: { data: ToolDoc_Pop }) => {
+    .then(({ data }: { data: ToolDoc }) => {
       tool.value = { ...data };
       toolOriginal.value = { ...data };
     })
@@ -371,9 +366,9 @@ async function saveTool() {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
   if (routeName === 'createTool') {
-    await toolStore.add({ ...(tool.value as ToolDoc), category: category.value });
+    await toolStore.add({ ...tool.value, category: category.value });
   } else if (routeName === 'viewTool') {
-    await toolStore.update(tool.value as ToolDoc_Pop);
+    await toolStore.update(tool.value);
   }
   saveFlag.value = false;
   router.back();
@@ -427,6 +422,10 @@ function printLocation() {
 
 const fluteText = computed(() => {
   return category.value === 'milling' ? 'Flutes' : 'Cutting Edges';
+});
+
+const types = computed<string[]>(() => {
+  return toolTypes[tool.value.category];
 });
 </script>
 
