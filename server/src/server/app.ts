@@ -6,6 +6,10 @@ import api from './api';
 
 const app = express();
 
+if (process.env.NODE_ENV === 'production') {
+  app.enabled('trust proxy');
+}
+
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(format, { stream: logger.stream }));
 app.use(express.json());
