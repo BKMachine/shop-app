@@ -1,10 +1,12 @@
 import * as database from './database';
 import logger from './logger';
 import * as server from './server';
+import Audit from './database/lib/audit';
 
 async function start(): Promise<void> {
   await database.connect();
   server.start();
+  await Audit.getToolDifferences();
 }
 
 async function stop(): Promise<void> {
