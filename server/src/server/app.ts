@@ -14,6 +14,11 @@ const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(format, { stream: logger.stream }));
 app.use(express.json());
 
+app.use((req, res, next) => {
+  logger.default.info(req.hostname);
+  next();
+});
+
 app.use('/api', api);
 
 if (process.env.NODE_ENV === 'production') {

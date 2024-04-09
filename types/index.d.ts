@@ -105,3 +105,10 @@ interface ToolReorders extends ToolDoc {
 }
 
 type ToolDocReorders = ToolDoc & ToolReorders;
+
+interface AuditDoc {
+  type: 'newTool' | 'updateTool';
+  timestamp: string;
+  old: any | null;
+  new: any;
+}

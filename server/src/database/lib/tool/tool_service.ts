@@ -1,4 +1,5 @@
 import { emit } from '../../../server/sockets';
+import Audit from '../audit';
 import Tool from './tool_model';
 
 async function list(): Promise<ToolDoc[]> {
@@ -29,6 +30,7 @@ async function getAutoReorders(): Promise<ToolDocReorders[]> {
 async function add(data: ToolDoc): Promise<ToolDoc> {
   const doc = new Tool(data);
   await doc.save();
+  await Audit.addToolAudit(null, doc);
   emit('tool', doc);
   return doc;
 }
@@ -46,6 +48,7 @@ async function update(doc: ToolDoc): Promise<ToolDoc | null> {
   // Assume if the current stock is now greater than the reorderThreshold that the order has been fulfilled
   if (newDoc.reorderThreshold > 0 && newDoc.stock > newDoc.reorderThreshold) newDoc.onOrder = false;
   const updatedTool = await Tool.findByIdAndUpdate(newDoc._id, newDoc, { new: true });
+  await Audit.addToolAudit(oldDoc, newDoc);
   emit('tool', updatedTool);
   return updatedTool;
 }
@@ -57,9 +60,20 @@ async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc |
     .populate('vendor')
     .populate('supplier');
   if (!tool) return { status: 404, tool: null };
+  const oldTool = {
+    ...tool,
+    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
+    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
+  };
   if (tool.stock <= 0) return { status: 400, tool: tool };
   tool.stock--;
   await tool.save();
+  const newTool = {
+    ...tool,
+    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
+    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
+  };
+  await Audit.addToolAudit(oldTool, newTool);
   emit('tool', tool);
   return { status: 200, tool: tool };
 }
@@ -70,9 +84,20 @@ async function stock(
 ): Promise<{ status: number; tool: ToolDoc | null }> {
   const tool = await Tool.findById(id).populate('vendor').populate('supplier');
   if (!tool) return { status: 404, tool: null };
+  const oldTool = {
+    ...tool,
+    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
+    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
+  };
   if (tool.stock + amount < 0) return { status: 400, tool: tool };
   tool.stock += amount;
   await tool.save();
+  const newTool = {
+    ...tool,
+    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
+    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
+  };
+  await Audit.addToolAudit(oldTool, newTool);
   emit('tool', tool);
   return { status: 200, tool: tool };
 }
