@@ -7,7 +7,7 @@ import api from './api';
 const app = express();
 
 if (process.env.NODE_ENV === 'production') {
-  app.enabled('trust proxy');
+  app.set('trust proxy', true);
 }
 
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
