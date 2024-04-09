@@ -15,7 +15,7 @@ app.use(morgan(format, { stream: logger.stream }));
 app.use(express.json());
 
 app.use((req, res, next) => {
-  logger.default.info(req.hostname);
+  if (req.ips.length) logger.default.info(req.ips.join(', '));
   next();
 });
 
