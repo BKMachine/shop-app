@@ -82,7 +82,12 @@
           </v-row>
           <v-row no-gutters>
             <v-col cols="6">
-              <v-text-field v-model="tool.item" class="mr-2" label="Product Number">
+              <v-text-field
+                v-model="tool.item"
+                class="mr-2"
+                label="Product Number"
+                :rules="[rules.uniqueItem]"
+              >
                 <template v-slot:append-inner>
                   <v-icon icon="mdi-barcode"></v-icon>
                   <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />
@@ -94,9 +99,13 @@
                 v-model="tool.barcode"
                 class="ml-2"
                 label="Barcode"
-                append-inner-icon="mdi-barcode"
-                :rules="[rules.barcode]"
-              />
+                :rules="[rules.barcode, rules.uniqueBarcode]"
+              >
+                <template v-slot:append-inner>
+                  <v-icon icon="mdi-barcode"></v-icon>
+                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printBarcode" />
+                </template>
+              </v-text-field>
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -391,6 +400,16 @@ const rules: Rules = {
     if (!tool.value.item) return true;
     return val !== tool.value.item || 'Not needed if the same as Product Number';
   },
+  uniqueItem: (val) => {
+    if (!tool.value.item) return true;
+    return (
+      toolStore.tools.findIndex((x) => x.item === val) === -1 || 'Must be a unique Product Number'
+    );
+  },
+  uniqueBarcode: (val) => {
+    if (!tool.value.barcode) return true;
+    return toolStore.tools.findIndex((x) => x.barcode === val) === -1 || 'Must be a unique Barcode';
+  },
 };
 
 /* GENERAL TAB LOGIC */
@@ -405,6 +424,14 @@ const coatings = computed(() => {
 
 function printItem() {
   const item = tool.value.item;
+  const description = tool.value.description;
+  const brand = (tool.value.vendor as VendorDoc)?.name;
+  if (!item || !description || !brand) return;
+  printer.printItem({ item, description, brand });
+}
+
+function printBarcode() {
+  const item = tool.value.barcode;
   const description = tool.value.description;
   const brand = (tool.value.vendor as VendorDoc)?.name;
   if (!item || !description || !brand) return;
