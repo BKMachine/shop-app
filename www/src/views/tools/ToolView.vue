@@ -237,9 +237,7 @@
               </v-row>
             </v-col>
           </v-row>
-          <v-row no-gutters>
-            <ToolStockGraph :id="tool._id" />
-          </v-row>
+          <ToolStockGraph :id="tool._id" :reorderThreshold="tool.reorderThreshold" />
         </v-window-item>
 
         <v-window-item value="tech">
@@ -283,6 +281,7 @@
 import isEqual from 'lodash/isEqual';
 import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import ToolStockGraph from '@/components/ToolStockGraph.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import toolTypes from '@/plugins/toolTypes';
@@ -291,7 +290,6 @@ import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
-import ToolStockGraph from '@/components/ToolStockGraph.vue';
 
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
@@ -307,7 +305,7 @@ const tool = ref<ToolDoc>({
 const toolOriginal = ref<ToolDoc>({} as ToolDoc);
 
 const category = ref<ToolCategory>('milling');
-const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'tech');
+const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'stock');
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);

@@ -339,6 +339,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@kurkle/color@npm:^0.3.0":
+  version: 0.3.2
+  resolution: "@kurkle/color@npm:0.3.2"
+  checksum: 10c0/a9e8e3e35dcd59dec4dd4f0105919c05e24823a96347bcf152965c29e48d6290b66d5fb96c071875db752e10930724c48ce6d338fefbd65e0ce5082d5c78970e
+  languageName: node
+  linkType: hard
+
 "@mdi/font@npm:^7.4.47":
   version: 7.4.47
   resolution: "@mdi/font@npm:7.4.47"
@@ -1103,7 +1110,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue/runtime-core@npm:3.4.21":
+"@vue/runtime-core@npm:3.4.21, @vue/runtime-core@npm:latest":
   version: 3.4.21
   resolution: "@vue/runtime-core@npm:3.4.21"
   dependencies:
@@ -1113,7 +1120,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue/runtime-dom@npm:3.4.21":
+"@vue/runtime-dom@npm:3.4.21, @vue/runtime-dom@npm:latest":
   version: 3.4.21
   resolution: "@vue/runtime-dom@npm:3.4.21"
   dependencies:
@@ -1589,6 +1596,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"chart.js@npm:^4.4.2":
+  version: 4.4.2
+  resolution: "chart.js@npm:4.4.2"
+  dependencies:
+    "@kurkle/color": "npm:^0.3.0"
+  checksum: 10c0/4233bdc3cce9e4d5aca575f8ef9313f56867491b9eac027f3514ca807aca9a2ba2087f85ca3c68f022974f948ce688a178b0ce21d95706116abca5acf19e072f
+  languageName: node
+  linkType: hard
+
+"chartjs-plugin-annotation@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "chartjs-plugin-annotation@npm:3.0.1"
+  peerDependencies:
+    chart.js: ">=4.0.0"
+  checksum: 10c0/eeb76e3ebca8147710863c948636898e25605cf1490cf8dcb5df85ffb87079eb7076356fd9de846e89c943be3f745a91ca67d769a4e30159470cbabe933389ce
+  languageName: node
+  linkType: hard
+
 "chokidar@npm:^3.5.1":
   version: 3.6.0
   resolution: "chokidar@npm:3.6.0"
@@ -1814,7 +1839,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"csstype@npm:^3.1.3":
+"csstype@npm:^3.1.3, csstype@npm:latest":
   version: 3.1.3
   resolution: "csstype@npm:3.1.3"
   checksum: 10c0/80c089d6f7e0c5b2bd83cf0539ab41474198579584fa10d86d0cafe0642202343cbc119e076a0b1aece191989477081415d66c9fefbf3c957fc2fc4b7009f248
@@ -3539,6 +3564,13 @@ __metadata:
   dependencies:
     p-locate: "npm:^5.0.0"
   checksum: 10c0/d3972ab70dfe58ce620e64265f90162d247e87159b6126b01314dd67be43d50e96a50b517bce2d9452a79409c7614054c277b5232377de50416564a77ac7aad3
+  languageName: node
+  linkType: hard
+
+"lodash-es@npm:latest":
+  version: 4.17.21
+  resolution: "lodash-es@npm:4.17.21"
+  checksum: 10c0/fb407355f7e6cd523a9383e76e6b455321f0f153a6c9625e21a8827d10c54c2a2341bd2ae8d034358b60e07325e1330c14c224ff582d04612a46a4f0479ff2f2
   languageName: node
   linkType: hard
 
@@ -5699,6 +5731,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"vue-chart-3@npm:^3.1.8":
+  version: 3.1.8
+  resolution: "vue-chart-3@npm:3.1.8"
+  dependencies:
+    "@vue/runtime-core": "npm:latest"
+    "@vue/runtime-dom": "npm:latest"
+    csstype: "npm:latest"
+    lodash-es: "npm:latest"
+  peerDependencies:
+    chart.js: "*"
+    vue: ">= 3"
+  checksum: 10c0/9f67aa469bf521b69868dedb7ea250d72510ac1a330b875b695cf704776d05ead241596a46b48f0f3971903c2813a86c2e3afabb3b4a9abffe826ea348d43c07
+  languageName: node
+  linkType: hard
+
 "vue-demi@npm:>=0.14.5":
   version: 0.14.7
   resolution: "vue-demi@npm:0.14.7"
@@ -6005,6 +6052,8 @@ __metadata:
     "@vue/eslint-config-typescript": "npm:^13.0.0"
     "@vue/tsconfig": "npm:^0.5.1"
     axios: "npm:^1.6.8"
+    chart.js: "npm:^4.4.2"
+    chartjs-plugin-annotation: "npm:^3.0.1"
     cross-env: "npm:^7.0.3"
     eslint: "npm:^8.57.0"
     eslint-import-resolver-alias: "npm:^1.1.2"
@@ -6025,6 +6074,7 @@ __metadata:
     vite: "npm:^5.1.6"
     vite-plugin-vuetify: "npm:^2.0.3"
     vue: "npm:^3.4.21"
+    vue-chart-3: "npm:^3.1.8"
     vue-router: "npm:^4.3.0"
     vue-toast-notification: "npm:^3"
     vue-tsc: "npm:^2.0.6"
