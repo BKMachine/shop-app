@@ -28,6 +28,7 @@ app.post('/print', async (req, res, next) => {
   }
 });
 
+console.log(await dymo.getPrinters());
 const port = process.env.PORT || 3005;
 app.listen(port);
 console.log(`Listening on port: ${port}`);
