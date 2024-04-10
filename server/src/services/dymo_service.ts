@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 
-const hostname = 'loki.bkmachine.lan';
+const hostname = 'thor.bkmachine.lan';
 const port = 3005;
 const baseUrl = `http://${hostname}:${port}`;
 
