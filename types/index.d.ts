@@ -89,13 +89,14 @@ interface CustomerDoc {
 }
 
 interface PrintLocationBody {
-  loc?: string;
-  pos?: string;
+  loc: string;
+  pos: string;
 }
 
 interface PrintItemBody {
-  item?: string;
-  description?: string;
+  item: string;
+  description: string;
+  brand: string;
 }
 
 interface PrintRequest {

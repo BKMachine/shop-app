@@ -18,13 +18,13 @@ router.post('/print/location', async (req, res, next) => {
 });
 
 router.post('/print/item', async (req, res, next) => {
-  const { item, description }: PrintItemBody = req.body;
-  if (!item || !description) {
+  const { item, description, brand }: PrintItemBody = req.body;
+  if (!item || !description || !brand) {
     res.sendStatus(400);
     return;
   }
   try {
-    await DymoService.printItemLabel({ item, description });
+    await DymoService.printItemLabel({ item, description, brand });
     res.sendStatus(204);
   } catch (e) {
     next(e);

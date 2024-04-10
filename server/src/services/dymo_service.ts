@@ -34,7 +34,8 @@ async function printItemLabel(data: PrintItemBody) {
   });
   const label = itemLabelXml
     .replaceAll('$DESCRIPTION', data.description)
-    .replaceAll('$ITEM', data.item);
+    .replaceAll('$ITEM', data.item)
+    .replaceAll('$BRAND', data.brand);
   const body: PrintRequest = {
     printerName: 'DYMO LabelWriter Wireless 2',
     labelXml: label,

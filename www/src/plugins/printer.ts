@@ -6,7 +6,7 @@ async function printLocation(data: PrintLocationBody) {
 }
 
 async function printItem(data: PrintItemBody) {
-  if (!data.item || !data.description) return;
+  if (!data.item || !data.description || !data.brand) return;
   return axios.post('/print/item', data);
 }
 

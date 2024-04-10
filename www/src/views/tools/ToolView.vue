@@ -404,7 +404,11 @@ const coatings = computed(() => {
 });
 
 function printItem() {
-  printer.printItem({ item: tool.value.item, description: tool.value.description });
+  const item = tool.value.item;
+  const description = tool.value.description;
+  const brand = (tool.value.vendor as VendorDoc)?.name;
+  if (!item || !description || !brand) return;
+  printer.printItem({ item, description, brand });
 }
 
 /* STOCK TAB LOGIC */
@@ -421,7 +425,10 @@ function gotoLocation() {
 }
 
 function printLocation() {
-  printer.printLocation({ loc: tool.value.location, pos: tool.value.position });
+  const loc = tool.value.location;
+  const pos = tool.value.position;
+  if (!loc || !pos) return;
+  printer.printLocation({ loc, pos });
 }
 
 /* TECHNICAL TAB LOGIC */
