@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
     <DYMOLabel Version="3">
         <Description>DYMO Label</Description>
@@ -245,10 +245,10 @@
                     </Margin>
                     <HorizontalAlignment>Center</HorizontalAlignment>
                     <VerticalAlignment>Middle</VerticalAlignment>
-                    <FitMode>None</FitMode>
+                    <FitMode>AlwaysFit</FitMode>
                     <IsVertical>False</IsVertical>
                     <FormattedText>
-                        <FitMode>None</FitMode>
+                        <FitMode>AlwaysFit</FitMode>
                         <HorizontalAlignment>Center</HorizontalAlignment>
                         <VerticalAlignment>Middle</VerticalAlignment>
                         <IsVertical>False</IsVertical>
@@ -257,7 +257,7 @@
                                 <Text>$BRAND</Text>
                                 <FontInfo>
                                     <FontName>Segoe UI</FontName>
-                                    <FontSize>8</FontSize>
+                                    <FontSize>14.8</FontSize>
                                     <IsBold>False</IsBold>
                                     <IsItalic>False</IsItalic>
                                     <IsUnderline>False</IsUnderline>
@@ -272,12 +272,12 @@
                     </FormattedText>
                     <ObjectLayout>
                         <DYMOPoint>
-                            <X>0.2430209</X>
+                            <X>0.2317709</X>
                             <Y>0.6286446</Y>
                         </DYMOPoint>
                         <Size>
-                            <Width>0.8888549</Width>
-                            <Height>0.2743754</Height>
+                            <Width>0.904171</Width>
+                            <Height>0.2743755</Height>
                         </Size>
                     </ObjectLayout>
                 </TextObject>
