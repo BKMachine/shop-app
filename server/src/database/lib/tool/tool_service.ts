@@ -28,78 +28,71 @@ async function getAutoReorders(): Promise<ToolDocReorders[]> {
 }
 
 async function add(data: ToolDoc): Promise<ToolDoc> {
-  const doc = new Tool(data);
-  await doc.save();
-  await Audit.addToolAudit(null, doc);
-  emit('tool', doc);
-  return doc;
+  const tool = new Tool(data);
+  await tool.save();
+  await Audit.addToolAudit(null, tool);
+  emit('tool', tool);
+  return tool;
 }
 
-async function update(doc: ToolDoc): Promise<ToolDoc | null> {
-  const newDoc: ToolDoc = {
-    ...doc,
-    vendor: typeof doc.vendor === 'object' ? doc.vendor._id : doc.vendor,
-    supplier: typeof doc.supplier === 'object' ? doc.supplier._id : doc.supplier,
-  };
-  const oldDoc = (await Tool.findById(newDoc._id)) as ToolDoc;
-  if (!oldDoc) throw new Error('Missing Tool Document');
-  // Set the orderedOn date if onOrder is newly set to true
-  if (newDoc.onOrder && !oldDoc.onOrder) newDoc.orderedOn = new Date().toISOString();
-  // Assume if the current stock is now greater than the reorderThreshold that the order has been fulfilled
-  if (newDoc.reorderThreshold > 0 && newDoc.stock > newDoc.reorderThreshold) newDoc.onOrder = false;
-  const updatedTool = await Tool.findByIdAndUpdate(newDoc._id, newDoc, { new: true });
-  await Audit.addToolAudit(oldDoc, newDoc);
+async function update(newTool: ToolDoc): Promise<ToolDoc | null> {
+  const id = newTool._id;
+  const oldTool: ToolDoc | null = await Tool.findById(id);
+  if (!oldTool) throw new Error(`Missing tool document id: ${id}`);
+  const computedTool = computedToolChanges(oldTool, newTool);
+  const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true });
+  if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
+  await Audit.addToolAudit(oldTool, updatedTool);
   emit('tool', updatedTool);
   return updatedTool;
 }
 
 async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc | null }> {
-  const tool = await Tool.findOne({
+  // Find tool by matching passed scanCode to tool item or barcode property
+  const oldTool = await Tool.findOne({
     $or: [{ item: scanCode }, { barcode: scanCode }],
   })
     .populate('vendor')
     .populate('supplier');
-  if (!tool) return { status: 404, tool: null };
-  const oldTool = {
-    ...tool,
-    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
-    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
-  };
-  if (tool.stock <= 0) return { status: 400, tool: tool };
-  tool.stock--;
-  await tool.save();
-  const newTool = {
-    ...tool,
-    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
-    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
-  };
-  await Audit.addToolAudit(oldTool, newTool);
-  emit('tool', tool);
-  return { status: 200, tool: tool };
+  if (!oldTool) return { status: 404, tool: null };
+  if (oldTool.stock <= 0) return { status: 400, tool: oldTool };
+  const id = oldTool._id;
+  // Copy tool before any changes are made
+  const newTool = { ...oldTool.toObject() };
+  newTool.stock--;
+  const computedTool = computedToolChanges(oldTool, newTool);
+  const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true });
+  if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
+  await Audit.addToolAudit(oldTool, updatedTool);
+  emit('tool', updatedTool);
+  return { status: 200, tool: updatedTool };
 }
 
 async function stock(
   id: string,
   amount: number,
 ): Promise<{ status: number; tool: ToolDoc | null }> {
-  const tool = await Tool.findById(id).populate('vendor').populate('supplier');
-  if (!tool) return { status: 404, tool: null };
-  const oldTool = {
-    ...tool,
-    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
-    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
-  };
-  if (tool.stock + amount < 0) return { status: 400, tool: tool };
-  tool.stock += amount;
-  await tool.save();
-  const newTool = {
-    ...tool,
-    vendor: typeof tool.vendor === 'object' ? tool.vendor._id : tool.vendor,
-    supplier: typeof tool.supplier === 'object' ? tool.supplier._id : tool.supplier,
-  };
-  await Audit.addToolAudit(oldTool, newTool);
-  emit('tool', tool);
-  return { status: 200, tool: tool };
+  const oldTool = await Tool.findById(id).populate('vendor').populate('supplier');
+  if (!oldTool) return { status: 404, tool: null };
+  if (oldTool.stock + amount < 0) return { status: 400, tool: oldTool };
+  // Copy tool before any changes are made
+  const newTool: ToolDoc = { ...oldTool.toObject() };
+  newTool.stock += amount;
+  const computedTool = computedToolChanges(oldTool, newTool);
+  const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true });
+  if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
+  await Audit.addToolAudit(oldTool, updatedTool);
+  emit('tool', updatedTool);
+  return { status: 200, tool: updatedTool };
+}
+
+function computedToolChanges(oldTool: ToolDoc, newTool: ToolDoc): ToolDoc {
+  // Set the orderedOn date if onOrder is newly set to true
+  if (newTool.onOrder && !oldTool.onOrder) newTool.orderedOn = new Date().toISOString();
+  // Assume if the current stock is now greater than the reorderThreshold that the order has been fulfilled
+  if (newTool.reorderThreshold > 0 && newTool.stock > newTool.reorderThreshold)
+    newTool.onOrder = false;
+  return newTool;
 }
 
 export default {

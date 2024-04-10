@@ -69,8 +69,9 @@ const stockAdjustText = computed(() => {
   else return scannerStore.stockAdjustment;
 });
 
-function pickTool() {
-  adjustStock(-1);
+async function pickTool() {
+  await toolStore.pickTool(scannerStore.code);
+  close();
 }
 
 async function adjustStock(num: number) {

@@ -85,21 +85,23 @@ export const useToolStore = defineStore('tools', () => {
 
   async function update(tool: ToolDoc) {
     await axios.put('/tools', { data: tool }).then(({ data }: { data: ToolDoc }) => {
-      const index = rawTools.value.findIndex((x) => x._id === tool._id);
+      const index = rawTools.value.findIndex((x) => x._id === data._id);
       if (index > -1) rawTools.value[index] = data;
     });
   }
 
-  async function adjustStock(id: string, num: number) {
-    const index = tools.value.findIndex((x) => x._id === id);
-    const tool = tools.value[index];
-    if (!tool) return;
-    const clone: ToolDoc = {
-      ...tool,
-      stock: (tool.stock += num),
-    };
-    if (clone.stock < 0) throw Error('Stock cannot be less than 0');
-    await update(clone);
+  async function pickTool(scanCode: string) {
+    await axios.put('/tools/pick', { scanCode }).then(({ data }: { data: ToolDoc }) => {
+      const index = rawTools.value.findIndex((x) => x._id === data._id);
+      if (index > -1) rawTools.value[index] = data;
+    });
+  }
+
+  async function adjustStock(id: string, amount: number) {
+    await axios.put('/tools/stock', { id, amount }).then(({ data }: { data: ToolDoc }) => {
+      const index = rawTools.value.findIndex((x) => x._id === data._id);
+      if (index > -1) rawTools.value[index] = data;
+    });
   }
 
   const trigger = ref({ tool: 0 });
@@ -126,6 +128,7 @@ export const useToolStore = defineStore('tools', () => {
     fetch,
     add,
     update,
+    pickTool,
     adjustStock,
     SOCKET_tool,
     setTabChange,
