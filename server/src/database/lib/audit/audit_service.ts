@@ -1,4 +1,5 @@
 import Audit from './audit_model';
+import { Types } from 'mongoose';
 
 async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc) {
   const doc = new Audit({
@@ -10,6 +11,18 @@ async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc) {
   await doc.save();
 }
 
+async function getToolAudits(id: string, from: string, to: string) {
+  return Audit.find(
+    {
+      type: 'tool',
+      'old._id': new Types.ObjectId(id),
+      timestamp: { $gte: from, $lte: to },
+    },
+    'timestamp new.stock old.stock',
+  );
+}
+
 export default {
   addToolAudit,
+  getToolAudits,
 };

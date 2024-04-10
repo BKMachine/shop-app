@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import DymoService from '../../services/dymo_service';
 import SMTPService from '../../services/smtp_service';
+import AuditRoutes from './routes/audits';
 import CustomerRoutes from './routes/customers';
 import SupplierRoutes from './routes/suppliers';
 import ToolRoutes from './routes/tools';
@@ -26,6 +27,7 @@ router.use(CustomerRoutes);
 router.use(SupplierRoutes);
 router.use(VendorRoutes);
 router.use(ToolRoutes);
+router.use(AuditRoutes);
 
 router.post('/print/location', async (req, res, next) => {
   const { loc, pos }: PrintLocationBody = req.body;

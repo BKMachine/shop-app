@@ -237,6 +237,9 @@
               </v-row>
             </v-col>
           </v-row>
+          <v-row no-gutters>
+            <ToolStockGraph :id="tool._id" />
+          </v-row>
         </v-window-item>
 
         <v-window-item value="tech">
@@ -288,6 +291,7 @@ import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
+import ToolStockGraph from '@/components/ToolStockGraph.vue';
 
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
