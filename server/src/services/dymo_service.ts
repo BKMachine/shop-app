@@ -27,6 +27,22 @@ async function printLocationLabel(data: PrintLocationBody) {
   return thor.post('/print', body);
 }
 
+async function printItemLabel(data: PrintItemBody) {
+  if (!data.item || !data.description) throw new Error('Missing item data.');
+  const itemLabelXml = fs.readFileSync(path.join(__dirname, '../../public', '/label_item.xml'), {
+    encoding: 'utf-8',
+  });
+  const label = itemLabelXml
+    .replaceAll('$DESCRIPTION', data.description)
+    .replaceAll('$ITEM', data.item);
+  const body: PrintRequest = {
+    printerName: 'DYMO LabelWriter Wireless 2',
+    labelXml: label,
+  };
+  return thor.post('/print', body);
+}
+
 export default {
   printLocationLabel,
+  printItemLabel,
 };

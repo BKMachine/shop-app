@@ -82,12 +82,12 @@
           </v-row>
           <v-row no-gutters>
             <v-col cols="6">
-              <v-text-field
-                v-model="tool.item"
-                class="mr-2"
-                label="Product Number"
-                append-inner-icon="mdi-barcode"
-              />
+              <v-text-field v-model="tool.item" class="mr-2" label="Product Number">
+                <template v-slot:append-inner>
+                  <v-icon icon="mdi-barcode"></v-icon>
+                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />
+                </template>
+              </v-text-field>
             </v-col>
             <v-col cols="6">
               <v-text-field
@@ -402,6 +402,10 @@ const coatings = computed(() => {
   if (!vendor) return [];
   return vendor.coatings;
 });
+
+function printItem() {
+  printer.printItem({ item: tool.value.item, description: tool.value.description });
+}
 
 /* STOCK TAB LOGIC */
 

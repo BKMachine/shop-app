@@ -1,5 +1,5 @@
-import Audit from './audit_model';
 import { Types } from 'mongoose';
+import Audit from './audit_model';
 
 async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc) {
   const doc = new Audit({

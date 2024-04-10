@@ -93,6 +93,11 @@ interface PrintLocationBody {
   pos?: string;
 }
 
+interface PrintItemBody {
+  item?: string;
+  description?: string;
+}
+
 interface PrintRequest {
   printerName: string;
   labelXml: string;
