@@ -61,7 +61,9 @@ async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc |
   const newTool = { ...oldTool.toObject() };
   newTool.stock--;
   const computedTool = computedToolChanges(oldTool, newTool);
-  const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true });
+  const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true })
+    .populate('vendor')
+    .populate('supplier');
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   await Audit.addToolAudit(oldTool, updatedTool);
   emit('tool', updatedTool);
@@ -79,7 +81,9 @@ async function stock(
   const newTool: ToolDoc = { ...oldTool.toObject() };
   newTool.stock += amount;
   const computedTool = computedToolChanges(oldTool, newTool);
-  const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true });
+  const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true })
+    .populate('vendor')
+    .populate('supplier');
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   await Audit.addToolAudit(oldTool, updatedTool);
   emit('tool', updatedTool);
