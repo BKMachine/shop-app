@@ -117,6 +117,7 @@
                 :items="vendorStore.vendors"
                 item-title="name"
                 item-value="_id"
+                clearable
               >
                 <template v-slot:item="{ props, item }">
                   <v-list-item v-bind="props" title="">
@@ -131,7 +132,13 @@
               </v-select>
             </v-col>
             <v-col cols="6">
-              <v-select v-model="tool.coating" class="ml-2" label="Coating" :items="coatings" />
+              <v-select
+                v-model="tool.coating"
+                class="ml-2"
+                label="Coating"
+                :items="coatings"
+                clearable
+              />
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -203,6 +210,7 @@
                 :items="supplierStore.suppliers"
                 item-title="name"
                 item-value="_id"
+                clearable
               >
                 <template v-slot:item="{ props, item }">
                   <v-list-item v-bind="props" title="">
@@ -252,7 +260,7 @@
         <v-window-item value="tech">
           <v-row>
             <v-col col="3">
-              <v-select v-model="tool.toolType" :items="types" label="Tool Type" />
+              <v-select v-model="tool.toolType" :items="types" label="Tool Type" clearable />
             </v-col>
             <v-col cols="3">
               <v-text-field
