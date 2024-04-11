@@ -463,7 +463,7 @@ const fluteText = computed(() => {
 });
 
 const types = computed<string[]>(() => {
-  return toolTypes[tool.value.category || localStorage.getItem('type')];
+  return toolTypes[tool.value.category || category.value];
 });
 </script>
 
