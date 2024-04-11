@@ -402,13 +402,11 @@ const rules: Rules = {
   },
   uniqueItem: (val) => {
     if (!tool.value.item) return true;
-    return (
-      toolStore.tools.findIndex((x) => x.item === val) === -1 || 'Must be a unique Product Number'
-    );
+    return true;
   },
   uniqueBarcode: (val) => {
     if (!tool.value.barcode) return true;
-    return toolStore.tools.findIndex((x) => x.barcode === val) === -1 || 'Must be a unique Barcode';
+    return true;
   },
 };
 
