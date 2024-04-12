@@ -433,7 +433,7 @@ function fetchTool(showSpinner: boolean = true) {
     });
 }
 
-async function saveTool(stayOnPage = false) {
+async function saveTool() {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
   if (routeName === 'createTool') {
@@ -456,7 +456,7 @@ async function saveTool(stayOnPage = false) {
       });
   }
   saveFlag.value = false;
-  if (!stayOnPage) router.back();
+  router.back();
 }
 
 function openLink(link: string | undefined) {
