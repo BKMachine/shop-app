@@ -165,12 +165,62 @@
         </v-window-item>
 
         <v-window-item value="stock">
-          <v-row no-gutters>
-            <v-switch v-model="tool.autoReorder" label="Auto Reorder" color="#901394"></v-switch>
+          <v-row no-gutters class="mb-4" align="center">
+            <v-dialog v-model="manualOrderDialog" max-width="500">
+              <template v-slot:activator="{ props: activatorProps }">
+                <v-btn
+                  v-bind="activatorProps"
+                  elevation="2"
+                  density="comfortable"
+                  variant="tonal"
+                  color="#932c95"
+                  :disabled="!manualOrderEnabled"
+                >
+                  <v-icon icon="mdi-cart-arrow-down" />
+                </v-btn>
+              </template>
+
+              <template v-slot:default>
+                <v-card>
+                  <v-card-title>Manual Order</v-card-title>
+                  <v-card-text>
+                    <v-row> How many would you like to order? </v-row>
+                    <v-row class="mt-4">
+                      <v-text-field
+                        v-model="manualOrderAmount"
+                        type="number"
+                        label="Amount"
+                        placeholder="1"
+                        min="1"
+                        @keydown="isNumber"
+                      ></v-text-field>
+                    </v-row>
+                  </v-card-text>
+                  <v-card-actions>
+                    <v-spacer />
+                    <v-btn color="green" variant="elevated" @click="addManualOrder">Order</v-btn>
+                    <v-btn color="red" variant="elevated" @click="closeManualOrderDialog">
+                      Cancel
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </template>
+            </v-dialog>
+            <v-switch
+              v-model="tool.autoReorder"
+              label="Auto Reorder"
+              class="ml-6"
+              color="#932c95"
+              density="compact"
+              hide-details
+            />
             <v-checkbox
               v-model="tool.onOrder"
               :label="formattedOrderedOn"
+              class="ml-3"
               color="#901394"
+              density="compact"
+              hide-details
               @click="tool.orderedOn = undefined"
             />
           </v-row>
@@ -303,6 +353,7 @@ import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
+import { toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
@@ -317,6 +368,7 @@ const tool = ref<ToolDoc>({
   reorderThreshold: 0,
   reorderQty: 0,
   autoReorder: false,
+  onOrder: false,
   flutes: 0,
 } as ToolDoc);
 const toolOriginal = ref<ToolDoc>({} as ToolDoc);
@@ -381,7 +433,7 @@ function fetchTool(showSpinner: boolean = true) {
     });
 }
 
-async function saveTool() {
+async function saveTool(stayOnPage = false) {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
   if (routeName === 'createTool') {
@@ -390,7 +442,7 @@ async function saveTool() {
     await toolStore.update(tool.value);
   }
   saveFlag.value = false;
-  router.back();
+  if (!stayOnPage) router.back();
 }
 
 function openLink(link: string | undefined) {
@@ -464,6 +516,25 @@ function printLocation() {
   printer.printLocation({ loc, pos });
 }
 
+const manualOrderDialog = ref(false);
+const manualOrderAmount = ref(1);
+const manualOrderEnabled = computed(() => {
+  return tool.value.item && tool.value.vendor && tool.value.supplier;
+});
+
+async function addManualOrder() {
+  // await saveTool(true);
+  toastSuccess('Manual order placed');
+  closeManualOrderDialog();
+}
+
+function closeManualOrderDialog() {
+  manualOrderDialog.value = false;
+  setTimeout(() => {
+    manualOrderAmount.value = 1;
+  }, 1000);
+}
+
 /* TECHNICAL TAB LOGIC */
 
 const fluteText = computed(() => {
@@ -494,7 +565,7 @@ const types = computed<string[]>(() => {
   position: relative;
 }
 .active {
-  background: #901394;
+  background: #932c95;
   color: white;
 }
 .location {
