@@ -353,7 +353,7 @@ import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
-import { toastSuccess } from '@/plugins/vue-toast-notification';
+import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
@@ -437,9 +437,23 @@ async function saveTool(stayOnPage = false) {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
   if (routeName === 'createTool') {
-    await toolStore.add({ ...tool.value, category: category.value });
+    await toolStore
+      .add({ ...tool.value, category: category.value })
+      .then(() => {
+        toastSuccess('Tool added successfully');
+      })
+      .catch(() => {
+        toastError('Unable to add tool');
+      });
   } else if (routeName === 'viewTool') {
-    await toolStore.update(tool.value);
+    await toolStore
+      .update(tool.value)
+      .then(() => {
+        toastSuccess('Tool updated successfully');
+      })
+      .catch(() => {
+        toastError('Unable to update tool');
+      });
   }
   saveFlag.value = false;
   if (!stayOnPage) router.back();
