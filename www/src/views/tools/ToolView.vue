@@ -184,7 +184,7 @@
                 <v-card>
                   <v-card-title>Manual Order</v-card-title>
                   <v-card-text>
-                    <v-row> How many would you like to order? </v-row>
+                    <v-row> How many items would you like to order? </v-row>
                     <v-row class="mt-4">
                       <v-text-field
                         v-model="manualOrderAmount"
@@ -273,13 +273,7 @@
                   </v-list-item>
                 </template>
               </v-select>
-              <v-text-field
-                v-model.number="tool.cost"
-                class="ml-2"
-                label="Cost"
-                prepend-inner-icon="mdi-currency-usd"
-                @keydown="isNumber($event)"
-              />
+              <CurrencyInput v-model="tool.cost" label="Cost" class="ml-2" />
               <v-row no-gutters>
                 <v-col cols="6">
                   <v-text-field
@@ -348,6 +342,7 @@
 import isEqual from 'lodash/isEqual';
 import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import CurrencyInput from '@/components/CurrencyInput.vue';
 import ToolStockGraph from '@/components/ToolStockGraph.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';

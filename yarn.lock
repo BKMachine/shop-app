@@ -5746,6 +5746,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"vue-currency-input@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "vue-currency-input@npm:3.1.0"
+  peerDependencies:
+    vue: ^2.7 || ^3.0.0
+  checksum: 10c0/a70850af622bcc4e77670a750bed75158548e414d91e1f399f9917b4920764aeb0ff39870e896bd71c918ced0ff8ffdcc7d8257b00e1547a0196a346ac0185f3
+  languageName: node
+  linkType: hard
+
 "vue-demi@npm:>=0.14.5":
   version: 0.14.7
   resolution: "vue-demi@npm:0.14.7"
@@ -6075,6 +6084,7 @@ __metadata:
     vite-plugin-vuetify: "npm:^2.0.3"
     vue: "npm:^3.4.21"
     vue-chart-3: "npm:^3.1.8"
+    vue-currency-input: "npm:^3.1.0"
     vue-router: "npm:^4.3.0"
     vue-toast-notification: "npm:^3"
     vue-tsc: "npm:^2.0.6"
