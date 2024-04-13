@@ -317,6 +317,7 @@
             </v-col>
             <v-col cols="3">
               <v-text-field
+                v-if="category === 'milling'"
                 v-model.number="tool.cuttingDia"
                 label="Cutting Dia"
                 min="0"
@@ -325,6 +326,7 @@
             </v-col>
             <v-col cols="3">
               <v-text-field
+                v-if="category === 'milling'"
                 v-model.number="tool.fluteLength"
                 label="Flute Length"
                 min="0"
@@ -353,6 +355,7 @@ import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
+import { ca } from 'vuetify/locale';
 
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
