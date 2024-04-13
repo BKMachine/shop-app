@@ -96,8 +96,11 @@ const options = computed<ChartOptions<'line'>>(() => {
           display: true,
           text: 'Stock #',
         },
-        suggestedMin: 0,
-        //suggestedMax: 100,
+        min: 0,
+        suggestedMax: 10,
+        ticks: {
+          stepSize: 1,
+        },
       },
     },
     interaction: {
@@ -109,7 +112,7 @@ const options = computed<ChartOptions<'line'>>(() => {
 
 <style scoped>
 .container {
-  height: 150px;
+  height: 200px;
   width: 100%;
   margin-bottom: 20px;
 }
