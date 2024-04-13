@@ -355,7 +355,6 @@ import router from '@/router';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
-import { ca } from 'vuetify/locale';
 
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
