@@ -12,6 +12,8 @@ export function isNumber(evt: KeyboardEvent) {
     '9',
     '.',
     'Backspace',
+    'ArrowUp',
+    'ArrowDown',
   ];
   const keyPressed: string = evt.key;
 
