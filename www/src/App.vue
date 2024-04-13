@@ -13,13 +13,17 @@
       <v-list>
         <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }"> Tools </v-list-item>
-        <v-list-item prepend-icon="mdi-dots-triangle"> Parts </v-list-item>
+        <!--        <v-list-item prepend-icon="mdi-dots-triangle"> Parts </v-list-item>-->
         <v-list-item prepend-icon="mdi-map-marker" link :to="{ name: 'locations' }">
           Locations
         </v-list-item>
       </v-list>
       <template v-slot:append>
-        <v-list-item prepend-icon="mdi-barcode-scan" @click="scannerStore.scan('120850')">
+        <v-list-item
+          v-if="showTestScan"
+          prepend-icon="mdi-barcode-scan"
+          @click="scannerStore.scan('120850')"
+        >
           Test
         </v-list-item>
         <v-list-item prepend-icon="mdi-file-document-outline" link :to="{ name: 'toolReport' }">
@@ -41,7 +45,7 @@
 
 <script setup lang="ts">
 import onScan from 'onscan.js';
-import { onBeforeMount, ref } from 'vue';
+import { computed, onBeforeMount, ref } from 'vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import router from '@/router';
@@ -93,6 +97,10 @@ onBeforeMount(() => {
   supplierStore.fetch();
   vendorStore.fetch();
   toolStore.fetch();
+});
+
+const showTestScan = computed<boolean>(() => {
+  return location.host.includes('localhost');
 });
 </script>
 
