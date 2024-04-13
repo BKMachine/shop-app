@@ -226,4 +226,7 @@ function location(tool: ToolDoc): string {
 .highlighted {
   background: #efefef !important;
 }
+.tool-img {
+  max-height: 50px;
+}
 </style>
