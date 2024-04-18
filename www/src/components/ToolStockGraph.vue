@@ -45,6 +45,24 @@ const data = computed<{ x: number; y: number }[]>(() => {
   });
 });
 
+const orderPoints = computed(() => {
+  let i = 1;
+  const radius = 5;
+  return [...items.value]
+    .filter((x) => !x.old.onOrder && x.new.onOrder)
+    .map((x) => {
+      return {
+        type: 'point',
+        xValue: DateTime.fromISO(x.timestamp).toMillis(),
+        yValue: props.reorderThreshold,
+        backgroundColor: 'rgba(151,255,99,0.25)',
+        radius,
+        xAdjust: -(radius * 0.5) + 2,
+      };
+    })
+    .reduce((a, v) => ({ ...a, [`point${i++}`]: v }), {});
+});
+
 Chart.register(...registerables);
 Chart.register(annotationPlugin);
 
@@ -80,6 +98,7 @@ const options = computed<ChartOptions<'line'>>(() => {
             borderColor: 'rgb(216,60,60)',
             borderWidth: 1.0,
           },
+          ...orderPoints.value,
         },
       },
     },

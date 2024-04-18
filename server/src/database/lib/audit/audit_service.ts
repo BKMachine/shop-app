@@ -18,7 +18,7 @@ async function getToolAudits(id: string, from: string, to: string) {
       'old._id': new Types.ObjectId(id),
       timestamp: { $gte: from, $lte: to },
     },
-    'timestamp new.stock old.stock',
+    'timestamp new.stock old.stock new.onOrder old.onOrder',
   );
 }
 
