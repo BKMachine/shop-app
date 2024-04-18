@@ -11,6 +11,7 @@ import { DateTime, Duration } from 'luxon';
 import { computed, onMounted, ref } from 'vue';
 import { LineChart } from 'vue-chart-3';
 import axios from '@/plugins/axios';
+import 'chartjs-adapter-luxon';
 
 const props = defineProps<{
   id: string;
@@ -18,13 +19,11 @@ const props = defineProps<{
 }>();
 
 const items = ref<AuditDoc[]>([] as AuditDoc[]);
-const from = ref<DateTime>();
-const to = ref<DateTime>();
+const to = ref<DateTime>(DateTime.now());
+const diff = Duration.fromObject({ month: 3 });
+const from = ref<DateTime>(DateTime.now().minus(diff));
 
 onMounted(() => {
-  to.value = DateTime.now();
-  const diff = Duration.fromObject({ month: 3 });
-  from.value = DateTime.now().minus(diff);
   axios
     .post('/audits/tools/stock', {
       id: props.id,
@@ -40,13 +39,9 @@ const filteredItems = computed(() => {
   return [...items.value].filter((x) => x.old.stock !== x.new.stock);
 });
 
-const stocks = computed<number[]>(() => {
-  return filteredItems.value.map((x) => x.new.stock);
-});
-
-const labels = computed<string[]>(() => {
+const data = computed<{ x: number; y: number }[]>(() => {
   return filteredItems.value.map((x) => {
-    return DateTime.fromISO(x.timestamp).toLocaleString();
+    return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
   });
 });
 
@@ -55,10 +50,9 @@ Chart.register(annotationPlugin);
 
 const chartData = computed<ChartData<'line'>>(() => {
   return {
-    labels: labels.value,
     datasets: [
       {
-        data: stocks.value,
+        data: data.value,
         tension: 0.4,
         //cubicInterpolationMode: 'monotone',
         borderColor: '#54c0b9',
@@ -100,6 +94,20 @@ const options = computed<ChartOptions<'line'>>(() => {
         suggestedMax: 10,
         ticks: {
           stepSize: 1,
+        },
+      },
+      x: {
+        type: 'timeseries',
+        min: from.value.toMillis(),
+        max: to.value.toMillis(),
+        adapters: {
+          date: {},
+        },
+        time: {
+          unit: 'day',
+          displayFormats: {
+            day: 'L/d/yyyy',
+          },
         },
       },
     },
