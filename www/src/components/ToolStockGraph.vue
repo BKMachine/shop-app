@@ -76,19 +76,29 @@ interface Data {
   y: number;
 }
 
+const firstDate = DateTime.fromISO('2024-04-09T00:00:00-06:00');
+
 const data = computed<Data[]>(() => {
-  if (!items.value) return [];
-  const filtered: Data[] = [...items.value]
-    .filter((x) => x.old.stock && x.new.stock)
-    .filter((x) => x.old.stock !== x.new.stock)
-    .map((x) => {
-      return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
-    });
-  if (!filtered.length) return [];
-  const firstStock = filtered[0].y;
-  const first: Data = { x: from.value.startOf('day').toMillis(), y: firstStock };
+  const init: Data = { x: firstDate.toMillis(), y: props.currentStock || 0 };
   const last: Data = { x: to.value.toMillis(), y: props.currentStock || 0 };
-  return [first, ...filtered, last];
+  if (!items.value) return [init, last];
+
+  const filtered = [...items.value].filter((x) => x.old.stock !== x.new.stock);
+  const mappedData: Data[] = filtered.map((x) => {
+    return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
+  });
+  if (!filtered.length) return [init, last];
+
+  const firstItemStock = mappedData[0].y;
+  const firstItemDate = DateTime.fromISO(filtered[0].timestamp);
+
+  let first: Data;
+  if (firstItemDate > from.value) {
+    first = { x: firstDate.toMillis(), y: firstItemStock };
+  } else {
+    first = { x: from.value.startOf('day').toMillis(), y: firstItemStock };
+  }
+  return [first, ...mappedData, last];
 });
 
 const orderPoints = computed(() => {
@@ -113,8 +123,8 @@ const chartData = computed<ChartData<'line'>>(() => {
       {
         data: data.value,
         tension: 0,
-        //cubicInterpolationMode: 'monotone',
         borderColor: '#54c0b9',
+        stepped: true,
       },
     ],
   };
@@ -152,7 +162,7 @@ const options = computed<ChartOptions<'line'>>(() => {
           text: 'Stock #',
         },
         min: 0,
-        suggestedMax: 6,
+        suggestedMax: Math.max(6, props.reorderThreshold + 2),
         ticks: {
           stepSize: 1,
         },
