@@ -298,7 +298,12 @@
               </v-row>
             </v-col>
           </v-row>
-          <ToolStockGraph :id="tool._id" :reorderThreshold="tool.reorderThreshold" />
+          <ToolStockGraph
+            v-if="tool._id"
+            :id="tool._id"
+            :reorderThreshold="tool.reorderThreshold"
+            :currentStock="tool.stock"
+          />
         </v-window-item>
 
         <v-window-item value="tech">

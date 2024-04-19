@@ -1,29 +1,65 @@
 <template>
-  <div class="container">
-    <LineChart :chart-data="chartData" :options="options" class="chart" />
-  </div>
+  <v-divider />
+  <v-row no-gutters class="mt-5">
+    <v-spacer />
+    <v-col cols="3">
+      <v-select
+        v-model="months"
+        class="ml-2"
+        :items="selectOptions"
+        item-title="title"
+        item-value="value"
+        density="compact"
+        @update:modelValue="getData"
+      />
+    </v-col>
+  </v-row>
+  <v-row class="container" no-gutters>
+    <Line :data="chartData" :options="options" class="chart" />
+  </v-row>
 </template>
 
 <script setup lang="ts">
 import { Chart, type ChartData, type ChartOptions, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
-import { DateTime, Duration } from 'luxon';
+import { DateTime } from 'luxon';
 import { computed, onMounted, ref } from 'vue';
-import { LineChart } from 'vue-chart-3';
+import { Line } from 'vue-chartjs';
 import axios from '@/plugins/axios';
 import 'chartjs-adapter-luxon';
+
+Chart.register(...registerables);
+Chart.register(annotationPlugin);
 
 const props = defineProps<{
   id: string;
   reorderThreshold: number;
+  currentStock: number;
 }>();
+
+interface Select {
+  title: string;
+  value: number;
+}
+
+const selectOptions: Select[] = [
+  { title: '1 month', value: 1 },
+  { title: '3 months', value: 3 },
+  { title: '6 months', value: 6 },
+  { title: '1 year', value: 12 },
+];
+// Default to 1 month chart
+const months = ref<number>(selectOptions[0].value);
 
 const items = ref<AuditDoc[]>([] as AuditDoc[]);
 const to = ref<DateTime>(DateTime.now());
-const diff = Duration.fromObject({ month: 3 });
-const from = ref<DateTime>(DateTime.now().minus(diff));
+const from = computed<DateTime>(() => DateTime.now().minus({ months: months.value }));
 
 onMounted(() => {
+  getData();
+});
+
+function getData() {
   axios
     .post('/audits/tools/stock', {
       id: props.id,
@@ -33,21 +69,30 @@ onMounted(() => {
     .then(({ data }: { data: AuditDoc[] }) => {
       items.value = data;
     });
-});
+}
 
-const filteredItems = computed(() => {
-  return [...items.value].filter((x) => x.old.stock !== x.new.stock);
-});
+interface Data {
+  x: number;
+  y: number;
+}
 
-const data = computed<{ x: number; y: number }[]>(() => {
-  return filteredItems.value.map((x) => {
-    return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
-  });
+const data = computed<Data[]>(() => {
+  if (!items.value) return [];
+  const filtered: Data[] = [...items.value]
+    .filter((x) => x.old.stock && x.new.stock)
+    .filter((x) => x.old.stock !== x.new.stock)
+    .map((x) => {
+      return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
+    });
+  if (!filtered.length) return [];
+  const firstStock = filtered[0].y;
+  const first: Data = { x: from.value.startOf('day').toMillis(), y: firstStock };
+  const last: Data = { x: to.value.toMillis(), y: props.currentStock || 0 };
+  return [first, ...filtered, last];
 });
 
 const orderPoints = computed(() => {
   let i = 1;
-  const radius = 5;
   return [...items.value]
     .filter((x) => !x.old.onOrder && x.new.onOrder)
     .map((x) => {
@@ -55,23 +100,19 @@ const orderPoints = computed(() => {
         type: 'point',
         xValue: DateTime.fromISO(x.timestamp).toMillis(),
         yValue: props.reorderThreshold,
-        backgroundColor: 'rgba(151,255,99,0.25)',
-        radius,
-        xAdjust: -(radius * 0.5) + 2,
+        radius: 6,
+        backgroundColor: 'rgba(151,255,99,0.5)',
       };
     })
     .reduce((a, v) => ({ ...a, [`point${i++}`]: v }), {});
 });
-
-Chart.register(...registerables);
-Chart.register(annotationPlugin);
 
 const chartData = computed<ChartData<'line'>>(() => {
   return {
     datasets: [
       {
         data: data.value,
-        tension: 0.4,
+        tension: 0,
         //cubicInterpolationMode: 'monotone',
         borderColor: '#54c0b9',
       },
@@ -82,6 +123,7 @@ const chartData = computed<ChartData<'line'>>(() => {
 const options = computed<ChartOptions<'line'>>(() => {
   return {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false,
@@ -110,24 +152,23 @@ const options = computed<ChartOptions<'line'>>(() => {
           text: 'Stock #',
         },
         min: 0,
-        suggestedMax: 10,
+        suggestedMax: 6,
         ticks: {
           stepSize: 1,
         },
       },
       x: {
-        type: 'timeseries',
+        type: 'time',
         min: from.value.toMillis(),
         max: to.value.toMillis(),
-        adapters: {
-          date: {},
-        },
         time: {
+          tooltipFormat: 'D t',
           unit: 'day',
           displayFormats: {
-            day: 'L/d/yyyy',
+            day: 'L/d',
           },
         },
+        // clip: false,
       },
     },
     interaction: {

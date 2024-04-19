@@ -8,7 +8,11 @@ router.post('/audits/tools/stock', async (req, res, next) => {
     id,
     from,
     to,
-  }: { id: string | undefined; from: string | undefined; to: string | undefined } = req.body;
+  }: {
+    id: string | undefined;
+    from: string | undefined;
+    to: string | undefined;
+  } = req.body;
   if (!id || !from || !to) {
     res.sendStatus(400);
     return;

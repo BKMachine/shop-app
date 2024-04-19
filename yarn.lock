@@ -1110,7 +1110,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue/runtime-core@npm:3.4.21, @vue/runtime-core@npm:latest":
+"@vue/runtime-core@npm:3.4.21":
   version: 3.4.21
   resolution: "@vue/runtime-core@npm:3.4.21"
   dependencies:
@@ -1120,7 +1120,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue/runtime-dom@npm:3.4.21, @vue/runtime-dom@npm:latest":
+"@vue/runtime-dom@npm:3.4.21":
   version: 3.4.21
   resolution: "@vue/runtime-dom@npm:3.4.21"
   dependencies:
@@ -1849,7 +1849,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"csstype@npm:^3.1.3, csstype@npm:latest":
+"csstype@npm:^3.1.3":
   version: 3.1.3
   resolution: "csstype@npm:3.1.3"
   checksum: 10c0/80c089d6f7e0c5b2bd83cf0539ab41474198579584fa10d86d0cafe0642202343cbc119e076a0b1aece191989477081415d66c9fefbf3c957fc2fc4b7009f248
@@ -3574,13 +3574,6 @@ __metadata:
   dependencies:
     p-locate: "npm:^5.0.0"
   checksum: 10c0/d3972ab70dfe58ce620e64265f90162d247e87159b6126b01314dd67be43d50e96a50b517bce2d9452a79409c7614054c277b5232377de50416564a77ac7aad3
-  languageName: node
-  linkType: hard
-
-"lodash-es@npm:latest":
-  version: 4.17.21
-  resolution: "lodash-es@npm:4.17.21"
-  checksum: 10c0/fb407355f7e6cd523a9383e76e6b455321f0f153a6c9625e21a8827d10c54c2a2341bd2ae8d034358b60e07325e1330c14c224ff582d04612a46a4f0479ff2f2
   languageName: node
   linkType: hard
 
@@ -5741,18 +5734,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vue-chart-3@npm:^3.1.8":
-  version: 3.1.8
-  resolution: "vue-chart-3@npm:3.1.8"
-  dependencies:
-    "@vue/runtime-core": "npm:latest"
-    "@vue/runtime-dom": "npm:latest"
-    csstype: "npm:latest"
-    lodash-es: "npm:latest"
+"vue-chartjs@npm:^5.3.1":
+  version: 5.3.1
+  resolution: "vue-chartjs@npm:5.3.1"
   peerDependencies:
-    chart.js: "*"
-    vue: ">= 3"
-  checksum: 10c0/9f67aa469bf521b69868dedb7ea250d72510ac1a330b875b695cf704776d05ead241596a46b48f0f3971903c2813a86c2e3afabb3b4a9abffe826ea348d43c07
+    chart.js: ^4.1.1
+    vue: ^3.0.0-0 || ^2.7.0
+  checksum: 10c0/a5788cd62b8e662207c9762794e542f84144e777fd0a907eead1ece7301c74b549f9f5cf402ce972b78a8dbed41baee6603dcc57d3eb11257a663c0c17ad6035
   languageName: node
   linkType: hard
 
@@ -6094,7 +6082,7 @@ __metadata:
     vite: "npm:^5.1.6"
     vite-plugin-vuetify: "npm:^2.0.3"
     vue: "npm:^3.4.21"
-    vue-chart-3: "npm:^3.1.8"
+    vue-chartjs: "npm:^5.3.1"
     vue-currency-input: "npm:^3.1.0"
     vue-router: "npm:^4.3.0"
     vue-toast-notification: "npm:^3"

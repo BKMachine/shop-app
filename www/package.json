@@ -24,7 +24,7 @@
     "socket.io-client": "^4.7.5",
     "uuid": "^9.0.1",
     "vue": "^3.4.21",
-    "vue-chart-3": "^3.1.8",
+    "vue-chartjs": "^5.3.1",
     "vue-currency-input": "^3.1.0",
     "vue-router": "^4.3.0",
     "vuetify": "^3.5.9"
