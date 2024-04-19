@@ -57,7 +57,7 @@ const items = computed<Item[]>(() => {
   const brands: Set<string> = new Set(
     tools.value
       .map((x) => {
-        return typeof x.vendor === 'object' ? x.vendor.name : 'No Brand';
+        return x.vendor && typeof x.vendor === 'object' ? x.vendor.name : 'No Brand';
       })
       .sort((a, b) => {
         const c = a.toLowerCase();
@@ -71,7 +71,7 @@ const items = computed<Item[]>(() => {
   brands.forEach((brand) => {
     const matches = tools.value
       .filter((x) => {
-        const name = typeof x.vendor === 'object' ? x.vendor.name : 'No Brand';
+        const name = x.vendor && typeof x.vendor === 'object' ? x.vendor.name : 'No Brand';
         return name.toLowerCase() === brand.toLowerCase();
       })
       .sort((a, b) => {

@@ -28,7 +28,7 @@ new CronJob(
 
 async function reorders() {
   const tools = await Tool.getAutoReorders();
-  const filtered = tools.filter((x) => !x.onOrder);
+  const filtered = tools.filter((x) => !x.onOrder && x.vendor);
   const sorted = filtered.sort((a, b) => {
     if (a.supplier.name === b.supplier.name) {
       if (a.vendor.name === b.vendor.name) {
