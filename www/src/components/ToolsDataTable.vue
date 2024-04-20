@@ -116,7 +116,7 @@ const resultsTitle = computed(() => {
   return `${title}`;
 });
 
-const types = computed<string[]>(() => {
+const types = computed<readonly string[]>(() => {
   return toolTypes[props.category];
 });
 

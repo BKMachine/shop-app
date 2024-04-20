@@ -1,10 +1,11 @@
-const milling: MillingToolType[] = [
+const milling = [
   'Endmill',
   'Ball Endmill',
   'Chamfer Mill',
   'Drill',
   'Tap - Cutting',
   'Tap - Roll Form',
+  '123',
   'Insert',
   'Drill Insert',
   'Drill Body',
@@ -18,13 +19,17 @@ const milling: MillingToolType[] = [
   'Thread Mill',
   'Tapered Endmill',
   'Lens Cutter',
-];
+] as const;
 
-const turning: TurningToolType[] = ['Insert', 'Stick Holder', 'Bore Bar'];
-const other: OtherToolType[] = [];
+const turning = ['Insert', 'Stick Holder', 'Bore Bar'] as const;
+const other = [] as const;
 
 export default {
   milling,
   turning,
   other,
 };
+
+export type MillingType = (typeof milling)[number];
+export type TurningType = (typeof turning)[number];
+export type OtherType = (typeof other)[number];

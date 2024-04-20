@@ -322,7 +322,7 @@
             </v-col>
             <v-col cols="3">
               <v-text-field
-                v-if="category === 'milling'"
+                v-if="showMillingOpts"
                 v-model.number="tool.cuttingDia"
                 label="Cutting Dia"
                 min="0"
@@ -331,7 +331,7 @@
             </v-col>
             <v-col cols="3">
               <v-text-field
-                v-if="category === 'milling'"
+                v-if="showMillingOpts"
                 v-model.number="tool.fluteLength"
                 label="Flute Length"
                 min="0"
@@ -557,8 +557,15 @@ const fluteText = computed(() => {
   return category.value === 'milling' ? 'Flutes' : 'Cutting Edges';
 });
 
-const types = computed<string[]>(() => {
+const types = computed<readonly string[]>(() => {
   return toolTypes[tool.value.category || category.value];
+});
+
+const showMillingOpts = computed<boolean>(() => {
+  if (tool.value.category) {
+    return tool.value.category === 'milling';
+  }
+  return category.value === 'milling';
 });
 </script>
 

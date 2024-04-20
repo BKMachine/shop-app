@@ -43,28 +43,9 @@ interface OtherTool extends ToolDocBase {
 type ToolDoc = MillingTool | TurningTool | OtherTool;
 
 type ToolCategory = 'milling' | 'turning' | 'other';
-type MillingToolType =
-  | 'Endmill'
-  | 'Ball Endmill'
-  | 'Drill'
-  | 'Insert'
-  | 'Drill Insert'
-  | 'Drill Body'
-  | 'Tap - Cutting'
-  | 'Tap - Roll Form'
-  | "C'Sink"
-  | 'Dovetail Cutter'
-  | 'Double Angle Cutter'
-  | 'Custom Cutter'
-  | 'Form Cutter'
-  | 'Chamfer Mill'
-  | 'Keyseat Cutter'
-  | 'Reamer'
-  | 'Thread Mill'
-  | 'Tapered Endmill'
-  | 'Lens Cutter';
-type TurningToolType = 'Insert' | 'Stick Holder' | 'Bore Bar';
-type OtherToolType = '';
+type MillingToolType = import('../www/src/plugins/toolTypes').MillingType;
+type TurningToolType = import('../www/src/plugins/toolTypes').TurningType;
+type OtherToolType = import('../www/src/plugins/toolTypes').OtherType;
 
 interface VendorDoc {
   _id: string;
