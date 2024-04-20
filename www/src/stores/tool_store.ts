@@ -1,6 +1,6 @@
 import uniq from 'lodash/uniq';
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import axios from '@/plugins/axios';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useVendorStore } from '@/stores/vendor_store';
@@ -60,6 +60,16 @@ export const useToolStore = defineStore('tools', () => {
         loading.value = false;
       });
   }
+
+  const totalStockCost = computed(() => {
+    return [...rawTools.value].reduce((a, b) => {
+      return a + (b.stock * b.cost || 0);
+    }, 0);
+  });
+
+  watch(totalStockCost, () => {
+    console.log(parseFloat(totalStockCost.value.toFixed(2)));
+  });
 
   const tabChange = ref(false);
 
