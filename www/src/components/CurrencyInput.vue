@@ -13,13 +13,13 @@ import { CurrencyDisplay, useCurrencyInput } from 'vue-currency-input';
 
 const props = defineProps<{
   label: string;
-  modelValue: number;
+  modelValue?: number;
 }>();
 
 watch(
   () => props.modelValue,
   (value) => {
-    setValue(value);
+    if (value) setValue(value);
   },
 );
 
