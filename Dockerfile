@@ -4,7 +4,7 @@ RUN corepack enable && \
 WORKDIR /app
 
 COPY . .
-RUN yarn
+RUN yarn install --immutable
 
 RUN cd /app/server && \
     yarn prettier && \
