@@ -10,7 +10,6 @@
         item-title="title"
         item-value="value"
         density="compact"
-        @update:modelValue="getData"
       />
     </v-col>
   </v-row>
@@ -23,7 +22,7 @@
 import { Chart, type ChartData, type ChartOptions, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { DateTime } from 'luxon';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Line } from 'vue-chartjs';
 import axios from '@/plugins/axios';
 import 'chartjs-adapter-luxon';
@@ -48,14 +47,17 @@ const selectOptions: Select[] = [
   { title: '6 months', value: 6 },
   { title: '1 year', value: 12 },
 ];
-// Default to 1 month chart
-const months = ref<number>(selectOptions[0].value);
 
+const months = ref<number>(0);
 const items = ref<AuditDoc[]>([] as AuditDoc[]);
 const to = ref<DateTime>(DateTime.now());
 const from = computed<DateTime>(() => DateTime.now().minus({ months: months.value }));
 
 onMounted(() => {
+  months.value = 1;
+});
+
+watch(months, () => {
   getData();
 });
 
