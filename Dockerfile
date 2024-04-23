@@ -18,4 +18,4 @@ RUN cd /app/www && \
 
 ENV NODE_ENV=production
 EXPOSE 3000
-ENTRYPOINT ["node", "/app/server/dist/index.js"]
+ENTRYPOINT ["node", "/app/server/dist/server/index.js"]
