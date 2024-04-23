@@ -94,6 +94,7 @@ interface ToolReorders extends ToolDoc {
 type ToolDocReorders = ToolDoc & ToolReorders;
 
 interface AuditDoc {
+  _id: string;
   type: 'newTool' | 'updateTool';
   timestamp: string;
   old: any | null;

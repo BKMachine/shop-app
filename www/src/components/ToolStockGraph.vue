@@ -10,6 +10,7 @@
         item-title="title"
         item-value="value"
         density="compact"
+        @update:modelValue="getData"
       />
     </v-col>
   </v-row>
@@ -22,7 +23,7 @@
 import { Chart, type ChartData, type ChartOptions, registerables } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { DateTime } from 'luxon';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { Line } from 'vue-chartjs';
 import axios from '@/plugins/axios';
 import 'chartjs-adapter-luxon';
@@ -48,17 +49,13 @@ const selectOptions: Select[] = [
   { title: '1 year', value: 12 },
 ];
 
-const months = ref<number>(0);
+const months = ref<number>(1);
 const items = ref<AuditDoc[]>([] as AuditDoc[]);
 const to = ref<DateTime>(DateTime.now());
 const from = computed<DateTime>(() => DateTime.now().minus({ months: months.value }));
 
 onMounted(() => {
-  months.value = 1;
-});
-
-watch(months, () => {
-  getData();
+  setTimeout(getData, 100);
 });
 
 function getData() {
@@ -81,26 +78,26 @@ interface Data {
 const firstDate = DateTime.fromISO('2024-04-09T00:00:00-06:00');
 
 const data = computed<Data[]>(() => {
+  // If there are no audits just show a straight line at the current stock value
   const init: Data = { x: firstDate.toMillis(), y: props.currentStock || 0 };
   const last: Data = { x: to.value.toMillis(), y: props.currentStock || 0 };
-  if (!items.value) return [init, last];
+  if (!items.value || !items.value.length) return [init, last];
 
+  // Create a starting datum for when we started doing tool audits
+  const startingDatum: AuditDoc[] = [];
+  // Pull the first audit record from the results
+  const firstAudit = items.value[0];
+  // Filter for any audits with a stock number change
   const filtered = [...items.value].filter((x) => x.old.stock !== x.new.stock);
-  const mappedData: Data[] = filtered.map((x) => {
+  // If the first audit is not in the filtered results add it to the starting datums array
+  if (firstAudit._id !== filtered[0]._id) startingDatum.push(firstAudit);
+
+  // Map the data the chart cares about
+  const mappedData: Data[] = [...startingDatum, ...filtered].map((x) => {
     return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
   });
-  if (!filtered.length) return [init, last];
 
-  const firstItemStock = mappedData[0].y;
-  const firstItemDate = DateTime.fromISO(filtered[0].timestamp);
-
-  let first: Data;
-  if (firstItemDate > from.value) {
-    first = { x: firstDate.toMillis(), y: firstItemStock };
-  } else {
-    first = { x: from.value.startOf('day').toMillis(), y: firstItemStock };
-  }
-  return [first, ...mappedData, last];
+  return [...mappedData, last];
 });
 
 const orderPoints = computed(() => {
