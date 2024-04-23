@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 app.use('/api', api);
 
 if (process.env.NODE_ENV === 'production') {
-  const wwwDir = path.join(__dirname, '../../../www/dist');
+  const wwwDir = path.join(__dirname, '../../../../../www/dist');
 
   app.get('/', (req, res, next) => {
     res.sendFile(path.join(wwwDir, 'index.html'));
