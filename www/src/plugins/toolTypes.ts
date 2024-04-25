@@ -20,7 +20,7 @@ const milling = [
   'Thread Mill',
   'Tapered Endmill',
   'Lens Cutter',
-  'Slitting Saws',
+  'Slitting Saw',
   'Arbor',
 ] as const;
 
