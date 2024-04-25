@@ -17,10 +17,17 @@ app.get('/', (req, res, next) => {
 app.post('/print', async (req, res, next) => {
   const { printerName, labelXml } = req.body;
   if (!printerName || !labelXml) {
+    console.log('Missing required body parameters');
     res.sendStatus(400);
     return;
   }
   try {
+    const printers = await dymo.getPrinters();
+    if (!printers.includes(printerName)) {
+      console.log(`No printer found with the name: ${printerName}`);
+      res.sendStatus(503);
+      return;
+    }
     await dymo.print(printerName, labelXml);
     res.sendStatus(204);
   } catch (e) {
@@ -28,7 +35,6 @@ app.post('/print', async (req, res, next) => {
   }
 });
 
-console.log(await dymo.getPrinters());
 const port = process.env.PORT || 3005;
 app.listen(port);
 console.log(`Listening on port: ${port}`);
