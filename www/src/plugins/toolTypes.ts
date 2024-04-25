@@ -7,6 +7,7 @@ const milling = [
   'Tap - Roll Form',
   '123',
   'Insert',
+  'Insert Body',
   'Drill Insert',
   'Drill Body',
   "C'Sink",
@@ -19,6 +20,8 @@ const milling = [
   'Thread Mill',
   'Tapered Endmill',
   'Lens Cutter',
+  'Slitting Saws',
+  'Arbor',
 ] as const;
 
 const turning = ['Insert', 'Stick Holder', 'Bore Bar'] as const;
