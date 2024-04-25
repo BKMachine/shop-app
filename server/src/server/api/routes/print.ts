@@ -19,7 +19,7 @@ router.post('/print/location', async (req, res, next) => {
 
 router.post('/print/item', async (req, res, next) => {
   const { item, description, brand }: PrintItemBody = req.body;
-  if (!item || !description || !brand) {
+  if (!item || !description) {
     res.sendStatus(400);
     return;
   }

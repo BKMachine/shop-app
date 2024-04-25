@@ -500,7 +500,7 @@ function printItem() {
   const item = tool.value.item;
   const description = tool.value.description;
   const brand = (tool.value.vendor as VendorDoc)?.name;
-  if (!item || !description || !brand) return;
+  if (!item || !description) return;
   printer.printItem({ item, description, brand });
 }
 
@@ -508,7 +508,7 @@ function printBarcode() {
   const item = tool.value.barcode;
   const description = tool.value.description;
   const brand = (tool.value.vendor as VendorDoc)?.name;
-  if (!item || !description || !brand) return;
+  if (!item || !description) return;
   printer.printItem({ item, description, brand });
 }
 
