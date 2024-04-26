@@ -402,9 +402,12 @@ onMounted(() => {
   // Update tool if changed from another user
   watch(toolStore.trigger, () => {
     if (routeName !== 'viewTool') return;
+    if (toolStore.trigger.toolID === '') return;
     const match = toolStore.rawTools.find((x) => x._id === routeParams.id);
     if (!match) return;
-    // Alert user tool has updated if not the user that did the update
+    if (match._id !== toolStore.trigger.toolID) return;
+    // Alert user that the currently viewed tool has updated if not the user that did the update
+    // but only if changes are currently being made
     if (!isEqual(tool.value, toolOriginal.value) && saveFlag.value === false) {
       alert('Tool was updated. Local changes will be lost.');
     }

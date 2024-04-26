@@ -62,13 +62,25 @@ export const useToolStore = defineStore('tools', () => {
   }
 
   const totalStockCost = computed(() => {
-    return [...rawTools.value].reduce((a, b) => {
-      return a + (b.stock * b.cost || 0);
-    }, 0);
+    const milling = [...rawTools.value].filter((x) => x.category === 'milling');
+    const turning = [...rawTools.value].filter((x) => x.category === 'turning');
+    const other = [...rawTools.value].filter((x) => x.category === 'other');
+    return {
+      milling: reduce(milling),
+      turning: reduce(turning),
+      other: reduce(other),
+      total: reduce([...rawTools.value]),
+    };
+    function reduce(tools: ToolDoc[]) {
+      const cost = tools.reduce((a, b) => {
+        return a + (b.stock * b.cost || 0);
+      }, 0);
+      return parseFloat(cost.toFixed(2));
+    }
   });
 
   watch(totalStockCost, () => {
-    console.log(parseFloat(totalStockCost.value.toFixed(2)));
+    console.log(totalStockCost.value);
   });
 
   const tabChange = ref(false);
@@ -114,13 +126,14 @@ export const useToolStore = defineStore('tools', () => {
     });
   }
 
-  const trigger = ref({ tool: 0 });
+  const trigger = ref({ toolID: '' });
 
   function SOCKET_tool(tool: ToolDoc) {
     const index = rawTools.value.findIndex((x) => x._id === tool._id);
     if (index > -1) {
       rawTools.value[index] = tool;
-      trigger.value.tool++;
+      trigger.value.toolID = tool._id;
+      setTimeout(() => (trigger.value.toolID = ''), 500);
     }
   }
 
