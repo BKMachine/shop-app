@@ -90,7 +90,7 @@ const data = computed<Data[]>(() => {
   // Filter for any audits with a stock number change
   const filtered = [...items.value].filter((x) => x.old.stock !== x.new.stock);
   // If the first audit is not in the filtered results add it to the starting datums array
-  if (firstAudit._id !== filtered[0]._id) startingDatum.push(firstAudit);
+  if (!filtered[0] || firstAudit._id !== filtered[0]._id) startingDatum.push(firstAudit);
 
   // Map the data the chart cares about
   const mappedData: Data[] = [...startingDatum, ...filtered].map((x) => {
