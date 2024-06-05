@@ -93,9 +93,8 @@ async function stock(
 function computedToolChanges(oldTool: ToolDoc, newTool: ToolDoc): ToolDoc {
   // Set the orderedOn date if onOrder is newly set to true
   if (newTool.onOrder && !oldTool.onOrder) newTool.orderedOn = new Date().toISOString();
-  // Assume if the current stock is now greater than the reorderThreshold that the order has been fulfilled
-  if (newTool.reorderThreshold > 0 && newTool.stock > newTool.reorderThreshold)
-    newTool.onOrder = false;
+  // Assume if the current stock has increased that the order has been fulfilled
+  if (newTool.stock > oldTool.stock) newTool.onOrder = false;
   return newTool;
 }
 
