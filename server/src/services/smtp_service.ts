@@ -55,7 +55,7 @@ async function reorders() {
   });
 
   let to: string[] = ['dave@bkmachine.net'];
-  if (process.env.NODE_ENV === 'production') to.push('bradc@bkmachine.net');
+  if (process.env.NODE_ENV === 'production') to.push('jeff@bkmachine.net');
 
   return transporter.sendMail({
     from: 'noreply@bkmachine.net',
