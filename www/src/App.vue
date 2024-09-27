@@ -12,8 +12,10 @@
     <v-navigation-drawer v-model="drawer">
       <v-list>
         <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }"> Home </v-list-item>
+        <v-list-item prepend-icon="mdi-dots-triangle" link :to="{ name: 'parts' }">
+          Parts
+        </v-list-item>
         <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }"> Tools </v-list-item>
-        <!--        <v-list-item prepend-icon="mdi-dots-triangle"> Parts </v-list-item>-->
         <v-list-item prepend-icon="mdi-map-marker" link :to="{ name: 'locations' }">
           Locations
         </v-list-item>
@@ -50,12 +52,14 @@ import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
+import { usePartStore } from '@/stores/parts_store';
 import { useScannerStore } from '@/stores/scanner_store';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const customerStore = useCustomerStore();
+const partStore = usePartStore();
 const scannerStore = useScannerStore();
 const supplierStore = useSupplierStore();
 const toolStore = useToolStore();
@@ -94,6 +98,7 @@ const drawer = ref(true);
 
 onBeforeMount(() => {
   customerStore.fetch();
+  partStore.fetch();
   supplierStore.fetch();
   vendorStore.fetch();
   toolStore.fetch();

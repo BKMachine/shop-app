@@ -100,3 +100,14 @@ interface AuditDoc {
   old: any | null;
   new: any;
 }
+
+interface PartDoc {
+  _id: string;
+  customer: CustomerDoc | string;
+  part: string;
+  description: string;
+  stock: number;
+  location?: string;
+  position?: string;
+  img?: string;
+}

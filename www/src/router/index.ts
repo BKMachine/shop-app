@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import LocationsView from '@/views/LocationsView.vue';
+import PartsView from '@/views/parts/PartsView.vue';
+import PartView from '@/views/parts/PartView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
@@ -43,6 +45,21 @@ const router = createRouter({
       path: '/report',
       name: 'toolReport',
       component: ToolReportView,
+    },
+    {
+      path: '/parts',
+      name: 'parts',
+      component: PartsView,
+    },
+    {
+      path: '/parts/create',
+      name: 'createPart',
+      component: PartView,
+    },
+    {
+      path: '/parts/database/:id',
+      name: 'viewPart',
+      component: PartView,
     },
   ],
 });
