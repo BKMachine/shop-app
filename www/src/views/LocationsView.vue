@@ -45,9 +45,7 @@
             </template>
 
             <template v-slot:[`item.stock`]="{ item }">
-              <span class="stock">
-                {{ item.stock }}
-              </span>
+              <span class="stock">{{ item.stock }}</span>
             </template>
           </v-data-table-virtual>
         </v-card-text>
@@ -117,6 +115,7 @@ const headers = [
   {
     title: 'Stock',
     key: 'stock',
+    align: 'center',
   },
 ];
 
@@ -175,10 +174,6 @@ const printEnabled = computed(() => {
 </script>
 
 <style scoped>
-.stock {
-  font-weight: bolder;
-  font-size: 1.1em;
-}
 .tool-img {
   max-height: 50px;
 }

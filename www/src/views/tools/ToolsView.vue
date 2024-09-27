@@ -94,6 +94,11 @@ const millingHeaders = [
     title: 'Location',
     key: 'location',
   },
+  {
+    title: 'Stock',
+    key: 'stock',
+    align: 'center',
+  },
 ];
 
 const turningHeaders = [

@@ -79,6 +79,9 @@
           <template v-slot:[`item.location`]="{ item }">
             {{ location(item) }}
           </template>
+          <template v-slot:[`item.stock`]="{ item }">
+            <span class="stock">{{ item.stock }}</span>
+          </template>
         </v-data-table>
       </v-card>
     </v-card-text>
