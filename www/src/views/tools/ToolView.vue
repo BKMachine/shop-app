@@ -4,7 +4,7 @@
   </div>
   <v-container v-else class="container">
     <div class="title text-center">
-      <h1>{{ tool.description }}</h1>
+      <h1>{{ tool.description || 'New Tool' }}</h1>
     </div>
     <div class="d-flex align-center justify-space-between py-4">
       <img class="tool-img" :src="tool.img" alt="" />
@@ -573,31 +573,31 @@ const showMillingOpts = computed<boolean>(() => {
 </script>
 
 <style scoped>
-.stock {
-  font-weight: bolder;
-  font-size: 3em;
-  line-height: 0.8;
-}
-.tool-img {
-  max-width: 400px;
-  max-height: 100px;
+.container {
+  height: 200px;
+  position: relative;
 }
 .title {
   width: 100%;
   border-bottom: 1px solid #d8d8d8;
 }
-.container {
-  height: 200px;
-  position: relative;
+.tool-img {
+  max-width: 400px;
+  max-height: 100px;
 }
-.active {
-  background: #932c95;
-  color: white;
+.stock {
+  font-weight: bolder;
+  font-size: 3em;
+  line-height: 0.8;
 }
 .location {
   font-size: 0.8em;
 }
 .loading {
   height: 100%;
+}
+.active {
+  background: #932c95;
+  color: white;
 }
 </style>
