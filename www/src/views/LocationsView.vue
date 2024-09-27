@@ -90,7 +90,7 @@ const tools = computed(() => {
   return filteredLocation;
 });
 
-const headers = [
+const headers: readonly { [key: string]: any }[] = [
   {
     key: 'img',
     width: 150,
