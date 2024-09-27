@@ -5,7 +5,6 @@ const milling = [
   'Drill',
   'Tap - Cutting',
   'Tap - Roll Form',
-  '123',
   'Insert',
   'Insert Body',
   'Drill Insert',
