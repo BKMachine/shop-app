@@ -18,7 +18,7 @@ async function findByScanCode(scanCode: string): Promise<ToolDoc | null> {
     .populate('supplier');
 }
 
-async function getAutoReorders(): Promise<ToolDocReorders[]> {
+async function getAutoReorders(): Promise<ToolDoc[]> {
   return Tool.find({
     $expr: { $lte: ['$stock', '$reorderThreshold'] },
     autoReorder: true,
