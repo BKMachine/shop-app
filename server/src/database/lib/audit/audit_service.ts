@@ -12,14 +12,27 @@ async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc) {
 }
 
 async function getToolAudits(id: string, from: string, to: string) {
-  return Audit.find(
+  const projection = 'timestamp new.stock old.stock new.onOrder old.onOrder';
+
+  const docsInRange = await Audit.find(
     {
       type: 'tool',
       'old._id': new Types.ObjectId(id),
       timestamp: { $gte: from, $lte: to },
     },
-    'timestamp new.stock old.stock new.onOrder old.onOrder',
+    projection,
   );
+  if (!docsInRange.length) return [];
+
+  const previousDoc = await Audit.findOne(
+    { type: 'tool', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
+    projection,
+  )
+    .sort({
+      _id: -1,
+    })
+    .lean();
+  return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
 async function addPartAudit(oldPart: PartDoc | null, newPart: PartDoc) {
@@ -33,15 +46,28 @@ async function addPartAudit(oldPart: PartDoc | null, newPart: PartDoc) {
 }
 
 async function getPartAudits(id: string, from: string, to: string) {
-  return Audit.find(
+  const projection = 'timestamp new.stock old.stock';
+  const docsInRange = await Audit.find(
     {
       type: 'part',
       'old._id': new Types.ObjectId(id),
       timestamp: { $gte: from, $lte: to },
     },
-    'timestamp new.stock old.stock',
+    projection,
   );
+  if (!docsInRange.length) return [];
+
+  const previousDoc = await Audit.findOne(
+    { type: 'part', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
+    projection,
+  )
+    .sort({
+      _id: -1,
+    })
+    .lean();
+  return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
+
 export default {
   addToolAudit,
   getToolAudits,
