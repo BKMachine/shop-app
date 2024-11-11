@@ -48,11 +48,7 @@
 
               <template v-slot:default="{ isActive }">
                 <v-card>
-                  <PartsAdjustStockDialog :part="item" />
-                  <v-card-actions>
-                    <v-spacer />
-                    <v-btn text="Close Dialog" @click="isActive.value = false"></v-btn>
-                  </v-card-actions>
+                  <PartsAdjustStockDialog :part="item" @closeDialog="isActive.value = false" />
                 </v-card>
               </template>
             </v-dialog>

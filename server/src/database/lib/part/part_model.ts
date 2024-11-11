@@ -8,6 +8,7 @@ const schema = new Schema<PartDoc>({
   location: String,
   position: String,
   img: String,
+  revision: String,
 });
 
 export default model<PartDoc>('parts', schema);

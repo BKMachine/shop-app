@@ -110,4 +110,5 @@ interface PartDoc {
   location?: string;
   position?: string;
   img?: string;
+  revision?: string;
 }

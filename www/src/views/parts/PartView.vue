@@ -4,7 +4,8 @@
   </div>
   <v-container v-else class="container">
     <div class="title text-center">
-      <h1>{{ part.description || 'New Part' }}</h1>
+      <h1>{{ part.part }}</h1>
+      <h3>{{ part.description }}</h3>
     </div>
     <div class="d-flex align-center justify-space-between py-4">
       <img class="part-img" :src="part.img" alt="" />
@@ -51,7 +52,7 @@
       <v-window v-model="tab" class="tab-window">
         <v-window-item value="general">
           <v-row no-gutters>
-            <v-col cols="6">
+            <v-col cols="5">
               <v-text-field
                 v-model="part.part"
                 class="mr-2"
@@ -63,6 +64,9 @@
                   <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />-->
                 </template>
               </v-text-field>
+            </v-col>
+            <v-col cols="1">
+              <v-text-field v-model="part.revision" label="Rev"> </v-text-field>
             </v-col>
             <v-col cols="6">
               <v-select
@@ -167,7 +171,7 @@ const part = ref<PartDoc>({
 } as PartDoc);
 const partOriginal = ref<PartDoc>({} as PartDoc);
 
-const tab = ref<'general' | 'stock'>(import.meta.env.PROD ? 'general' : 'stock');
+const tab = ref<'general' | 'stock'>(import.meta.env.PROD ? 'stock' : 'stock');
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);
@@ -215,7 +219,7 @@ function fetchPart(showSpinner: boolean = true) {
       partOriginal.value = { ...data };
     })
     .catch(() => {
-      alert('Tool not found.');
+      alert('Part not found.');
     })
     .finally(() => {
       loading.value = false;
@@ -286,6 +290,11 @@ function printLocation() {
 .title {
   width: 100%;
   border-bottom: 1px solid #d8d8d8;
+}
+.title h3 {
+  position: relative;
+  bottom: 8px;
+  font-weight: normal;
 }
 .part-img {
   max-width: 400px;
