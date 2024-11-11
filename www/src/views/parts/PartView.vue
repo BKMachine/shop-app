@@ -33,8 +33,21 @@
     <v-tabs v-model="tab" class="mb-4" bg-color="#555555" color="secondary">
       <v-tab value="general">General</v-tab>
       <v-tab value="stock">Stock</v-tab>
+      <v-tab value="docs">Documents</v-tab>
+      <v-tab value="notes">Notes</v-tab>
       <v-spacer />
       <div class="d-flex align-center">
+        <v-btn
+          v-if="showAdd"
+          color="blue"
+          variant="elevated"
+          density="comfortable"
+          prepend-icon="mdi-plus"
+          class="mr-2"
+          @click="addNew"
+        >
+          Add
+        </v-btn>
         <v-btn
           color="green"
           variant="elevated"
@@ -146,6 +159,10 @@
             <PartStockGraph v-if="part._id" :id="part._id" :currentStock="part.stock" />
           </v-row>
         </v-window-item>
+
+        <v-window-item value="docs"> DOCS </v-window-item>
+
+        <v-window-item value="notes"> NOTES </v-window-item>
       </v-window>
     </v-form>
   </v-container>
@@ -166,12 +183,17 @@ import { usePartStore } from '@/stores/parts_store';
 const partStore = usePartStore();
 const customerStore = useCustomerStore();
 
+const showAdd = computed(() => {
+  const tabs = ['docs', 'notes'];
+  return tabs.includes(tab.value);
+});
+
 const part = ref<PartDoc>({
   stock: 0,
 } as PartDoc);
 const partOriginal = ref<PartDoc>({} as PartDoc);
 
-const tab = ref<'general' | 'stock'>(import.meta.env.PROD ? 'stock' : 'stock');
+const tab = ref<'general' | 'stock' | 'docs' | 'notes'>(import.meta.env.PROD ? 'stock' : 'stock');
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);
@@ -279,6 +301,21 @@ function printLocation() {
   const pos = part.value.position;
   if (!loc || !pos) return;
   printer.printLocation({ loc, pos });
+}
+
+function addNew() {
+  if (tab.value === 'docs') {
+    addDoc();
+  } else if (tab.value === 'notes') {
+    addNote();
+  }
+}
+
+function addDoc() {
+  alert('add doc');
+}
+function addNote() {
+  alert('add note');
 }
 </script>
 
