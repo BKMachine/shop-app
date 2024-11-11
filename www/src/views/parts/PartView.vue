@@ -117,7 +117,9 @@
               v-model="part.img"
               label="Part Image URL"
               append-inner-icon="mdi-image-outline"
-            />
+            >
+            </v-text-field>
+            <ImageUploader :id="id" type="part" @done="handleImageUpload" />
           </v-row>
         </v-window-item>
 
@@ -179,6 +181,7 @@ import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
 import { usePartStore } from '@/stores/parts_store';
+import ImageUploader from '@/components/ImageUploader.vue';
 
 const partStore = usePartStore();
 const customerStore = useCustomerStore();
@@ -316,6 +319,10 @@ function addDoc() {
 }
 function addNote() {
   alert('add note');
+}
+
+function handleImageUpload(url) {
+  part.value.img = url;
 }
 </script>
 

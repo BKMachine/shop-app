@@ -20,11 +20,7 @@ export default defineConfig({
     port: 8080,
     strictPort: true,
     proxy: {
-      '^/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '^/socket.io/': {
+      '^/(api|img|socket.io)/': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         ws: true,

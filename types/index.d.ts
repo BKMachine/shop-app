@@ -112,3 +112,12 @@ interface PartDoc {
   img?: string;
   revision?: string;
 }
+
+interface ImageDoc {
+  _id: string;
+  filename: string;
+  path: string;
+  uploadDate: Date;
+  ref: string;
+  type: 'tool' | 'part';
+}
