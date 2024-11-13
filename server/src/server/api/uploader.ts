@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
-import { imgDir } from '../../directories';
+import { staticDir } from '../../directories';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const { type, id } = req.body;
-    const dir = path.join(imgDir, type, id);
+    const dir = path.join(staticDir, type, id);
 
     fs.mkdir(dir, { recursive: true }, (err) => {
       if (err) return cb(err, dir);

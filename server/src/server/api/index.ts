@@ -44,7 +44,7 @@ router.get('/mail/reorders', async (req, res, next) => {
 });
 
 // Upload route
-router.post('/upload', uploader.single('image'), async (req, res) => {
+router.post('/upload', uploader.single('image'), async (req, res, next) => {
   try {
     await ImageService.save(req.file.filename, req.file.path, req.body.id, req.body.type);
     const imageUrl = `${process.env.BASE_URL}/img/${req.body.type}/${req.body.id}/${req.file.filename}`;

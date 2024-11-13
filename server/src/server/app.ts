@@ -1,9 +1,9 @@
 import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
+import { staticDir } from '../directories';
 import * as logger from '../logger';
 import api from './api';
-import { imgDir } from '../directories';
 
 const app = express();
 
@@ -21,7 +21,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', api);
-app.use('/img', express.static(imgDir));
+app.use(express.static(staticDir));
 
 if (process.env.NODE_ENV === 'production') {
   const wwwDir = path.join(__dirname, '../../../../../www/dist');

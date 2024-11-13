@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" max-width="600" class="card-height">
+  <v-dialog v-model="dialog" max-width="600">
     <template v-slot:activator="{ props: activatorProps }">
       <v-btn v-bind="activatorProps" class="ml-3" color="grey-lighten-1">
         <v-icon icon="mdi-image-plus-outline" size="large"></v-icon>
@@ -9,7 +9,7 @@
     <template v-slot:default="{ isActive }">
       <v-card>
         <v-toolbar color="primary" title="Image Selector"> </v-toolbar>
-        <div class="d-flex flex-row card-height">
+        <div class="d-flex flex-row inner-card-height">
           <v-tabs v-model="tab" color="orange" direction="vertical">
             <v-tab prepend-icon="mdi-desktop-classic" text="Desktop" value="pc"></v-tab>
             <v-tab prepend-icon="mdi-camera-outline" text="Camera" value="cam"></v-tab>
@@ -26,24 +26,28 @@
                 <v-tabs-window-item value="pc">
                   <v-container>
                     <v-row class="align-center">
-                      <div class="preview mr-4">
-                        <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="Image Preview" />
-                        <v-icon
-                          v-else
-                          icon="mdi-image-outline"
-                          size="50"
-                          color="grey-darken-2"
-                          @click="triggerFileInput"
+                      <v-col cols="auto">
+                        <div class="preview">
+                          <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="Image Preview" />
+                          <v-icon
+                            v-else
+                            icon="mdi-image-outline"
+                            size="50"
+                            color="grey-darken-2"
+                            @click="triggerFileInput"
+                          />
+                        </div>
+                      </v-col>
+                      <v-col>
+                        <v-file-input
+                          label="Click here to select a file"
+                          accept="image/*"
+                          prepend-icon=""
+                          hide-details
+                          @change="handleFileChange"
+                          @click:clear="clearInputs"
                         />
-                      </div>
-                      <v-file-input
-                        label="Click here to select a file"
-                        accept="image/*"
-                        prepend-icon=""
-                        hide-details
-                        @change="handleFileChange"
-                        @click:clear="clearInputs"
-                      />
+                      </v-col>
                     </v-row>
                   </v-container>
                 </v-tabs-window-item>
@@ -136,8 +140,8 @@ async function uploadImage() {
 </script>
 
 <style scoped>
-.card-height {
-  height: 400px;
+.inner-card-height {
+  height: 300px;
 }
 .window-container {
   display: flex;
@@ -161,5 +165,8 @@ async function uploadImage() {
 .preview img {
   width: 100%;
   height: 100%;
+}
+.grow {
+  flex-grow: 1;
 }
 </style>
