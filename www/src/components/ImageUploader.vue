@@ -12,7 +12,7 @@
         <div class="d-flex flex-row card-height">
           <v-tabs v-model="tab" color="orange" direction="vertical">
             <v-tab prepend-icon="mdi-desktop-classic" text="Desktop" value="pc"></v-tab>
-            <v-tab prepend-icon="mdi-camera-outline" text="Webcam" value="cam"></v-tab>
+            <v-tab prepend-icon="mdi-camera-outline" text="Camera" value="cam"></v-tab>
             <v-tab prepend-icon="mdi-history" text="Recent" value="recent"></v-tab>
           </v-tabs>
           <v-divider vertical />
@@ -24,26 +24,28 @@
             <div class="window-container">
               <v-tabs-window v-model="tab" class="window">
                 <v-tabs-window-item value="pc">
-                  <v-file-input
-                    label="Click here to select a file"
-                    accept="image/*"
-                    prepend-icon=""
-                    @change="handleFileChange"
-                    @click:clear="clearInputs"
-                  >
-                    <template v-slot:prepend>
-                      <div v-if="imagePreviewUrl" class="preview">
-                        <img :src="imagePreviewUrl" alt="Image Preview" />
+                  <v-container>
+                    <v-row class="align-center">
+                      <div class="preview mr-4">
+                        <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="Image Preview" />
+                        <v-icon
+                          v-else
+                          icon="mdi-image-outline"
+                          size="50"
+                          color="grey-darken-2"
+                          @click="triggerFileInput"
+                        />
                       </div>
-                      <v-icon
-                        v-else
-                        icon="mdi-image-outline"
-                        size="50"
-                        color="grey-darken-2"
-                        @click="triggerFileInput"
+                      <v-file-input
+                        label="Click here to select a file"
+                        accept="image/*"
+                        prepend-icon=""
+                        hide-details
+                        @change="handleFileChange"
+                        @click:clear="clearInputs"
                       />
-                    </template>
-                  </v-file-input>
+                    </v-row>
+                  </v-container>
                 </v-tabs-window-item>
               </v-tabs-window>
             </div>
@@ -51,6 +53,7 @@
         </div>
         <template v-slot:actions>
           <v-btn
+            v-if="tab === 'pc'"
             class="ml-auto"
             text="Upload"
             prepend-icon="mdi-upload"
@@ -150,6 +153,10 @@ async function uploadImage() {
   width: 100px;
   border: 1px solid #969696;
   border-radius: 5px;
+  display: flex;
+  flex-grow: 0;
+  justify-content: center;
+  align-items: center;
 }
 .preview img {
   width: 100%;
