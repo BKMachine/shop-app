@@ -10,7 +10,7 @@
       <v-card>
         <v-toolbar color="primary" title="Image Selector"> </v-toolbar>
         <div class="d-flex flex-row inner-card-height">
-          <v-tabs v-model="tab" color="orange" direction="vertical">
+          <v-tabs v-model="tab" color="orange" direction="vertical" @update:modelValue="tabChange">
             <v-tab prepend-icon="mdi-desktop-classic" text="Desktop" value="pc"></v-tab>
             <v-tab prepend-icon="mdi-camera-outline" text="Camera" value="cam"></v-tab>
             <v-tab prepend-icon="mdi-history" text="Recent" value="recent"></v-tab>
@@ -51,6 +51,19 @@
                     </v-row>
                   </v-container>
                 </v-tabs-window-item>
+
+                <v-tabs-window-item value="recent" class="recent-files">
+                  <v-container>
+                    <v-row justify="center">
+                      <div v-if="recents.length">
+                        <v-card v-for="file in recents" :key="file.url" width="100" height="100">
+                          <img :src="file.url" alt="file.name" />
+                        </v-card>
+                      </div>
+                      <h3 v-else>There are no recent files available to view</h3>
+                    </v-row>
+                  </v-container>
+                </v-tabs-window-item>
               </v-tabs-window>
             </div>
           </v-card-text>
@@ -64,7 +77,7 @@
             :disabled="selectedFile === null"
             @click="uploadImage"
           />
-          <v-btn text="Close" @click="isActive.value = false" />
+          <v-btn text="Close" @click="closeDialog(isActive)" />
         </template>
       </v-card>
     </template>
@@ -75,6 +88,7 @@
 import { computed, ref, watch } from 'vue';
 import api from '@/plugins/axios';
 
+const recents = ref<RecentFiles[]>([]);
 const imagePreviewUrl = ref('');
 const tab = ref<'pc' | 'cam' | 'recent'>('pc');
 const dialog = ref(true);
@@ -134,8 +148,25 @@ async function uploadImage() {
     })
     .then(({ data }) => {
       emit('done', data.url);
-      dialog.value = false;
+      closeDialog();
     });
+}
+
+function tabChange() {
+  if (tab.value === 'recent') getRecentFiles();
+}
+
+function getRecentFiles() {
+  api.get('/recent').then(({ data }) => {
+    recents.value = data;
+  });
+}
+
+function closeDialog(isActive) {
+  if (isActive) isActive.value = false;
+  dialog.value = false;
+  clearInputs();
+  tab.value = 'pc';
 }
 </script>
 
@@ -166,7 +197,8 @@ async function uploadImage() {
   width: 100%;
   height: 100%;
 }
-.grow {
-  flex-grow: 1;
+.recent-files img {
+  width: 100%;
+  height: 100%;
 }
 </style>

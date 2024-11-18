@@ -121,3 +121,8 @@ interface ImageDoc {
   ref: string;
   type: 'tool' | 'part';
 }
+
+interface RecentFiles {
+  name: string;
+  url: string;
+}
