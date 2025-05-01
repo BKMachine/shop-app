@@ -1,0 +1,12 @@
+{
+  "name": "@repo/typescript-config",
+  "private": true,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/shop-app": "workspace:*",
+    "@vue/tsconfig": "^0.7.0"
+  }
+}

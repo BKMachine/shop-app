@@ -1,0 +1,21 @@
+{
+  "name": "printer",
+  "version": "1.0.0",
+  "description": "Printer service for BKMachine",
+  "scripts": {
+    "start": "node ./index.mjs",
+    "service:install": "node service_install.js",
+    "service:uninstall": "node service_uninstall.js",
+    "build": "pnpm service:uninstall && pnpm service:install"
+  },
+  "dependencies": {
+    "dymojs": "^1.2.0",
+    "express": "^5.1.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.3",
+    "node-windows": "1.0.0-beta.8"
+  }
+}

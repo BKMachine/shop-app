@@ -1,0 +1,41 @@
+{
+  "name": "server",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Server for the Shop App",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development tsx watch --clear-screen=false -r dotenv/config ./src/index.ts",
+    "build": "rimraf ./dist && tsc",
+    "lint": "eslint '**/*.{js,ts,jsx,tsx}' --ignore-pattern '__tests__' .",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "cron": "^4.3.0",
+    "express": "^5.1.0",
+    "http-terminator": "^3.2.0",
+    "mongoose": "^8.14.1",
+    "morgan": "^1.10.0",
+    "nodemailer": "^6.10.1",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/express": "^5.0.1",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.15.3",
+    "@types/nodemailer": "^6.4.17",
+    "@types/shop-app": "workspace:*",
+    "@types/uuid": "^10.0.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.5.0",
+    "eslint": "^9.25.1",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

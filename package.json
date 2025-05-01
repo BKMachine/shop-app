@@ -4,10 +4,16 @@
   "author": "Dave <dave@bkmachine.net>",
   "license": "MIT",
   "private": true,
-  "workspaces": [
-    "printer",
-    "server",
-    "www"
-  ],
-  "packageManager": "yarn@4.1.0"
+  "scripts": {
+    "dev": "turbo run dev",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.2"
+  },
+  "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=22"
+  }
 }

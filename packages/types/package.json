@@ -1,0 +1,9 @@
+{
+  "name": "@types/shop-app",
+  "private": true,
+  "license": "MIT",
+  "types": "index.d.ts",
+  "devDependencies": {
+    "mongoose": "^8.14.1"
+  }
+}
