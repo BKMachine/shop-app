@@ -29,7 +29,18 @@
         @click:row="openPart"
       >
         <template v-slot:[`item.img`]="{ item }">
-          <v-img :id="item._id" :src="item.img" class="part-img"></v-img>
+          <v-hover>
+            <template v-slot:default="{ isHovering, props }">
+              <v-img
+                v-bind="props"
+                :id="item._id"
+                :src="item.img"
+                class="part-img"
+                @mouseenter="showExpandedImage(item.img, $event)"
+                @mouseleave="hideExpandedImage"
+              ></v-img>
+            </template>
+          </v-hover>
         </template>
         <template v-slot:[`item.location`]="{ item }">
           {{ location(item) }}
@@ -57,6 +68,16 @@
       </v-data-table>
     </v-card-text>
   </v-card>
+
+  <teleport to="body">
+    <div
+      v-if="expandedImage.visible"
+      class="expanded-img-container"
+      :style="{ top: expandedImage.top + 'px', left: expandedImage.left + 'px' }"
+    >
+      <v-img :src="expandedImage.src" class="expanded-img"></v-img>
+    </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
@@ -113,6 +134,29 @@ function location(part: PartDoc) {
   if (part.position) text += ' - ' + part.position;
   return text;
 }
+
+const expandedImage = ref({
+  visible: false,
+  src: '',
+  top: 0,
+  left: 0,
+});
+
+function showExpandedImage(src: string | undefined, event: MouseEvent) {
+  if (!src) return;
+  const target = event.target as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  expandedImage.value = {
+    visible: true,
+    src,
+    top: rect.top,
+    left: rect.right,
+  };
+}
+
+function hideExpandedImage() {
+  expandedImage.value.visible = false;
+}
 </script>
 
 <style scoped>
@@ -127,5 +171,17 @@ function location(part: PartDoc) {
 }
 .part-img {
   max-height: 50px;
+}
+.expanded-img-container {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.expanded-img {
+  width: 500px;
+  border: 1px solid #ccc;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 </style>
