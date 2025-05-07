@@ -113,4 +113,5 @@ interface PartDoc {
   position?: string;
   img?: string;
   revision?: string;
+  material?: MaterialDoc | string;
 }

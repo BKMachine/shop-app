@@ -106,11 +106,24 @@
             </v-col>
           </v-row>
           <v-row no-gutters>
-            <v-text-field
-              v-model="part.description"
-              label="Description"
-              :rules="[rules.required]"
-            />
+            <v-col cols="6">
+              <v-text-field
+                v-model="part.description"
+                label="Description"
+                :rules="[rules.required]"
+              />
+            </v-col>
+            <v-col cols="6">
+              <v-select
+                v-model="part.material"
+                item-title="description"
+                item-value="_id"
+                :items="materialsStore.materials"
+                label="Material"
+                class="ml-2"
+              >
+              </v-select>
+            </v-col>
           </v-row>
           <v-row no-gutters>
             <v-text-field
@@ -178,10 +191,12 @@ import { isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
+import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
 
 const partStore = usePartStore();
 const customerStore = useCustomerStore();
+const materialsStore = useMaterialsStore();
 
 const showAdd = computed(() => {
   const tabs = ['docs', 'notes'];
@@ -193,7 +208,9 @@ const part = ref<PartDoc>({
 } as PartDoc);
 const partOriginal = ref<PartDoc>({} as PartDoc);
 
-const tab = ref<'general' | 'stock' | 'docs' | 'notes'>(import.meta.env.PROD ? 'stock' : 'stock');
+const tab = ref<'general' | 'stock' | 'docs' | 'notes'>(
+  import.meta.env.PROD ? 'general' : 'general',
+);
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);

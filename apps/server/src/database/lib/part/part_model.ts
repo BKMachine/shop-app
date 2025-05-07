@@ -9,6 +9,7 @@ const schema = new Schema<PartDoc>({
   position: String,
   img: String,
   revision: String,
+  material: { type: Types.ObjectId, ref: 'materials', default: null },
 });
 
 export default model<PartDoc>('parts', schema);

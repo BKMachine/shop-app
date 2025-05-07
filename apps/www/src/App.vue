@@ -19,7 +19,7 @@
         <v-list-item prepend-icon="mdi-map-marker" link :to="{ name: 'locations' }">
           Locations
         </v-list-item>
-        <v-list-item prepend-icon="mdi-straighten" link :to="{ name: 'materials' }">
+        <v-list-item prepend-icon="mdi-cube-scan" link :to="{ name: 'materials' }">
           Materials
         </v-list-item>
       </v-list>
