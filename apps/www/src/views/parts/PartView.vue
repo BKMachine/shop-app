@@ -32,6 +32,7 @@
     </div>
     <v-tabs v-model="tab" class="mb-4" bg-color="#555555" color="secondary">
       <v-tab value="general">General</v-tab>
+      <v-tab value="material">Material</v-tab>
       <v-tab value="stock">Stock</v-tab>
       <v-tab value="docs">Documents</v-tab>
       <v-tab value="notes">Notes</v-tab>
@@ -106,23 +107,12 @@
             </v-col>
           </v-row>
           <v-row no-gutters>
-            <v-col cols="6">
+            <v-col cols="12">
               <v-text-field
                 v-model="part.description"
                 label="Description"
                 :rules="[rules.required]"
               />
-            </v-col>
-            <v-col cols="6">
-              <v-select
-                v-model="part.material"
-                item-title="description"
-                item-value="_id"
-                :items="materialsStore.materials"
-                label="Material"
-                class="ml-2"
-              >
-              </v-select>
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -131,6 +121,41 @@
               label="Part Image URL"
               append-inner-icon="mdi-image-outline"
             />
+          </v-row>
+        </v-window-item>
+
+        <v-window-item value="material">
+          <v-row no-gutters>
+            <v-col cols="6">
+              <v-select
+                v-model="part.material"
+                item-title="description"
+                item-value="_id"
+                :items="materialsStore.materials"
+                label="Material"
+                @update:modelValue="assignMaterial"
+              >
+              </v-select>
+            </v-col>
+            <v-col cols="2">
+              <v-text-field
+                v-model="part.materialLength"
+                label="Material Length"
+                class="ml-2"
+                type="number"
+                min="0"
+              >
+              </v-text-field>
+            </v-col>
+          </v-row>
+          <v-row no-gutters>
+            <div class="d-flex align-center ml-4">
+              {{ part.material ? part.material.length : 0 }} / {{ part.materialLength }} =
+              <span class="font-weight-bold mx-1">
+                {{ partsPerBar }}
+              </span>
+              parts per bar
+            </div>
           </v-row>
         </v-window-item>
 
@@ -198,6 +223,22 @@ const partStore = usePartStore();
 const customerStore = useCustomerStore();
 const materialsStore = useMaterialsStore();
 
+const folderPath = ref<string | null>(null);
+
+function selectFolder() {
+  const folderInput = document.querySelector('input[webkitdirectory]');
+  if (folderInput) {
+    folderInput.click();
+  }
+}
+
+function handleFolderSelection(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files.length > 0) {
+    folderPath.value = input.files[0].webkitRelativePath.split('/')[0];
+  }
+}
+
 const showAdd = computed(() => {
   const tabs = ['docs', 'notes'];
   return tabs.includes(tab.value);
@@ -208,7 +249,7 @@ const part = ref<PartDoc>({
 } as PartDoc);
 const partOriginal = ref<PartDoc>({} as PartDoc);
 
-const tab = ref<'general' | 'stock' | 'docs' | 'notes'>(
+const tab = ref<'general' | 'material' | 'stock' | 'docs' | 'notes'>(
   import.meta.env.PROD ? 'general' : 'general',
 );
 const id = computed(() => router.currentRoute.value.params.id);
@@ -333,6 +374,18 @@ function addDoc() {
 }
 function addNote() {
   alert('add note');
+}
+
+const partsPerBar = computed(() => {
+  if (!part.value.material?.length || !part.value.materialLength) return 0;
+  return Math.floor(part.value.material.length / part.value.materialLength);
+});
+
+function assignMaterial() {
+  if (!part.value.material) return;
+  const material = materialsStore.materials.find((x) => x._id === part.value.material);
+  if (!material) return;
+  part.value.material = material;
 }
 </script>
 

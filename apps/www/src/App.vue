@@ -55,6 +55,7 @@ import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
+import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
 import { useScannerStore } from '@/stores/scanner_store';
 import { useSupplierStore } from '@/stores/supplier_store';
@@ -62,6 +63,7 @@ import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const customerStore = useCustomerStore();
+const materialsStore = useMaterialsStore();
 const partStore = usePartStore();
 const scannerStore = useScannerStore();
 const supplierStore = useSupplierStore();
@@ -101,6 +103,7 @@ const drawer = ref(true);
 
 onBeforeMount(() => {
   customerStore.fetch();
+  materialsStore.fetch();
   partStore.fetch();
   supplierStore.fetch();
   vendorStore.fetch();

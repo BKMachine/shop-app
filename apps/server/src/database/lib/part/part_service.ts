@@ -7,7 +7,7 @@ async function list(): Promise<PartDoc[]> {
 }
 
 async function findById(id: string): Promise<PartDoc | null> {
-  return Part.findById(id).populate('customer');
+  return Part.findById(id).populate('customer').populate('material');
 }
 /*
 async function findByScanCode(scanCode: string): Promise<ToolDoc | null> {
