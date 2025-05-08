@@ -3,8 +3,13 @@
 .git
 .editorconfig
 .turbo
+.vscode
 README.md
+node_modules
+Dockerfile
 
 **/dist
 **/logs
 **/node_modules
+
+apps/printer

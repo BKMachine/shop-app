@@ -6,7 +6,6 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/shop-app": "workspace:*",
-    "@vue/tsconfig": "^0.7.0"
+    "@types/shop-app": "workspace:*"
   }
 }
