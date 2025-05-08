@@ -1,8 +1,12 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import morgan from 'morgan';
 import * as logger from '../logger.js';
 import api from './api/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app: express.Application = express();
 
@@ -21,16 +25,17 @@ app.use((req, res, next) => {
 
 app.use('/api', api);
 
-if (process.env.NODE_ENV === 'production') {
-  const wwwDir = path.join(__dirname, '../../../../../www/dist');
+const wwwDir = path.join(__dirname, '../../../www/dist');
+logger.default.info(`Serving static files from ${wwwDir}`);
 
+if (process.env.NODE_ENV === 'production') {
   app.get('/', (req, res, next) => {
     res.sendFile(path.join(wwwDir, 'index.html'));
   });
 
   app.use(express.static(wwwDir));
 
-  app.all('*', (req, res, next) => {
+  app.all('*path', (req, res, next) => {
     res.sendFile(path.join(wwwDir, 'index.html'));
   });
 }
