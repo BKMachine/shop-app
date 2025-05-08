@@ -31,6 +31,7 @@ export const useMaterialsStore = defineStore('materials', () => {
   }
 
   async function add(material: Material) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { _id, ...rest } = material;
     await axios.post<Material>('/materials', { data: rest }).then(({ data }) => {
       rawMaterials.value.push(data);
