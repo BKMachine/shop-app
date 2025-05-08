@@ -223,22 +223,6 @@ const partStore = usePartStore();
 const customerStore = useCustomerStore();
 const materialsStore = useMaterialsStore();
 
-const folderPath = ref<string | null>(null);
-
-function selectFolder() {
-  const folderInput = document.querySelector('input[webkitdirectory]');
-  if (folderInput) {
-    folderInput.click();
-  }
-}
-
-function handleFolderSelection(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (input.files && input.files.length > 0) {
-    folderPath.value = input.files[0].webkitRelativePath.split('/')[0];
-  }
-}
-
 const showAdd = computed(() => {
   const tabs = ['docs', 'notes'];
   return tabs.includes(tab.value);
