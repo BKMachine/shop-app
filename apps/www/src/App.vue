@@ -22,6 +22,7 @@
         <v-list-item prepend-icon="mdi-cube-scan" link :to="{ name: 'materials' }">
           Materials
         </v-list-item>
+        <v-list-item prepend-icon="mdi-pulse" link :to="{ name: 'status' }"> Status </v-list-item>
       </v-list>
       <template v-slot:append>
         <v-list-item

@@ -8,6 +8,7 @@ import PartsView from '@/views/parts/PartsView.vue';
 import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolView from '@/views/tools/ToolView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
+import StatusView from '@/views/StatusView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -66,6 +67,11 @@ const router = createRouter({
       path: '/materials',
       name: 'materials',
       component: MaterialsView,
+    },
+    {
+      path: '/status',
+      name: 'status',
+      component: StatusView,
     },
   ],
 });
