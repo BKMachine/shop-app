@@ -58,7 +58,7 @@ async function pick(scanCode: string): Promise<{ status: number; tool: ToolDoc |
   if (oldTool.stock <= 0) return { status: 400, tool: oldTool };
   const id = oldTool._id;
   // Copy tool before any changes are made
-  const newTool = { ...oldTool.toObject() };
+  const newTool: ToolDoc = oldTool.toObject();
   newTool.stock--;
   const computedTool = computedToolChanges(oldTool, newTool);
   const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true })
@@ -78,7 +78,7 @@ async function stock(
   if (!oldTool) return { status: 404, tool: null };
   if (oldTool.stock + amount < 0) return { status: 400, tool: oldTool };
   // Copy tool before any changes are made
-  const newTool: ToolDoc = { ...oldTool.toObject() };
+  const newTool: ToolDoc = oldTool.toObject();
   newTool.stock += amount;
   const computedTool = computedToolChanges(oldTool, newTool);
   const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { new: true })
