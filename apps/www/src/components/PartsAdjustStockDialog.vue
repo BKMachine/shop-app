@@ -60,7 +60,7 @@ import { usePartStore } from '@/stores/parts_store';
 
 const partStore = usePartStore();
 const props = defineProps<{
-  part: PartDoc;
+  part: Part;
 }>();
 const emit = defineEmits(['closeDialog']);
 const saveFlag = ref(false);

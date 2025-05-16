@@ -125,11 +125,11 @@ const filteredItems = computed(() => {
   return [...partStore.parts];
 });
 
-function openPart(event: unknown, { item }: { item: PartDoc }) {
+function openPart(event: unknown, { item }: { item: Part }) {
   router.push({ name: 'viewPart', params: { id: item._id } });
 }
 
-function location(part: PartDoc) {
+function location(part: Part) {
   let text = part.location || '';
   if (part.position) text += ' - ' + part.position;
   return text;

@@ -1,6 +1,6 @@
 import Customer from './customer_model.js';
 
-async function list() {
+async function list(): Promise<CustomerDoc[]> {
   return Customer.find({});
 }
 

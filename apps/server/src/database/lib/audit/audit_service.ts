@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import Audit from './audit_model.js';
 
-async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc) {
+async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc): Promise<void> {
   const doc = new Audit({
     type: 'tool',
     timestamp: new Date(),
@@ -11,7 +11,7 @@ async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc) {
   await doc.save();
 }
 
-async function getToolAudits(id: string, from: string, to: string) {
+async function getToolAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
   const projection = 'timestamp new.stock old.stock new.onOrder old.onOrder';
 
   const docsInRange = await Audit.find(
@@ -35,7 +35,7 @@ async function getToolAudits(id: string, from: string, to: string) {
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
-async function addPartAudit(oldPart: PartDoc | null, newPart: PartDoc) {
+async function addPartAudit(oldPart: PartDoc | null, newPart: PartDoc): Promise<void> {
   const doc = new Audit({
     type: 'part',
     timestamp: new Date(),
@@ -45,7 +45,7 @@ async function addPartAudit(oldPart: PartDoc | null, newPart: PartDoc) {
   await doc.save();
 }
 
-async function getPartAudits(id: string, from: string, to: string) {
+async function getPartAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
   const projection = 'timestamp new.stock old.stock';
   const docsInRange = await Audit.find(
     {

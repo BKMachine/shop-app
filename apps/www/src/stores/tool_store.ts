@@ -9,9 +9,9 @@ export const useToolStore = defineStore('tools', () => {
   const vendorStore = useVendorStore();
   const supplierStore = useSupplierStore();
 
-  const rawTools = ref<ToolDoc[]>([]);
+  const rawTools = ref<Tool[]>([]);
 
-  const tools = computed<ToolDoc[]>(() => {
+  const tools = computed<Tool[]>(() => {
     return rawTools.value.map((x) => {
       return {
         ...x,
@@ -53,7 +53,7 @@ export const useToolStore = defineStore('tools', () => {
     loading.value = true;
     axios
       .get('/tools')
-      .then(({ data }: { data: ToolDoc[] }) => {
+      .then(({ data }: { data: Tool[] }) => {
         rawTools.value = data;
       })
       .finally(() => {
@@ -71,7 +71,7 @@ export const useToolStore = defineStore('tools', () => {
       other: reduce(other),
       total: reduce([...rawTools.value]),
     };
-    function reduce(tools: ToolDoc[]) {
+    function reduce(tools: Tool[]) {
       const cost = tools.reduce((a, b) => {
         return a + (b.stock * b.cost || 0);
       }, 0);
@@ -95,32 +95,32 @@ export const useToolStore = defineStore('tools', () => {
     lastId.value = id;
   }
 
-  async function add(tool: ToolDoc) {
+  async function add(tool: Tool) {
     const data = {
       ...tool,
       category: tool.category.toLowerCase(),
     };
-    await axios.post('/tools', { data }).then(({ data }: { data: ToolDoc }) => {
+    await axios.post('/tools', { data }).then(({ data }: { data: Tool }) => {
       rawTools.value.push(data);
     });
   }
 
-  async function update(tool: ToolDoc) {
-    await axios.put('/tools', { data: tool }).then(({ data }: { data: ToolDoc }) => {
+  async function update(tool: Tool) {
+    await axios.put('/tools', { data: tool }).then(({ data }: { data: Tool }) => {
       const index = rawTools.value.findIndex((x) => x._id === data._id);
       if (index > -1) rawTools.value[index] = data;
     });
   }
 
   async function pickTool(scanCode: string) {
-    await axios.put('/tools/pick', { scanCode }).then(({ data }: { data: ToolDoc }) => {
+    await axios.put('/tools/pick', { scanCode }).then(({ data }: { data: Tool }) => {
       const index = rawTools.value.findIndex((x) => x._id === data._id);
       if (index > -1) rawTools.value[index] = data;
     });
   }
 
   async function adjustStock(id: string, amount: number) {
-    await axios.put('/tools/stock', { id, amount }).then(({ data }: { data: ToolDoc }) => {
+    await axios.put('/tools/stock', { id, amount }).then(({ data }: { data: Tool }) => {
       const index = rawTools.value.findIndex((x) => x._id === data._id);
       if (index > -1) rawTools.value[index] = data;
     });
@@ -128,7 +128,7 @@ export const useToolStore = defineStore('tools', () => {
 
   const trigger = ref({ toolID: '' });
 
-  function SOCKET_tool(tool: ToolDoc) {
+  function SOCKET_tool(tool: Tool) {
     const index = rawTools.value.findIndex((x) => x._id === tool._id);
     if (index > -1) {
       rawTools.value[index] = tool;

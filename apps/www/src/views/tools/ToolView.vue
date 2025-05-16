@@ -365,15 +365,15 @@ const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 const supplierStore = useSupplierStore();
 
-const tool = ref<ToolDoc>({
+const tool = ref<Tool>({
   stock: 0,
   reorderThreshold: 0,
   reorderQty: 0,
   autoReorder: false,
   onOrder: false,
   flutes: 0,
-} as ToolDoc);
-const toolOriginal = ref<ToolDoc>({} as ToolDoc);
+} as Tool);
+const toolOriginal = ref<Tool>({} as Tool);
 
 const category = ref<ToolCategory>('milling');
 const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'stock' : 'stock');
@@ -426,7 +426,7 @@ function fetchTool(showSpinner: boolean = true) {
   if (showSpinner) loading.value = true;
   axios
     .get(`/tools/${id}`)
-    .then(({ data }: { data: ToolDoc }) => {
+    .then(({ data }: { data: Tool }) => {
       tool.value = { ...data };
       toolOriginal.value = { ...data };
     })
@@ -502,16 +502,20 @@ const coatings = computed(() => {
 function printItem() {
   const item = tool.value.item;
   const description = tool.value.description;
-  const brand = (tool.value.vendor as VendorDoc)?.name;
-  if (!item || !description) return;
+  const vendor = tool.value.vendor;
+
+  if (!item || !description || !vendor) return;
+  const brand = typeof vendor === 'string' ? vendor : vendor.name;
   printer.printItem({ item, description, brand });
 }
 
 function printBarcode() {
   const item = tool.value.barcode;
   const description = tool.value.description;
-  const brand = (tool.value.vendor as VendorDoc)?.name;
-  if (!item || !description) return;
+  const vendor = tool.value.vendor;
+
+  if (!item || !description || !vendor) return;
+  const brand = typeof vendor === 'string' ? vendor : vendor.name;
   printer.printItem({ item, description, brand });
 }
 

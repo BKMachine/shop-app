@@ -179,7 +179,6 @@ const defaultMaterial: Material = {
   wallThickness: 0,
   length: 144,
   supplier: '',
-  __v: 0,
 };
 
 const items = [

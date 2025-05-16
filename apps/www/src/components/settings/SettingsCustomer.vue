@@ -45,7 +45,7 @@ import { useCustomerStore } from '@/stores/customer_store';
 const customerStore = useCustomerStore();
 const dialog = ref(false);
 const editingIndex = ref(-1);
-const editingItem = ref<CustomerDoc>({} as CustomerDoc);
+const editingItem = ref<Customer>({} as Customer);
 const valid = ref(true);
 
 const isEditing = computed(() => editingIndex.value > -1);
@@ -61,7 +61,7 @@ const actionText = computed(() => {
 
 function create() {
   editingIndex.value = -1;
-  editingItem.value = {} as CustomerDoc;
+  editingItem.value = {} as Customer;
   dialog.value = true;
 }
 

@@ -228,10 +228,10 @@ const showAdd = computed(() => {
   return tabs.includes(tab.value);
 });
 
-const part = ref<PartDoc>({
+const part = ref<Part>({
   stock: 0,
-} as PartDoc);
-const partOriginal = ref<PartDoc>({} as PartDoc);
+} as Part);
+const partOriginal = ref<Part>({} as Part);
 
 const tab = ref<'general' | 'material' | 'stock' | 'docs' | 'notes'>(
   import.meta.env.PROD ? 'general' : 'general',
@@ -277,8 +277,8 @@ function fetchPart(showSpinner: boolean = true) {
   const { id } = router.currentRoute.value.params;
   if (showSpinner) loading.value = true;
   axios
-    .get(`/parts/${id}`)
-    .then(({ data }: { data: PartDoc }) => {
+    .get<Part>(`/parts/${id}`)
+    .then(({ data }) => {
       part.value = { ...data };
       partOriginal.value = { ...data };
     })

@@ -7,9 +7,9 @@ import { useCustomerStore } from '@/stores/customer_store';
 export const usePartStore = defineStore('parts', () => {
   const customerStore = useCustomerStore();
 
-  const rawParts = ref<PartDoc[]>([]);
+  const rawParts = ref<Part[]>([]);
 
-  const parts = computed<PartDoc[]>(() => {
+  const parts = computed<Part[]>(() => {
     return rawParts.value.map((x) => {
       return {
         ...x,
@@ -37,8 +37,8 @@ export const usePartStore = defineStore('parts', () => {
   function fetch() {
     loading.value = true;
     axios
-      .get('/parts')
-      .then(({ data }: { data: PartDoc[] }) => {
+      .get<Part[]>('/parts')
+      .then(({ data }) => {
         rawParts.value = data;
       })
       .finally(() => {
@@ -51,14 +51,14 @@ export const usePartStore = defineStore('parts', () => {
     lastId.value = id;
   }
 
-  async function add(part: PartDoc) {
-    await axios.post('/parts', { data: part }).then(({ data }: { data: PartDoc }) => {
+  async function add(part: Part) {
+    await axios.post<Part>('/parts', { data: part }).then(({ data }) => {
       rawParts.value.push(data);
     });
   }
 
-  async function update(part: PartDoc) {
-    await axios.put('/parts', { data: part }).then(({ data }: { data: PartDoc }) => {
+  async function update(part: Part) {
+    await axios.put<Part>('/parts', { data: part }).then(({ data }) => {
       const index = rawParts.value.findIndex((x) => x._id === data._id);
       if (index > -1) rawParts.value[index] = data;
     });

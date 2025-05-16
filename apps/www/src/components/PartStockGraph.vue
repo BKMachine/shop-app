@@ -49,7 +49,7 @@ const selectOptions: Select[] = [
 ];
 
 const months = ref<number>(1);
-const items = ref<AuditDoc[]>([] as AuditDoc[]);
+const items = ref<Audit[]>([] as Audit[]);
 const to = ref<DateTime>(DateTime.now());
 const from = computed<DateTime>(() => DateTime.now().minus({ months: months.value }));
 
@@ -64,7 +64,7 @@ function getData() {
       from: from.value.toISO(),
       to: to.value.toISO(),
     })
-    .then(({ data }: { data: AuditDoc[] }) => {
+    .then(({ data }: { data: Audit[] }) => {
       items.value = data;
     });
 }
@@ -83,7 +83,7 @@ const data = computed<Data[]>(() => {
   if (!items.value || !items.value.length) return [init, last];
 
   // Create a starting datum for when we started doing tool audits
-  const startingDatum: AuditDoc[] = [];
+  const startingDatum: Audit[] = [];
   // Pull the first audit record from the results
   const firstAudit = items.value[0];
   // Filter for any audits with a stock number change

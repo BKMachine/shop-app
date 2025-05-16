@@ -119,7 +119,7 @@ const headers: readonly { [key: string]: any }[] = [
   },
 ];
 
-function openTool(event: unknown, { item }: { item: ToolDoc }) {
+function openTool(event: unknown, { item }: { item: Tool }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
 

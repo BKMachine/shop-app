@@ -16,7 +16,7 @@ const toolStore = useToolStore();
 const socket = io();
 
 // Tool updated or added
-socket.on('tool', (tool: ToolDoc) => {
+socket.on('tool', (tool: Tool) => {
   toolStore.SOCKET_tool(tool);
 });
 
