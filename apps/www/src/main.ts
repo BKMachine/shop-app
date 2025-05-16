@@ -13,7 +13,7 @@ app.mount('#app');
 
 // Socket connection to backend for app updates
 const toolStore = useToolStore();
-const socket = io();
+const socket = io({ transports: ['websocket', 'polling'] });
 
 // Tool updated or added
 socket.on('tool', (tool: Tool) => {

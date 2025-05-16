@@ -1,5 +1,11 @@
 <template>
   <div class="machine" :class="[status, { online: isOnline, alarmed: hasAlarm, blink }]">
+    <div>
+      <div>{{ data.name }}</div>
+      <!-- <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" /> -->
+    </div>
+  </div>
+  <!-- <div class="machine">
     <div class="header">
       <div>{{ data.name }}</div>
       <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" />
@@ -25,7 +31,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">
@@ -108,14 +114,14 @@ const status = computed(() => {
 
 <style scoped>
 .machine {
-  width: 200px;
-  height: 120px;
+  width: 300px;
+  /* height: 120px; */
   color: #ffffff;
-  padding: 10px;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  overflow-y: hidden;
+  padding: 5px;
+  border-radius: 6px;
+  /* display: flex; */
+  /* flex-direction: column; */
+  /* overflow-y: hidden; */
 }
 
 .machine .online {
@@ -127,11 +133,11 @@ const status = computed(() => {
 }
 
 .header {
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: white;
+  font-size: 16px;
+  /* display: flex; */
+  /* align-items: center; */
+  /* justify-content: space-between; */
+  /* color: white; */
 }
 
 .logo {

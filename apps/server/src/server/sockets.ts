@@ -5,7 +5,11 @@ import logger from '../logger.js';
 let io: Server;
 
 export default function (server: http.Server) {
-  io = new Server(server);
+  io = new Server(server, {
+    cors: {
+      origin: [process.env.BASE_URL as string],
+    },
+  });
 
   io.on('connection', (socket) => {
     logger.info('SOCKET CONNECTED');

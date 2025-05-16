@@ -1,3 +1,14 @@
 import * as logger from '@repo/utilities/logger';
 
-export default logger.create('status');
+const myLogger = logger.create('status');
+
+class MyStream {
+  write(text: string) {
+    myLogger.info(text.trim());
+    // TODO: remove color codes in .log files
+    // TODO: separate http log file?
+  }
+}
+
+export default myLogger;
+export const stream = new MyStream();
