@@ -1,0 +1,35 @@
+{
+  "name": "@repo/utilities",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "exports": {
+    "./main": {
+      "import": "./dist/main.js",
+      "types": "./dist/main.d.ts"
+    },
+    "./logger": {
+      "import": "./dist/logger.js",
+      "types": "./dist/logger.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "rimraf ./dist && tsc",
+    "dev": "tsc --watch --preserveWatchOutput",
+    "lint": "eslint '**/*.{js,ts,jsx,tsx}'",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "hono": "^4.7.9",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.18",
+    "eslint": "^9.24.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3"
+  }
+}
