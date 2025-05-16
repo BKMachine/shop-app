@@ -7,7 +7,9 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "build:server": "docker build -t bkmachine/shop-app-server .",
+    "build:status": "docker build --file=./Dockerfile-status -t bkmachine/shop-app-status ."
   },
   "devDependencies": {
     "prettier": "^3.5.3",
