@@ -21,14 +21,14 @@
   },
   "dependencies": {
     "chalk": "^5.4.1",
-    "hono": "^4.7.9",
+    "hono": "^4.7.10",
     "winston": "^3.17.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22.15.18",
-    "eslint": "^9.24.0",
+    "@types/node": "^22.15.19",
+    "eslint": "^9.27.0",
     "rimraf": "^6.0.1",
     "typescript": "^5.8.3"
   }

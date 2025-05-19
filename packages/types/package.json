@@ -4,6 +4,6 @@
   "license": "MIT",
   "types": "index.d.ts",
   "devDependencies": {
-    "mongoose": "^8.14.1"
+    "mongoose": "^8.15.0"
   }
 }
