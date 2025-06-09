@@ -37,6 +37,7 @@ RUN pnpm run build --filter=www
 FROM node:22-slim AS runner
 WORKDIR /app
 COPY --from=server-installer /app/node_modules /app/node_modules
+COPY --from=server-installer /app/packages /app/packages
 COPY --from=server-installer /app/apps/server/dist /app/apps/server/dist
 COPY --from=server-installer /app/apps/server/node_modules /app/apps/server/node_modules
 COPY --from=www-installer /app/apps/www/dist /app/apps/www/dist
