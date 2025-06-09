@@ -1,4 +1,3 @@
-import { SearchResponse } from '@elastic/elasticsearch/lib/api/types.js';
 import machines from '../machines/index.js';
 import client, { prefix } from './index.js';
 
@@ -73,7 +72,7 @@ export async function getHourlyRate() {
   return Math.round(((runningCount / onlineCount) * 100 + Number.EPSILON) * 100) / 100;
 }
 
-export async function getHourlyPerformance() {
+export async function getHourlyPerformance(): Promise<unknown[]> {
   const performance = await client.search({
     index: `${prefix}performance`,
     size: 100,
