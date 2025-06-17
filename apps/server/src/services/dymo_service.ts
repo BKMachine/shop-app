@@ -19,7 +19,7 @@ async function printLocationLabel(data: PrintLocationBody) {
   const qrCode = `Loc:${data.loc} | ${data.pos}`;
   const label = locationLabelXml.replaceAll('$POSITION', data.pos).replaceAll('$QRCODE', qrCode);
   const body: PrintRequest = {
-    printerName: 'DYMO LabelWriter Wireless 1',
+    printerName: 'DYMO_LabelWriter_1',
     labelXml: label,
   };
   return thor.post('/print', body);
@@ -35,7 +35,7 @@ async function printItemLabel(data: PrintItemBody) {
     .replaceAll('$ITEM', data.item)
     .replaceAll('$BRAND', data.brand || '');
   const body: PrintRequest = {
-    printerName: 'DYMO LabelWriter Wireless 2',
+    printerName: 'DYMO_LabelWriter_2',
     labelXml: label,
   };
   return thor.post('/print', body);
