@@ -3,6 +3,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import express from 'express';
 import morgan from 'morgan';
 import Dymo from 'dymojs';
+import xml2js from 'xml2js';
 
 const app = express();
 const dymo = new Dymo();
@@ -22,7 +23,7 @@ app.post('/print', async (req, res, next) => {
     return;
   }
   try {
-    const printers = await dymo.getPrinters();
+    const printers = await listPrinters();
     if (!printers.includes(printerName)) {
       console.log(`No printer found with the name: ${printerName}`);
       res.sendStatus(503);
@@ -35,6 +36,17 @@ app.post('/print', async (req, res, next) => {
   }
 });
 
+async function listPrinters() {
+  const printersXml = await dymo.getPrinters();
+  const parser = new xml2js.Parser();
+  const result = await parser.parseStringPromise(printersXml);
+  const printers = result?.Printers?.LabelWriterPrinter || [];
+  printers.forEach((printer) => {
+    console.log(printer.Name[0]);
+  });
+}
+
 const port = process.env.PORT || 3005;
 app.listen(port);
 console.log(`Listening on port: ${port}`);
+listPrinters();
