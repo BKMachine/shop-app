@@ -24,14 +24,17 @@ const milling = [
 ] as const;
 
 const turning = ['Insert', 'Stick Holder', 'Bore Bar'] as const;
+const swiss = ['Insert', 'Stick Holder', 'Bore Bar'] as const;
 const other = [] as const;
 
 export default {
   milling,
   turning,
+  swiss,
   other,
 };
 
 export type MillingType = (typeof milling)[number];
 export type TurningType = (typeof turning)[number];
+export type SwissType = (typeof swiss)[number];
 export type OtherType = (typeof other)[number];
