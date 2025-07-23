@@ -12,10 +12,10 @@
     "build:status": "docker build --file=./Dockerfile-status -t bkmachine/shop-app-status ."
   },
   "devDependencies": {
-    "prettier": "^3.5.3",
-    "turbo": "^2.5.3"
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.5"
   },
-  "packageManager": "pnpm@10.10.0",
+  "packageManager": "pnpm@10.13.1",
   "engines": {
     "node": ">=22"
   }

@@ -29,6 +29,10 @@ export const useToolStore = defineStore('tools', () => {
     return tools.value.filter((x) => x.category === 'turning');
   });
 
+  const swissTools = computed(() => {
+    return tools.value.filter((x) => x.category === 'swiss');
+  });
+
   const otherTools = computed(() => {
     return tools.value.filter((x) => x.category === 'other');
   });
@@ -143,6 +147,7 @@ export const useToolStore = defineStore('tools', () => {
     loading,
     millingTools,
     turningTools,
+    swissTools,
     otherTools,
     locations,
     tabChange,

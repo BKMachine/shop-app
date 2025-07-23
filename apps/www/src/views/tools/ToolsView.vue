@@ -1,15 +1,16 @@
 <template>
   <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:modelValue="onChange">
-    <v-tab value="milling" class="milling">Milling</v-tab>
-    <v-tab value="turning" class="turning">Turning</v-tab>
-    <v-tab value="other" class="other">Other</v-tab>
+    <v-tab value="milling" class="milling">Mill</v-tab>
+    <v-tab value="turning" class="turning">Lathe</v-tab>
+    <v-tab value="swiss" class="swiss">Swiss</v-tab>
+    <v-tab value="other" class="other">Misc</v-tab>
   </v-tabs>
 
   <v-window v-model="tab" class="mt-3">
     <v-window-item value="milling">
       <ToolsDataTable
         v-if="tab === 'milling'"
-        title="Milling Tools"
+        title="Mill Department Tooling"
         :headers="millingHeaders"
         :items="toolStore.millingTools"
         :category="tab"
@@ -21,9 +22,21 @@
     <v-window-item value="turning">
       <ToolsDataTable
         v-if="tab === 'turning'"
-        title="Turning Tools"
+        title="Lathe Department Tooling"
         :headers="turningHeaders"
         :items="toolStore.turningTools"
+        :category="tab"
+        :search="search"
+        @updateSearch="updateSearch"
+      />
+    </v-window-item>
+
+    <v-window-item value="swiss">
+      <ToolsDataTable
+        v-if="tab === 'swiss'"
+        title="Swiss Department Tooling"
+        :headers="turningHeaders"
+        :items="toolStore.swissTools"
         :category="tab"
         :search="search"
         @updateSearch="updateSearch"
@@ -33,7 +46,7 @@
     <v-window-item value="other">
       <ToolsDataTable
         v-if="tab === 'other'"
-        title="Other Tools"
+        title="Miscellaneous Items"
         :headers="otherHeaders"
         :items="toolStore.otherTools"
         :category="tab"

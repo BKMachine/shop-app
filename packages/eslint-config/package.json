@@ -8,16 +8,16 @@
     "./vite": "./vite.js"
   },
   "devDependencies": {
-    "@eslint/js": "^9.27.0",
+    "@eslint/js": "^9.31.0",
     "@vue/eslint-config-prettier": "^10.2.0",
-    "@vue/eslint-config-typescript": "^14.5.0",
-    "eslint": "^9.27.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-import": "^2.31.0",
+    "@vue/eslint-config-typescript": "^14.6.0",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-only-warn": "^1.1.0",
-    "eslint-plugin-turbo": "^2.5.3",
-    "eslint-plugin-vue": "^10.1.0",
+    "eslint-plugin-turbo": "^2.5.5",
+    "eslint-plugin-vue": "^10.3.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.32.1"
+    "typescript-eslint": "^8.38.0"
   }
 }
