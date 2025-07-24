@@ -7,12 +7,11 @@ let io: Server;
 export default function (server: http.Server) {
   io = new Server<ServerToClientEvents>(server, {
     cors: {
-      origin: [process.env.BASE_URL as string],
+      origin: '*',
     },
-    path: '/status-api/socket.io',
   });
 
-  io.of('/status-api').on('connection', (socket) => {
+  io.on('connection', (socket) => {
     logger.info('SOCKET CONNECTED');
     socket.on('disconnect', () => {
       logger.info('SOCKET DISCONNECTED');
@@ -21,5 +20,5 @@ export default function (server: http.Server) {
 }
 
 export function emit(event: EmitterEventNames, data?: any): void {
-  if (io) io.of('/status-api').emit(event, data);
+  if (io) io.emit(event, data);
 }

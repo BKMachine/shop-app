@@ -22,11 +22,6 @@ export default defineConfig({
     port: 8080,
     strictPort: true,
     proxy: {
-      '^/status-api/socket.io': {
-        target: 'http://127.0.0.1:3001',
-        changeOrigin: true,
-        ws: true,
-      },
       '^/status-api': {
         target: 'http://127.0.0.1:3001',
         changeOrigin: true,

@@ -10,14 +10,13 @@
 
 <script setup lang="ts">
 import MachineTile from '@/components/MachineTile.vue';
-import { onMounted, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { statusApi } from '@/plugins/axios';
 import { io } from 'socket.io-client';
 
 const machines = ref<MachineInfo[]>([]);
 
-const socket = io(import.meta.env.VITE_STATUS_API_URL || '/status-api', {
-  path: '/status-api/socket.io',
+const socket = io(import.meta.env.VITE_STATUS_API_URL || 'http://localhost:3001', {
   transports: ['websocket', 'polling'],
   autoConnect: false,
 });
@@ -49,6 +48,10 @@ socket.on('refresh-data', () => {
 onMounted(async () => {
   await fetchMachines();
   socket.connect();
+});
+
+onBeforeUnmount(() => {
+  socket.disconnect();
 });
 
 async function fetchMachines() {
