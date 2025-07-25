@@ -13,3 +13,4 @@ Dockerfile
 **/node_modules
 
 apps/printer
+**/.env

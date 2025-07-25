@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express, { Application } from 'express';
 import morgan from 'morgan';
 import * as logger from '../logger.js';
@@ -10,6 +11,11 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
+app.use(
+  cors({
+    origin: '*',
+  }),
+);
 app.use(morgan(format, { stream: logger.stream }));
 app.use(express.json());
 

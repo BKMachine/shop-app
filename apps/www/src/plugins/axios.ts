@@ -5,7 +5,7 @@ const api = axios.create({
 });
 
 const statusApi = axios.create({
-  baseURL: import.meta.env.VITE_STATUS_API_URL || '/status-api',
+  baseURL: import.meta.env.VITE_STATUS_API_URL + '/api',
 });
 
 export default api;

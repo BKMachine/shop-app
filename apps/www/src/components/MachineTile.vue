@@ -47,7 +47,7 @@ const props = defineProps<{
 const nowStore = useNowStore();
 
 const isOnline = computed(() => {
-  return props.data.state.online;
+  return props.data.state.online || false;
 });
 
 const seconds = computed(() => {

@@ -16,7 +16,7 @@ import { io } from 'socket.io-client';
 
 const machines = ref<MachineInfo[]>([]);
 
-const socket = io(import.meta.env.VITE_STATUS_API_URL || 'http://localhost:3001', {
+const socket = io(import.meta.env.VITE_STATUS_API_URL, {
   transports: ['websocket', 'polling'],
   autoConnect: false,
 });
