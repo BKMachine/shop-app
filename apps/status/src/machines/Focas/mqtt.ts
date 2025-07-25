@@ -44,10 +44,11 @@ export function processMessage(topic: string, message: Buffer) {
   if (!machine) return;
 
   // Try to parse the message buffer to JSON
-  let data: any = {};
+  let data: unknown = {};
   try {
     data = JSON.parse(message.toString());
-  } catch (e) {
+  } catch (_error) {
+    // Do Nothing - Invalid JSON format
     return;
   }
 
@@ -64,7 +65,8 @@ export function processMessage(topic: string, message: Buffer) {
     // Try to get the nested value via the mapped subtopic
     try {
       value = get(data, location);
-    } catch (e) {
+    } catch (error) {
+      logger.error(`Error getting value for ${location} in subtopic ${subtopic}:`, error);
       return;
     }
     if (value === undefined) return;
@@ -106,17 +108,14 @@ export function processMessage(topic: string, message: Buffer) {
   if (machineLocationsManualCycleCalc.includes(machineLocation)) {
     if (previousStatus === 'green' && currentStatus !== 'green') {
       const lastCycle: Changes = new Map();
-      lastCycle.set('lastCycle', new Date().valueOf() - new Date(lastStateTs).valueOf());
+      lastCycle.set('lastCycle', Date.now() - new Date(lastStateTs).valueOf());
       machine.setState(lastCycle);
     }
   }
 
   if (previousStatus === 'yellow' && currentStatus !== 'yellow') {
     const lastOperatorTime: Changes = new Map();
-    lastOperatorTime.set(
-      'lastOperatorTime',
-      new Date().valueOf() - new Date(lastStateTs).valueOf(),
-    );
+    lastOperatorTime.set('lastOperatorTime', Date.now() - new Date(lastStateTs).valueOf());
     machine.setState(lastOperatorTime);
   }
 }

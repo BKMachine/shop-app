@@ -3,7 +3,7 @@ import Customers from '../../../database/lib/customer/customer_service.js';
 
 const router: Router = Router();
 
-router.get('/customers', async (req, res, next) => {
+router.get('/customers', async (_req, res, next) => {
   try {
     const data = await Customers.list();
     res.status(200).json(data);

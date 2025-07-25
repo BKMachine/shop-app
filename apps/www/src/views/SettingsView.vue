@@ -46,9 +46,9 @@
 
 <script setup lang="ts">
 import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
+import SettingsReport from '@/components/settings/SettingsReport.vue';
 import SupplierSettings from '@/components/settings/SettingsSupplier.vue';
 import VendorSettings from '@/components/settings/SettingsVendor.vue';
-import SettingsReport from '@/components/settings/SettingsReport.vue';
 </script>
 
 <style scoped></style>

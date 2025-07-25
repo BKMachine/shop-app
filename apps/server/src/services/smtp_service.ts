@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
 
 new CronJob(
   '0 0 8 * * 1', // At 08:00 AM, only on Monday
-  function () {
+  () => {
     reorders().catch((e) => logger.error(e));
   },
   null,

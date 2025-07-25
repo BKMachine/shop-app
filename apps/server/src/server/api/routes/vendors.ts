@@ -3,7 +3,7 @@ import Vendors from '../../../database/lib/vendor/vendor_service.js';
 
 const router: Router = Router();
 
-router.get('/vendors', async (req, res, next) => {
+router.get('/vendors', async (_req, res, next) => {
   try {
     const data = await Vendors.list();
     res.status(200).json(data);

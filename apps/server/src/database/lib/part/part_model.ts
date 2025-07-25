@@ -1,4 +1,4 @@
-import { Schema, Types, model } from 'mongoose';
+import { model, Schema, Types } from 'mongoose';
 
 const schema = new Schema<PartDoc>({
   part: { type: String, required: true },

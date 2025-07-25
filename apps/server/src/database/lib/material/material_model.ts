@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import { model, Schema } from 'mongoose';
 
 const schema = new Schema<MaterialDoc>({
   description: { type: String, required: true },

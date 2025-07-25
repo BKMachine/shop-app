@@ -3,7 +3,7 @@ import Materials from '../../../database/lib/material/material_service.js';
 
 const router: Router = Router();
 
-router.get('/materials', async (req, res, next) => {
+router.get('/materials', async (_req, res, next) => {
   try {
     const data = await Materials.list();
     res.status(200).json(data);

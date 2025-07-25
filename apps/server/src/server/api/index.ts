@@ -13,11 +13,11 @@ import VendorRoutes from './routes/vendors.js';
 const router: Router = Router();
 const uuid = uuidv4();
 
-router.get('/', (req, res, next) => {
+router.get('/', (_req, res, _next) => {
   res.status(200).json({ message: 'Welcome to the API' });
 });
 
-router.get('/version', (req, res, next) => {
+router.get('/version', (_req, res, next) => {
   try {
     res.status(200).send(uuid);
   } catch (e) {
@@ -34,7 +34,7 @@ router.use(PrintRoutes);
 router.use(PartRoutes);
 router.use(MaterialRoutes);
 
-router.get('/mail/reorders', async (req, res, next) => {
+router.get('/mail/reorders', async (_req, res, next) => {
   try {
     await SMTPService.reorders();
     res.sendStatus(204);

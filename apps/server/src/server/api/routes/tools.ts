@@ -3,7 +3,7 @@ import Tools from '../../../database/lib/tool/tool_service.js';
 
 const router: Router = Router();
 
-router.get('/tools', async (req, res, next) => {
+router.get('/tools', async (_req, res, next) => {
   try {
     const data = await Tools.list();
     res.status(200).json(data);
@@ -12,7 +12,7 @@ router.get('/tools', async (req, res, next) => {
   }
 });
 
-router.get('/tools/reorders', async (req, res, next) => {
+router.get('/tools/reorders', async (_req, res, next) => {
   try {
     const reorders = await Tools.getAutoReorders();
     res.status(200).json(reorders);

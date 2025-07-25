@@ -1,8 +1,8 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+import Dymo from 'dymojs';
 import express from 'express';
 import morgan from 'morgan';
-import Dymo from 'dymojs';
 import xml2js from 'xml2js';
 
 const app = express();
@@ -11,7 +11,7 @@ const dymo = new Dymo();
 app.use(morgan('combined'));
 app.use(express.json());
 
-app.get('/', (req, res, next) => {
+app.get('/', (_req, res, _next) => {
   res.status(200).json({ message: 'Printer Proxy' });
 });
 

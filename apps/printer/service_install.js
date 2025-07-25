@@ -14,7 +14,7 @@ const svc = new Service({
   ],
 });
 
-svc.on('install', function () {
+svc.on('install', () => {
   svc.start();
 });
 

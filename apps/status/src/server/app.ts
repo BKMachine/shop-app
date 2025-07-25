@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express, { Application } from 'express';
+import express, { type Application } from 'express';
 import morgan from 'morgan';
 import * as logger from '../logger.js';
 import api from './api/index.js';

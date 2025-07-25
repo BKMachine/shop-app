@@ -31,7 +31,6 @@
     "vuetify": "^3.9.2"
   },
   "devDependencies": {
-    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@tsconfig/node22": "^22.0.2",
     "@types/lodash": "^4.17.20",

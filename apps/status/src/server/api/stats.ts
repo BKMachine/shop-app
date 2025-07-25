@@ -1,9 +1,9 @@
-import express, { Router } from 'express';
+import express, { type Router } from 'express';
 import { getHourlyPerformance, getHourlyRate } from '../../elastic/performance.js';
 
 const router: Router = express.Router();
 
-router.get('/hourly', async (req, res, next) => {
+router.get('/hourly', async (_req, res, next) => {
   try {
     const rate = await getHourlyRate();
     const performance = await getHourlyPerformance();

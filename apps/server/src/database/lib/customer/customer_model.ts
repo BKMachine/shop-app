@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import { model, Schema } from 'mongoose';
 
 const schema = new Schema<CustomerDoc>({
   name: { type: String, unique: true, required: true },

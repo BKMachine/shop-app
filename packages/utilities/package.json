@@ -25,7 +25,6 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
-    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.16.5",
     "eslint": "^9.31.0",

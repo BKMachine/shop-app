@@ -10,7 +10,7 @@ export function start() {
   interval = setInterval(() => {
     try {
       run();
-    } catch (e) {
+    } catch (_error) {
       // Do Nothing
     }
   }, 10000);
@@ -27,7 +27,7 @@ export function stop() {
 function run() {
   machines.forEach((machine, location) => {
     const { hostname, protocol } = new URL(location);
-    const url = protocol + '//' + hostname + '/index.htm';
+    const url = `${protocol}//${hostname}/index.htm`;
     const changes: Changes = new Map();
     axios
       .get(url)
@@ -119,7 +119,7 @@ async function serial(location: string): Promise<string[][]> {
 
 function open(tcp: RSPC): Promise<void> {
   return new Promise((resolve, reject) => {
-    tcp.open(function (error) {
+    tcp.open((error) => {
       if (error) reject(error);
       else resolve();
     });
@@ -130,7 +130,7 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
   return new Promise((resolve, reject) => {
     tcp.write(`Q${code}\r`);
     setTimeout(() => {
-      tcp.read(function (error, result) {
+      tcp.read((error, result) => {
         if (error) reject(error);
         else resolve(parse(result));
       });

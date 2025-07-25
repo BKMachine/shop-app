@@ -3,7 +3,7 @@ import Parts from '../../../database/lib/part/part_service.js';
 
 const router: Router = Router();
 
-router.get('/parts', async (req, res, next) => {
+router.get('/parts', async (_req, res, next) => {
   try {
     const data = await Parts.list();
     res.status(200).json(data);

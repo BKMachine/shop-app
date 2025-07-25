@@ -1,5 +1,5 @@
-import { Server } from 'http';
-import { HttpTerminator, createHttpTerminator } from 'http-terminator';
+import { Server } from 'node:http';
+import { createHttpTerminator, type HttpTerminator } from 'http-terminator';
 import logger from '../logger.js';
 import app from './app.js';
 import sockets from './socket.io.js';

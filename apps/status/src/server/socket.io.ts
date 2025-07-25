@@ -1,4 +1,4 @@
-import type http from 'http';
+import type http from 'node:http';
 import { Server } from 'socket.io';
 import logger from '../logger.js';
 
@@ -19,6 +19,6 @@ export default function (server: http.Server) {
   });
 }
 
-export function emit(event: EmitterEventNames, data?: any): void {
+export function emit(event: EmitterEventNames, data?: unknown): void {
   if (io) io.emit(event, data);
 }

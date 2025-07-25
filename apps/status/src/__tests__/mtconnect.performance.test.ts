@@ -1,19 +1,17 @@
-import now from 'performance-now';
 import { XMLParser } from 'fast-xml-parser';
+import now from 'performance-now';
 import { data } from './__stubs__/mtconnect_example.js';
 
 const count = 1000;
 
-let start, end;
-
-start = now();
+const start = now();
 
 const parser = new XMLParser();
 
 for (let i = 0; i < count; i++) {
   parser.parse(data);
 }
-end = now();
+const end = now();
 const diff = end - start;
 console.log(diff.toFixed(3));
 console.log((diff / count).toFixed(4));

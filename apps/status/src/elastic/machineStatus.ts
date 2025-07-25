@@ -9,7 +9,7 @@ export function storeMachineStatus() {
     const status = value.getStatus();
     const meta = { create: { _index: `${prefix}status-${key}` } };
     const body = { status, '@timestamp': timestamp };
-    operations.push(JSON.stringify(meta) + '\n' + JSON.stringify(body));
+    operations.push(`${JSON.stringify(meta)}\n${JSON.stringify(body)}`);
   }
   client.bulk({ operations }).catch(() => {
     logger.error('Elastic Bulk write error');

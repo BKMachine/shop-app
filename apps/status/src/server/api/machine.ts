@@ -1,4 +1,4 @@
-import express, { Router } from 'express';
+import express, { type Router } from 'express';
 import MachineService from '../../database/lib/machine/index.js';
 import machines from '../../machines/index.js';
 

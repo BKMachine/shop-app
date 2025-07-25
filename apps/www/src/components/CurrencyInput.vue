@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { watch } from 'vue';
-import { CurrencyDisplay, useCurrencyInput } from 'vue-currency-input';
+import { type CurrencyDisplay, useCurrencyInput } from 'vue-currency-input';
 
 const props = defineProps<{
   label: string;

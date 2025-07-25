@@ -31,7 +31,7 @@ function run() {
       // Parse XML string to json
       try {
         processJSON(parser.parse(data));
-      } catch (e) {
+      } catch (_error) {
         // Do Nothing - Wait until next query
       }
     })
@@ -58,10 +58,11 @@ function processJSON(data: MTConnectResponse) {
     }
     componentStreams.forEach((componentStream) => {
       Object.keys(mappings).forEach((location) => {
-        let value: any;
+        let value: unknown;
         try {
           value = get(componentStream, location);
-        } catch (e) {
+        } catch (error) {
+          logger.error(`Error getting value for location ${location} in componentStream`, error);
           return;
         }
         const prop = mappings[location] as keyof MTConnectState;
@@ -76,7 +77,7 @@ function processJSON(data: MTConnectResponse) {
             const date = new Date().toISOString();
             changes.set('lastStateTs', date);
             if (value !== 'ACTIVE' && old === 'ACTIVE') {
-              const now = new Date().valueOf();
+              const now = Date.now();
               const lastState = new Date(machine.getState().lastStateTs).valueOf();
               const time = now - lastState;
               changes.set('lastCycle', time);
@@ -98,7 +99,7 @@ function processJSON(data: MTConnectResponse) {
         const lastOperatorTime: Changes = new Map();
         lastOperatorTime.set(
           'lastOperatorTime',
-          new Date().valueOf() - new Date(machine.getState().lastStateTs).valueOf(),
+          Date.now() - new Date(machine.getState().lastStateTs).valueOf(),
         );
         machine.setState(lastOperatorTime);
       }

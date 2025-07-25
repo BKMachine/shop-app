@@ -14,7 +14,7 @@ export function start() {
   interval = setInterval(() => {
     try {
       run();
-    } catch (e) {
+    } catch (_error) {
       // Do Nothing
     }
   }, 5000);
@@ -52,7 +52,7 @@ function run() {
         if (changes.has('green')) {
           const isGreen = changes.get('green');
           if (!isGreen) {
-            const now = new Date().valueOf();
+            const now = Date.now();
             const lastState = new Date(machine.getState().lastStateTs).valueOf();
             const time = now - lastState;
             changes.set('lastCycle', time);
@@ -61,7 +61,7 @@ function run() {
         if (changes.has('yellow')) {
           const isYellow = changes.get('yellow');
           if (!isYellow) {
-            const now = new Date().valueOf();
+            const now = Date.now();
             const lastState = new Date(machine.getState().lastStateTs).valueOf();
             const time = now - lastState;
             changes.set('lastOperatorTime', time);

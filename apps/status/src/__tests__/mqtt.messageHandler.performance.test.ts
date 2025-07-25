@@ -4,13 +4,11 @@ import { processMessage } from '../machines/Focas/mqtt.js';
 const message: Buffer = getMessage();
 const count = 100000;
 
-let start, end;
-
-start = now();
+const start = now();
 for (let i = 0; i < count; i++) {
   processMessage('fanuc/rd1/production/1', message);
 }
-end = now();
+const end = now();
 const diff = end - start;
 console.log(diff.toFixed(3));
 console.log((diff / count).toFixed(4));

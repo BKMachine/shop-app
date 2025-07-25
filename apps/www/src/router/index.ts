@@ -2,13 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import LocationsView from '@/views/LocationsView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
-import SettingsView from '@/views/SettingsView.vue';
-import PartView from '@/views/parts/PartView.vue';
 import PartsView from '@/views/parts/PartsView.vue';
-import ToolReportView from '@/views/tools/ToolReportView.vue';
-import ToolView from '@/views/tools/ToolView.vue';
-import ToolsView from '@/views/tools/ToolsView.vue';
+import PartView from '@/views/parts/PartView.vue';
+import SettingsView from '@/views/SettingsView.vue';
 import StatusView from '@/views/StatusView.vue';
+import ToolReportView from '@/views/tools/ToolReportView.vue';
+import ToolsView from '@/views/tools/ToolsView.vue';
+import ToolView from '@/views/tools/ToolView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

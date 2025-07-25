@@ -9,10 +9,10 @@
 </template>
 
 <script setup lang="ts">
-import MachineTile from '@/components/MachineTile.vue';
-import { onMounted, onBeforeUnmount, ref } from 'vue';
-import { statusApi } from '@/plugins/axios';
 import { io } from 'socket.io-client';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import MachineTile from '@/components/MachineTile.vue';
+import { statusApi } from '@/plugins/axios';
 
 const machines = ref<MachineInfo[]>([]);
 
@@ -75,7 +75,5 @@ async function fetchMachines() {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-.machine {
 }
 </style>

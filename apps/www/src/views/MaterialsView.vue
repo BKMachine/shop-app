@@ -162,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import { useMaterialsStore } from '@/stores/materials_store';
 

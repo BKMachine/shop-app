@@ -35,9 +35,9 @@
 </template>
 
 <script setup lang="ts">
+import { Duration } from 'luxon';
 import { computed } from 'vue';
 import offlineImg from '@/assets/img/offline.png';
-import { Duration } from 'luxon';
 import logos from '@/plugins/dynamic_logos.js';
 import useNowStore from '@/stores/now.js';
 
