@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch --clear-screen=false -r dotenv/config ./src/index.ts",
     "build": "rimraf ./dist && tsc",
-    "lint": "eslint '**/*.{js,ts,jsx,tsx}' --ignore-pattern '__tests__' .",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "check": "biome check --write",
+    "ci": "biome ci",
     "test": "jest",
     "performance:mqtt": "tsx -r dotenv/config ./src/__tests__/mqtt.messageHandler.performance.test.ts",
     "performance:mtconnect": "tsx -r dotenv/config ./src/__tests__/mtconnect.performance.test.ts"

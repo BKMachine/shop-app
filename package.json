@@ -7,10 +7,17 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "format": "biome format --write",
-    "lint": "biome lint --write",
-    "build:server": "docker build -t bkmachine/shop-app-server .",
-    "build:status": "docker build --file=./Dockerfile-status -t bkmachine/shop-app-status ."
+    "format": "turbo run format",
+    "lint": "turbo run lint",
+    "check": "turbo run check",
+    "ci": "turbo run ci",
+    "check-types": "turbo run check-types",
+    "build:server": "docker build -t bkmachine/shop-app .",
+    "build:status": "docker build -f ./Dockerfile-status -t bkmachine/cnc-status .",
+    "build:all": "pnpm run build:server && pnpm run build:status",
+    "publish:server": "pnpm run build:server && docker push bkmachine/shop-app",
+    "publish:status": "pnpm run build:status && docker push bkmachine/cnc-status",
+    "publish:all": "pnpm run publish:server && pnpm run publish:status"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.2",
