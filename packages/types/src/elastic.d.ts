@@ -3,18 +3,18 @@ interface PerformanceResponse {
     total: {
       value: number;
     };
-    hits: Performance[]
+    hits: Performance[];
   };
 }
 
 interface Performance {
   _source: {
-    "@timestamp": string;
+    '@timestamp': string;
     running: number;
     notRunning: number;
     percent: number;
     machineCount: number;
-  }
+  };
 }
 
 interface StatsResponse {

@@ -1,17 +1,17 @@
 * {
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .v-data-table__tr:hover {
-    background-color: rgba(204, 204, 204, 0.42) !important;
+  background-color: rgba(204, 204, 204, 0.42) !important;
 }
 
 .stock {
-    font-weight: bolder;
-    font-size: 1.1em;
+  font-weight: bolder;
+  font-size: 1.1em;
 }
