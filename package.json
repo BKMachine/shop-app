@@ -1,22 +1,23 @@
 {
-  "name": "shop-app",
-  "repository": "https://github.com/BKMachine/shop-app.git",
-  "author": "Dave <dave@bkmachine.net>",
-  "license": "MIT",
-  "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "build:server": "docker build -t bkmachine/shop-app-server .",
-    "build:status": "docker build --file=./Dockerfile-status -t bkmachine/shop-app-status ."
-  },
-  "devDependencies": {
-    "prettier": "^3.6.2",
-    "turbo": "^2.5.5"
-  },
-  "packageManager": "pnpm@10.13.1",
-  "engines": {
-    "node": ">=22"
-  }
+	"name": "shop-app",
+	"repository": "https://github.com/BKMachine/shop-app.git",
+	"author": "Dave <dave@bkmachine.net>",
+	"license": "MIT",
+	"private": true,
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev",
+		"format": "prettier --write \"**/*.{ts,tsx,md}\"",
+		"build:server": "docker build -t bkmachine/shop-app-server .",
+		"build:status": "docker build --file=./Dockerfile-status -t bkmachine/shop-app-status ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.1.2",
+		"prettier": "^3.6.2",
+		"turbo": "^2.5.5"
+	},
+	"packageManager": "pnpm@10.13.1",
+	"engines": {
+		"node": ">=22"
+	}
 }
