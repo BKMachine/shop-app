@@ -1,18 +1,36 @@
 <template>
   <div class="machine" :class="[status, { online: isOnline, alarmed: hasAlarm, blink }]">
-    <div>
+   <div class="header">
       <div>{{ data.name }}</div>
-      <!-- <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" /> -->
+      <img v-if="!isOnline" class="offline" :src="offlineImg" alt="OFFLINE" />
+      <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" />
+    </div>
+    <div v-if="isOnline">
+<div class="details">
+        <div v-if="isOnline" class="timer">
+          <div v-if="!hasAlarm">
+            <div class="d-flex justify-space-between align-center">
+              <div>
+                <div v-if="data.state.lastCycle">Last Cycle: {{ lastCycle }}</div>
+                <div v-else>Last Cycle: ---</div>
+              </div>
+              <div>{{ timerText }}</div>
+            </div>
+            <!-- <div v-if="data.state.lastOperatorTime" :class="{ 'long-change': longChange }">
+              Change Time: {{ lastOperatorIdle }}
+            </div> -->
+            <!-- <div v-else>Change Time: ---</div> -->
+          </div>
+        </div>
+        <div v-if="hasAlarm && data.source === 'focas'" class="alarm">
+          {{ alarms[0].message.replace(/\*/g, ' ') }}
+        </div>
+        </div>
     </div>
   </div>
   <!-- <div class="machine">
-    <div class="header">
-      <div>{{ data.name }}</div>
-      <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" />
-    </div>
-    <div v-if="!isOnline" class="offline">
-      <img :src="offlineImg" alt="OFFLINE" />
-    </div>
+    
+    
     <div v-else>
       <div class="details">
         <div v-if="isOnline" class="timer">
@@ -115,16 +133,17 @@ const status = computed(() => {
 <style scoped>
 .machine {
   width: 300px;
-  /* height: 120px; */
+  height: 60px;
   color: #ffffff;
   padding: 5px;
   border-radius: 6px;
-  /* display: flex; */
-  /* flex-direction: column; */
-  /* overflow-y: hidden; */
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  position: relative;
 }
 
-.machine .online {
+.machine.online {
   background: #6c6c6c;
 }
 
@@ -133,11 +152,11 @@ const status = computed(() => {
 }
 
 .header {
-  font-size: 16px;
-  /* display: flex; */
-  /* align-items: center; */
-  /* justify-content: space-between; */
-  /* color: white; */
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
 }
 
 .logo {
@@ -146,11 +165,14 @@ const status = computed(() => {
   flex-shrink: 0;
 }
 
+.details {
+  font-size: 14px;
+}
+
 .offline {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 55%;
+  height: 24px;
+  position: absolute;
+  left: 15%;
 }
 
 .offline img {
