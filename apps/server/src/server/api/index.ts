@@ -6,6 +6,7 @@ import CustomerRoutes from './routes/customers.js';
 import MaterialRoutes from './routes/materials.js';
 import PartRoutes from './routes/parts.js';
 import PrintRoutes from './routes/print.js';
+import ReportRoutes from './routes/reports.js';
 import SupplierRoutes from './routes/suppliers.js';
 import ToolRoutes from './routes/tools.js';
 import VendorRoutes from './routes/vendors.js';
@@ -33,6 +34,7 @@ router.use(AuditRoutes);
 router.use(PrintRoutes);
 router.use(PartRoutes);
 router.use(MaterialRoutes);
+router.use(ReportRoutes);
 
 router.get('/mail/reorders', async (_req, res, next) => {
   try {

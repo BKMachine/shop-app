@@ -1,5 +1,5 @@
 /// <reference path="../index.d.ts" />
-import { Types, Document } from 'mongoose';
+import type { Document, Types } from 'mongoose';
 
 // _id is a string for the frontend
 // _id is a Mongoose ObjectId for backend Documents
@@ -29,6 +29,23 @@ declare global {
   }
 
   interface CustomerDoc extends Omit<Customer, '_id'>, Document<Types.ObjectId> {
+    _id: Types.ObjectId;
+  }
+
+  /* REPORT */
+
+  interface Report {
+    _id: string;
+    email: string;
+    tooling: Email;
+  }
+
+  interface Email {
+    to: boolean;
+    cc: boolean;
+  }
+
+  interface ReportDoc extends Omit<Report, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 

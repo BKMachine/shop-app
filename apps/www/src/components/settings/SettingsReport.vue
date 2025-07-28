@@ -1,68 +1,76 @@
 <template>
   <v-container>
-    <v-row>
-      <v-col cols="12">
-        <v-btn color="primary" @click="addEmail">Add Email</v-btn>
+    <!-- Header Row -->
+    <v-row class="mb-2" no-gutters>
+      <v-col cols="4"></v-col>
+      <v-col cols="6" class="">
+        <div>
+        <span class="mr-4 font-weight-bold">Tooling Report</span>
+        </div>
+        <div>
+        <span class="ml-4" style="width: 40px;">To</span>
+        <span class="ml-4" style="width: 40px;">Cc</span>
+        </div>
       </v-col>
+      <v-col cols="2"><v-btn color="primary" @click="addEmail">Add Email</v-btn></v-col>
     </v-row>
-    <v-row v-for="(email, idx) in emails" :key="email.email" class="mb-4">
+    <!-- Email Rows -->
+    <v-row v-for="(email, index) in emails" :key="email._id" class="mb-0" no-gutters>
       <v-col cols="4">
         <v-text-field
           v-model="email.email"
           label="Email"
-          :disabled="!email.editing"
-          @blur="email.editing = false"
+          @blur="update(email)"
         ></v-text-field>
       </v-col>
-      <v-col cols="6">
+      <v-col cols="6" class="d-flex row align-center">
         <v-checkbox
-          v-for="category in categories"
-          :key="category.name"
-          :label="category.name"
-          :value="category.name"
-          v-model="email.enabledCategories"
+          v-model="email.tooling.to"
+          class="ml-2"
+          hide-details
+          style="width: 40px;"
+        ></v-checkbox>
+        <v-checkbox
+          v-model="email.tooling.cc"
+          class="ml-4"
+          hide-details
+          style="width: 40px;"
         ></v-checkbox>
       </v-col>
       <v-col cols="2" class="d-flex align-center">
-        <v-btn icon @click="editEmail(idx)">
-          <v-icon>mdi-pencil</v-icon>
-        </v-btn>
-        <v-btn icon color="error" @click="deleteEmail(idx)">
+        <v-btn icon color="error" @click="deleteEmail(index)">
           <v-icon>mdi-delete</v-icon>
         </v-btn>
+      </v-col>
+    </v-row>
+    <v-row no-gutters>
+      <v-col cols="12">
+        
       </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import api from '@/plugins/axios';
 
-const categories = [{ name: 'Weekly Tool Order' }, { name: 'Weekly Tool Totals' }];
+const emails = ref<Report[]>([]);
 
-const emails = ref([
-  {
-    email: 'dave@bkmachine.net',
-    enabledCategories: [],
-    editing: false,
-  },
-]);
+onMounted(() => {
+  fetchEmails();
+});
 
-function addEmail() {
-  emails.value.push({
-    email: '',
-    enabledCategories: [],
-    editing: true,
-  });
+async function fetchEmails() {
+  api.get<Report[]>('/reports').then(({data}) => {
+    emails.value = data;
+  })
 }
 
-function editEmail(idx: number) {
-  emails.value[idx].editing = true;
+async function update(email: Report) {
+  await api.put('/reports', email);
 }
 
-function deleteEmail(idx: number) {
-  emails.value.splice(idx, 1);
-}
 </script>
 
 <style scoped>
