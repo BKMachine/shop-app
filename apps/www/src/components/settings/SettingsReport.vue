@@ -71,6 +71,8 @@ async function update(email: Report) {
   await api.put('/reports', email);
 }
 
+function addEmail() {}
+function deleteEmail(index: number) {}
 </script>
 
 <style scoped>
