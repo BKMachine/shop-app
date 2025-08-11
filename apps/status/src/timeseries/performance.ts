@@ -16,6 +16,10 @@ export function storePerformance(writeApi: WriteApi): void {
     .intField('running', running)
     .intField('notRunning', notRunning)
     .floatField('percent', Math.round(((running / total) * 100 + Number.EPSILON) * 100) / 100)
+    .floatField(
+      'totalPercent',
+      Math.round(((running / machines.size) * 100 + Number.EPSILON) * 100) / 100,
+    )
     .intField('machineCount', machines.size);
 
   writeApi.writePoint(point);
