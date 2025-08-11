@@ -121,6 +121,12 @@ importers:
       '@elastic/elasticsearch':
         specifier: 9.0.1
         version: 9.0.1
+      '@influxdata/influxdb-client':
+        specifier: ^1.35.0
+        version: 1.35.0
+      '@influxdata/influxdb-client-apis':
+        specifier: ^1.35.0
+        version: 1.35.0(@influxdata/influxdb-client@1.35.0)
       axios:
         specifier: ^1.10.0
         version: 1.10.0
@@ -895,6 +901,14 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@influxdata/influxdb-client-apis@1.35.0':
+    resolution: {integrity: sha512-+7h6smVPHYBge2rNKgYh/5k+SriYvPMsoJDfbUiQt1vJtpWnElwgBDLDl7Cr6d9XPC+FCI9GP4GQEMv7y8WxdA==}
+    peerDependencies:
+      '@influxdata/influxdb-client': '*'
+
+  '@influxdata/influxdb-client@1.35.0':
+    resolution: {integrity: sha512-woWMi8PDpPQpvTsRaUw4Ig+nOGS/CWwAwS66Fa1Vr/EkW+NEwxI8YfPBsdBMn33jK2Y86/qMiiuX/ROHIkJLTw==}
 
   '@isaacs/balanced-match@4.0.1':
     resolution: {integrity: sha512-yzMTt9lEb8Gv7zRioUilSglI0c0smZ9k5D65677DLWLtWJaXIS3CqcGyUFByYKlnUj6TkjLVs54fBl6+TiGQDQ==}
@@ -4673,6 +4687,12 @@ snapshots:
   '@humanwhocodes/retry@0.3.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@influxdata/influxdb-client-apis@1.35.0(@influxdata/influxdb-client@1.35.0)':
+    dependencies:
+      '@influxdata/influxdb-client': 1.35.0
+
+  '@influxdata/influxdb-client@1.35.0': {}
 
   '@isaacs/balanced-match@4.0.1': {}
 

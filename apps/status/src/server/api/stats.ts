@@ -1,5 +1,5 @@
 import express, { type Router } from 'express';
-import { getHourlyPerformance, getHourlyRate } from '../../elastic/performance.js';
+import { getHourlyPerformance, getHourlyRate } from '../../timeseries/performance.js';
 
 const router: Router = express.Router();
 
