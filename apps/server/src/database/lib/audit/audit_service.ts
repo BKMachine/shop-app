@@ -12,7 +12,7 @@ async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc): Promise<
 }
 
 async function getToolAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
-  const projection = 'timestamp new.stock old.stock new.onOrder old.onOrder';
+  const projection = 'timestamp new.stock old.stock new.onOrder old.onOrder, new.cost old.cost';
 
   const docsInRange = await Audit.find(
     {

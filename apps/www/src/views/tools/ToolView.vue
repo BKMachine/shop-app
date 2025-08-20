@@ -303,6 +303,7 @@
             :id="tool._id"
             :reorderThreshold="tool.reorderThreshold"
             :currentStock="tool.stock"
+            :currentCost="tool.cost"
           />
         </v-window-item>
 

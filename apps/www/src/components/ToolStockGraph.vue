@@ -1,6 +1,6 @@
 <template>
   <v-divider />
-  <v-row no-gutters class="mt-5">
+  <v-row no-gutters class="mt-2 d-flex align-center">
     <v-spacer />
     <v-col cols="3">
       <v-select
@@ -35,6 +35,7 @@ const props = defineProps<{
   id: string;
   reorderThreshold: number;
   currentStock: number;
+  currentCost: number;
 }>();
 
 interface Select {
@@ -77,27 +78,49 @@ interface Data {
 
 const firstDate = DateTime.fromISO('2024-04-09T00:00:00-06:00');
 
-const data = computed<Data[]>(() => {
-  // If there are no audits just show a straight line at the current stock value
-  const init: Data = { x: firstDate.toMillis(), y: props.currentStock || 0 };
-  const last: Data = { x: to.value.toMillis(), y: props.currentStock || 0 };
-  if (!items.value || !items.value.length) return [init, last];
+const data = computed<{stock: Data[], cost: Data[]}>(() => {
+  const stock: Data[] = [];
+  const cost: Data[] = [];
+
+  // If there are no audits just show a straight line at the current values
+  const initStock: Data = { x: from.value.toMillis(), y: props.currentStock || 0 };
+  const lastStock: Data = { x: to.value.toMillis(), y: props.currentStock || 0 };
+
+  const initCost: Data = { x: from.value.toMillis(), y: props.currentCost || 0 };
+  const lastCost: Data = { x: to.value.toMillis(), y: props.currentCost || 0 };
+  if (!items.value || !items.value.length) return {
+    stock: [initStock, lastStock],
+    cost: [initCost, lastCost]
+  };
 
   // Create a starting datum for when we started doing tool audits
-  const startingDatum: Audit[] = [];
+  const startingDatumStock: Audit[] = [];
+  const startingDatumCost: Audit[] = [];
   // Pull the first audit record from the results
   const firstAudit = items.value[0];
+
   // Filter for any audits with a stock number change
-  const filtered = [...items.value].filter((x) => x.old.stock !== x.new.stock);
+  const filteredStock = [...items.value].filter((x) => x.old.stock !== x.new.stock);
+  const filteredCost = [...items.value].filter((x) => x.old.cost !== x.new.cost);
+  
   // If the first audit is not in the filtered results add it to the starting datums array
-  if (!filtered[0] || firstAudit._id !== filtered[0]._id) startingDatum.push(firstAudit);
+  // firstAudit.timestamp = from.value.toISO() as string
+  if (!filteredStock[0] || firstAudit._id !== filteredStock[0]._id) startingDatumStock.push(firstAudit);
+  if (!filteredCost[0] || firstAudit._id !== filteredCost[0]._id) startingDatumCost.push(firstAudit);
 
   // Map the data the chart cares about
-  const mappedData: Data[] = [...startingDatum, ...filtered].map((x) => {
+  const mappedStockData: Data[] = [...startingDatumStock, ...filteredStock].map((x) => {
     return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
   });
+  const mappedCostData: Data[] = [...startingDatumCost, ...filteredCost].map((x) => {
+    return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.cost };
+  });
 
-  return [...mappedData, last];
+  console.log([...mappedCostData, lastCost])
+  return {
+    stock: [...mappedStockData, lastStock],
+    cost: [...mappedCostData, lastCost],
+  };
 });
 
 const orderPoints = computed(() => {
@@ -119,13 +142,22 @@ const orderPoints = computed(() => {
 const chartData = computed<ChartData<'line'>>(() => {
   return {
     datasets: [
-      {
-        data: data.value,
+    {
+        data: data.value.stock,
         tension: 0,
         borderColor: '#54c0b9',
         stepped: true,
-      },
-    ],
+        yAxisID: 'y',
+    },
+    {
+      data: data.value.cost,
+      tension: 0,
+      borderColor: '#ec5d0f',
+      borderWidth: 1.5,
+      stepped: true,
+      yAxisID: 'y1',
+    }
+  ]
   };
 });
 
@@ -152,6 +184,18 @@ const options = computed<ChartOptions<'line'>>(() => {
           ...orderPoints.value,
         },
       },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            // If this is the cost dataset (yAxisID === 'y1'), add a $
+            if (context.dataset.yAxisID === 'y1') {
+              return `Cost: $${context.parsed.y}`;
+            } else {
+              return `Stock: ${context.parsed.y}`;
+            }
+          }
+        }
+      }
     },
     scales: {
       y: {
@@ -165,6 +209,18 @@ const options = computed<ChartOptions<'line'>>(() => {
         ticks: {
           stepSize: 1,
         },
+      },
+      y1: {
+        display: true,
+        position: 'right',
+        title: {
+          display: true,
+          text: 'Cost ($)',
+        },
+        grid: {
+          drawOnChartArea: false,
+        },
+        min: 0,
       },
       x: {
         type: 'time',
@@ -181,7 +237,9 @@ const options = computed<ChartOptions<'line'>>(() => {
       },
     },
     interaction: {
+      mode: 'nearest',
       intersect: false,
+      includeInvisible: true
     },
   };
 });
