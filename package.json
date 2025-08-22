@@ -20,7 +20,7 @@
     "publish:all": "pnpm run publish:server && pnpm run publish:status"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.1.2",
+    "@biomejs/biome": "2.2.0",
     "turbo": "^2.5.5"
   },
   "packageManager": "pnpm@10.13.1",
