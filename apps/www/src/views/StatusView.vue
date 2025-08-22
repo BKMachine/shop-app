@@ -58,7 +58,7 @@ async function fetchMachines() {
   statusApi
     .get<MachineInfo[]>('/machines')
     .then(({ data }) => {
-      machines.value = data;
+      machines.value = data.sort((a, b) => a.name.localeCompare(b.name));
     })
     .catch((error) => {
       console.error('Error fetching status:', error);
