@@ -104,7 +104,7 @@ const data = computed<{stock: Data[], cost: Data[]}>(() => {
   const filteredCost = [...items.value].filter((x) => x.old.cost !== x.new.cost);
   
   // If the first audit is not in the filtered results add it to the starting datums array
-  // firstAudit.timestamp = from.value.toISO() as string
+  firstAudit.timestamp = from.value.toISO() as string
   if (!filteredStock[0] || firstAudit._id !== filteredStock[0]._id) startingDatumStock.push(firstAudit);
   if (!filteredCost[0] || firstAudit._id !== filteredCost[0]._id) startingDatumCost.push(firstAudit);
 
