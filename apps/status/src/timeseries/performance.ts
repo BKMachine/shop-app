@@ -12,6 +12,7 @@ export function storePerformance(influx: InfluxDBClient, database: string): void
   const total = running + notRunning;
 
   const point = Point.measurement('performance')
+    .setTag('dev', process.env.NODE_ENV !== 'production' ? 'dev' : 'prod')
     .setTimestamp(new Date())
     .setIntegerField('running', running)
     .setIntegerField('notRunning', notRunning)

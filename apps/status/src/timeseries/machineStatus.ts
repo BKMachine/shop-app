@@ -8,6 +8,7 @@ export function storeMachineStatus(influx: InfluxDBClient, database: string) {
     const status = value.getStatus();
 
     const point = Point.measurement('status')
+      .setTag('dev', process.env.NODE_ENV !== 'production' ? 'dev' : 'prod')
       .setTimestamp(timestamp)
       .setTag('name', value.getMachine().name)
       .setTag('id', key)
