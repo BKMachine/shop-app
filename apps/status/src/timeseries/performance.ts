@@ -1,7 +1,7 @@
-import { Point, type WriteApi } from '@influxdata/influxdb-client';
+import { type InfluxDBClient, Point } from '@influxdata/influxdb3-client';
 import machines from '../machines/index.js';
 
-export function storePerformance(writeApi: WriteApi): void {
+export function storePerformance(influx: InfluxDBClient, database: string): void {
   let running = 0;
   let notRunning = 0;
   for (const [, value] of machines) {
@@ -11,19 +11,18 @@ export function storePerformance(writeApi: WriteApi): void {
   }
   const total = running + notRunning;
 
-  const point = new Point('performance')
-    .timestamp(new Date())
-    .intField('running', running)
-    .intField('notRunning', notRunning)
-    .floatField('percent', Math.round(((running / total) * 100 + Number.EPSILON) * 100) / 100)
-    .floatField(
+  const point = Point.measurement('performance')
+    .setTimestamp(new Date())
+    .setIntegerField('running', running)
+    .setIntegerField('notRunning', notRunning)
+    .setFloatField('percent', Math.round(((running / total) * 100 + Number.EPSILON) * 100) / 100)
+    .setFloatField(
       'totalPercent',
       Math.round(((running / machines.size) * 100 + Number.EPSILON) * 100) / 100,
     )
-    .intField('machineCount', machines.size);
+    .setIntegerField('machineCount', machines.size);
 
-  writeApi.writePoint(point);
-  if (process.env.NODE_ENV !== 'production') writeApi.flush();
+  influx.write(point, database);
 }
 
 export async function getHourlyRate() {
