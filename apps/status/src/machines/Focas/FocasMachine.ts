@@ -28,7 +28,7 @@ class FocasMachine extends Machine {
     const state = this.getState() as FocasState;
     let status: MachineStatus;
     if (!state.online) status = 'offline';
-    else if (state.alarms.concat(state.alarms2).length > 0) status = 'red';
+    else if (state.alarms.length > 0 || state.alarms2.length > 0) status = 'red';
     else if (state.execution === 'ACTIVE' || state.execution2 === 'ACTIVE') status = 'green';
     else if (
       (state.mode === 'AUTOMATIC' && state.execution === 'READY') ||
