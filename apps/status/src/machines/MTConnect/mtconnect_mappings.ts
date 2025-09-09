@@ -1,10 +1,10 @@
 const mtconnect_mappings: MTConnectMappings = {
-  'Events.Availability.#text': 'online',
-  'Events.EmergencyStop.#text': 'eStop',
-  'Events.Mode.#text': 'mode',
-  'Events.Execution.#text': 'execution',
-  'Events.Program.#text': 'program',
-  'Events.Motion.#text': 'motion',
+  Availability: 'online',
+  EmergencyStop: 'eStop',
+  Mode: 'mode',
+  Execution: 'execution',
+  Program: 'program',
+  Motion: 'motion',
 };
 
 export default mtconnect_mappings;

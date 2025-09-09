@@ -1,38 +1,51 @@
 interface MTConnectResponse {
   MTConnectStreams: {
-    Streams: {
-      DeviceStream: DeviceStream[];
+    jsonVersion: number;
+    schemaVersion: string;
+    Header: {
+      version: string;
+      creationTime: string;
+      testIndicator: boolean;
+      instanceId: number;
+      sender: string;
+      schemaVersion: string;
+      deviceModelChangeTime: string;
+      bufferSize: number;
+      nextSequence: number;
+      lastSequence: number;
+      firstSequence: number;
     };
+    Streams: { DeviceStream: [DeviceStream] };
   };
 }
 
 interface DeviceStream {
-  '@_name': string;
-  '@_uuid': string;
-  ComponentStream: ComponentStream | ComponentStream[];
+  name: string;
+  uuid: string;
+  ComponentStream: [Component];
 }
 
-interface ComponentStream {
-  Events?: Event;
+interface Component {
+  component: string;
+  componentId: string;
+  name: string;
+  Events: {
+    AssetChanged: [Event];
+    AssetCountDataSet: [Event];
+    AssetRemoved: [Event];
+    Availability: [Event];
+    EmergencyStop: [Event];
+    Execution: [Event];
+    Mode: [Event];
+    Motion: [Event];
+    Program: [Event];
+  };
 }
 
 interface Event {
-  Availability?: {
-    '@_text': 'UNAVAILABLE' | 'AVAILABLE';
-  };
-  EmergencyStop?: {
-    '@_text': 'UNAVAILABLE' | 'ARMED' | 'TRIGGERED';
-  };
-  Mode?: {
-    '@_text': 'AUTOMATIC' | string;
-  };
-  Execution?: {
-    '@_text': 'READY' | string;
-  };
-  Program?: {
-    '@_text': string;
-  };
-  Motion?: {
-    '@_text': 'NORMAL' | 'WARNING' | 'FAULT';
-  };
+  value: string;
+  assetType: string;
+  dataItemId: string;
+  sequence: number;
+  timestamp: string;
 }
