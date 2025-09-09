@@ -9,10 +9,10 @@ const initState: FocasState = {
   runningComment: '',
   mode: 'UNAVAILABLE',
   execution: 'UNAVAILABLE',
-  alarms: [],
+  alarms: {},
   mode2: 'UNAVAILABLE',
   execution2: 'UNAVAILABLE',
-  alarms2: [],
+  alarms2: {},
   cycle: 0,
   lastCycle: 0,
   lastOperatorTime: 0,
@@ -27,8 +27,10 @@ class FocasMachine extends Machine {
   updateStatus(): void {
     const state = this.getState() as FocasState;
     let status: MachineStatus;
+    const alarms = Object.assign({}, state.alarms, state.alarms2);
+    state;
     if (!state.online) status = 'offline';
-    else if (state.alarms.length > 0 || state.alarms2.length > 0) status = 'red';
+    else if (Object.keys(alarms).length > 0) status = 'red';
     else if (state.execution === 'ACTIVE' || state.execution2 === 'ACTIVE') status = 'green';
     else if (
       (state.mode === 'AUTOMATIC' && state.execution === 'READY') ||

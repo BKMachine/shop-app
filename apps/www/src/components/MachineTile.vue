@@ -23,7 +23,7 @@
           </div>
         </div>
         <div v-if="hasAlarm && data.source === 'focas'" class="alarm">
-          {{ alarms[0].message.replace(/\*/g, ' ') }}
+          {{ alarmMessages[0] }}
         </div>
         </div>
     </div>
@@ -96,24 +96,29 @@ const lastOperatorIdle = computed(() => {
 
 const alarms = computed(() => {
   if (props.data.source === 'focas') {
-    return props.data.state.alarms.concat(props.data.state.alarms2);
+    return Object.assign({}, props.data.state.alarms, props.data.state.alarms2);
   } else {
-    return [];
+    return {};
   }
 });
 
 const hasAlarm = computed(() => {
   if (props.data.source === 'focas') {
-    const a1 = props.data.state.alarms || [];
-    const a2 = props.data.state.alarms2 || [];
-    const alarms = a1.concat(a2);
-    return alarms.length > 0;
+    return Object.keys(alarms.value).length > 0;
   } else if (props.data.source === 'arduino') {
     return props.data.state.red;
   } else if (props.data.source === 'mtconnect') {
     return props.data.state.eStop === 'TRIGGERED' || props.data.state.motion === 'FAULT';
   }
   return false;
+});
+
+const alarmMessages = computed<string[]>(() => {
+  if (props.data.source === 'focas') {
+    return Object.values(alarms.value).map((a: any) => a.message.replace(/\*/g, ' '));
+  } else {
+    return [];
+  }
 });
 
 const blink = computed(() => {

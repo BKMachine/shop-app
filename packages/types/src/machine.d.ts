@@ -6,10 +6,10 @@ interface FocasState {
   runningComment: string;
   mode: Mode;
   execution: Execution;
-  alarms: Alarm[];
+  alarms: Alarm;
   mode2: Mode;
   execution2: Execution;
-  alarms2: Alarm[];
+  alarms2: Alarm;
   cycle: number;
   lastCycle: number;
   lastOperatorTime: number;
@@ -28,15 +28,17 @@ type Execution =
   | 'UNAVAILABLE';
 
 interface Alarm {
-  path: number;
-  axis_code: number;
-  axis: string;
-  number: number;
-  message: string;
-  type_code: number;
-  type: string;
-  id: string;
-  is_triggered: boolean;
+  [key: string]: {
+    path: number;
+    axis_code: number;
+    axis: string;
+    number: number;
+    message: string;
+    type_code: number;
+    type: string;
+    id: string;
+    is_triggered: boolean;
+  };
 }
 
 interface FocasMapping {
