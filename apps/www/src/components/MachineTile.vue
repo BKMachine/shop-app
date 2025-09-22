@@ -11,7 +11,7 @@
           <div v-if="!hasAlarm">
             <div class="d-flex justify-space-between align-center">
               <div>
-                <div v-if="data.state.lastCycle">Last Cycle: {{ lastCycle }}</div>
+                <div v-if="lastCycle !== '0:00'">Last Cycle: {{ lastCycle }}</div>
                 <div v-else>Last Cycle: ---</div>
               </div>
               <div>{{ timerText }}</div>
@@ -80,8 +80,12 @@ const timerText = computed(() => {
   return dur.toFormat('hh:mm:ss');
 });
 
+const macroTimerMachines = ['rd1', 'rd2', 'rd3'];
+
 const lastCycle = computed(() => {
-  const seconds = Math.floor(props.data.state.lastCycle / 1000);
+  let seconds = 0;
+  if (props.data.source === 'focas' && macroTimerMachines.includes(props.data.name.toLowerCase())) seconds = props.data.state.macro_timer;
+  else seconds = Math.floor(props.data.state.lastCycle / 1000);
   const dur = Duration.fromObject({ seconds });
   if (dur.as('hours') > 1) return dur.toFormat('h:mm:ss');
   return dur.toFormat('m:ss');
@@ -132,6 +136,13 @@ const longChange = computed(() => {
 
 const status = computed(() => {
   return `status-${props.data.status}`;
+});
+
+const macroTimer = computed(() => {
+  if (props.data.source === 'focas') {
+    return props.data.state.macro_timer || 0;
+  }
+  return 0;
 });
 </script>
 

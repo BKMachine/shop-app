@@ -11,6 +11,7 @@ interface FocasState {
   execution2: Execution;
   alarms2: Alarm;
   cycle: number;
+  macro_timer: number;
   lastCycle: number;
   lastOperatorTime: number;
   lastStateTs: string;

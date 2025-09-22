@@ -23,6 +23,9 @@ const focas_mappings: FocasMapping = {
   'alarms/2': {
     'state.data.alarms': 'alarms2',
   },
+  'macro/1': {
+    'state.data.macro_timer.value': 'macro_timer',
+  },
 };
 
 export default focas_mappings;
