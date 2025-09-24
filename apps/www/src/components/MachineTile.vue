@@ -61,6 +61,7 @@ import { Duration } from 'luxon';
 import { computed } from 'vue';
 import offlineImg from '@/assets/img/offline.png';
 import logos from '@/plugins/dynamic_logos.js';
+import {alarms as alarmMutations} from '@/plugins/mutations.js';
 import useNowStore from '@/stores/now.js';
 
 const props = defineProps<{
@@ -133,7 +134,10 @@ const hasAlarm = computed(() => {
 
 const alarmMessages = computed<string[]>(() => {
   if (props.data.source === 'focas') {
-    return Object.values(alarms.value).map((a: any) => a.message.replace(/\*/g, ' '));
+    return Object.values(alarms.value).map((a: any) => {
+      const msg: string = a.message.replace(/\*/g, ' ').trim();
+      return alarmMutations[msg] || msg;
+  });
   } else {
     return [];
   }
