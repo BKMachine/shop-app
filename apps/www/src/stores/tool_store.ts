@@ -137,7 +137,9 @@ export const useToolStore = defineStore('tools', () => {
     if (index > -1) {
       rawTools.value[index] = tool;
       trigger.value.toolID = tool._id;
-      setTimeout(() => (trigger.value.toolID = ''), 500);
+      setTimeout(() => {
+        trigger.value.toolID = '';
+      }, 500);
     }
   }
 
