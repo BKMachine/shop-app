@@ -27,11 +27,10 @@ async function getToolAudits(id: string, from: string, to: string): Promise<Audi
   const previousDoc = await Audit.findOne(
     { type: 'tool', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
     projection,
-  )
-    .sort({
-      _id: -1,
-    })
-    .lean();
+  ).sort({
+    _id: -1,
+  });
+  //.lean();
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
@@ -60,11 +59,10 @@ async function getPartAudits(id: string, from: string, to: string): Promise<Audi
   const previousDoc = await Audit.findOne(
     { type: 'part', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
     projection,
-  )
-    .sort({
-      _id: -1,
-    })
-    .lean();
+  ).sort({
+    _id: -1,
+  });
+  //.lean();
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
