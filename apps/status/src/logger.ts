@@ -1,6 +1,7 @@
 import * as logger from '@repo/utilities/logger';
+import type { Logger } from 'winston';
 
-const myLogger = logger.create('status');
+const myLogger: Logger = logger.create('status');
 
 class MyStream {
   write(text: string) {
