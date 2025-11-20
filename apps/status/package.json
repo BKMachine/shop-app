@@ -10,6 +10,7 @@
     "lint": "biome lint --write",
     "check": "biome check --write",
     "ci": "biome ci",
+    "check-types": "tsc --noEmit",
     "test": "jest",
     "performance:mqtt": "tsx -r dotenv/config ./src/__tests__/mqtt.messageHandler.performance.test.ts",
     "performance:mtconnect": "tsx -r dotenv/config ./src/__tests__/mtconnect.performance.test.ts"
