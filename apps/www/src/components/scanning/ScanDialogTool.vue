@@ -45,19 +45,16 @@ import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 const scannerStore = useScannerStore();
-
 let vButtons: NodeListOf<HTMLElement>;
-// let hButtons: NodeListOf<HTMLElement>;
 
 const tool = computed(() => scannerStore.tool);
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
   vButtons = document.querySelectorAll('.v-arrow-select');
-  // hButtons = document.querySelectorAll('.h-arrow-select');
-  let buttonToFocus = vButtons[0];
-  if (buttonToFocus.getAttribute('disabled') === '') buttonToFocus = vButtons[1];
-  buttonToFocus.focus();
+  // choose the first available button (fallback to the second) and only focus if it exists
+  let buttonToFocus = vButtons[0] ?? vButtons[1];
+  if (buttonToFocus) buttonToFocus.focus();
 });
 
 onUnmounted(() => {
@@ -91,7 +88,7 @@ function close() {
 
 function handleKeydown(e: KeyboardEvent) {
   let index = findVerticalIndex();
-  const pickIsDisabled = vButtons[0].getAttribute('disabled') === '';
+  const pickIsDisabled = vButtons?.[0]?.getAttribute('disabled') === '';
 
   switch (e.key) {
     case 'ArrowUp':
