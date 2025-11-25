@@ -43,7 +43,7 @@
             <template v-slot:[`item.img`]="{ item }">
               <v-img :src="item.img" class="tool-img"></v-img>
             </template>
-
+            
             <template v-slot:[`item.stock`]="{ item }">
               <span class="stock">{{ item.stock }}</span>
             </template>
@@ -90,7 +90,7 @@ const tools = computed(() => {
   return filteredLocation;
 });
 
-const headers: readonly { [key: string]: any }[] = [
+const headers: readonly { [key: string]: unknown }[] = [
   {
     key: 'img',
     width: 150,

@@ -72,14 +72,18 @@
           :search="search"
           :loading="toolStore.loading"
           @click:row="openTool"
+
+
+
+          
         >
-          <template v-slot:[`item.img`]="{ item }">
+          <template v-slot:['item.img']="{ item }">
             <v-img :id="item._id" :src="item.img" class="tool-img"></v-img>
           </template>
-          <template v-slot:[`item.location`]="{ item }">
+          <template v-slot:['item.location']="{ item }">
             {{ location(item) }}
           </template>
-          <template v-slot:[`item.stock`]="{ item }">
+          <template v-slot:['item.stock']="{ item }">
             <span class="stock">{{ item.stock }}</span>
           </template>
         </v-data-table>
@@ -180,8 +184,8 @@ onMounted(() => {
   // Do items per page before page number
   const ipp = localStorage.getItem('ipp');
   if (ipp) {
-    const ippNum = parseInt(ipp);
-    if (!isNaN(ippNum)) itemsPerPage.value = ippNum;
+    const ippNum = parseInt(ipp, 10);
+    if (!Number.isNaN(ippNum)) itemsPerPage.value = ippNum;
   }
 
   const tabChanged = toolStore.tabChange;
@@ -191,8 +195,8 @@ onMounted(() => {
   } else {
     const query = router.currentRoute.value.query;
     if (query.page) {
-      const pageNum = parseInt(query.page as string);
-      if (!isNaN(pageNum)) page.value = pageNum;
+      const pageNum = parseInt(query.page as string, 10);
+      if (!Number.isNaN(pageNum)) page.value = pageNum;
     }
   }
 

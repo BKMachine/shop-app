@@ -2,13 +2,16 @@
   <v-card-title class="title">{{ part.part }}</v-card-title>
   <v-card-text>
     <v-row>
-      <div>{{ title }} <v-switch v-model="set" label="Set" color="secondary"></v-switch></div>
+      <div>
+        {{ title }}
+        <v-switch v-model="set" label="Set" color="secondary"></v-switch>
+      </div>
     </v-row>
     <v-row>
       <v-btn @click="adjustment -= 1">-1</v-btn>
-      <v-btn @click="adjustment -= 10"> -10</v-btn>
+      <v-btn @click="adjustment -= 10">-10</v-btn>
       <v-btn @click="adjustment -= 100">-100</v-btn>
-      <v-btn @click="adjustment += 100"> +100</v-btn>
+      <v-btn @click="adjustment += 100">+100</v-btn>
       <v-btn @click="adjustment += 10">+10</v-btn>
       <v-btn @click="adjustment += 1">+1</v-btn>
     </v-row>
@@ -21,15 +24,11 @@
         ></v-text-field>
       </v-col>
       <v-col cols="3" class="stock-display align-center d-flex flex-column">
-        <v-row>
-          {{ part.stock }}
-        </v-row>
+        <v-row>{{ part.stock }}</v-row>
         <v-row>
           <v-icon icon="mdi-arrow-down"></v-icon>
         </v-row>
-        <v-row>
-          {{ newStock }}
-        </v-row>
+        <v-row>{{ newStock }}</v-row>
       </v-col>
     </v-row>
   </v-card-text>

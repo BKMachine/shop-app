@@ -7,18 +7,16 @@
       </v-btn>
     </v-row>
     <div v-for="(item, i) in items" :key="i">
-      <span class="bold">
-        {{ item[0] }}
-      </span>
+      <span class="bold"> {{ item[0] }} </span>
       <v-divider />
       <div v-for="(tool, j) in item[1]" :key="tool._id">
         <input type="checkbox" class="mr-2" :checked="tool.onOrder" @click="toggleOnOrder(tool)" />
-        <span class="item"> {{ tool.item }} - Qty: {{ tool.reorderQty }} </span>
+        <span class="item"> {{ tool.item }}- Qty: {{ tool.reorderQty }}</span>
         <span class="line"> - </span>
         <span class="subtotal">{{ getCost(tool) }}</span>
         <span
-          ><v-icon icon="mdi-open-in-app" size="16" class="ml-2" @click="open(tool)"></v-icon
-        ></span>
+          ><v-icon icon="mdi-open-in-app" size="16" class="ml-2" @click="open(tool)"></v-icon></span
+        >
         <div v-if="j === item[1].length - 1" class="space"></div>
       </div>
     </div>

@@ -11,18 +11,18 @@
     </v-app-bar>
     <v-navigation-drawer v-model="drawer">
       <v-list>
-        <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }"> Home </v-list-item>
+        <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }">Home </v-list-item>
         <v-list-item prepend-icon="mdi-dots-triangle" link :to="{ name: 'parts' }">
           Parts
         </v-list-item>
-        <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }"> Tools </v-list-item>
+        <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }">Tools </v-list-item>
         <v-list-item prepend-icon="mdi-map-marker" link :to="{ name: 'locations' }">
           Locations
         </v-list-item>
         <v-list-item prepend-icon="mdi-cube-scan" link :to="{ name: 'materials' }">
           Materials
         </v-list-item>
-        <v-list-item prepend-icon="mdi-pulse" link :to="{ name: 'status' }"> Status </v-list-item>
+        <v-list-item prepend-icon="mdi-pulse" link :to="{ name: 'status' }">Status </v-list-item>
       </v-list>
       <template v-slot:append>
         <v-list-item

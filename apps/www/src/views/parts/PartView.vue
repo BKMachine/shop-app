@@ -71,7 +71,7 @@
                 v-model="part.part"
                 class="mr-2"
                 label="Part Number"
-                :rules="[rules.required]"
+                :rules="[rules.required!]"
               >
                 <template v-slot:append-inner>
                   <!--                  <v-icon icon="mdi-barcode"></v-icon>
@@ -91,7 +91,7 @@
                 item-title="name"
                 item-value="_id"
                 clearable
-                :rules="[rules.required]"
+                :rules="[rules.required!]"
               >
                 <template v-slot:item="{ props, item }">
                   <v-list-item v-bind="props" title="">
@@ -111,7 +111,7 @@
               <v-text-field
                 v-model="part.description"
                 label="Description"
-                :rules="[rules.required]"
+                :rules="[rules.required!]"
               />
             </v-col>
           </v-row>

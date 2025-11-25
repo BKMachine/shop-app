@@ -75,31 +75,31 @@
         <v-window-item value="general">
           <v-row no-gutters>
             <v-text-field
-              v-model="tool.description"
-              label="Description"
-              :rules="[rules.required]"
-            />
+                v-model="tool.description"
+                label="Description"
+                :rules="[rules.required!]"
+              />
           </v-row>
           <v-row no-gutters>
             <v-col cols="6">
               <v-text-field
-                v-model="tool.item"
-                class="mr-2"
-                label="Product Number"
-                :rules="[rules.uniqueItem]"
-              >
-                <template v-slot:append-inner>
-                  <v-icon icon="mdi-barcode"></v-icon>
-                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />
-                </template>
-              </v-text-field>
+                  v-model="tool.item"
+                  class="mr-2"
+                  label="Product Number"
+                  :rules="[rules.uniqueItem!]"
+                >
+                  <template v-slot:append-inner>
+                    <v-icon icon="mdi-barcode"></v-icon>
+                    <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />
+                  </template>
+                </v-text-field>
             </v-col>
             <v-col cols="6">
               <v-text-field
                 v-model="tool.barcode"
                 class="ml-2"
                 label="Barcode"
-                :rules="[rules.barcode, rules.uniqueBarcode]"
+                :rules="[rules.barcode!, rules.uniqueBarcode!]"
               >
                 <template v-slot:append-inner>
                   <v-icon icon="mdi-barcode"></v-icon>

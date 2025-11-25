@@ -1,20 +1,22 @@
 <template>
   <div class="machine" :class="[status, { online: isOnline, alarmed: hasAlarm, blink }]">
-   <div class="header">
+    <div class="header">
       <div>{{ data.name }}</div>
       <img v-if="!isOnline" class="offline" :src="offlineImg" alt="OFFLINE" />
       <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" />
     </div>
     <div v-if="isOnline">
-<div class="details">
+      <div class="details">
         <div v-if="isOnline" class="timer">
           <div v-if="!hasAlarm">
             <div class="d-flex justify-space-between align-center">
               <div>
-                <div v-if="props.data.state.lastCycle">Last Cycle: {{ lastCycle }}
+                <div v-if="props.data.state.lastCycle">
+                  Last Cycle: {{ lastCycle }}
                   <span v-if="hasMacroTimer"> ({{ macroTimer }})</span>
                 </div>
-                <div v-else>Last Cycle: ---
+                <div v-else>
+                  Last Cycle: ---
                   <span v-if="hasMacroTimer"> ({{ macroTimer }})</span>
                 </div>
               </div>
@@ -26,10 +28,8 @@
             <!-- <div v-else>Change Time: ---</div> -->
           </div>
         </div>
-        <div v-if="hasAlarm && data.source === 'focas'" class="alarm">
-          {{ alarmMessages[0] }}
-        </div>
-        </div>
+        <div v-if="hasAlarm && data.source === 'focas'" class="alarm">{{ alarmMessages[0] }}</div>
+      </div>
     </div>
   </div>
   <!-- <div class="machine">
@@ -61,7 +61,7 @@ import { Duration } from 'luxon';
 import { computed } from 'vue';
 import offlineImg from '@/assets/img/offline.png';
 import logos from '@/plugins/dynamic_logos.js';
-import {alarms as alarmMutations} from '@/plugins/mutations.js';
+import { alarms as alarmMutations } from '@/plugins/mutations.js';
 import useNowStore from '@/stores/now.js';
 
 const props = defineProps<{
@@ -134,10 +134,10 @@ const hasAlarm = computed(() => {
 
 const alarmMessages = computed<string[]>(() => {
   if (props.data.source === 'focas') {
-    return Object.values(alarms.value).map((a: any) => {
+    return Object.values(alarms.value).map((a) => {
       const msg: string = a.message.replace(/\*/g, ' ').trim();
       return alarmMutations[msg] || msg;
-  });
+    });
   } else {
     return [];
   }

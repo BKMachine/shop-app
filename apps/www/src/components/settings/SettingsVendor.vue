@@ -10,7 +10,7 @@
           <v-text-field
             v-model="editingItem.name"
             label="Name"
-            :rules="[rules.required, rules.counter, rules.unique]"
+            :rules="[rules.required!, rules.counter!, rules.unique!]"
           />
           <div class="logo-container">
             <v-text-field v-model="editingItem.logo" label="Logo URL" />
@@ -72,7 +72,8 @@ function create() {
 
 function edit(i: number) {
   editingIndex.value = i;
-  editingItem.value = { ...vendorStore.vendors[editingIndex.value] };
+  const editingVendor = vendorStore.vendors[editingIndex.value];
+  if (editingVendor) editingItem.value = { ...editingVendor };
   dialog.value = true;
 }
 

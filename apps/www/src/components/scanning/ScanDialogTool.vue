@@ -7,7 +7,7 @@
       <v-card-title class="text-right card-title">
         <div>{{ tool.item }}</div>
         <div>{{ tool.description }}</div>
-        <div>{{ tool.stock }} in stock</div>
+        <div>{{ tool.stock }}in stock</div>
         <div class="location">
           <span v-if="tool.location">{{ tool.location }}</span>
           <span v-if="tool.position"> | {{ tool.position }}</span>
@@ -30,7 +30,7 @@
           </div>
         </div>
         <div>
-          <v-btn class="v-arrow-select" @click="openDetails"> View Details </v-btn>
+          <v-btn class="v-arrow-select" @click="openDetails">View Details </v-btn>
         </div>
       </v-card-text>
     </v-card>
@@ -53,7 +53,7 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
   vButtons = document.querySelectorAll('.v-arrow-select');
   // choose the first available button (fallback to the second) and only focus if it exists
-  let buttonToFocus = vButtons[0] ?? vButtons[1];
+  const buttonToFocus = vButtons[0] ?? vButtons[1];
   if (buttonToFocus) buttonToFocus.focus();
 });
 
@@ -143,7 +143,6 @@ function arrowLeft(e: MouseEvent) {
 
 <style scoped>
 .card {
-  background: rgb(101, 108, 217);
   background: linear-gradient(
     -135deg,
     rgba(215, 218, 99, 1) 0%,

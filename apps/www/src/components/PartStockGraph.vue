@@ -86,6 +86,7 @@ const data = computed<Data[]>(() => {
   const startingDatum: Audit[] = [];
   // Pull the first audit record from the results
   const firstAudit = items.value[0];
+  if (!firstAudit) return [init, last];
   // Filter for any audits with a stock number change
   const filtered = [...items.value].filter((x) => x.old.stock !== x.new.stock);
   // If the first audit is not in the filtered results add it to the starting datums array

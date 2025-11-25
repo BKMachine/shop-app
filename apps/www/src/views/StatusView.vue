@@ -30,15 +30,18 @@ socket.on('change', (status: { id: string; changes: Changes }) => {
   const { id, changes } = status;
   const index = machines.value.findIndex((x) => x.id === id);
   if (index !== -1) {
-    const currentState = machines.value[index].state;
-    machines.value[index].state = Object.assign({}, currentState, changes);
+    let currentState = machines.value[index]?.state;
+    if (currentState) currentState = Object.assign({}, currentState, changes);
   }
 });
 
 socket.on('status', (data: { id: string; status: MachineStatus }) => {
   const { id, status } = data;
   const index = machines.value.findIndex((x) => x.id === id);
-  if (index !== -1) machines.value[index].status = status;
+  if (index !== -1) {
+    let currentStatus = machines.value[index]?.status;
+    if (currentStatus) currentStatus = status;
+  }
 });
 
 socket.on('refresh-data', () => {
