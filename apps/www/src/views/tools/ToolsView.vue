@@ -1,5 +1,5 @@
 <template>
-  <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:modelValue="onChange">
+  <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:model-value="onChange">
     <v-tab value="milling" class="milling">Mill</v-tab>
     <v-tab value="turning" class="turning">Lathe</v-tab>
     <v-tab value="swiss" class="swiss">Swiss</v-tab>

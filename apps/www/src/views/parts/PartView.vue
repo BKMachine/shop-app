@@ -15,9 +15,7 @@
             <div class="stock">{{ part.stock }}</div>
             <div>In Stock</div>
             <div class="location">
-              <span v-if="part.location">
-                {{ part.location }}
-              </span>
+              <span v-if="part.location"> {{ part.location }} </span>
               <span v-if="part.position"> | {{ part.position }}</span>
             </div>
           </div>
@@ -80,7 +78,7 @@
               </v-text-field>
             </v-col>
             <v-col cols="1">
-              <v-text-field v-model="part.revision" label="Rev"> </v-text-field>
+              <v-text-field v-model="part.revision" label="Rev"></v-text-field>
             </v-col>
             <v-col cols="6">
               <v-select
@@ -133,9 +131,8 @@
                 item-value="_id"
                 :items="materialsStore.materials"
                 label="Material"
-                @update:modelValue="assignMaterial"
-              >
-              </v-select>
+                @update:model-value="assignMaterial"
+              ></v-select>
             </v-col>
             <v-col cols="2">
               <v-text-field
@@ -144,16 +141,13 @@
                 class="ml-2"
                 type="number"
                 min="0"
-              >
-              </v-text-field>
+              ></v-text-field>
             </v-col>
           </v-row>
           <v-row no-gutters>
             <div class="d-flex align-center ml-4">
-              {{ part.material ? part.material.length : 0 }} / {{ part.materialLength }} =
-              <span class="font-weight-bold mx-1">
-                {{ partsPerBar }}
-              </span>
+              {{ part.material ? part.material.length : 0 }}/ {{ part.materialLength }}=
+              <span class="font-weight-bold mx-1"> {{ partsPerBar }} </span>
               parts per bar
             </div>
           </v-row>
@@ -184,7 +178,7 @@
                 v-model="part.position"
                 class="ml-2"
                 label="Position"
-                @update:modelValue="part.position = part.position?.toUpperCase()"
+                @update:model-value="part.position = part.position?.toUpperCase()"
               >
                 <template v-slot:append-inner>
                   <!--                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation"></v-icon>
@@ -198,9 +192,9 @@
           </v-row>
         </v-window-item>
 
-        <v-window-item value="docs"> DOCS </v-window-item>
+        <v-window-item value="docs">DOCS </v-window-item>
 
-        <v-window-item value="notes"> NOTES </v-window-item>
+        <v-window-item value="notes">NOTES </v-window-item>
       </v-window>
     </v-form>
   </v-container>

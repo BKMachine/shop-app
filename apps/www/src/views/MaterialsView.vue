@@ -21,16 +21,14 @@
             @click="selectMaterial(material)"
           >
             <v-list-item-content>
-              <v-list-item-title>
-                {{ material.description }}
-              </v-list-item-title>
+              <v-list-item-title>{{ material.description }}</v-list-item-title>
               <v-list-item-subtitle class="d-flex align-center">
-                {{ material.type }} - {{ material.materialType }}
+                {{ material.type }}- {{ material.materialType }}
                 <v-spacer></v-spacer>
                 <div v-if="material.type === 'Flat'">
-                  {{ material.height }} x {{ material.width }}
+                  {{ material.height }}x {{ material.width }}
                 </div>
-                <div v-else-if="material.type === 'Round'">{{ material.diameter }} ⌀</div>
+                <div v-else-if="material.type === 'Round'">{{ material.diameter }}⌀</div>
               </v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
@@ -65,9 +63,7 @@
                     required
                   >
                     <template #item="data">
-                      <v-list-item v-if="data.props.header">
-                        {{ data.props.header }}
-                      </v-list-item>
+                      <v-list-item v-if="data.props.header">{{ data.props.header }}</v-list-item>
                       <v-divider v-else-if="data.props.divider" />
                       <v-list-subheader v-else v-bind="data.props" class="material-select-item">
                         {{ data.item.value }}
@@ -123,10 +119,10 @@
                     type="number"
                     min="0"
                     required
-                  ></v-text-field
-                ></v-col>
-                <v-col cols="6"
-                  ><v-text-field
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
                     v-model="selectedMaterial.wallThickness"
                     label="Wall Thickness"
                     type="number"

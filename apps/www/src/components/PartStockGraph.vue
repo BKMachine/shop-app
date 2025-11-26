@@ -10,7 +10,7 @@
         item-title="title"
         item-value="value"
         density="compact"
-        @update:modelValue="getData"
+        @update:model-value="getData"
       />
     </v-col>
   </v-row>

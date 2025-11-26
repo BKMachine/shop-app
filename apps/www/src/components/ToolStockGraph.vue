@@ -10,7 +10,7 @@
         item-title="title"
         item-value="value"
         density="compact"
-        @update:modelValue="getData"
+        v-on:update:model-value="getData"
       />
     </v-col>
   </v-row>
@@ -99,6 +99,7 @@ const data = computed<{ stock: Data[]; cost: Data[] }>(() => {
   const startingDatumCost: Audit[] = [];
   // Pull the first audit record from the results
   const firstAudit = items.value[0];
+  if (!firstAudit) return { stock, cost };
 
   // Filter for any audits with a stock number change
   const filteredStock = [...items.value].filter((x) => x.old.stock !== x.new.stock);
@@ -189,7 +190,7 @@ const options = computed<ChartOptions<'line'>>(() => {
       },
       tooltip: {
         callbacks: {
-          label: function (context) {
+          label: (context) => {
             // If this is the cost dataset (yAxisID === 'y1'), add a $
             if (context.dataset.yAxisID === 'y1') {
               return `Cost: $${context.parsed.y}`;

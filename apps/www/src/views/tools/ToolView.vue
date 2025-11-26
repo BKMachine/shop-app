@@ -14,9 +14,7 @@
             <div class="stock">{{ tool.stock }}</div>
             <div>In Stock</div>
             <div class="location">
-              <span v-if="tool.location">
-                {{ tool.location }}
-              </span>
+              <span v-if="tool.location"> {{ tool.location }} </span>
               <span v-if="tool.position"> | {{ tool.position }}</span>
             </div>
           </div>
@@ -75,24 +73,24 @@
         <v-window-item value="general">
           <v-row no-gutters>
             <v-text-field
-                v-model="tool.description"
-                label="Description"
-                :rules="[rules.required!]"
-              />
+              v-model="tool.description"
+              label="Description"
+              :rules="[rules.required!]"
+            />
           </v-row>
           <v-row no-gutters>
             <v-col cols="6">
               <v-text-field
-                  v-model="tool.item"
-                  class="mr-2"
-                  label="Product Number"
-                  :rules="[rules.uniqueItem!]"
-                >
-                  <template v-slot:append-inner>
-                    <v-icon icon="mdi-barcode"></v-icon>
-                    <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />
-                  </template>
-                </v-text-field>
+                v-model="tool.item"
+                class="mr-2"
+                label="Product Number"
+                :rules="[rules.uniqueItem!]"
+              >
+                <template v-slot:append-inner>
+                  <v-icon icon="mdi-barcode"></v-icon>
+                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />
+                </template>
+              </v-text-field>
             </v-col>
             <v-col cols="6">
               <v-text-field
@@ -184,7 +182,7 @@
                 <v-card>
                   <v-card-title>Manual Order</v-card-title>
                   <v-card-text>
-                    <v-row> How many items would you like to order? </v-row>
+                    <v-row>How many items would you like to order? </v-row>
                     <v-row class="mt-4">
                       <v-text-field
                         v-model="manualOrderAmount"
@@ -244,7 +242,7 @@
                 v-model="tool.position"
                 class="mr-2"
                 label="Position"
-                @update:modelValue="tool.position = tool.position?.toUpperCase()"
+                @update:model-value="tool.position = tool.position?.toUpperCase()"
               >
                 <template v-slot:append-inner>
                   <v-icon icon="mdi-map-marker-outline" @click="gotoLocation"></v-icon>

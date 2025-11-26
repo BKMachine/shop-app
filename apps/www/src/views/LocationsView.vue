@@ -40,11 +40,11 @@
             :loading="toolStore.loading"
             @click:row="openTool"
           >
-            <template v-slot:[`item.img`]="{ item }">
+            <template v-slot:['item.img']="{ item }">
               <v-img :src="item.img" class="tool-img"></v-img>
             </template>
             
-            <template v-slot:[`item.stock`]="{ item }">
+            <template v-slot:['item.stock']="{ item }">
               <span class="stock">{{ item.stock }}</span>
             </template>
           </v-data-table-virtual>

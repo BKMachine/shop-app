@@ -28,7 +28,7 @@
         :loading="partStore.loading"
         @click:row="openPart"
       >
-        <template v-slot:[`item.img`]="{ item }">
+        <template v-slot:['item.img']="{ item }">
           <v-hover>
             <template v-slot:default="{ isHovering, props }">
               <v-img
@@ -42,10 +42,10 @@
             </template>
           </v-hover>
         </template>
-        <template v-slot:[`item.location`]="{ item }">
+        <template v-slot:['item.location']="{ item }">
           {{ location(item) }}
         </template>
-        <template v-slot:[`item.stock`]="{ item }">
+        <template v-slot:['item.stock']="{ item }">
           <div class="d-flex align-center">
             <v-dialog max-width="500">
               <template v-slot:activator="{ props: activatorProps }">
