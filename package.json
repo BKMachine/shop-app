@@ -19,7 +19,7 @@
     "publish:server": "pnpm run build:server && docker push bkmachine/shop-app",
     "publish:status": "pnpm run build:status && docker push bkmachine/cnc-status",
     "publish:haas_serial": "pnpm run build:haas_serial && docker push bkmachine/haas-serial",
-    "publish:all": "pnpm run publish:server && pnpm run publish:status"
+    "publish:all": "pnpm run publish:server && pnpm run publish:status && pnpm run publish:haas_serial"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.7",
