@@ -14,13 +14,11 @@
   },
   "engineStrict": true,
   "dependencies": {
-    "axios": "^1.13.2",
     "cors": "^2.8.5",
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "http-terminator": "^3.2.0",
-    "lodash": "^4.17.21",
     "morgan": "^1.10.1",
     "remote-serial-port-client": "^0.4.0",
     "winston": "^3.18.3"
@@ -35,7 +33,6 @@
     "@types/node": "^24.10.1",
     "@types/shop-app": "workspace:*",
     "rimraf": "^6.1.2",
-    "ts-jest": "^29.4.5",
     "tsx": "^4.20.6",
     "typescript": "~5.9.3"
   }
