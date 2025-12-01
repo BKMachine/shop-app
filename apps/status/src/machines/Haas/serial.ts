@@ -34,16 +34,16 @@ function run() {
       : `${url.pathname}/${encodeURIComponent(name)}`;
     url.pathname = uri;
     axios
-      .post<string[][]>(url.toString(), { url: location })
-      .then(async ({ data: responses }) => {
+      .post<{ data: string[][] }>(url.toString(), { url: location })
+      .then(async ({ data }) => {
+        const responses = data.data;
         const state = machine.getState() as HaasState;
-        const online = state.online;
-        if (!online) {
+        if (!state.online) {
           changes.set('online', true);
           changes.set('lastStateTs', new Date().toISOString());
         }
         if (responses.join('').trim().length) changes.set('serial', JSON.stringify(responses));
-        responses.forEach((response, i) => {
+        responses.forEach((response) => {
           const command = response.shift() as HaasCommand;
           switch (command) {
             case 'MODE': {
@@ -95,7 +95,10 @@ function run() {
           }*/
         });
       })
-      .catch(() => {
+      .catch((err) => {
+        const status = err.response?.status;
+        if (!status || status !== 503)
+          logger.warn(`Haas Serial Polling Error for ${location}: ${err.message}`);
         if (machine.getState().online) changes.set('online', false);
       })
       .finally(() => {
