@@ -15,7 +15,7 @@
             <div class="stock">{{ part.stock }}</div>
             <div>In Stock</div>
             <div class="location">
-              <span v-if="part.location"> {{ part.location }} </span>
+              <span v-if="part.location"> {{ part.location }}</span>
               <span v-if="part.position"> | {{ part.position }}</span>
             </div>
           </div>
@@ -147,7 +147,7 @@
           <v-row no-gutters>
             <div class="d-flex align-center ml-4">
               {{ part.material ? part.material.length : 0 }}/ {{ part.materialLength }}=
-              <span class="font-weight-bold mx-1"> {{ partsPerBar }} </span>
+              <span class="font-weight-bold mx-1"> {{ partsPerBar }}</span>
               parts per bar
             </div>
           </v-row>

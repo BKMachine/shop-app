@@ -14,7 +14,7 @@
             <div class="stock">{{ tool.stock }}</div>
             <div>In Stock</div>
             <div class="location">
-              <span v-if="tool.location"> {{ tool.location }} </span>
+              <span v-if="tool.location"> {{ tool.location }}</span>
               <span v-if="tool.position"> | {{ tool.position }}</span>
             </div>
           </div>

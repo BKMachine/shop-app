@@ -7,7 +7,7 @@
       </v-btn>
     </v-row>
     <div v-for="(item, i) in items" :key="i">
-      <span class="bold"> {{ item[0] }} </span>
+      <span class="bold"> {{ item[0] }}</span>
       <v-divider />
       <div v-for="(tool, j) in item[1]" :key="tool._id">
         <input type="checkbox" class="mr-2" :checked="tool.onOrder" @click="toggleOnOrder(tool)" />

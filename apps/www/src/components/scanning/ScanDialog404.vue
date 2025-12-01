@@ -6,7 +6,7 @@
     </v-card-title>
     <v-card-text>
       No items were found with the scan code:
-      <span class="scan-code"> {{ scannerStore.code }} </span>
+      <span class="scan-code"> {{ scannerStore.code }}</span>
     </v-card-text>
     <v-card-actions>
       <v-spacer />
