@@ -135,7 +135,7 @@ const hasAlarm = computed(() => {
 const alarmMessages = computed<string[]>(() => {
   if (props.data.source === 'focas') {
     return Object.values(alarms.value).map((a) => {
-      const msg: string = a.message.replace(/\*/g, ' ').trim();
+      const msg: string = a.message.replace(/\*/g, ' ').replace(/�/g, '').trim();
       return alarmMutations[msg] || msg;
     });
   } else {
