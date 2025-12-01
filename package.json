@@ -22,7 +22,7 @@
     "publish:all": "pnpm run publish:server && pnpm run publish:status && pnpm run publish:haas_serial"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.7",
+    "@biomejs/biome": "^2.3.8",
     "npm-check": "^6.0.1",
     "turbo": "^2.6.1"
   },

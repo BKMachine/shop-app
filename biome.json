@@ -42,7 +42,7 @@
   },
   "html": {
     "experimentalFullSupportEnabled": true,
-    "formatter": { "selfCloseVoidElements": "always" }
+    "formatter": { "enabled": true, "selfCloseVoidElements": "always" }
   },
   "assist": {
     "enabled": true,
