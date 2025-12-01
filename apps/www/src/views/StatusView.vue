@@ -29,18 +29,16 @@ socket.io.on('reconnect', () => {
 socket.on('change', (status: { id: string; changes: Changes }) => {
   const { id, changes } = status;
   const index = machines.value.findIndex((x) => x.id === id);
-  if (index !== -1) {
-    let currentState = machines.value[index]?.state;
-    if (currentState) currentState = Object.assign({}, currentState, changes);
+  if (index !== -1 && machines.value[index]) {
+    machines.value[index].state = Object.assign({}, machines.value[index].state, changes);
   }
 });
 
 socket.on('status', (data: { id: string; status: MachineStatus }) => {
   const { id, status } = data;
   const index = machines.value.findIndex((x) => x.id === id);
-  if (index !== -1) {
-    let currentStatus = machines.value[index]?.status;
-    if (currentStatus) currentStatus = status;
+  if (index !== -1 && machines.value[index]) {
+    machines.value[index].status = status;
   }
 });
 
