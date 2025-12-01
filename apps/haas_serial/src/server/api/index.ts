@@ -13,7 +13,11 @@ router.post('/serial/status', async (req, res, next) => {
     const responses = await fetch(url);
     res.status(200).json({ data: responses });
   } catch (e) {
-    next(e);
+    if (e && (e as any).status) {
+      res.status((e as any).status).json({ error: (e as any).message });
+    } else {
+      next(e);
+    }
   }
 });
 

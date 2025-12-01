@@ -1,3 +1,4 @@
+import net from 'node:net';
 import { RemoteSerialPort } from 'remote-serial-port-client';
 
 type PendingRequest = {
@@ -48,6 +49,13 @@ export async function fetch(url: string): Promise<string[][]> {
 
 async function serial(url: string): Promise<string[][]> {
   const { hostname, port } = new URL(url);
+  const isOpen = await isRemotePortOpen(hostname, parseInt(port, 10), 200);
+  if (!isOpen) {
+    const error = new Error(`Cannot connect to ${hostname}:${port}`);
+    (error as any).status = 503;
+    throw error;
+  }
+
   const responses: string[][] = [];
   const tcp: RSPC = new RemoteSerialPort({ mode: 'tcp', host: hostname, port, reconnect: false });
   await open(tcp);
@@ -64,6 +72,7 @@ function open(tcp: RSPC): Promise<void> {
 
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
+      tcp.close();
       reject(new Error(`Connection timeout after ${seconds} seconds`));
     }, seconds * 1000);
 
@@ -92,4 +101,29 @@ function parse(result: Buffer) {
     .toString('ascii')
     .replace(/[^0-9A-Z,]/gi, '')
     .split(',');
+}
+
+function isRemotePortOpen(host: string, port: number, timeout = 2000) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+
+    socket.setTimeout(timeout);
+
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.once('error', (_err) => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.connect(port, host);
+  });
 }
