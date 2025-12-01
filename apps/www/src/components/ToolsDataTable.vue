@@ -72,10 +72,6 @@
           :search="search"
           :loading="toolStore.loading"
           @click:row="openTool"
-
-
-
-          
         >
           <template v-slot:['item.img']="{ item }">
             <v-img :id="item._id" :src="item.img" class="tool-img"></v-img>
