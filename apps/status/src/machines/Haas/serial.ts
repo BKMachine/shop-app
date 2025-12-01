@@ -24,10 +24,17 @@ export function stop() {
 }
 
 function run() {
+  logger.debug('Haas Serial Polling...');
   machines.forEach((machine, location) => {
     const changes: Changes = new Map();
+    const url = new URL(process.env.HAAS_SERIAL_URL as string);
+    const name = machine.getMachine().name;
+    const uri = url.pathname.endsWith('/')
+      ? `${url.pathname}${encodeURIComponent(name)}`
+      : `${url.pathname}/${encodeURIComponent(name)}`;
+    url.pathname = uri;
     axios
-      .post<string[][]>(process.env.HAAS_SERIAL_URL as string, { url: location })
+      .post<string[][]>(url.toString(), { url: location })
       .then(async ({ data: responses }) => {
         const state = machine.getState() as HaasState;
         const online = state.online;

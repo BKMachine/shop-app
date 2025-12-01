@@ -7,7 +7,7 @@ router.get('/', (_req, res, _next) => {
   res.status(200).json({ message: 'Welcome to the API' });
 });
 
-router.post('/serial/status', async (req, res, next) => {
+router.post(['/serial/status/:name', '/serial/status'], async (req, res, next) => {
   const { url } = req.body;
   try {
     const responses = await fetch(url);

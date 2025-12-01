@@ -92,7 +92,7 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
         if (error) reject(error);
         else resolve(parse(result));
       });
-    }, 500);
+    }, 300);
   });
 }
 
