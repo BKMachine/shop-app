@@ -60,8 +60,15 @@ async function serial(url: string): Promise<string[][]> {
 }
 
 function open(tcp: RSPC): Promise<void> {
+  const seconds = 3;
+
   return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`Connection timeout after ${seconds} seconds`));
+    }, seconds * 1000);
+
     tcp.open((error) => {
+      if (timeout) clearTimeout(timeout);
       if (error) reject(error);
       else resolve();
     });
