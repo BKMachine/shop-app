@@ -49,9 +49,9 @@ export async function fetch(url: string): Promise<string[][]> {
 
 async function serial(url: string): Promise<string[][]> {
   const { hostname, port } = new URL(url);
-  const isOpen = await isRemotePortOpen(hostname, parseInt(port, 10), 200);
+  const isOpen = await isRemotePortOpen(hostname, parseInt(port, 10), 1000);
   if (!isOpen) {
-    const error = new Error(`Cannot connect to ${hostname}:${port}`);
+    const error = new Error(`Cannot connect to ${url}`);
     (error as any).status = 503;
     throw error;
   }
