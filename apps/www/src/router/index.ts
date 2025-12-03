@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import CameraView from '@/views/CameraView.vue';
 import HomeView from '@/views/HomeView.vue';
 import LocationsView from '@/views/LocationsView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
@@ -72,6 +73,11 @@ const router = createRouter({
       path: '/status',
       name: 'status',
       component: StatusView,
+    },
+    {
+      path: '/camera',
+      name: 'camera',
+      component: CameraView,
     },
   ],
 });

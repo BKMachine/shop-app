@@ -132,8 +132,8 @@ declare global {
     status: 'temp' | 'attached';
     entityType: 'tool' | 'part' | 'setup' | null;
     entityId: string | null;
-    createdAt?: Date;
-    updatedAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
   }
 
   interface ImageDoc extends Omit<Image, '_id'>, Document<Types.ObjectId> {

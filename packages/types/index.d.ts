@@ -77,3 +77,9 @@ interface ToolReorders extends ToolDoc {
 }
 
 type ToolDocReorders = ToolDoc & ToolReorders;
+
+interface RecentImage {
+  id: string;
+  url: string;
+  createdAt: string;
+}

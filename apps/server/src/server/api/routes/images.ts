@@ -94,11 +94,14 @@ router.get('/recent', async (_req, res) => {
     const docs = await ImageService.listRecents();
 
     res.json(
-      docs.map((img) => ({
-        id: img._id,
-        url: `/images/${img.relPath}`,
-        createdAt: img.createdAt,
-      })),
+      docs.map((img) => {
+        const recents: RecentImage = {
+          id: img._id.toString(),
+          url: `/images/${img.relPath}`,
+          createdAt: img.createdAt.toISOString(),
+        };
+        return recents;
+      }),
     );
   } catch (err) {
     console.error(err);
