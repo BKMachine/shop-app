@@ -49,7 +49,7 @@ interface OtherTool extends ToolDocBase {
 
 type Tool = MillingTool | TurningTool | OtherTool;
 
-type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other';
+type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other' | 'all';
 type MillingToolType = import('../www/src/plugins/toolTypes').MillingType;
 type TurningToolType = import('../www/src/plugins/toolTypes').TurningType;
 type OtherToolType = import('../www/src/plugins/toolTypes').OtherType;

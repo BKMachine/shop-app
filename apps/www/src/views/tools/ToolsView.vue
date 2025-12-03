@@ -4,6 +4,7 @@
     <v-tab value="turning" class="turning">Lathe</v-tab>
     <v-tab value="swiss" class="swiss">Swiss</v-tab>
     <v-tab value="other" class="other">Misc</v-tab>
+    <v-tab value="all" class="all">All</v-tab>
   </v-tabs>
 
   <v-window v-model="tab" class="mt-3">
@@ -49,6 +50,18 @@
         title="Miscellaneous Items"
         :headers="otherHeaders"
         :items="toolStore.otherTools"
+        :category="tab"
+        :search="search"
+        @updateSearch="updateSearch"
+      />
+    </v-window-item>
+
+    <v-window-item value="all">
+      <ToolsDataTable
+        v-if="tab === 'all'"
+        title="All Items"
+        :headers="otherHeaders"
+        :items="toolStore.tools"
         :category="tab"
         :search="search"
         @updateSearch="updateSearch"
