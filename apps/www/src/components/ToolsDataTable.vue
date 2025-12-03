@@ -2,7 +2,7 @@
   <v-card>
     <v-card-title class="header">
       <div>{{ resultsTitle }}</div>
-      <div>
+      <div v-if="category !== 'all'">
         <v-btn link :to="{ name: 'createTool' }" color="primary" prepend-icon="mdi-plus">
           Create New Tool
         </v-btn>
