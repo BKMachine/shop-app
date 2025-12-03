@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import SMTPService from '../../services/smtp_service.js';
 import AuditRoutes from './routes/audits.js';
 import CustomerRoutes from './routes/customers.js';
+import ImageRoutes from './routes/images.js';
 import MaterialRoutes from './routes/materials.js';
 import PartRoutes from './routes/parts.js';
 import PrintRoutes from './routes/print.js';
@@ -36,6 +37,8 @@ router.use(PartRoutes);
 router.use(MaterialRoutes);
 router.use(ReportRoutes);
 
+router.use('/images', ImageRoutes);
+
 router.get('/mail/reorders', async (_req, res, next) => {
   try {
     await SMTPService.reorders();
@@ -44,4 +47,5 @@ router.get('/mail/reorders', async (_req, res, next) => {
     next(e);
   }
 });
+
 export default router;

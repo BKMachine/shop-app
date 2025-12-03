@@ -121,4 +121,22 @@ declare global {
   interface VendorDoc extends Omit<Vendor, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
+
+  /* IMAGE */
+
+  interface Image {
+    _id: string;
+    filename: string;
+    relPath: string;
+    mimeType?: string;
+    status: 'temp' | 'attached';
+    entityType: 'tool' | 'part' | 'setup' | null;
+    entityId: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }
+
+  interface ImageDoc extends Omit<Image, '_id'>, Document<Types.ObjectId> {
+    _id: Types.ObjectId;
+  }
 }
