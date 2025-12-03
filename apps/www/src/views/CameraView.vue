@@ -48,7 +48,7 @@ onMounted(() => {
 });
 
 function loadRecent() {
-  api.get('/images/recent').then(({ data }) => {
+  api.get('/images/uploads/recent').then(({ data }) => {
     images.value = data;
   });
 }

@@ -6,7 +6,7 @@ async function add(data: unknown): Promise<ImageDoc> {
   return doc;
 }
 
-async function update(image: Image): Promise<ImageDoc | null> {
+async function update(image: ImageDoc): Promise<ImageDoc | null> {
   return await Image.findByIdAndUpdate(
     image._id,
     { ...image, updatedAt: new Date() },
@@ -18,8 +18,13 @@ async function listRecents(limit = 50): Promise<ImageDoc[]> {
   return Image.find({ status: 'temp' }).sort({ createdAt: -1 }).limit(limit);
 }
 
+async function findById(id: string): Promise<ImageDoc | null> {
+  return Image.findById(id);
+}
+
 export default {
   add,
   update,
   listRecents,
+  findById,
 };
