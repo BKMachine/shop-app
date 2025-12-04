@@ -1,10 +1,10 @@
-import { io } from 'socket.io-client';
 import { createApp } from 'vue';
 import axios from '@/plugins/axios';
 import { useToolStore } from '@/stores/tool_store';
 import App from './App.vue';
 import { registerPlugins } from './plugins';
 import './assets/style.css';
+import { socket } from '@/plugins/socket';
 
 const app = createApp(App);
 registerPlugins(app);
@@ -12,7 +12,6 @@ app.mount('#app');
 
 // Socket connection to backend for app updates
 const toolStore = useToolStore();
-const socket = io({ transports: ['websocket', 'polling'] });
 
 // Tool updated or added
 socket.on('tool', (tool: Tool) => {

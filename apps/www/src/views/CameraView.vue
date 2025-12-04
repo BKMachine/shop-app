@@ -38,10 +38,15 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import api from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 
 const loading = ref(false);
 const error = ref('');
 const images = ref<RecentImage[]>([]);
+
+socket.on('imageUploaded', () => {
+  loadRecent();
+});
 
 onMounted(() => {
   loadRecent();

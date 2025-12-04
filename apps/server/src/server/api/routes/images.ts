@@ -6,6 +6,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import ImageService from '../../../database/lib/image/image_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
+import { emit } from '../../sockets.js';
 
 const router: Router = Router();
 
@@ -42,6 +43,7 @@ router.post('/uploads/file', upload.single('image'), async (req, res) => {
       url: `/images/${image.relPath}`,
       createdAt: image.createdAt,
     });
+    emit('imageUploaded');
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Upload failed' });
@@ -83,6 +85,7 @@ router.post('/uploads/url', async (req, res) => {
       url: `/images/${image.relPath}`,
       createdAt: image.createdAt,
     });
+    emit('imageUploaded');
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to download image' });
