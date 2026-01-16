@@ -93,7 +93,7 @@ const lastCycle = computed(() => {
 });
 
 const hasMacroTimer = computed(() => {
-  const macroTimerMachines = ['rd1', 'rd2', 'rd3'];
+  const macroTimerMachines = ['rd1', 'rd2', 'rd3', 'rd4'];
   return macroTimerMachines.includes(props.data.name.toLowerCase());
 });
 
