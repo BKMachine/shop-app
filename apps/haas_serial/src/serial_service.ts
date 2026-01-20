@@ -97,10 +97,12 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
 }
 
 function parse(result: Buffer) {
-  return result
+  const resultArray = result
     .toString('ascii')
     .replace(/[^0-9A-Z,]/gi, '')
     .split(',');
+  if (resultArray[0]) resultArray[0] = resultArray[0].replace(/^Q[0-9]+/, '');
+  return resultArray;
 }
 
 function isRemotePortOpen(host: string, port: number, timeout = 2000) {
