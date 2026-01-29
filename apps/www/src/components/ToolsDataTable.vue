@@ -49,7 +49,7 @@
                 </v-row>
               </v-col>
             </v-row>
-            <v-row> </v-row>
+            <v-row></v-row>
           </div>
           <div v-else>
             <v-text-field
@@ -76,9 +76,7 @@
           <template v-slot:['item.img']="{ item }">
             <v-img :id="item._id" :src="item.img" class="tool-img"></v-img>
           </template>
-          <template v-slot:['item.location']="{ item }">
-            {{ location(item) }}
-          </template>
+          <template v-slot:['item.location']="{ item }">{{ location(item) }}</template>
           <template v-slot:['item.stock']="{ item }">
             <span class="stock">{{ item.stock }}</span>
           </template>

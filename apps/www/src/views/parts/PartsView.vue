@@ -42,17 +42,13 @@
             </template>
           </v-hover>
         </template>
-        <template v-slot:['item.location']="{ item }">
-          {{ location(item) }}
-        </template>
+        <template v-slot:['item.location']="{ item }">{{ location(item) }}</template>
         <template v-slot:['item.stock']="{ item }">
           <div class="d-flex align-center">
             <v-dialog max-width="500">
               <template v-slot:activator="{ props: activatorProps }">
                 <v-btn v-bind="activatorProps">
-                  <span class="stock mr-2">
-                    {{ item.stock }}
-                  </span>
+                  <span class="stock mr-2"> {{ item.stock }} </span>
                   <v-icon icon="mdi-contrast" size="large" color="secondary" />
                 </v-btn>
               </template>

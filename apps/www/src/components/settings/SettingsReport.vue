@@ -4,9 +4,7 @@
     <v-row class="mb-2" no-gutters>
       <v-col cols="4"></v-col>
       <v-col cols="6" class="">
-        <div>
-          <span class="mr-4 font-weight-bold">Tooling Report</span>
-        </div>
+        <div><span class="mr-4 font-weight-bold">Tooling Report</span></div>
         <div>
           <span class="ml-4" style="width: 40px;">To</span>
           <span class="ml-4" style="width: 40px;">Cc</span>
