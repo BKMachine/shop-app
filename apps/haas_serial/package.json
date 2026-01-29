@@ -14,26 +14,26 @@
   },
   "engineStrict": true,
   "dependencies": {
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "http-terminator": "^3.2.0",
     "morgan": "^1.10.1",
     "remote-serial-port-client": "^0.4.0",
-    "winston": "^3.18.3"
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@repo/utilities": "workspace:*",
     "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.5",
-    "@types/lodash": "^4.17.20",
+    "@types/express": "^5.0.6",
+    "@types/lodash": "^4.17.23",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^24.10.1",
+    "@types/node": "^25.1.0",
     "@types/shop-app": "workspace:*",
     "rimraf": "^6.1.2",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3"
   }
 }
