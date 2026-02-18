@@ -58,7 +58,6 @@ async function serial(url: string): Promise<string[][]> {
 
   const responses: string[][] = [];
   const tcp: RSPC = new RemoteSerialPort({ mode: 'tcp', host: hostname, port, reconnect: false });
-  console.time('serial');
   try {
     await open(tcp);
     // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
@@ -71,7 +70,6 @@ async function serial(url: string): Promise<string[][]> {
   } finally {
     tcp.close();
   }
-  console.timeEnd('serial');
   return responses;
 }
 
