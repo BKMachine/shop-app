@@ -59,12 +59,18 @@ async function serial(url: string): Promise<string[][]> {
   const responses: string[][] = [];
   const tcp: RSPC = new RemoteSerialPort({ mode: 'tcp', host: hostname, port, reconnect: false });
   console.time('serial');
-  await open(tcp);
-  // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
-  responses.push(await send(tcp, 104)); // MODE, xxxxx
-  responses.push(await send(tcp, 303)); // LASTCYCLE, xxxxxxx
-  responses.push(await send(tcp, 500)); // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
-  tcp.close();
+  try {
+    await open(tcp);
+    // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
+    responses.push(await send(tcp, 104)); // MODE, xxxxx
+    responses.push(await send(tcp, 303)); // LASTCYCLE, xxxxxxx
+    responses.push(await send(tcp, 500)); // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
+  } catch (error) {
+    tcp.close();
+    throw error;
+  } finally {
+    tcp.close();
+  }
   console.timeEnd('serial');
   return responses;
 }
@@ -73,15 +79,34 @@ function open(tcp: RSPC): Promise<void> {
   const seconds = 3;
 
   return new Promise((resolve, reject) => {
+    let finished = false;
+
     const timeout = setTimeout(() => {
+      if (finished) return;
+      finished = true;
       tcp.close();
       reject(new Error(`Connection timeout after ${seconds} seconds`));
     }, seconds * 1000);
 
+    const handleError = (error: any) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeout);
+      tcp.close();
+      reject(error);
+    };
+
+    tcp.on('error', handleError);
     tcp.open((error) => {
-      if (timeout) clearTimeout(timeout);
-      if (error) reject(error);
-      else resolve();
+      if (finished) return;
+      clearTimeout(timeout);
+      finished = true;
+      if (error) {
+        tcp.close();
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }
@@ -120,7 +145,13 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
 
     tcp.on('read', onRead);
     tcp.on('error', onError);
-    tcp.write(`Q${code}\r\n`);
+    try {
+      tcp.write(`Q${code}\r\n`);
+    } catch (error) {
+      finished = true;
+      clearTimeout(timeout);
+      reject(error);
+    }
   });
 }
 
