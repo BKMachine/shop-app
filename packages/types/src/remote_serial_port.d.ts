@@ -5,4 +5,5 @@ interface RSPC {
   write(text: string);
   read(callback: (error: Error, result: Buffer) => void);
   close: () => void;
+  on(event: 'read' | 'error', listener: Function): void;
 }

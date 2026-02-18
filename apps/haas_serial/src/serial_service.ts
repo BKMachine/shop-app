@@ -58,12 +58,14 @@ async function serial(url: string): Promise<string[][]> {
 
   const responses: string[][] = [];
   const tcp: RSPC = new RemoteSerialPort({ mode: 'tcp', host: hostname, port, reconnect: false });
+  console.time('serial');
   await open(tcp);
   // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
   responses.push(await send(tcp, 104)); // MODE, xxxxx
   responses.push(await send(tcp, 303)); // LASTCYCLE, xxxxxxx
   responses.push(await send(tcp, 500)); // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
   tcp.close();
+  console.timeEnd('serial');
   return responses;
 }
 
@@ -86,13 +88,39 @@ function open(tcp: RSPC): Promise<void> {
 
 async function send(tcp: RSPC, code: QCode): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    tcp.write(`Q${code}\r`);
-    setTimeout(() => {
-      tcp.read((error, result) => {
-        if (error) reject(error);
-        else resolve(parse(result));
-      });
-    }, 300);
+    let data = Buffer.alloc(0);
+    let finished = false;
+
+    const onRead = (result: any) => {
+      if (finished) return;
+
+      data = Buffer.concat([data, result.data]);
+
+      // Check if we've received the EOL (CR LF)
+      if (data.includes('\r\n')) {
+        finished = true;
+        clearTimeout(timeout);
+        resolve(parse(data));
+      }
+    };
+
+    const onError = (error: any) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeout);
+      reject(error);
+    };
+
+    // Add a safety timeout in case no EOL is received
+    const timeout = setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      reject(new Error('No EOL received within timeout'));
+    }, 500);
+
+    tcp.on('read', onRead);
+    tcp.on('error', onError);
+    tcp.write(`Q${code}\r\n`);
   });
 }
 
