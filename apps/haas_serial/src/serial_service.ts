@@ -139,7 +139,7 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
       if (finished) return;
       finished = true;
       reject(new Error('No EOL received within timeout'));
-    }, 500);
+    }, 1000);
 
     tcp.on('read', onRead);
     tcp.on('error', onError);
