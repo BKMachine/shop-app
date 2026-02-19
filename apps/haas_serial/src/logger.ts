@@ -2,6 +2,7 @@ import * as logger from '@repo/utilities/logger';
 import type { Logger } from 'winston';
 
 const myLogger: Logger = logger.create('haas_serial');
+myLogger.level = process.env.DEBUG ? 'debug' : 'info';
 
 class MyStream {
   write(text: string) {

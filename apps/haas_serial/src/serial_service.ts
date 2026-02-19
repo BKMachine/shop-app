@@ -1,5 +1,6 @@
 import net from 'node:net';
 import { RemoteSerialPort } from 'remote-serial-port-client';
+import logger from './logger.js';
 
 type PendingRequest = {
   resolve: (value: string[][]) => void;
@@ -11,6 +12,7 @@ const inProgress = new Set<string>();
 
 export async function fetch(url: string): Promise<string[][]> {
   // Add this request to the queue for this URL
+  logger.debug(`Received request for ${url}`);
   const pending = new Promise<string[][]>((resolve, reject) => {
     const urlQueue = queue.get(url) ?? [];
     if (!queue.has(url)) {
@@ -20,12 +22,16 @@ export async function fetch(url: string): Promise<string[][]> {
 
     // If no request is already in progress for this URL, start one
     if (!inProgress.has(url)) {
+      logger.debug(`Starting new request for ${url}`);
       inProgress.add(url);
       serial(url)
         .then((result) => {
           // Resolve all pending requests for this URL
           const pendingRequests = queue.get(url) ?? [];
           queue.delete(url);
+          logger.debug(
+            `Request for ${url} completed, resolving ${pendingRequests.length} pending requests`,
+          );
           pendingRequests.forEach(({ resolve: res }) => {
             res(result);
           });
@@ -34,6 +40,9 @@ export async function fetch(url: string): Promise<string[][]> {
           // Reject all pending requests for this URL
           const pendingRequests = queue.get(url) ?? [];
           queue.delete(url);
+          logger.debug(
+            `Request for ${url} failed, rejecting ${pendingRequests.length} pending requests: ${error.message}`,
+          );
           pendingRequests.forEach(({ reject: rej }) => {
             rej(error);
           });
@@ -50,6 +59,7 @@ export async function fetch(url: string): Promise<string[][]> {
 async function serial(url: string): Promise<string[][]> {
   const { hostname, port } = new URL(url);
   const isOpen = await isRemotePortOpen(hostname, parseInt(port, 10), 1000);
+  logger.debug(`Checked remote port ${hostname}:${port}, open: ${isOpen}`);
   if (!isOpen) {
     const error = new Error(`Cannot connect to ${url}`);
     (error as any).status = 503;
@@ -59,15 +69,19 @@ async function serial(url: string): Promise<string[][]> {
   const responses: string[][] = [];
   const tcp: RSPC = new RemoteSerialPort({ mode: 'tcp', host: hostname, port, reconnect: false });
   try {
+    logger.debug(`Attempting to open serial communication to ${url}`);
     await open(tcp);
+    logger.debug(`Serial communication to ${url} opened successfully`);
     // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
-    responses.push(await send(tcp, 104)); // MODE, xxxxx
-    responses.push(await send(tcp, 303)); // LASTCYCLE, xxxxxxx
-    responses.push(await send(tcp, 500)); // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
-  } catch (error) {
+    responses.push(await send(tcp, 104, url)); // MODE, xxxxx
+    responses.push(await send(tcp, 303, url)); // LASTCYCLE, xxxxxxx
+    responses.push(await send(tcp, 500, url)); // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
+  } catch (error: any) {
+    logger.debug(`Error during serial communication to ${url}: ${error.message}`);
     tcp.close();
     throw error;
   } finally {
+    logger.debug(`Closing serial communication to ${url}`);
     tcp.close();
   }
   return responses;
@@ -95,6 +109,7 @@ function open(tcp: RSPC): Promise<void> {
     };
 
     tcp.on('error', handleError);
+
     tcp.open((error) => {
       if (finished) return;
       clearTimeout(timeout);
@@ -109,7 +124,7 @@ function open(tcp: RSPC): Promise<void> {
   });
 }
 
-async function send(tcp: RSPC, code: QCode): Promise<string[]> {
+async function send(tcp: RSPC, code: QCode, url: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
     let data = Buffer.alloc(0);
     let finished = false;
@@ -121,6 +136,9 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
 
       // Check if we've received the EOL (CR LF)
       if (data.includes('\r\n')) {
+        logger.debug(
+          `Received response for Q${code} from ${url}: ${data.toString('ascii').trim()}`,
+        );
         finished = true;
         clearTimeout(timeout);
         resolve(parse(data));
@@ -128,6 +146,7 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
     };
 
     const onError = (error: any) => {
+      logger.debug(`Error while waiting for response to Q${code} from ${url}: ${error.message}`);
       if (finished) return;
       finished = true;
       clearTimeout(timeout);
@@ -143,8 +162,11 @@ async function send(tcp: RSPC, code: QCode): Promise<string[]> {
 
     tcp.on('read', onRead);
     tcp.on('error', onError);
+
     try {
+      logger.debug(`Sending command Q${code} to ${url}`);
       tcp.write(`Q${code}\r\n`);
+      logger.debug(`Command Q${code} sent, waiting for response...`);
     } catch (error) {
       finished = true;
       clearTimeout(timeout);
