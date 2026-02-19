@@ -1,4 +1,3 @@
-import net from 'node:net';
 import { RemoteSerialPort } from 'remote-serial-port-client';
 import logger from './logger.js';
 
@@ -58,21 +57,22 @@ export async function fetch(url: string): Promise<string[][]> {
 
 async function serial(url: string): Promise<string[][]> {
   const { hostname, port } = new URL(url);
-  const isOpen = await isRemotePortOpen(hostname, parseInt(port, 10), 1000);
-  logger.debug(`Checked remote port ${hostname}:${port}, open: ${isOpen}`);
-  if (!isOpen) {
-    const error = new Error(`Cannot connect to ${url}`);
-    (error as any).status = 503;
-    throw error;
-  }
-
   const responses: string[][] = [];
   const tcp: RSPC = new RemoteSerialPort({ mode: 'tcp', host: hostname, port, reconnect: false });
+
   try {
     logger.debug(`Attempting to open serial communication to ${url}`);
     await open(tcp);
     logger.debug(`Serial communication to ${url} opened successfully`);
-    // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
+  } catch (error: any) {
+    logger.debug(`Error during open serial communication to ${url}: ${error.message}`);
+    tcp.close();
+    error.status = 503; // Service Unavailable
+    throw error;
+  }
+
+  // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
+  try {
     responses.push(await send(tcp, 104, url)); // MODE, xxxxx
     responses.push(await send(tcp, 303, url)); // LASTCYCLE, xxxxxxx
     responses.push(await send(tcp, 500, url)); // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
@@ -88,7 +88,7 @@ async function serial(url: string): Promise<string[][]> {
 }
 
 function open(tcp: RSPC): Promise<void> {
-  const seconds = 3;
+  const seconds = 1;
 
   return new Promise((resolve, reject) => {
     let finished = false;
@@ -137,7 +137,7 @@ async function send(tcp: RSPC, code: QCode, url: string): Promise<string[]> {
       // Check if we've received the EOL (CR LF)
       if (data.includes('\r\n')) {
         logger.debug(
-          `Received response for Q${code} from ${url}: ${data.toString('ascii').trim()}`,
+          `Received response for Q${code} from ${url}: ${data.toString('ascii').trim().replace(/\r?\n/g, '')}`,
         );
         finished = true;
         clearTimeout(timeout);
@@ -182,29 +182,4 @@ function parse(result: Buffer) {
     .split(',');
   if (resultArray[0]) resultArray[0] = resultArray[0].replace(/^Q[0-9]+/, '');
   return resultArray;
-}
-
-function isRemotePortOpen(host: string, port: number, timeout = 2000) {
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-
-    socket.setTimeout(timeout);
-
-    socket.once('connect', () => {
-      socket.destroy();
-      resolve(true);
-    });
-
-    socket.once('error', (_err) => {
-      socket.destroy();
-      resolve(false);
-    });
-
-    socket.once('timeout', () => {
-      socket.destroy();
-      resolve(false);
-    });
-
-    socket.connect(port, host);
-  });
 }
