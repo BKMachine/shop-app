@@ -1,7 +1,5 @@
 <template>
-  <div>
-    <img :src="logo" alt="logo" />
-  </div>
+  <div><img :src="logo" alt="logo" /></div>
 </template>
 
 <script setup lang="ts">

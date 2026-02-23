@@ -14,9 +14,7 @@
           />
           <div class="logo-container">
             <v-text-field v-model="editingItem.logo" label="Logo URL" />
-            <div class="logo-preview ml-3 elevation-1">
-              <img :src="editingItem.logo" alt="" />
-            </div>
+            <div class="logo-preview ml-3 elevation-1"><img :src="editingItem.logo" alt="" /></div>
           </div>
           <v-text-field
             v-model="editingItem.homepage"

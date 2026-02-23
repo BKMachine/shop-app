@@ -141,9 +141,7 @@
                     required
                   ></v-text-field>
                 </v-col>
-                <v-col cols="6">
-                  <SupplierSelect v-model="selectedMaterial.supplier" />
-                </v-col>
+                <v-col cols="6"> <SupplierSelect v-model="selectedMaterial.supplier" /> </v-col>
               </v-row>
             </v-form>
           </v-card-text>

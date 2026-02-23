@@ -40,9 +40,7 @@
         <v-list-item prepend-icon="mdi-cog" link to="/settings">Settings</v-list-item>
       </template>
     </v-navigation-drawer>
-    <v-main>
-      <RouterView />
-    </v-main>
+    <v-main> <RouterView /> </v-main>
     <v-dialog v-model="scannerStore.dialog" class="scan-dialog" opacity="0.65">
       <ScanDialogTool v-if="scannerStore.type === 'tool'" />
       <ScanDialog404 v-else-if="scannerStore.type === '404'" />

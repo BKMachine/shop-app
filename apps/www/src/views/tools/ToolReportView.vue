@@ -2,9 +2,7 @@
   <v-container>
     <v-row>
       <v-spacer />
-      <v-btn class="my-5" @click="mail">
-        <v-icon icon="mdi-email-outline" />
-      </v-btn>
+      <v-btn class="my-5" @click="mail"> <v-icon icon="mdi-email-outline" /> </v-btn>
     </v-row>
     <div v-for="(item, i) in items" :key="i">
       <span class="bold"> {{ item[0] }}</span>

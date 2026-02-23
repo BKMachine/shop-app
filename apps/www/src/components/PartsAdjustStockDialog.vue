@@ -25,9 +25,7 @@
       </v-col>
       <v-col cols="3" class="stock-display align-center d-flex flex-column">
         <v-row>{{ part.stock }}</v-row>
-        <v-row>
-          <v-icon icon="mdi-arrow-down"></v-icon>
-        </v-row>
+        <v-row> <v-icon icon="mdi-arrow-down"></v-icon> </v-row>
         <v-row>{{ newStock }}</v-row>
       </v-col>
     </v-row>

@@ -14,9 +14,7 @@
           />
           <div class="logo-container">
             <v-text-field v-model="editingItem.logo" label="Logo URL" />
-            <div class="logo-preview ml-3 elevation-1">
-              <img :src="editingItem.logo" alt="" />
-            </div>
+            <div class="logo-preview ml-3 elevation-1"><img :src="editingItem.logo" alt="" /></div>
           </div>
           <v-text-field
             v-model="editingItem.homepage"
@@ -25,9 +23,7 @@
             @click:append-inner="open"
           />
           <v-combobox v-model="editingItem.coatings" label="Tool Coatings" chips multiple>
-            <template v-slot:selection="{ item }">
-              <v-chip>{{ item }}</v-chip>
-            </template>
+            <template v-slot:selection="{ item }"> <v-chip>{{ item }}</v-chip> </template>
           </v-combobox>
         </v-form>
       </v-card-text>

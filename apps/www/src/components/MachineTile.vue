@@ -3,7 +3,7 @@
     <div class="header">
       <div>{{ data.name }}</div>
       <img v-if="!isOnline" class="offline" :src="offlineImg" alt="OFFLINE" />
-      <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" />
+      <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" aria-label="brand" />
     </div>
     <div v-if="isOnline">
       <div class="details">

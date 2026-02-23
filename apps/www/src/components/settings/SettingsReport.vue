@@ -10,9 +10,7 @@
           <span class="ml-4" style="width: 40px;">Cc</span>
         </div>
       </v-col>
-      <v-col cols="2">
-        <v-btn color="primary" @click="addEmail">Add Email</v-btn>
-      </v-col>
+      <v-col cols="2"> <v-btn color="primary" @click="addEmail">Add Email</v-btn> </v-col>
     </v-row>
     <!-- Email Rows -->
     <v-row v-for="(email, index) in emails" :key="email._id" class="mb-0" no-gutters>
@@ -34,14 +32,10 @@
         ></v-checkbox>
       </v-col>
       <v-col cols="2" class="d-flex align-center">
-        <v-btn icon color="error" @click="deleteEmail(index)">
-          <v-icon>mdi-delete</v-icon>
-        </v-btn>
+        <v-btn icon color="error" @click="deleteEmail(index)"> <v-icon>mdi-delete</v-icon> </v-btn>
       </v-col>
     </v-row>
-    <v-row no-gutters>
-      <v-col cols="12"></v-col>
-    </v-row>
+    <v-row no-gutters> <v-col cols="12"></v-col> </v-row>
   </v-container>
 </template>
 

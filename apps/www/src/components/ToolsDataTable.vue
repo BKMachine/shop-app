@@ -15,7 +15,7 @@
             <v-row>
               <v-col cols="6">
                 <v-text-field
-                  v-model="search"
+                  v-model="searchText"
                   class="milling-search"
                   label="Search"
                   prepend-inner-icon="mdi-magnify"
@@ -53,7 +53,7 @@
           </div>
           <div v-else>
             <v-text-field
-              v-model="search"
+              v-model="searchText"
               label="Search"
               prepend-inner-icon="mdi-magnify"
               variant="outlined"
@@ -104,7 +104,7 @@ const props = defineProps<{
 const emits = defineEmits(['updateSearch']);
 
 const toolStore = useToolStore();
-const search = ref<string>(props.search);
+const searchText = ref<string>(props.search);
 const page = ref(1);
 const itemsPerPage = ref(10);
 const cuttingDia = ref<string>();
@@ -121,8 +121,8 @@ const types = computed<readonly string[]>(() => {
   return toolTypes[props.category];
 });
 
-watch(search, () => {
-  emits('updateSearch', search.value);
+watch(searchText, () => {
+  emits('updateSearch', searchText.value);
 });
 
 const filteredItems = computed<Tool[]>(() => {
