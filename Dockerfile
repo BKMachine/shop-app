@@ -34,11 +34,13 @@ RUN turbo prune www --docker
 COPY --from=www-prune /app/out/full/ .
 
 FROM server-installer AS server-builder
+RUN pnpm run format --filter=server
 RUN pnpm run ci --filter=server
 RUN pnpm run build --filter=server
 
 FROM www-installer AS www-builder
-RUN pnpm run ci --filter=www
+RUN pnpm run format --filter=www
+RUN pnpm run ci --filter=www 
 RUN pnpm run build --filter=www
 
 FROM node:22-slim AS runner

@@ -23,6 +23,7 @@ RUN turbo prune status --docker
 COPY --from=status-prune /app/out/full/ .
 
 FROM status-installer AS status-builder
+RUN pnpm run format --filter=status
 RUN pnpm run ci --filter=status
 RUN pnpm run build --filter=status
 

@@ -23,6 +23,7 @@ RUN turbo prune haas_serial --docker
 COPY --from=haas_serial-prune /app/out/full/ .
 
 FROM haas_serial-installer AS haas_serial-builder
+RUN pnpm run format --filter=haas_serial
 RUN pnpm run ci --filter=haas_serial
 RUN pnpm run build --filter=haas_serial
 
