@@ -64,8 +64,8 @@ importers:
         specifier: ^1.9.10
         version: 1.9.10
       '@types/node':
-        specifier: ^25.3.0
-        version: 25.3.0
+        specifier: ^25.4.0
+        version: 25.4.0
       '@types/shop-app':
         specifier: workspace:*
         version: link:../../packages/types

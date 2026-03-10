@@ -9,6 +9,10 @@ router.get('/', (_req, res, _next) => {
 
 router.post(['/serial/status/:name', '/serial/status'], async (req, res, next) => {
   const { url } = req.body;
+  if (!url) {
+    res.status(400).json({ error: 'Missing url in request body' });
+    return;
+  }
   try {
     const responses = await fetch(url);
     res.status(200).json({ data: responses });
