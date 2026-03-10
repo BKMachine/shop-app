@@ -6,7 +6,11 @@
     "start": "node ./index.mjs",
     "service:install": "node service_install.js",
     "service:uninstall": "node service_uninstall.js",
-    "rebuild": "pnpm service:uninstall && pnpm service:install"
+    "rebuild": "pnpm service:uninstall && pnpm service:install",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "check": "biome check",
+    "ci": "biome ci"
   },
   "dependencies": {
     "dymojs": "^1.2.0",
