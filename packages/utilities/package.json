@@ -16,7 +16,10 @@
   "scripts": {
     "build": "rimraf ./dist && tsc",
     "dev": "tsc --watch --preserveWatchOutput",
-    "lint": "biome check",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "check": "biome check",
+    "ci": "biome ci",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
