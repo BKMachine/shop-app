@@ -21,44 +21,49 @@
       <div class="activity-column">
         <h2 class="column-title">Tools</h2>
         <div v-if="toolActivities.length === 0" class="no-data">No activity</div>
-        <v-card v-for="activity in toolActivities" :key="activity._id" class="activity-card">
-          <v-card-text class="card-content">
-            <v-row class="align-center" no-gutters>
-              <!-- Tool Image -->
-              <v-col cols="3" class="image-col">
-                <v-img class="tool-image" :src="activity.new.img" />
-              </v-col>
+        <template v-for="dayGroup in toolActivitiesGroupedByDay" :key="dayGroup.date">
+          <div class="day-header">{{ dayGroup.date }}</div>
+          <v-card v-for="activity in dayGroup.activities" :key="activity._id" class="activity-card">
+            <v-card-text class="card-content">
+              <v-row class="align-center" no-gutters>
+                <!-- Tool Image -->
+                <v-col cols="3" class="image-col">
+                  <v-img class="tool-image" :src="activity.new.img" />
+                </v-col>
 
-              <!-- Tool Info -->
-              <v-col cols="auto" class="info-col">
-                <div class="tool-description">{{ activity.new.description }}</div>
-                <div class="activity-meta">
-                  <span :class="`amount ${activity.type === 'increase' ? 'increase' : 'decrease'}`">
-                    {{ activity.type === 'increase' ? '+' : '−' }}{{ activity.amount }}
-                  </span>
-                  <span class="stock-info">{{ activity.new.stock }}</span>
-                  <span class="cost-badge"
-                    >${{ (activity.amount * activity.new.cost).toFixed(2) }}</span
+                <!-- Tool Info -->
+                <v-col cols="auto" class="info-col">
+                  <div class="tool-description">{{ activity.new.description }}</div>
+                  <div class="activity-meta">
+                    <span
+                      :class="`amount ${activity.type === 'increase' ? 'increase' : 'decrease'}`"
+                    >
+                      {{ activity.type === 'increase' ? '+' : '−' }}{{ activity.amount }}
+                    </span>
+                    <span class="stock-info">{{ activity.new.stock }}</span>
+                    <span class="cost-badge"
+                      >${{ (activity.amount * activity.new.cost).toFixed(2) }}</span
+                    >
+                  </div>
+                  <div class="timestamp">{{ new Date(activity.timestamp).toLocaleString() }}</div>
+                </v-col>
+
+                <!-- Action Button -->
+                <v-col cols="auto" class="action-col">
+                  <v-btn
+                    icon
+                    size="x-small"
+                    class="action-btn"
+                    @click="open(activity.new)"
+                    title="View tool details"
                   >
-                </div>
-                <div class="timestamp">{{ new Date(activity.timestamp).toLocaleString() }}</div>
-              </v-col>
-
-              <!-- Action Button -->
-              <v-col cols="auto" class="action-col">
-                <v-btn
-                  icon
-                  size="x-small"
-                  class="action-btn"
-                  @click="open(activity.new)"
-                  title="View tool details"
-                >
-                  <v-icon icon="mdi-arrow-top-right" size="small"></v-icon>
-                </v-btn>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+                    <v-icon icon="mdi-arrow-top-right" size="small"></v-icon>
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+        </template>
       </div>
 
       <!-- Parts Activity Column (placeholder for future) -->
@@ -96,6 +101,19 @@ const toolActivities = computed(() =>
     .filter((audit) => audit.type !== 'no_change')
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
 );
+
+const toolActivitiesGroupedByDay = computed(() => {
+  const grouped: Record<string, typeof toolActivities.value> = {};
+  toolActivities.value.forEach((activity) => {
+    const date = new Date(activity.timestamp);
+    const dateKey = date.toLocaleDateString();
+    if (!grouped[dateKey]) {
+      grouped[dateKey] = [];
+    }
+    grouped[dateKey].push(activity);
+  });
+  return Object.entries(grouped).map(([date, activities]) => ({ date, activities }));
+});
 
 onMounted(() => {
   refreshAudits();
@@ -247,6 +265,23 @@ function open(tool: Tool) {
   color: #2c3e50;
   margin: 0;
   padding: 0 4px;
+}
+
+.day-header {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #95a5a6;
+  padding: 12px 4px 8px 4px;
+  margin-top: 12px;
+  border-top: 2px solid #ecf0f1;
+}
+
+.day-header:first-child {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
 }
 
 .no-data {
