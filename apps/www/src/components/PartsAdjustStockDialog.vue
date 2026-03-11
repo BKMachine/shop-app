@@ -2,9 +2,15 @@
   <v-card-title class="title">
     <div class="d-flex align-center justify-space-between">
       <span>{{ part.part }}</span>
-      <div class="d-flex align-center gap-3">
-        <span class="mode-label">{{ set ? 'Set' : 'Adjust' }}</span>
-        <v-switch v-model="set" color="white" @change="adjustment = 0"></v-switch>
+      <div class="d-flex align-center">
+        <span class="mode-label mr-4">{{ set ? 'Set' : 'Adjust' }}</span>
+        <v-switch
+          v-model="set"
+          color="white"
+          @change="adjustment = 0"
+          density="compact"
+          hide-details
+        ></v-switch>
       </div>
     </div>
   </v-card-title>
@@ -76,7 +82,7 @@
 
     <!-- Input and Stock Display -->
     <div class="stock-section">
-      <div class="text-caption text-uppercase font-weight-bold opacity-75 mb-2">
+      <div class="text-caption text-uppercase font-weight-bold opacity-75 mb-2 mt-8">
         {{ set ? 'New Stock' : 'Adjustment' }}
       </div>
       <v-row>
@@ -187,19 +193,13 @@ async function save() {
   font-weight: 600;
 }
 
-.mode-indicator {
-  padding: 8px 12px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
-  border-radius: 6px;
-  border-left: 3px solid #6366f1;
-  text-align: center;
-}
-
-.mode-text {
-  font-weight: 600;
-  font-size: 0.95rem;
-  margin: 0;
-  color: #1f2937;
+.mode-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  min-width: 60px;
+  text-align: right;
 }
 
 .button-grid {
@@ -216,7 +216,7 @@ async function save() {
 
 .stock-section {
   border-radius: 8px;
-  padding: 16px;
+  /* padding: 16px; */
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(139, 92, 246, 0.02) 100%);
 }
 
