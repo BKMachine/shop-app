@@ -32,6 +32,7 @@
       <v-tab value="general">General</v-tab>
       <v-tab value="material">Material</v-tab>
       <v-tab value="stock">Stock</v-tab>
+      <v-tab value="cost">Cost</v-tab>
       <v-tab value="docs">Documents</v-tab>
       <v-tab value="notes">Notes</v-tab>
       <v-spacer />
@@ -151,6 +152,15 @@
               parts per bar
             </div>
           </v-row>
+          <v-row no-gutters>
+            <div class="d-flex align-center ml-4">
+              ${{ materialCost }}/{{ partsPerBar }}=
+              <span class="font-weight-bold mx-1">
+                ${{ Math.round((materialCost / partsPerBar)*100)/100 }}</span
+              >
+              cost per part
+            </div>
+          </v-row>
         </v-window-item>
 
         <v-window-item value="stock">
@@ -192,6 +202,67 @@
           </v-row>
         </v-window-item>
 
+        <v-window-item value="cost">
+          <v-row no-gutters>
+            <v-col cols="4">
+              <v-text-field
+                v-model.number="part.price"
+                label="Product Price (Customer)"
+                type="number"
+                min="0"
+                prefix="$"
+              />
+            </v-col>
+          </v-row>
+          <v-divider class="my-1" />
+          <div class="mb-2 font-weight-bold">Cycle Times</div>
+          <v-row v-for="(cycle, idx) in part.cycleTimes || []" :key="idx" class="mb-2">
+            <v-col cols="5">
+              <v-text-field v-model="cycle.operation" label="Operation Name" dense />
+            </v-col>
+            <v-col cols="5">
+              <v-text-field
+                v-model.number="cycle.time"
+                label="Cycle Time (min)"
+                type="number"
+                min="0"
+                dense
+              />
+            </v-col>
+            <v-col cols="2">
+              <v-btn icon color="red" @click="part.cycleTimes.splice(idx, 1)"
+                ><v-icon>mdi-delete</v-icon></v-btn
+              >
+            </v-col>
+          </v-row>
+          <v-btn
+            color="primary"
+            variant="outlined"
+            @click="part.cycleTimes ? part.cycleTimes.push({operation: '', time: 0}) : part.cycleTimes = [{operation: '', time: 0}]"
+          >
+            <v-icon left>mdi-plus</v-icon>Add Cycle Time
+          </v-btn>
+          <v-divider class="my-4" />
+          <v-row>
+            <v-col cols="4">
+              <div>
+                <b>Total Cycle Time:</b>
+                {{ (part.cycleTimes || []).reduce((t, c) => t + (c.time || 0), 0) }}
+                min
+              </div>
+            </v-col>
+            <v-col cols="4">
+              <div><b>Estimated Material Cost:</b> ${{ partMaterialCost }}</div>
+            </v-col>
+            <v-col cols="4">
+              <div>
+                <b>Estimated Profit:</b>
+                ${{ (part.price && materialCost) ? (part.price - materialCost).toFixed(2) : '0.00' }}
+              </div>
+            </v-col>
+          </v-row>
+        </v-window-item>
+
         <v-window-item value="docs">DOCS </v-window-item>
 
         <v-window-item value="notes">NOTES </v-window-item>
@@ -222,9 +293,7 @@ const showAdd = computed(() => {
   return tabs.includes(tab.value);
 });
 
-const part = ref<Part>({
-  stock: 0,
-} as Part);
+const part = ref<Part>({} as Part);
 const partOriginal = ref<Part>({} as Part);
 
 const tab = ref<'general' | 'material' | 'stock' | 'docs' | 'notes'>(
@@ -365,6 +434,16 @@ function assignMaterial() {
   if (!material) return;
   part.value.material = material;
 }
+
+const materialCost = computed(() => {
+  if (!part.value.material) return 0;
+  if (typeof part.value.material === 'string') return 0;
+  return part.value.material.cost || 0;
+});
+
+const partMaterialCost = computed(() => {
+  return Math.round((materialCost.value / (partsPerBar.value || 0)) * 100) / 100;
+});
 </script>
 
 <style scoped>

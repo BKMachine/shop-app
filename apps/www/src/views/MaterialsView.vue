@@ -143,6 +143,33 @@
                 </v-col>
                 <v-col cols="6"> <SupplierSelect v-model="selectedMaterial.supplier" /> </v-col>
               </v-row>
+              <v-row>
+                <v-col>
+                  <v-text-field
+                    v-model.number="selectedMaterial.rate"
+                    label="Cost per Pound"
+                    type="number"
+                    prefix="$"
+                  ></v-text-field>
+                </v-col>
+                <v-col>
+                  <v-text-field
+                    v-model="selectedMaterial.weight"
+                    label="Estimated Weight (lbs)"
+                    type="number"
+                    disabled
+                  ></v-text-field>
+                </v-col>
+                <v-col>
+                  <v-text-field
+                    v-model.number="selectedMaterial.cost"
+                    label="Estimated Cost"
+                    type="number"
+                    disabled
+                    prefix="$"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
             </v-form>
           </v-card-text>
           <v-card-actions>
@@ -173,25 +200,28 @@ const defaultMaterial: Material = {
   wallThickness: 0,
   length: 144,
   supplier: '',
+  weight: null,
+  rate: 0,
+  cost: 0,
 };
 
 const items = [
   { props: { header: 'Aluminum' } },
-  { name: '6061', value: '6061' },
-  { name: '7075', value: '7075' },
+  { name: '6061', value: '6061', density: 0.098 },
+  { name: '7075', value: '7075', density: 0.101 },
   { props: { divider: true } },
   { props: { header: 'Steel' } },
-  { name: '1018', value: '1018' },
-  { name: '4140', value: '4140' },
-  { name: '4130', value: '4130' },
+  { name: '1018', value: '1018', density: 0.284 },
+  { name: '4140', value: '4140', density: 0.284 },
+  { name: '4130', value: '4130', density: 0.284 },
   { props: { divider: true } },
   { props: { header: 'Stainless Steel' } },
-  { name: '303', value: '303' },
-  { name: '304', value: '304' },
-  { name: '316', value: '316' },
-  { name: '17-4PH', value: '17-4PH' },
-  { name: '420', value: '420' },
-  { name: '440C', value: '440C' },
+  { name: '303', value: '303', density: 0.284 },
+  { name: '304', value: '304', density: 0.284 },
+  { name: '316', value: '316', density: 0.284 },
+  { name: '17-4PH', value: '17-4PH', density: 0.284 },
+  { name: '420', value: '420', density: 0.284 },
+  { name: '440C', value: '440C', density: 0.284 },
 ];
 
 const search = ref('');
@@ -229,6 +259,9 @@ watch(
   selectedMaterial,
   (newMaterial) => {
     recomputeDescription(newMaterial);
+    newMaterial.weight = calcWeight(newMaterial);
+    newMaterial.cost =
+      newMaterial.weight && newMaterial.rate ? newMaterial.weight * newMaterial.rate : 0;
   },
   { deep: true },
 );
@@ -256,6 +289,45 @@ function recomputeDescription(material: Material) {
   } else {
     material.description = `${material.materialType}`;
   }
+}
+
+function calcWeight(selectedMaterial: Material) {
+  const materialInfo = items.find((item) => item.value === selectedMaterial.materialType);
+  if (!materialInfo) return 0;
+
+  const density = materialInfo.density || 0; // lbs/in³
+
+  let volume = 0; // in³
+  const height = selectedMaterial.height || 0;
+  const width = selectedMaterial.width || 0;
+  const diameter = selectedMaterial.diameter || 0;
+  const wallThickness = selectedMaterial.wallThickness || 0;
+  const length = selectedMaterial.length || 0;
+
+  if (selectedMaterial.type === 'Flat') {
+    if (wallThickness > 0) {
+      // Tubing: Calculate outer volume and subtract inner volume
+      const outerVolume = height * width * length;
+      const innerVolume = (height - 2 * wallThickness) * (width - 2 * wallThickness) * length;
+      volume = outerVolume - innerVolume;
+    } else {
+      // Bar: Simple rectangular volume
+      volume = height * width * length;
+    }
+  } else if (selectedMaterial.type === 'Round') {
+    const radius = diameter / 2;
+    if (wallThickness > 0) {
+      // Tubing: Calculate outer volume and subtract inner volume
+      const outerVolume = Math.PI * radius ** 2 * length;
+      const innerRadius = radius - wallThickness;
+      const innerVolume = Math.PI * innerRadius ** 2 * length;
+      volume = outerVolume - innerVolume;
+    } else {
+      // Bar: Simple cylindrical volume
+      volume = Math.PI * radius ** 2 * length;
+    }
+  }
+  return Math.round(volume * density); // Weight in lbs
 }
 </script>
 

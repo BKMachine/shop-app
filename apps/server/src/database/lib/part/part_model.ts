@@ -12,6 +12,8 @@ const schema = new Schema<PartDoc>({
   material: { type: Types.ObjectId, ref: 'materials', default: null },
   materialLength: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
+  cycleTimes: [{ operation: String, time: Number }],
+  price: { type: Number, default: 0 },
 });
 
 export default model<PartDoc>('parts', schema);

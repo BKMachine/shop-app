@@ -3,6 +3,9 @@
   "private": true,
   "license": "MIT",
   "types": "index.d.ts",
+  "scripts": {
+    "format": "biome format --write"
+  },
   "devDependencies": {
     "mongoose": "^9.2.4"
   }

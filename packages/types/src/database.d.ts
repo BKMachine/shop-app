@@ -62,6 +62,9 @@ declare global {
     length: number | null;
     materialType: string;
     supplier?: Supplier | string;
+    weight: number | null;
+    rate: number | null;
+    cost: number | null;
   }
 
   interface MaterialDoc extends Omit<Material, '_id'>, Document<Types.ObjectId> {
@@ -69,6 +72,11 @@ declare global {
   }
 
   /* PART */
+
+  interface CycleTimes {
+    operation: string;
+    time: number;
+  }
 
   interface Part {
     _id: string;
@@ -83,6 +91,8 @@ declare global {
     material?: Material | string;
     materialLength: number;
     createdAt: Date;
+    cycleTimes: CycleTimes[];
+    price: number;
   }
 
   interface PartDoc extends Omit<Part, '_id'>, Document<Types.ObjectId> {

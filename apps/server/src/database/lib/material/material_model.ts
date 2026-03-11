@@ -10,6 +10,9 @@ const schema = new Schema<MaterialDoc>({
   length: { type: Number, default: null },
   materialType: { type: String, required: true },
   supplier: { type: Schema.Types.ObjectId, ref: 'suppliers', default: null },
+  weight: { type: Number, default: null },
+  rate: { type: Number, default: null },
+  cost: { type: Number, default: null },
 });
 
 export default model<MaterialDoc>('materials', schema);
