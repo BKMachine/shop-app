@@ -81,10 +81,23 @@ async function getPartAudits(id: string, from: string, to: string): Promise<Audi
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
+async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
+  const projection = 'timestamp new old.stock new';
+
+  return Audit.find(
+    {
+      type: 'part',
+      timestamp: { $gte: from, $lte: to },
+    },
+    projection,
+  );
+}
+
 export default {
   addToolAudit,
   getToolAudits,
   addPartAudit,
   getPartAudits,
   getAllToolAudits,
+  getAllPartAudits,
 };

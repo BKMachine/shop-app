@@ -45,6 +45,26 @@ router.post('/audits/tools/stock', async (req, res, next) => {
   }
 });
 
+router.post('/audits/parts', async (req, res, next) => {
+  const {
+    from,
+    to,
+  }: {
+    from: string | undefined;
+    to: string | undefined;
+  } = req.body;
+  if (!from || !to) {
+    res.sendStatus(400);
+    return;
+  }
+  try {
+    const audits = await Audit.getAllPartAudits(from, to);
+    res.status(200).json(audits);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/audits/parts/stock', async (req, res, next) => {
   const {
     id,

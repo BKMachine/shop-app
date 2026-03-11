@@ -54,7 +54,7 @@
                     icon
                     size="x-small"
                     class="action-btn"
-                    @click="open(activity.new)"
+                    @click="open(activity.new, 'tool')"
                     title="View tool details"
                   >
                     <v-icon icon="mdi-arrow-top-right" size="small"></v-icon>
@@ -66,10 +66,53 @@
         </template>
       </div>
 
-      <!-- Parts Activity Column (placeholder for future) -->
+      <!-- Parts Activity Column -->
       <div class="activity-column">
         <h2 class="column-title">Parts</h2>
-        <div class="no-data">No parts activity yet</div>
+        <div v-if="partActivities.length === 0" class="no-data">No activity</div>
+        <template v-for="dayGroup in partActivitiesGroupedByDay" :key="dayGroup.date">
+          <div class="day-header">{{ dayGroup.date }}</div>
+          <v-card v-for="activity in dayGroup.activities" :key="activity._id" class="activity-card">
+            <v-card-text class="card-content">
+              <v-row class="align-center" no-gutters>
+                <!-- Part Image -->
+                <v-col cols="3" class="image-col">
+                  <v-img class="tool-image" :src="activity.new.img" />
+                </v-col>
+
+                <!-- Part Info -->
+                <v-col cols="auto" class="info-col">
+                  <div class="tool-description">{{ activity.new.description }}</div>
+                  <div class="activity-meta">
+                    <span
+                      :class="`amount ${activity.type === 'increase' ? 'increase' : 'decrease'}`"
+                    >
+                      {{ activity.type === 'increase' ? '+' : '−' }}{{ activity.amount }}
+                    </span>
+                    <span class="stock-info">{{ activity.new.stock }}</span>
+                    <!-- <span class="cost-badge"
+                      >${{ (activity.amount * activity.new.cost).toFixed(2) }}</span
+                    > -->
+                  </div>
+                  <div class="timestamp">{{ new Date(activity.timestamp).toLocaleString() }}</div>
+                </v-col>
+
+                <!-- Action Button -->
+                <v-col cols="auto" class="action-col">
+                  <v-btn
+                    icon
+                    size="x-small"
+                    class="action-btn"
+                    @click="open(activity.new, 'part')"
+                    title="View part details"
+                  >
+                    <v-icon icon="mdi-arrow-top-right" size="small"></v-icon>
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+        </template>
       </div>
     </div>
   </div>
@@ -82,12 +125,14 @@ import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import router from '@/router';
 
-const audits = ref<Audit[]>([]);
+const toolAudits = ref<Audit[]>([]);
+const partAudits = ref<Audit[]>([]);
 const to = ref<DateTime>(DateTime.now());
 const from = computed<DateTime>(() => DateTime.now().minus({ days: 7 }));
+const toolCosts = ref<{ today: number; yesterday: number }>({ today: 0, yesterday: 0 });
 
-const toolActivities = computed(() =>
-  audits.value
+function transformAuditsToActivities(audits: Audit[]) {
+  return audits
     .map((audit) => {
       const oldStock = audit.old?.stock ?? 0;
       const newStock = audit.new?.stock ?? 0;
@@ -99,12 +144,12 @@ const toolActivities = computed(() =>
       };
     })
     .filter((audit) => audit.type !== 'no_change')
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-);
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
 
-const toolActivitiesGroupedByDay = computed(() => {
-  const grouped: Record<string, typeof toolActivities.value> = {};
-  toolActivities.value.forEach((activity) => {
+function groupActivitiesByDay(activities: ReturnType<typeof transformAuditsToActivities>) {
+  const grouped: Record<string, typeof activities> = {};
+  activities.forEach((activity) => {
     const date = new Date(activity.timestamp);
     const dateKey = date.toLocaleDateString();
     if (!grouped[dateKey]) {
@@ -113,7 +158,13 @@ const toolActivitiesGroupedByDay = computed(() => {
     grouped[dateKey].push(activity);
   });
   return Object.entries(grouped).map(([date, activities]) => ({ date, activities }));
-});
+}
+
+const toolActivities = computed(() => transformAuditsToActivities(toolAudits.value));
+const toolActivitiesGroupedByDay = computed(() => groupActivitiesByDay(toolActivities.value));
+
+const partActivities = computed(() => transformAuditsToActivities(partAudits.value));
+const partActivitiesGroupedByDay = computed(() => groupActivitiesByDay(partActivities.value));
 
 onMounted(() => {
   refreshAudits();
@@ -125,17 +176,22 @@ socket.on('tool_audit', () => {
 
 function refreshAudits() {
   to.value = DateTime.now();
-  getToolAudits();
   getToolCosts();
+  getAudits('tools');
+  getAudits('parts');
 }
 
-function getToolAudits() {
-  api.post('/audits/tools', { from: from.value.toISO(), to: to.value.toISO() }).then((response) => {
-    audits.value = response.data;
-  });
+function getAudits(type: 'tools' | 'parts') {
+  api
+    .post(`/audits/${type}`, { from: from.value.toISO(), to: to.value.toISO() })
+    .then((response) => {
+      if (type === 'tools') {
+        toolAudits.value = response.data;
+      } else {
+        partAudits.value = response.data;
+      }
+    });
 }
-
-const toolCosts = ref<{ today: number; yesterday: number }>({ today: 0, yesterday: 0 });
 
 async function getToolCosts() {
   const now = DateTime.now();
@@ -185,8 +241,9 @@ async function getToolCosts() {
   };
 }
 
-function open(tool: Tool) {
-  router.push({ name: 'viewTool', params: { id: tool._id } });
+function open(item: Tool | Part, type: 'tool' | 'part') {
+  const routeName = type === 'tool' ? 'viewTool' : 'viewPart';
+  router.push({ name: routeName, params: { id: item._id } });
 }
 </script>
 
