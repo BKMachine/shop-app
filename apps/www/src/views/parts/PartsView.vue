@@ -164,6 +164,9 @@ function hideExpandedImage() {
 .stock {
   font-weight: bolder;
   font-size: 1.1em;
+  min-width: 4ch; /* reserve space for 4 digits */
+  text-align: center;
+  display: inline-block;
 }
 .part-img {
   max-height: 50px;
