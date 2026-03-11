@@ -1,48 +1,135 @@
 <template>
-  <v-card-title class="title">{{ part.part }}</v-card-title>
-  <v-card-text>
-    <v-row>
-      <div>
-        {{ title }}
-        <v-switch v-model="set" label="Set" color="secondary"></v-switch>
+  <v-card-title class="title">
+    <div class="d-flex align-center justify-space-between">
+      <span>{{ part.part }}</span>
+      <div class="d-flex align-center gap-3">
+        <span class="mode-label">{{ set ? 'Set' : 'Adjust' }}</span>
+        <v-switch v-model="set" color="white" @change="adjustment = 0"></v-switch>
       </div>
-    </v-row>
-    <v-row>
-      <v-btn @click="adjustment -= 1">-1</v-btn>
-      <v-btn @click="adjustment -= 10">-10</v-btn>
-      <v-btn @click="adjustment -= 100">-100</v-btn>
-      <v-btn @click="adjustment += 100">+100</v-btn>
-      <v-btn @click="adjustment += 10">+10</v-btn>
-      <v-btn @click="adjustment += 1">+1</v-btn>
-    </v-row>
-    <v-row>
-      <v-col cols="9">
-        <v-text-field
-          v-model.number="adjustment"
-          type="number"
-          @keydown="isNumber($event)"
-        ></v-text-field>
-      </v-col>
-      <v-col cols="3" class="stock-display align-center d-flex flex-column">
-        <v-row>{{ part.stock }}</v-row>
-        <v-row> <v-icon icon="mdi-arrow-down"></v-icon> </v-row>
-        <v-row>{{ newStock }}</v-row>
-      </v-col>
-    </v-row>
+    </div>
+  </v-card-title>
+  <v-card-text class="pa-6">
+    <!-- Quick Adjustment Buttons -->
+    <div class="mb-2">
+      <p class="text-caption text-uppercase font-weight-bold opacity-75 mb-2">
+        {{ set ? 'Quick Set' : 'Quick Adjust' }}
+      </p>
+      <div class="button-group">
+        <div class="button-grid">
+          <v-btn
+            class="adjust-btn decrease"
+            variant="tonal"
+            color="error"
+            size="small"
+            @click="adjustment -= 100"
+          >
+            −100
+          </v-btn>
+          <v-btn
+            class="adjust-btn decrease"
+            variant="tonal"
+            color="error"
+            size="small"
+            @click="adjustment -= 10"
+          >
+            −10
+          </v-btn>
+          <v-btn
+            class="adjust-btn decrease"
+            variant="tonal"
+            color="error"
+            size="small"
+            @click="adjustment -= 1"
+          >
+            −1
+          </v-btn>
+          <v-btn
+            class="adjust-btn increase"
+            variant="tonal"
+            color="success"
+            size="small"
+            @click="adjustment += 1"
+          >
+            +1
+          </v-btn>
+          <v-btn
+            class="adjust-btn increase"
+            variant="tonal"
+            color="success"
+            size="small"
+            @click="adjustment += 10"
+          >
+            +10
+          </v-btn>
+          <v-btn
+            class="adjust-btn increase"
+            variant="tonal"
+            color="success"
+            size="small"
+            @click="adjustment += 100"
+          >
+            +100
+          </v-btn>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input and Stock Display -->
+    <div class="stock-section">
+      <div class="text-caption text-uppercase font-weight-bold opacity-75 mb-2">
+        {{ set ? 'New Stock' : 'Adjustment' }}
+      </div>
+      <v-row>
+        <v-col cols="8">
+          <v-text-field
+            v-model.number="adjustment"
+            type="number"
+            variant="outlined"
+            density="compact"
+            @keydown="isNumber($event)"
+            :prefix="set ? '' : adjustment > 0 ? '+' : ''"
+          ></v-text-field>
+        </v-col>
+        <v-col cols="4" class="d-flex flex-column justify-center">
+          <div class="stock-display-card">
+            <div class="stock-value">
+              <p class="text-caption opacity-75">Current</p>
+              <p class="current-stock">{{ part.stock }}</p>
+            </div>
+            <v-icon size="x-large" color="#8b5cf6" class="transition-arrow">
+              mdi-arrow-down
+            </v-icon>
+            <div class="stock-value">
+              <p class="text-caption opacity-75">New</p>
+              <p
+                class="new-stock"
+                :class="{
+                  'text-error': newStock < 0,
+                  'text-success': newStock > part.stock && !set,
+                  'text-orange': newStock < part.stock && !set,
+                }"
+              >
+                {{ newStock }}
+              </p>
+            </div>
+          </div>
+        </v-col>
+      </v-row>
+    </div>
   </v-card-text>
-  <v-card-actions>
+  <v-card-actions class="pa-4">
     <v-spacer />
     <v-btn
       text="Cancel"
-      color="red"
-      variant="outlined"
+      color="default"
+      variant="text"
       :disabled="saveFlag"
       @click="emit('closeDialog')"
     ></v-btn>
     <v-btn
       text="Save"
-      color="green"
-      variant="outlined"
+      color="success"
+      variant="elevated"
       :disabled="newStock < 0 || saveFlag"
       @click="save"
     ></v-btn>
@@ -95,11 +182,86 @@ async function save() {
 
 <style scoped>
 .title {
-  background-color: rgb(var(--v-theme-secondary));
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
+  font-weight: 600;
 }
 
-.stock-display {
+.mode-indicator {
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-radius: 6px;
+  border-left: 3px solid #6366f1;
+  text-align: center;
+}
+
+.mode-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 0;
+  color: #1f2937;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.adjust-btn {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: none;
+}
+
+.stock-section {
+  border-radius: 8px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(139, 92, 246, 0.02) 100%);
+}
+
+.stock-display-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background-color: #f8f7ff;
+  border-radius: 8px;
+  border: 2px solid rgba(99, 102, 241, 0.2);
+  text-align: center;
+}
+
+.stock-value {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.current-stock {
+  font-size: 1.25em;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.new-stock {
   font-size: 1.5em;
+  font-weight: 700;
+  color: #6366f1;
+}
+
+.transition-arrow {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
 }
 </style>
