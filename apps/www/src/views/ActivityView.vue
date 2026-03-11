@@ -174,6 +174,10 @@ socket.on('tool_audit', () => {
   refreshAudits();
 });
 
+socket.on('part_audit', () => {
+  refreshAudits();
+});
+
 function refreshAudits() {
   to.value = DateTime.now();
   getToolCosts();

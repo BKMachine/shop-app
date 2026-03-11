@@ -4,13 +4,7 @@
       <span>{{ part.part }}</span>
       <div class="d-flex align-center">
         <span class="mode-label mr-4">{{ set ? 'Set' : 'Adjust' }}</span>
-        <v-switch
-          v-model="set"
-          color="white"
-          @change="adjustment = 0"
-          density="compact"
-          hide-details
-        ></v-switch>
+        <v-switch v-model="set" color="white" density="compact" hide-details></v-switch>
       </div>
     </div>
   </v-card-title>
