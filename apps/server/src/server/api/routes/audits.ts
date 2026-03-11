@@ -3,6 +3,26 @@ import Audit from '../../../database/lib/audit/audit_service.js';
 
 const router: Router = Router();
 
+router.post('/audits/tools', async (req, res, next) => {
+  const {
+    from,
+    to,
+  }: {
+    from: string | undefined;
+    to: string | undefined;
+  } = req.body;
+  if (!from || !to) {
+    res.sendStatus(400);
+    return;
+  }
+  try {
+    const audits = await Audit.getAllToolAudits(from, to);
+    res.status(200).json(audits);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/audits/tools/stock', async (req, res, next) => {
   const {
     id,

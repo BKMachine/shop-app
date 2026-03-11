@@ -11,13 +11,15 @@ import * as influx from './timeseries/influx.js';
 export async function start(): Promise<void> {
   await database.connect();
   await machines.initMachines();
-  await influx.connect().catch((err) => {
-    logger.error('Failed to connect to InfluxDB:', err);
-  });
+  if (process.env.NODE_ENV === 'production') {
+    await influx.connect().catch((err) => {
+      logger.error('Failed to connect to InfluxDB:', err);
+    });
+  }
   await mqtt.connect();
   arduino.start();
   mtconnect.start();
-  serial.start();
+  // serial.start();
   server.start();
 }
 

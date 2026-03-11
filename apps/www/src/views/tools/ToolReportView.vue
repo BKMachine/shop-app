@@ -12,9 +12,9 @@
         <span class="item"> {{ tool.item }}&nbsp;- Qty: {{ tool.reorderQty }}</span>
         <span class="line"> - </span>
         <span class="subtotal">{{ getCost(tool) }}</span>
-        <span
-          ><v-icon icon="mdi-open-in-app" size="16" class="ml-2" @click="open(tool)"></v-icon></span
-        >
+        <span>
+          <v-icon icon="mdi-open-in-app" size="16" class="ml-2" @click="open(tool)"></v-icon>
+        </span>
         <div v-if="j === item[1].length - 1" class="space"></div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import ActivityView from '@/views/ActivityView.vue';
 import CameraView from '@/views/CameraView.vue';
 import HomeView from '@/views/HomeView.vue';
 import LocationsView from '@/views/LocationsView.vue';
@@ -78,6 +79,11 @@ const router = createRouter({
       path: '/camera',
       name: 'camera',
       component: CameraView,
+    },
+    {
+      path: '/activity',
+      name: 'activity',
+      component: ActivityView,
     },
   ],
 });

@@ -25,13 +25,22 @@
         <v-list-item prepend-icon="mdi-pulse" link :to="{ name: 'status' }">Status </v-list-item>
       </v-list>
       <template v-slot:append>
-        <v-list-item prepend-icon="mdi-camera" link :to="{ name: 'camera' }">Images</v-list-item>
+        <v-list-item prepend-icon="mdi-camera-outline" link :to="{ name: 'camera' }">
+          Images
+        </v-list-item>
         <v-list-item
           v-if="showTestScan"
           prepend-icon="mdi-barcode-scan"
           @click="scannerStore.scan('120850')"
         >
           Test
+        </v-list-item>
+        <v-list-item
+          prepend-icon="mdi-clipboard-text-clock-outline"
+          link
+          :to="{ name: 'activity' }"
+        >
+          Activity
         </v-list-item>
         <v-list-item prepend-icon="mdi-file-document-outline" link :to="{ name: 'toolReport' }">
           Report
