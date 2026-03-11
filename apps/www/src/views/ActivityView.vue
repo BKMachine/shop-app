@@ -72,13 +72,14 @@
 
 <script setup lang="ts">
 import { DateTime } from 'luxon';
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import api from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 import router from '@/router';
 
 const audits = ref<Audit[]>([]);
 const to = ref<DateTime>(DateTime.now());
-const from = computed<DateTime>(() => DateTime.now().minus({ days: 2 }));
+const from = computed<DateTime>(() => DateTime.now().minus({ days: 7 }));
 
 const toolActivities = computed(() =>
   audits.value
@@ -97,13 +98,22 @@ const toolActivities = computed(() =>
 );
 
 onMounted(() => {
+  refreshAudits();
+});
+
+socket.on('tool_audit', () => {
+  refreshAudits();
+});
+
+function refreshAudits() {
+  to.value = DateTime.now();
   getToolAudits();
   getToolCosts();
-});
+}
 
 function getToolAudits() {
   api.post('/audits/tools', { from: from.value.toISO(), to: to.value.toISO() }).then((response) => {
-    audits.value = response.data.slice(0, 50);
+    audits.value = response.data;
   });
 }
 

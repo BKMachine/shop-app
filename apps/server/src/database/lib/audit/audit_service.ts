@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { emit } from '../../../server/sockets.js';
 import Audit from './audit_model.js';
 
 async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc): Promise<void> {
@@ -9,6 +10,7 @@ async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc): Promise<
     new: newTool,
   });
   await doc.save();
+  emit('tool_audit');
 }
 
 async function getToolAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
@@ -54,6 +56,7 @@ async function addPartAudit(oldPart: PartDoc | null, newPart: PartDoc): Promise<
     new: newPart,
   });
   await doc.save();
+  emit('part_audit');
 }
 
 async function getPartAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
