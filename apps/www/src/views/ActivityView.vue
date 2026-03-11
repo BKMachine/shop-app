@@ -149,18 +149,25 @@ async function getToolCosts() {
   function calcCosts(response: { data: Audit[] }) {
     const audits: Audit[] = response.data;
     const costs: Record<string, number> = {};
-    audits.forEach((audit) => {
-      const toolId = audit.new._id;
-      if (!costs[toolId]) {
-        costs[toolId] = 0;
-      }
-      const oldStock = audit.old?.stock ?? 0;
-      const newStock = audit.new?.stock ?? 0;
-      const diff = newStock - oldStock;
-      if (diff !== 0) {
-        costs[toolId] += Math.abs(diff) * audit.new.cost;
-      }
-    });
+    audits
+      .filter((audit) => {
+        // filter out audits that don't have a negative stock change
+        const oldStock = audit.old?.stock ?? 0;
+        const newStock = audit.new?.stock ?? 0;
+        return oldStock > newStock;
+      })
+      .forEach((audit) => {
+        const toolId = audit.new._id;
+        if (!costs[toolId]) {
+          costs[toolId] = 0;
+        }
+        const oldStock = audit.old?.stock ?? 0;
+        const newStock = audit.new?.stock ?? 0;
+        const diff = newStock - oldStock;
+        if (diff !== 0) {
+          costs[toolId] += Math.abs(diff) * audit.new.cost;
+        }
+      });
     return costs;
   }
 
