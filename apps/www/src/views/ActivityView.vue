@@ -194,32 +194,32 @@ function open(tool: Tool) {
 .container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 16px 12px;
+  padding: 12px 8px;
 }
 
 /* Stats Header Section */
 .stats-header {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .stats-title {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 600;
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
   color: #2c3e50;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
 }
 
 .stat-card {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border-radius: 8px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
 }
 
@@ -234,12 +234,12 @@ function open(tool: Tool) {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   opacity: 0.8;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .stat-card.highlight .stat-label {
@@ -247,23 +247,23 @@ function open(tool: Tool) {
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 
 /* Activities Grid */
 .activities-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 20px;
+  gap: 12px;
 }
 
 /* Activity Column */
 .activity-column {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .column-title {
@@ -275,14 +275,14 @@ function open(tool: Tool) {
 }
 
 .day-header {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: #95a5a6;
-  padding: 12px 4px 8px 4px;
-  margin-top: 12px;
-  border-top: 2px solid #ecf0f1;
+  padding: 8px 2px 4px 2px;
+  margin-top: 8px;
+  border-top: 1px solid #ecf0f1;
 }
 
 .day-header:first-child {
@@ -317,7 +317,7 @@ function open(tool: Tool) {
 }
 
 .card-content {
-  padding: 12px;
+  padding: 8px;
 }
 
 .image-col {
@@ -325,41 +325,41 @@ function open(tool: Tool) {
 }
 
 .tool-image {
-  max-width: 130px;
-  height: 80px;
-  border-radius: 6px;
+  max-width: 120px;
+  height: 70px;
+  border-radius: 5px;
   object-fit: cover;
 }
 
 .info-col {
-  padding: 0 10px;
+  padding: 0 8px;
   min-width: 0;
   flex: 1;
 }
 
 .tool-description {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #2c3e50;
-  margin-bottom: 6px;
-  line-height: 1.3;
+  margin-bottom: 3px;
+  line-height: 1.2;
   word-break: break-word;
 }
 
 .activity-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 4px;
+  gap: 6px;
+  margin-bottom: 2px;
   flex-wrap: wrap;
 }
 
 .amount {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  letter-spacing: -0.2px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: -0.1px;
   white-space: nowrap;
 }
 
@@ -374,26 +374,26 @@ function open(tool: Tool) {
 }
 
 .stock-info {
-  font-size: 12px;
+  font-size: 11px;
   color: #7f8c8d;
   font-weight: 500;
 }
 
 .cost-badge {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #667eea;
   background: #f0f3ff;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
   white-space: nowrap;
 }
 
 .timestamp {
-  font-size: 11px;
+  font-size: 10px;
   color: #95a5a6;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .action-col {
