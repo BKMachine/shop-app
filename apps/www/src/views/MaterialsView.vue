@@ -11,26 +11,34 @@
           prepend-inner-icon="mdi-magnify"
           @click:clear="search = ''"
         />
+        <div class="d-flex mb-2 align-center" style="gap: 8px;">
+          <v-btn-toggle v-model="typeFilter" dense mandatory>
+            <v-btn size="small" value="All">All</v-btn>
+            <v-btn size="small" value="Flat">Flat</v-btn>
+            <v-btn size="small" value="Round">Round</v-btn>
+          </v-btn-toggle>
+          <v-btn-toggle v-model="tubingFilter" dense mandatory>
+            <v-btn size="small" value="All">All</v-btn>
+            <v-btn size="small" value="Tubing">Tubing</v-btn>
+            <v-btn size="small" value="Bar">Bar</v-btn>
+          </v-btn-toggle>
+        </div>
 
-        <v-list>
+        <v-list class="materials-list" density="compact" nav>
           <v-list-item
-            v-for="material in filteredMaterials"
+            v-for="material in sortedFilteredMaterials"
             :key="material._id"
-            class="mb-2"
-            :class="{ 'selected-item': material._id === selectedMaterial._id }"
+            :active="material._id === selectedMaterial._id"
+            class="material-row"
             @click="selectMaterial(material)"
           >
-            <v-list-item-content>
-              <v-list-item-title>{{ material.description }}</v-list-item-title>
-              <v-list-item-subtitle class="d-flex align-center">
-                {{ material.type }}- {{ material.materialType }}
-                <v-spacer />
-                <div v-if="material.type === 'Flat'">
-                  {{ material.height }}x {{ material.width }}
-                </div>
-                <div v-else-if="material.type === 'Round'">{{ material.diameter }}⌀</div>
-              </v-list-item-subtitle>
-            </v-list-item-content>
+            <v-list-item-title class="material-title">
+              {{ formatMaterialTitle(material) }}
+            </v-list-item-title>
+
+            <v-list-item-subtitle class="material-subtitle">
+              {{ formatMaterialSize(material) }}
+            </v-list-item-subtitle>
           </v-list-item>
         </v-list>
       </v-col>
@@ -289,6 +297,8 @@ const search = ref('');
 const selectedMaterial = ref<Material>({ ...defaultMaterial });
 const lastCostField = ref<'rate' | 'costPerFoot' | 'cost'>('rate');
 const formValid = ref(true);
+const typeFilter = ref<'All' | 'Flat' | 'Round'>('All');
+const tubingFilter = ref<'All' | 'Tubing' | 'Bar'>('All');
 
 const materials = computed(() => materialsStore.materials);
 
@@ -296,11 +306,106 @@ onMounted(() => {
   materialsStore.fetch();
 });
 
-const filteredMaterials = computed(() =>
-  materials.value.filter((material) =>
-    material.description.toLowerCase().includes(search.value.toLowerCase()),
-  ),
-);
+const sortedFilteredMaterials = computed(() => {
+  const q = search.value.trim().toLowerCase();
+
+  return [...materials.value]
+    .filter((material) => {
+      // Search filter
+      if (
+        q &&
+        ![
+          material.description,
+          material.materialType,
+          material.type,
+          formatMaterialTitle(material),
+          formatMaterialSize(material),
+        ]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q))
+      ) {
+        return false;
+      }
+      // Type filter
+      if (typeFilter.value !== 'All' && material.type !== typeFilter.value) return false;
+      // Tubing/Bar filter
+      if (tubingFilter.value !== 'All') {
+        const isTubing = !!material.wallThickness;
+        if (tubingFilter.value === 'Tubing' && !isTubing) return false;
+        if (tubingFilter.value === 'Bar' && isTubing) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => compareMaterials(a, b));
+});
+
+function compareMaterials(a: Material, b: Material) {
+  const materialCompare = (a.materialType || '').localeCompare(b.materialType || '');
+  if (materialCompare !== 0) return materialCompare;
+
+  const typeOrder: Record<string, number> = { Flat: 0, Round: 1 };
+  const typeCompare = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
+  if (typeCompare !== 0) return typeCompare;
+
+  const aDims = getSortDimensions(a);
+  const bDims = getSortDimensions(b);
+
+  for (let i = 0; i < Math.max(aDims.length, bDims.length); i++) {
+    const diff = (aDims[i] ?? 0) - (bDims[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+
+  return (a.description || '').localeCompare(b.description || '');
+}
+
+function getSortDimensions(material: Material): number[] {
+  const length = material.length ?? 0;
+  const wall = material.wallThickness ?? 0;
+
+  if (material.type === 'Flat') {
+    const h = material.height ?? 0;
+    const w = material.width ?? 0;
+    const small = Math.min(h, w);
+    const large = Math.max(h, w);
+    return [small, large, wall, length];
+  }
+
+  if (material.type === 'Round') {
+    const d = material.diameter ?? 0;
+    return [d, wall, length];
+  }
+
+  return [length];
+}
+
+function formatNumber(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(3)).toString();
+}
+
+function formatMaterialTitle(material: Material): string {
+  const type = material.wallThickness ? 'Tubing' : 'Bar';
+  return `${material.materialType} ${material.type} ${type}`;
+}
+
+function formatMaterialSize(material: Material): string {
+  const length = material.length ? ` × ${formatNumber(material.length)}` : '';
+
+  if (material.type === 'Flat') {
+    const h = formatNumber(material.height);
+    const w = formatNumber(material.width);
+    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
+    return `${h} × ${w}${wall}${length}`;
+  }
+
+  if (material.type === 'Round') {
+    const d = formatNumber(material.diameter);
+    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
+    return `Ø${d}${wall}${length}`;
+  }
+
+  return '';
+}
 
 function selectMaterial(material: Material) {
   selectedMaterial.value = { ...material };
@@ -326,12 +431,13 @@ function saveMaterial() {
     materialsStore.update(selectedMaterial.value);
   }
 }
-// Validation rules
+
 const requiredRule = (v: any) => (v !== null && v !== undefined && v !== '') || 'Required';
 
 const numberRequiredRule = (v: any) =>
   (v !== null && v !== undefined && !Number.isNaN(v) && v !== '') ||
   'Required and must be a valid number';
+
 const numberOptionalRule = (v: any) =>
   v === null ||
   v === undefined ||
@@ -350,7 +456,6 @@ watch(
 );
 
 function onCostInputField(event: any, field: 'rate' | 'costPerFoot' | 'cost') {
-  // Parse and update the model with full precision, but display with 2 decimals
   const value = parseFloat(event.target.value);
   if (!Number.isNaN(value)) {
     selectedMaterial.value[field] = value;
@@ -365,15 +470,16 @@ function formatCost(val: number | null | undefined): string {
 }
 
 function autoCalculateCosts(material: any) {
-  // Avoid recursion by only updating non-last fields
   const weight = material.weight || 0;
   const lengthInFeet = (material.length || 0) / 12;
+
   if (!weight || !lengthInFeet) {
     material.rate = 0;
     material.costPerFoot = 0;
     material.cost = 0;
     return;
   }
+
   if (lastCostField.value === 'rate') {
     material.cost = weight * material.rate;
     material.costPerFoot = material.cost / lengthInFeet;
@@ -415,9 +521,9 @@ function calcWeight(selectedMaterial: Material) {
   const materialInfo = items.find((item) => item.value === selectedMaterial.materialType);
   if (!materialInfo) return 0;
 
-  const density = materialInfo.density || 0; // lbs/in³
+  const density = materialInfo.density || 0;
 
-  let volume = 0; // in³
+  let volume = 0;
   const height = selectedMaterial.height || 0;
   const width = selectedMaterial.width || 0;
   const diameter = selectedMaterial.diameter || 0;
@@ -426,39 +532,33 @@ function calcWeight(selectedMaterial: Material) {
 
   if (selectedMaterial.type === 'Flat') {
     if (wallThickness > 0) {
-      // Tubing: Calculate outer volume and subtract inner volume
       const outerVolume = height * width * length;
       const innerVolume = (height - 2 * wallThickness) * (width - 2 * wallThickness) * length;
       volume = outerVolume - innerVolume;
     } else {
-      // Bar: Simple rectangular volume
       volume = height * width * length;
     }
   } else if (selectedMaterial.type === 'Round') {
     const radius = diameter / 2;
     if (wallThickness > 0) {
-      // Tubing: Calculate outer volume and subtract inner volume
       const outerVolume = Math.PI * radius ** 2 * length;
       const innerRadius = radius - wallThickness;
       const innerVolume = Math.PI * innerRadius ** 2 * length;
       volume = outerVolume - innerVolume;
     } else {
-      // Bar: Simple cylindrical volume
       volume = Math.PI * radius ** 2 * length;
     }
   }
-  return volume * density; // Weight in lbs
+
+  return volume * density;
 }
 
 function formatWeight(weight: number | null | undefined): string {
   if (weight == null || Number.isNaN(weight)) return '';
-  // Show up to 2 decimals, but no trailing zeros
   return parseFloat(weight.toFixed(2)).toString();
 }
 
-// Only allow numbers, decimal, and control keys in numeric fields
 function onlyAllowNumeric(e: KeyboardEvent) {
-  // Allow: backspace, delete, tab, escape, enter, arrows, home/end, etc.
   if (
     [
       'Backspace',
@@ -476,27 +576,53 @@ function onlyAllowNumeric(e: KeyboardEvent) {
   ) {
     return;
   }
-  // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+
   if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
     return;
   }
-  // Allow: numbers and decimal point
+
   if (/^[0-9.]$/.test(e.key)) {
     return;
   }
-  // Prevent anything else
+
   e.preventDefault();
 }
 </script>
 
 <style scoped>
-.selected-item {
+.materials-list {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+
+.material-row {
+  min-height: 48px !important;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-radius: 6px;
+}
+
+.material-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.material-subtitle {
+  font-size: 0.8rem;
+  line-height: 1rem;
+  color: rgb(var(--v-theme-on-surface), 0.7);
+}
+
+.selected-item,
+.v-list-item--active {
   background-color: #e3f2fd;
 }
+
 .material-select-item {
   cursor: pointer;
-}
-.material-select-item:hover {
-  background-color: #e3f2fd;
 }
 </style>
