@@ -3,81 +3,81 @@
     <v-card-title class="header">
       <div>{{ resultsTitle }}</div>
       <div v-if="category !== 'all'">
-        <v-btn link :to="{ name: 'createTool' }" color="primary" prepend-icon="mdi-plus">
+        <v-btn color="primary" link prepend-icon="mdi-plus" :to="{ name: 'createTool' }">
           Create New Tool
         </v-btn>
       </div>
     </v-card-title>
     <v-card-text>
       <v-card flat>
-        <template v-slot:text>
+        <template #text>
           <div v-if="category === 'milling'">
             <v-row>
               <v-col cols="6">
                 <v-text-field
                   v-model="searchText"
                   class="milling-search"
+                  clearable
+                  hide-details
                   label="Search"
                   prepend-inner-icon="mdi-magnify"
-                  variant="outlined"
                   single-line
-                  hide-details
-                  clearable
+                  variant="outlined"
                 />
               </v-col>
               <v-col cols="6">
                 <v-row>
                   <v-col cols="4">
-                    <v-select v-model="toolType" label="Tool Type" :items="types" clearable />
+                    <v-select v-model="toolType" clearable :items="types" label="Tool Type" />
                   </v-col>
                   <v-col cols="4">
                     <v-text-field
                       v-model="cuttingDia"
-                      label="Cutting Dia"
                       clearable
+                      label="Cutting Dia"
                       @keydown="isNumber($event)"
                     />
                   </v-col>
                   <v-col cols="4">
                     <v-text-field
                       v-model="minFluteLength"
-                      label="Min Flute Length"
                       clearable
+                      label="Min Flute Length"
                       @keydown="isNumber($event)"
                     />
                   </v-col>
                 </v-row>
               </v-col>
             </v-row>
-            <v-row></v-row>
+            <v-row />
           </div>
           <div v-else>
             <v-text-field
               v-model="searchText"
+              clearable
+              hide-details
               label="Search"
               prepend-inner-icon="mdi-magnify"
-              variant="outlined"
               single-line
-              hide-details
-              clearable
+              variant="outlined"
             />
           </div>
         </template>
 
         <v-data-table
-          v-model:page="page"
           v-model:items-per-page="itemsPerPage"
+          v-model:page="page"
           :headers="headers"
           :items="filteredItems"
-          :search="search"
           :loading="toolStore.loading"
+          :search="search"
           @click:row="openTool"
         >
-          <template v-slot:['item.img']="{ item }">
-            <v-img :id="item._id" :src="item.img" class="tool-img"></v-img>
+          <template #['item.img']="{ item }">
+            <v-img :id="item._id" class="tool-img" :src="item.img" />
           </template>
-          <template v-slot:['item.location']="{ item }">{{ location(item) }}</template>
-          <template v-slot:['item.stock']="{ item }">
+          <template #['item.location']="{ item }"> {{ location(item) }} </template>
+          <template #['item.stock']="{ item }">
             <span class="stock">{{ item.stock }}</span>
           </template>
         </v-data-table>

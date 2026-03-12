@@ -1,6 +1,6 @@
 <template>
   <div v-if="loading" class="d-flex justify-center align-center loading">
-    <v-progress-circular indeterminate color="primary" size="150"></v-progress-circular>
+    <v-progress-circular color="primary" indeterminate size="150" />
   </div>
   <v-container v-else class="container">
     <div class="title text-center">
@@ -8,7 +8,7 @@
       <h3>{{ part.description }}</h3>
     </div>
     <div class="d-flex align-center justify-space-between py-4">
-      <img class="part-img" :src="part.img" alt="" />
+      <img alt="" class="part-img" :src="part.img" />
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
           <div class="d-flex flex-column align-center">
@@ -28,33 +28,33 @@
         </div>-->
       </div>
     </div>
-    <v-tabs v-model="tab" class="mb-4" bg-color="#555555" color="secondary">
-      <v-tab value="general">General</v-tab>
-      <v-tab value="material">Material</v-tab>
-      <v-tab value="stock">Stock</v-tab>
-      <v-tab value="cost">Cost</v-tab>
-      <v-tab value="docs">Documents</v-tab>
-      <v-tab value="notes">Notes</v-tab>
+    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="secondary">
+      <v-tab value="general"> General </v-tab>
+      <v-tab value="material"> Material </v-tab>
+      <v-tab value="stock"> Stock </v-tab>
+      <v-tab value="cost"> Cost </v-tab>
+      <v-tab value="docs"> Documents </v-tab>
+      <v-tab value="notes"> Notes </v-tab>
       <v-spacer />
       <div class="d-flex align-center">
         <v-btn
           v-if="showAdd"
+          class="mr-2"
           color="blue"
-          variant="elevated"
           density="comfortable"
           prepend-icon="mdi-plus"
-          class="mr-2"
+          variant="elevated"
           @click="addNew"
         >
           Add
         </v-btn>
         <v-btn
-          color="green"
-          variant="elevated"
           class="mr-2"
+          color="green"
           density="comfortable"
-          prepend-icon="mdi-content-save-outline"
           :disabled="!partIsAltered || !valid"
+          prepend-icon="mdi-content-save-outline"
+          variant="elevated"
           @click="savePart"
         >
           Save
@@ -72,31 +72,29 @@
                 label="Part Number"
                 :rules="[rules.required!]"
               >
-                <template v-slot:append-inner>
+                <template #append-inner>
                   <!--                  <v-icon icon="mdi-barcode"></v-icon>
                   <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />-->
                 </template>
               </v-text-field>
             </v-col>
-            <v-col cols="1">
-              <v-text-field v-model="part.revision" label="Rev"></v-text-field>
-            </v-col>
+            <v-col cols="1"> <v-text-field v-model="part.revision" label="Rev" /> </v-col>
             <v-col cols="6">
               <v-select
                 v-model="part.customer"
                 class="ml-2"
-                label="Customer"
-                :items="customerStore.customers"
+                clearable
                 item-title="name"
                 item-value="_id"
-                clearable
+                :items="customerStore.customers"
+                label="Customer"
                 :rules="[rules.required!]"
               >
-                <template v-slot:item="{ props, item }">
+                <template #item="{ props, item }">
                   <v-list-item v-bind="props" title="">
-                    <template v-slot:prepend>
+                    <template #prepend>
                       <v-avatar rounded="0">
-                        <v-img class="customer-logo" :src="item.raw.logo"></v-img>
+                        <v-img class="customer-logo" :src="item.raw.logo" />
                       </v-avatar>
                     </template>
                     {{ item.raw.name }}
@@ -117,8 +115,8 @@
           <v-row no-gutters>
             <v-text-field
               v-model="part.img"
-              label="Part Image URL"
               append-inner-icon="mdi-image-outline"
+              label="Part Image URL"
             />
           </v-row>
         </v-window-item>
@@ -133,16 +131,16 @@
                 :items="materialsStore.materials"
                 label="Material"
                 @update:model-value="assignMaterial"
-              ></v-select>
+              />
             </v-col>
             <v-col cols="2">
               <v-text-field
                 v-model="part.materialLength"
-                label="Material Length"
                 class="ml-2"
-                type="number"
+                label="Material Length"
                 min="0"
-              ></v-text-field>
+                type="number"
+              />
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -170,8 +168,8 @@
                 v-model.number="part.stock"
                 class="mr-2"
                 label="Stock Qty"
-                type="number"
                 min="0"
+                type="number"
                 @keydown="isNumber($event)"
               />
             </v-col>
@@ -190,7 +188,7 @@
                 label="Position"
                 @update:model-value="part.position = part.position?.toUpperCase()"
               >
-                <template v-slot:append-inner>
+                <template #append-inner>
                   <!--                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation"></v-icon>
                   <v-icon icon="mdi-printer-outline" class="ml-2" @click="printLocation" />-->
                 </template>
@@ -198,7 +196,7 @@
             </v-col>
           </v-row>
           <v-row no-gutters>
-            <PartStockGraph v-if="part._id" :id="part._id" :currentStock="part.stock" />
+            <PartStockGraph v-if="part._id" :id="part._id" :current-stock="part.stock" />
           </v-row>
         </v-window-item>
 
@@ -208,9 +206,9 @@
               <v-text-field
                 v-model.number="part.price"
                 label="Product Price (Customer)"
-                type="number"
                 min="0"
                 prefix="$"
+                type="number"
               />
             </v-col>
           </v-row>
@@ -218,21 +216,21 @@
           <div class="mb-2 font-weight-bold">Cycle Times</div>
           <v-row v-for="(cycle, idx) in part.cycleTimes || []" :key="idx" class="mb-2">
             <v-col cols="5">
-              <v-text-field v-model="cycle.operation" label="Operation Name" dense />
+              <v-text-field v-model="cycle.operation" dense label="Operation Name" />
             </v-col>
             <v-col cols="5">
               <v-text-field
                 v-model.number="cycle.time"
-                label="Cycle Time (min)"
-                type="number"
-                min="0"
                 dense
+                label="Cycle Time (min)"
+                min="0"
+                type="number"
               />
             </v-col>
             <v-col cols="2">
-              <v-btn icon color="red" @click="part.cycleTimes.splice(idx, 1)"
-                ><v-icon>mdi-delete</v-icon></v-btn
-              >
+              <v-btn color="red" icon @click="part.cycleTimes.splice(idx, 1)">
+                <v-icon>mdi-delete</v-icon>
+              </v-btn>
             </v-col>
           </v-row>
           <v-btn
@@ -240,7 +238,7 @@
             variant="outlined"
             @click="part.cycleTimes ? part.cycleTimes.push({operation: '', time: 0}) : part.cycleTimes = [{operation: '', time: 0}]"
           >
-            <v-icon left>mdi-plus</v-icon>Add Cycle Time
+            <v-icon left> mdi-plus </v-icon>Add Cycle Time
           </v-btn>
           <v-divider class="my-4" />
           <v-row>
@@ -263,9 +261,9 @@
           </v-row>
         </v-window-item>
 
-        <v-window-item value="docs">DOCS </v-window-item>
+        <v-window-item value="docs"> DOCS </v-window-item>
 
-        <v-window-item value="notes">NOTES </v-window-item>
+        <v-window-item value="notes"> NOTES </v-window-item>
       </v-window>
     </v-form>
   </v-container>

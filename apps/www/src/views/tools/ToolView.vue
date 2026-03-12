@@ -1,13 +1,13 @@
 <template>
   <div v-if="loading" class="d-flex justify-center align-center loading">
-    <v-progress-circular indeterminate color="primary" size="150"></v-progress-circular>
+    <v-progress-circular color="primary" indeterminate size="150" />
   </div>
   <v-container v-else class="container">
     <div class="title text-center">
       <h1>{{ tool.description || 'New Tool' }}</h1>
     </div>
     <div class="d-flex align-center justify-space-between py-4">
-      <img class="tool-img" :src="tool.img" alt="" />
+      <img alt="" class="tool-img" :src="tool.img" />
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
           <div class="d-flex flex-column align-center">
@@ -20,25 +20,25 @@
           </div>
         </div>
         <div class="d-flex flex-column align-end justify-center">
-          <v-chip :class="{ active: tool.autoReorder }" class="mb-2" density="comfortable">
+          <v-chip class="mb-2" :class="{ active: tool.autoReorder }" density="comfortable">
             Auto Reorder
           </v-chip>
-          <v-chip :class="{ active: tool.onOrder }" density="comfortable">On Order</v-chip>
+          <v-chip :class="{ active: tool.onOrder }" density="comfortable"> On Order </v-chip>
         </div>
       </div>
     </div>
-    <v-tabs v-model="tab" class="mb-4" bg-color="#555555" color="yellow">
-      <v-tab value="general">General</v-tab>
-      <v-tab value="stock">Stock</v-tab>
-      <v-tab value="tech">Technical</v-tab>
+    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="yellow">
+      <v-tab value="general"> General </v-tab>
+      <v-tab value="stock"> Stock </v-tab>
+      <v-tab value="tech"> Technical </v-tab>
       <v-spacer />
       <div class="d-flex align-center">
         <v-btn
           v-if="tool.productLink"
           class="mr-2"
           color="yellow"
-          prepend-icon="mdi-open-in-new"
           density="comfortable"
+          prepend-icon="mdi-open-in-new"
           variant="elevated"
           @click="openLink(tool.productLink)"
         >
@@ -48,20 +48,20 @@
           v-if="tool.techDataLink"
           class="mr-2"
           color="blue"
+          density="comfortable"
           prepend-icon="mdi-speedometer"
           variant="elevated"
-          density="comfortable"
           @click="openLink(tool.techDataLink)"
         >
           Tech Data
         </v-btn>
         <v-btn
-          color="green"
-          variant="elevated"
           class="mr-2"
+          color="green"
           density="comfortable"
-          prepend-icon="mdi-content-save-outline"
           :disabled="!toolIsAltered || !valid"
+          prepend-icon="mdi-content-save-outline"
+          variant="elevated"
           @click="saveTool"
         >
           Save
@@ -86,9 +86,9 @@
                 label="Product Number"
                 :rules="[rules.uniqueItem!]"
               >
-                <template v-slot:append-inner>
-                  <v-icon icon="mdi-barcode"></v-icon>
-                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printItem" />
+                <template #append-inner>
+                  <v-icon icon="mdi-barcode" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printItem" />
                 </template>
               </v-text-field>
             </v-col>
@@ -99,9 +99,9 @@
                 label="Barcode"
                 :rules="[rules.barcode!, rules.uniqueBarcode!]"
               >
-                <template v-slot:append-inner>
-                  <v-icon icon="mdi-barcode"></v-icon>
-                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printBarcode" />
+                <template #append-inner>
+                  <v-icon icon="mdi-barcode" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printBarcode" />
                 </template>
               </v-text-field>
             </v-col>
@@ -111,17 +111,17 @@
               <v-select
                 v-model="tool.vendor"
                 class="mr-2"
-                label="Brand"
-                :items="vendorStore.vendors"
+                clearable
                 item-title="name"
                 item-value="_id"
-                clearable
+                :items="vendorStore.vendors"
+                label="Brand"
               >
-                <template v-slot:item="{ props, item }">
+                <template #item="{ props, item }">
                   <v-list-item v-bind="props" title="">
-                    <template v-slot:prepend>
+                    <template #prepend>
                       <v-avatar rounded="0">
-                        <v-img class="vendor-logo" :src="item.raw.logo"></v-img>
+                        <v-img class="vendor-logo" :src="item.raw.logo" />
                       </v-avatar>
                     </template>
                     {{ item.raw.name }}
@@ -133,52 +133,52 @@
               <v-select
                 v-model="tool.coating"
                 class="ml-2"
-                label="Coating"
-                :items="coatings"
                 clearable
+                :items="coatings"
+                label="Coating"
               />
             </v-col>
           </v-row>
           <v-row no-gutters>
             <v-text-field
               v-model="tool.productLink"
-              label="Product Page Link"
               append-inner-icon="mdi-link"
+              label="Product Page Link"
             />
           </v-row>
           <v-row no-gutters>
             <v-text-field
               v-model="tool.techDataLink"
-              label="Speed & Feeds Link"
               append-inner-icon="mdi-link"
+              label="Speed & Feeds Link"
             />
           </v-row>
           <v-row no-gutters>
             <v-text-field
               v-model="tool.img"
-              label="Tool Image URL"
               append-inner-icon="mdi-image-outline"
+              label="Tool Image URL"
             />
           </v-row>
         </v-window-item>
 
         <v-window-item value="stock">
-          <v-row no-gutters class="mb-4" align="center">
+          <v-row align="center" class="mb-4" no-gutters>
             <v-dialog v-model="manualOrderDialog" max-width="500">
-              <template v-slot:activator="{ props: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-btn
                   v-bind="activatorProps"
-                  elevation="2"
-                  density="comfortable"
-                  variant="tonal"
                   color="#932c95"
+                  density="comfortable"
                   :disabled="!manualOrderEnabled"
+                  elevation="2"
+                  variant="tonal"
                 >
                   <v-icon icon="mdi-cart-arrow-down" />
                 </v-btn>
               </template>
 
-              <template v-slot:default>
+              <template #default>
                 <v-card>
                   <v-card-title>Manual Order</v-card-title>
                   <v-card-text>
@@ -186,17 +186,17 @@
                     <v-row class="mt-4">
                       <v-text-field
                         v-model="manualOrderAmount"
-                        type="number"
                         label="Amount"
-                        placeholder="1"
                         min="1"
+                        placeholder="1"
+                        type="number"
                         @keydown="isNumber"
-                      ></v-text-field>
+                      />
                     </v-row>
                   </v-card-text>
                   <v-card-actions>
                     <v-spacer />
-                    <v-btn color="green" variant="elevated" @click="addManualOrder">Order</v-btn>
+                    <v-btn color="green" variant="elevated" @click="addManualOrder"> Order </v-btn>
                     <v-btn color="red" variant="elevated" @click="closeManualOrderDialog">
                       Cancel
                     </v-btn>
@@ -206,19 +206,19 @@
             </v-dialog>
             <v-switch
               v-model="tool.autoReorder"
-              label="Auto Reorder"
               class="ml-6"
               color="#932c95"
               density="compact"
               hide-details
+              label="Auto Reorder"
             />
             <v-checkbox
               v-model="tool.onOrder"
-              :label="formattedOrderedOn"
               class="ml-3"
               color="#901394"
               density="compact"
               hide-details
+              :label="formattedOrderedOn"
               @click="tool.orderedOn = undefined"
             />
           </v-row>
@@ -228,8 +228,8 @@
                 v-model.number="tool.stock"
                 class="mr-2"
                 label="Stock Qty"
-                type="number"
                 min="0"
+                type="number"
                 @keydown="isNumber($event)"
               />
               <v-combobox
@@ -244,9 +244,9 @@
                 label="Position"
                 @update:model-value="tool.position = tool.position?.toUpperCase()"
               >
-                <template v-slot:append-inner>
-                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation"></v-icon>
-                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printLocation" />
+                <template #append-inner>
+                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printLocation" />
                 </template>
               </v-text-field>
             </v-col>
@@ -254,32 +254,32 @@
               <v-select
                 v-model="tool.supplier"
                 class="ml-2"
-                label="Supplier"
-                :items="supplierStore.suppliers"
+                clearable
                 item-title="name"
                 item-value="_id"
-                clearable
+                :items="supplierStore.suppliers"
+                label="Supplier"
               >
-                <template v-slot:item="{ props, item }">
+                <template #item="{ props, item }">
                   <v-list-item v-bind="props" title="">
-                    <template v-slot:prepend>
+                    <template #prepend>
                       <v-avatar rounded="0">
-                        <v-img class="vendor-logo" :src="item.raw.logo"></v-img>
+                        <v-img class="vendor-logo" :src="item.raw.logo" />
                       </v-avatar>
                     </template>
                     {{ item.raw.name }}
                   </v-list-item>
                 </template>
               </v-select>
-              <CurrencyInput v-model="tool.cost" label="Cost" class="ml-2" />
+              <CurrencyInput v-model="tool.cost" class="ml-2" label="Cost" />
               <v-row no-gutters>
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="tool.reorderQty"
                     class="mx-2"
                     label="Reorder Qty"
-                    type="number"
                     min="0"
+                    type="number"
                     @keydown="isNumber($event)"
                   />
                 </v-col>
@@ -288,8 +288,8 @@
                     v-model.number="tool.reorderThreshold"
                     class="ml-2"
                     label="Min Stock Qty"
-                    type="number"
                     min="0"
+                    type="number"
                     @keydown="isNumber($event)"
                   />
                 </v-col>
@@ -299,23 +299,23 @@
           <ToolStockGraph
             v-if="tool._id"
             :id="tool._id"
-            :reorderThreshold="tool.reorderThreshold"
-            :currentStock="tool.stock"
-            :currentCost="tool.cost"
+            :current-cost="tool.cost"
+            :current-stock="tool.stock"
+            :reorder-threshold="tool.reorderThreshold"
           />
         </v-window-item>
 
         <v-window-item value="tech">
           <v-row>
             <v-col col="3">
-              <v-select v-model="tool.toolType" :items="types" label="Tool Type" clearable />
+              <v-select v-model="tool.toolType" clearable :items="types" label="Tool Type" />
             </v-col>
             <v-col cols="3">
               <v-text-field
                 v-model.number="tool.flutes"
                 :label="fluteText"
-                type="number"
                 min="0"
+                type="number"
                 @keydown="isNumber($event)"
               />
             </v-col>

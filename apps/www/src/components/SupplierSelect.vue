@@ -1,17 +1,15 @@
 <template>
   <v-select
-    label="Supplier"
-    :items="supplierStore.suppliers"
+    clearable
     item-title="name"
     item-value="_id"
-    clearable
+    :items="supplierStore.suppliers"
+    label="Supplier"
   >
     <template #item="{ props, item }">
       <v-list-item v-bind="props" title="">
         <template #prepend>
-          <v-avatar rounded="0">
-            <v-img class="vendor-logo" :src="item.raw.logo"></v-img>
-          </v-avatar>
+          <v-avatar rounded="0"> <v-img class="vendor-logo" :src="item.raw.logo" /> </v-avatar>
         </template>
         {{ item.raw.name }}
       </v-list-item>

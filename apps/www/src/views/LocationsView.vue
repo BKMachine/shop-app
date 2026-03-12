@@ -8,7 +8,7 @@
             - {{ tools.length }} result{{ tools.length === 1 ? '' : 's' }}
           </div>
           <v-spacer />
-          <v-btn :disabled="!printEnabled" :color="printColor" @click="print">
+          <v-btn :color="printColor" :disabled="!printEnabled" @click="print">
             <v-icon icon="mdi-printer-outline" />
           </v-btn>
         </v-card-title>
@@ -17,19 +17,19 @@
             <v-col cols="6">
               <v-select
                 v-model="location"
+                clearable
                 :items="toolStore.locations"
                 label="Location"
-                clearable
-                @update:modelValue="updateLocation"
+                @update:model-value="updateLocation"
               />
             </v-col>
             <v-col cols="6">
               <v-select
                 v-model="position"
+                clearable
                 :items="positions"
                 label="Position"
-                clearable
-                @update:modelValue="updateQueryString"
+                @update:model-value="updateQueryString"
               />
             </v-col>
           </v-row>
@@ -40,11 +40,11 @@
             :loading="toolStore.loading"
             @click:row="openTool"
           >
-            <template v-slot:['item.img']="{ item }">
-              <v-img :src="item.img" class="tool-img"></v-img>
+            <template #['item.img']="{ item }">
+              <v-img class="tool-img" :src="item.img" />
             </template>
 
-            <template v-slot:['item.stock']="{ item }">
+            <template #['item.stock']="{ item }">
               <span class="stock">{{ item.stock }}</span>
             </template>
           </v-data-table-virtual>

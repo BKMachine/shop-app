@@ -1,70 +1,70 @@
 <template>
-  <v-tabs v-model="tab" align-tabs="center" grow bg-color="primary" @update:model-value="onChange">
-    <v-tab value="milling" class="milling">Mill</v-tab>
-    <v-tab value="turning" class="turning">Lathe</v-tab>
-    <v-tab value="swiss" class="swiss">Swiss</v-tab>
-    <v-tab value="other" class="other">Misc</v-tab>
-    <v-tab value="all" class="all">All</v-tab>
+  <v-tabs v-model="tab" align-tabs="center" bg-color="primary" grow @update:model-value="onChange">
+    <v-tab class="milling" value="milling"> Mill </v-tab>
+    <v-tab class="turning" value="turning"> Lathe </v-tab>
+    <v-tab class="swiss" value="swiss"> Swiss </v-tab>
+    <v-tab class="other" value="other"> Misc </v-tab>
+    <v-tab class="all" value="all"> All </v-tab>
   </v-tabs>
 
   <v-window v-model="tab" class="mt-3">
     <v-window-item value="milling">
       <ToolsDataTable
         v-if="tab === 'milling'"
-        title="Mill Department Tooling"
+        :category="tab"
         :headers="millingHeaders"
         :items="toolStore.millingTools"
-        :category="tab"
         :search="search"
-        @updateSearch="updateSearch"
+        title="Mill Department Tooling"
+        @update-search="updateSearch"
       />
     </v-window-item>
 
     <v-window-item value="turning">
       <ToolsDataTable
         v-if="tab === 'turning'"
-        title="Lathe Department Tooling"
+        :category="tab"
         :headers="turningHeaders"
         :items="toolStore.turningTools"
-        :category="tab"
         :search="search"
-        @updateSearch="updateSearch"
+        title="Lathe Department Tooling"
+        @update-search="updateSearch"
       />
     </v-window-item>
 
     <v-window-item value="swiss">
       <ToolsDataTable
         v-if="tab === 'swiss'"
-        title="Swiss Department Tooling"
+        :category="tab"
         :headers="turningHeaders"
         :items="toolStore.swissTools"
-        :category="tab"
         :search="search"
-        @updateSearch="updateSearch"
+        title="Swiss Department Tooling"
+        @update-search="updateSearch"
       />
     </v-window-item>
 
     <v-window-item value="other">
       <ToolsDataTable
         v-if="tab === 'other'"
-        title="Miscellaneous Items"
+        :category="tab"
         :headers="otherHeaders"
         :items="toolStore.otherTools"
-        :category="tab"
         :search="search"
-        @updateSearch="updateSearch"
+        title="Miscellaneous Items"
+        @update-search="updateSearch"
       />
     </v-window-item>
 
     <v-window-item value="all">
       <ToolsDataTable
         v-if="tab === 'all'"
-        title="All Items"
+        :category="tab"
         :headers="otherHeaders"
         :items="toolStore.tools"
-        :category="tab"
         :search="search"
-        @updateSearch="updateSearch"
+        title="All Items"
+        @update-search="updateSearch"
       />
     </v-window-item>
   </v-window>

@@ -13,7 +13,7 @@
       <v-btn variant="elevated" @click="copyToClipboard">
         <v-icon icon="mdi-content-copy" />
       </v-btn>
-      <v-btn color="primary" variant="elevated" @click="scannerStore.showDialog(false)">OK </v-btn>
+      <v-btn color="primary" variant="elevated" @click="scannerStore.showDialog(false)"> OK </v-btn>
     </v-card-actions>
   </v-card>
 </template>

@@ -3,7 +3,7 @@
     <v-app-bar class="elevation-2">
       <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
       <v-app-bar-title>
-        <v-avatar size="48" class="pointer" @click="router.push({ name: 'home' })">
+        <v-avatar class="pointer" size="48" @click="router.push({ name: 'home' })">
           <v-img src="@/assets/img/bk_logo.png" />
         </v-avatar>
         BK Machine
@@ -11,21 +11,22 @@
     </v-app-bar>
     <v-navigation-drawer v-model="drawer">
       <v-list>
-        <v-list-item prepend-icon="mdi-apps" link :to="{ name: 'home' }">Home </v-list-item>
-        <v-list-item prepend-icon="mdi-dots-triangle" link :to="{ name: 'parts' }">
+        <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
+        <v-list-item link prepend-icon="mdi-dots-triangle" :to="{ name: 'parts' }">
           Parts
         </v-list-item>
-        <v-list-item prepend-icon="mdi-tools" link :to="{ name: 'tools' }">Tools </v-list-item>
-        <v-list-item prepend-icon="mdi-map-marker" link :to="{ name: 'locations' }">
+
+        <v-list-item link prepend-icon="mdi-tools" :to="{ name: 'tools' }"> Tools </v-list-item>
+        <v-list-item link prepend-icon="mdi-map-marker" :to="{ name: 'locations' }">
           Locations
         </v-list-item>
-        <v-list-item prepend-icon="mdi-cube-scan" link :to="{ name: 'materials' }">
+        <v-list-item link prepend-icon="mdi-cube-scan" :to="{ name: 'materials' }">
           Materials
         </v-list-item>
-        <v-list-item prepend-icon="mdi-pulse" link :to="{ name: 'status' }">Status </v-list-item>
+        <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
       </v-list>
-      <template v-slot:append>
-        <v-list-item prepend-icon="mdi-camera-outline" link :to="{ name: 'camera' }">
+      <template #append>
+        <v-list-item link prepend-icon="mdi-camera-outline" :to="{ name: 'camera' }">
           Images
         </v-list-item>
         <v-list-item
@@ -36,17 +37,17 @@
           Test
         </v-list-item>
         <v-list-item
-          prepend-icon="mdi-clipboard-text-clock-outline"
           link
+          prepend-icon="mdi-clipboard-text-clock-outline"
           :to="{ name: 'activity' }"
         >
           Activity
         </v-list-item>
-        <v-list-item prepend-icon="mdi-file-document-outline" link :to="{ name: 'toolReport' }">
+        <v-list-item link prepend-icon="mdi-file-document-outline" :to="{ name: 'toolReport' }">
           Report
         </v-list-item>
         <v-divider />
-        <v-list-item prepend-icon="mdi-cog" link to="/settings">Settings</v-list-item>
+        <v-list-item link prepend-icon="mdi-cog" to="/settings"> Settings </v-list-item>
       </template>
     </v-navigation-drawer>
     <v-main> <RouterView /> </v-main>

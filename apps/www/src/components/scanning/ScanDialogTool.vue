@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-avatar class="avatar" size="150"> <img :src="tool.img" alt="" /> </v-avatar>
+    <v-avatar class="avatar" size="150"> <img alt="" :src="tool.img" /> </v-avatar>
     <v-card class="card">
       <v-card-title class="text-right card-title">
         <div>{{ tool.item }}</div>
@@ -27,7 +27,7 @@
             <v-btn class="h-arrow-select" icon="mdi-plus" @mousedown.left="arrowRight" />
           </div>
         </div>
-        <div><v-btn class="v-arrow-select" @click="openDetails">View Details </v-btn></div>
+        <div><v-btn class="v-arrow-select" @click="openDetails"> View Details </v-btn></div>
       </v-card-text>
     </v-card>
   </div>

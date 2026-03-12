@@ -1,21 +1,21 @@
 <template>
   <v-divider />
-  <v-row no-gutters class="mt-5">
+  <v-row class="mt-5" no-gutters>
     <v-spacer />
     <v-col cols="3">
       <v-select
         v-model="months"
         class="ml-2"
-        :items="selectOptions"
+        density="compact"
         item-title="title"
         item-value="value"
-        density="compact"
+        :items="selectOptions"
         @update:model-value="getData"
       />
     </v-col>
   </v-row>
   <v-row class="container" no-gutters>
-    <Line :data="chartData" :options="options" class="chart" />
+    <Line class="chart" :data="chartData" :options="options" />
   </v-row>
 </template>
 

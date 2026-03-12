@@ -4,7 +4,7 @@
       <span>{{ part.part }}</span>
       <div class="d-flex align-center">
         <span class="mode-label mr-4">{{ set ? 'Set' : 'Adjust' }}</span>
-        <v-switch v-model="set" color="white" density="compact" hide-details></v-switch>
+        <v-switch v-model="set" color="white" density="compact" hide-details />
       </div>
     </div>
   </v-card-title>
@@ -18,54 +18,54 @@
         <div class="button-grid">
           <v-btn
             class="adjust-btn decrease"
-            variant="tonal"
             color="error"
             size="small"
+            variant="tonal"
             @click="adjustment -= 100"
           >
             −100
           </v-btn>
           <v-btn
             class="adjust-btn decrease"
-            variant="tonal"
             color="error"
             size="small"
+            variant="tonal"
             @click="adjustment -= 10"
           >
             −10
           </v-btn>
           <v-btn
             class="adjust-btn decrease"
-            variant="tonal"
             color="error"
             size="small"
+            variant="tonal"
             @click="adjustment -= 1"
           >
             −1
           </v-btn>
           <v-btn
             class="adjust-btn increase"
-            variant="tonal"
             color="success"
             size="small"
+            variant="tonal"
             @click="adjustment += 1"
           >
             +1
           </v-btn>
           <v-btn
             class="adjust-btn increase"
-            variant="tonal"
             color="success"
             size="small"
+            variant="tonal"
             @click="adjustment += 10"
           >
             +10
           </v-btn>
           <v-btn
             class="adjust-btn increase"
-            variant="tonal"
             color="success"
             size="small"
+            variant="tonal"
             @click="adjustment += 100"
           >
             +100
@@ -83,20 +83,20 @@
         <v-col cols="8">
           <v-text-field
             v-model.number="adjustment"
+            density="compact"
+            :prefix="set ? '' : adjustment > 0 ? '+' : ''"
             type="number"
             variant="outlined"
-            density="compact"
             @keydown="isNumber($event)"
-            :prefix="set ? '' : adjustment > 0 ? '+' : ''"
-          ></v-text-field>
+          />
         </v-col>
-        <v-col cols="4" class="d-flex flex-column justify-center">
+        <v-col class="d-flex flex-column justify-center" cols="4">
           <div class="stock-display-card">
             <div class="stock-value">
               <p class="text-caption opacity-75">Current</p>
               <p class="current-stock">{{ part.stock }}</p>
             </div>
-            <v-icon size="x-large" color="#8b5cf6" class="transition-arrow">
+            <v-icon class="transition-arrow" color="#8b5cf6" size="x-large">
               mdi-arrow-down
             </v-icon>
             <div class="stock-value">
@@ -120,19 +120,19 @@
   <v-card-actions class="pa-4">
     <v-spacer />
     <v-btn
-      text="Cancel"
       color="default"
-      variant="text"
       :disabled="saveFlag"
+      text="Cancel"
+      variant="text"
       @click="emit('closeDialog')"
-    ></v-btn>
+    />
     <v-btn
-      text="Save"
       color="success"
-      variant="elevated"
       :disabled="newStock < 0 || saveFlag"
+      text="Save"
+      variant="elevated"
       @click="save"
-    ></v-btn>
+    />
   </v-card-actions>
 </template>
 

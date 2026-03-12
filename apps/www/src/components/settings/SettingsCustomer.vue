@@ -14,22 +14,22 @@
           />
           <div class="logo-container">
             <v-text-field v-model="editingItem.logo" label="Logo URL" />
-            <div class="logo-preview ml-3 elevation-1"><img :src="editingItem.logo" alt="" /></div>
+            <div class="logo-preview ml-3 elevation-1"><img alt="" :src="editingItem.logo" /></div>
           </div>
           <v-text-field
             v-model="editingItem.homepage"
-            label="Homepage"
             append-inner-icon="mdi-open-in-new"
+            label="Homepage"
             @click:append-inner="open"
           />
         </v-form>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn color="green" variant="elevated" :disabled="!valid" @click="save">
+        <v-btn color="green" :disabled="!valid" variant="elevated" @click="save">
           {{ actionText }}
         </v-btn>
-        <v-btn color="red" variant="elevated" @click="close">Cancel</v-btn>
+        <v-btn color="red" variant="elevated" @click="close"> Cancel </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

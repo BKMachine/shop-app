@@ -27,12 +27,12 @@
             <v-card-text class="card-content">
               <v-row class="align-center" no-gutters>
                 <!-- Tool Image -->
-                <v-col cols="3" class="image-col">
+                <v-col class="image-col" cols="3">
                   <v-img class="tool-image" :src="activity.new.img" />
                 </v-col>
 
                 <!-- Tool Info -->
-                <v-col cols="auto" class="info-col">
+                <v-col class="info-col" cols="auto">
                   <div class="tool-description">{{ activity.new.description }}</div>
                   <div class="activity-meta">
                     <span
@@ -49,15 +49,15 @@
                 </v-col>
 
                 <!-- Action Button -->
-                <v-col cols="auto" class="action-col">
+                <v-col class="action-col" cols="auto">
                   <v-btn
+                    class="action-btn"
                     icon
                     size="x-small"
-                    class="action-btn"
-                    @click="open(activity.new, 'tool')"
                     title="View tool details"
+                    @click="open(activity.new, 'tool')"
                   >
-                    <v-icon icon="mdi-arrow-top-right" size="small"></v-icon>
+                    <v-icon icon="mdi-arrow-top-right" size="small" />
                   </v-btn>
                 </v-col>
               </v-row>
@@ -76,12 +76,12 @@
             <v-card-text class="card-content">
               <v-row class="align-center" no-gutters>
                 <!-- Part Image -->
-                <v-col cols="3" class="image-col">
+                <v-col class="image-col" cols="3">
                   <v-img class="tool-image" :src="activity.new.img" />
                 </v-col>
 
                 <!-- Part Info -->
-                <v-col cols="auto" class="info-col">
+                <v-col class="info-col" cols="auto">
                   <div class="tool-description">{{ activity.new.description }}</div>
                   <div class="activity-meta">
                     <span
@@ -98,15 +98,15 @@
                 </v-col>
 
                 <!-- Action Button -->
-                <v-col cols="auto" class="action-col">
+                <v-col class="action-col" cols="auto">
                   <v-btn
+                    class="action-btn"
                     icon
                     size="x-small"
-                    class="action-btn"
-                    @click="open(activity.new, 'part')"
                     title="View part details"
+                    @click="open(activity.new, 'part')"
                   >
-                    <v-icon icon="mdi-arrow-top-right" size="small"></v-icon>
+                    <v-icon icon="mdi-arrow-top-right" size="small" />
                   </v-btn>
                 </v-col>
               </v-row>

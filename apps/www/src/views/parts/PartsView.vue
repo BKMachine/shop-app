@@ -3,7 +3,7 @@
     <v-card-title class="header my-4">
       <div>Parts</div>
       <div>
-        <v-btn link :to="{ name: 'createPart' }" color="secondary" prepend-icon="mdi-plus">
+        <v-btn color="secondary" link prepend-icon="mdi-plus" :to="{ name: 'createPart' }">
           Create New Part
         </v-btn>
       </div>
@@ -12,50 +12,50 @@
       <v-text-field
         v-model="search"
         class="my-2"
+        clearable
+        hide-details
         label="Search"
         prepend-inner-icon="mdi-magnify"
-        variant="outlined"
         single-line
-        hide-details
-        clearable
+        variant="outlined"
       />
       <v-data-table
-        v-model:page="page"
         v-model:items-per-page="itemsPerPage"
+        v-model:page="page"
         :headers="headers"
         :items="filteredItems"
-        :search="search"
         :loading="partStore.loading"
+        :search="search"
         @click:row="openPart"
       >
-        <template v-slot:['item.img']="{ item }">
+        <template #['item.img']="{ item }">
           <v-hover>
-            <template v-slot:default="{ isHovering, props }">
+            <template #default="{ isHovering, props }">
               <v-img
                 v-bind="props"
                 :id="item._id"
-                :src="item.img"
                 class="part-img"
+                :src="item.img"
                 @mouseenter="showExpandedImage(item.img, $event)"
                 @mouseleave="hideExpandedImage"
-              ></v-img>
+              />
             </template>
           </v-hover>
         </template>
-        <template v-slot:['item.location']="{ item }">{{ location(item) }}</template>
-        <template v-slot:['item.stock']="{ item }">
+        <template #['item.location']="{ item }"> {{ location(item) }} </template>
+        <template #['item.stock']="{ item }">
           <div class="d-flex align-center">
             <v-dialog max-width="500">
-              <template v-slot:activator="{ props: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-btn v-bind="activatorProps">
                   <span class="stock mr-2"> {{ item.stock }} </span>
-                  <v-icon icon="mdi-contrast" size="large" color="secondary" />
+                  <v-icon color="secondary" icon="mdi-contrast" size="large" />
                 </v-btn>
               </template>
 
-              <template v-slot:default="{ isActive }">
+              <template #default="{ isActive }">
                 <v-card>
-                  <PartsAdjustStockDialog :part="item" @closeDialog="isActive.value = false" />
+                  <PartsAdjustStockDialog :part="item" @close-dialog="isActive.value = false" />
                 </v-card>
               </template>
             </v-dialog>
@@ -71,7 +71,7 @@
       class="expanded-img-container"
       :style="{ top: expandedImage.top + 'px', left: expandedImage.left + 'px' }"
     >
-      <v-img :src="expandedImage.src" class="expanded-img"></v-img>
+      <v-img class="expanded-img" :src="expandedImage.src" />
     </div>
   </teleport>
 </template>

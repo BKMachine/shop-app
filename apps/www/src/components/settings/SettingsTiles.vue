@@ -5,15 +5,15 @@
     class="tile elevation-2"
     @click="$emit('edit', index)"
   >
-    <v-img v-if="item.logo" :src="item.logo" class="logo" />
+    <v-img v-if="item.logo" class="logo" :src="item.logo" />
     <span v-else>{{ item.name }}</span>
-    <v-tooltip activator="parent" open-delay="500" location="top" offset="-20">
+    <v-tooltip activator="parent" location="top" offset="-20" open-delay="500">
       {{ item.name }}
     </v-tooltip>
   </v-btn>
 
   <v-btn class="tile elevation-2" color="blue-lighten-2" @click="$emit('create')">
-    <v-icon size="36" icon="mdi-plus" />
+    <v-icon icon="mdi-plus" size="36" />
   </v-btn>
 </template>
 

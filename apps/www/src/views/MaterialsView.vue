@@ -5,12 +5,12 @@
       <v-col cols="4">
         <v-text-field
           v-model="search"
-          label="Search Materials"
-          prepend-inner-icon="mdi-magnify"
           class="mb-0"
           clearable
+          label="Search Materials"
+          prepend-inner-icon="mdi-magnify"
           @click:clear="search = ''"
-        ></v-text-field>
+        />
 
         <v-list>
           <v-list-item
@@ -24,7 +24,7 @@
               <v-list-item-title>{{ material.description }}</v-list-item-title>
               <v-list-item-subtitle class="d-flex align-center">
                 {{ material.type }}- {{ material.materialType }}
-                <v-spacer></v-spacer>
+                <v-spacer />
                 <div v-if="material.type === 'Flat'">
                   {{ material.height }}x {{ material.width }}
                 </div>
@@ -37,23 +37,23 @@
 
       <!-- Right Column: Material Details -->
       <v-col cols="8">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            Material Details
-            <v-spacer />
-            <v-btn color="primary" @click="addNewMaterial">Add New</v-btn>
-          </v-card-title>
-          <v-card-text>
-            <v-form ref="form">
+        <v-form ref="form" v-model="formValid">
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              Material Details
+              <v-spacer />
+              <v-btn color="primary" @click="addNewMaterial"> Add New </v-btn>
+            </v-card-title>
+            <v-card-text>
               <v-row class="mt-4">
                 <v-col>
                   <v-text-field
-                    :model-value="selectedMaterial.description"
-                    label="Description"
-                    readonly
-                    hint="Auto Generated"
                     class="readonly-field"
-                  ></v-text-field>
+                    hint="Auto Generated"
+                    label="Description"
+                    :model-value="selectedMaterial.description"
+                    readonly
+                  />
                 </v-col>
               </v-row>
 
@@ -61,15 +61,15 @@
                 <v-col cols="6">
                   <v-select
                     v-model="selectedMaterial.materialType"
-                    :items="items"
+                    hide-details
                     item-title="name"
                     item-value="value"
+                    :items="items"
                     label="Material Type"
                     required
-                    hide-details
                   >
                     <template #item="data">
-                      <v-list-item v-if="data.props.header">{{ data.props.header }}</v-list-item>
+                      <v-list-item v-if="data.props.header"> {{ data.props.header }} </v-list-item>
                       <v-divider v-else-if="data.props.divider" />
                       <v-list-subheader v-else v-bind="data.props" class="material-select-item">
                         {{ data.item.value }}
@@ -80,11 +80,11 @@
                 <v-col cols="6">
                   <v-select
                     v-model="selectedMaterial.type"
+                    hide-details
                     :items="['Flat', 'Round']"
                     label="Type"
                     required
-                    hide-details
-                  ></v-select>
+                  />
                 </v-col>
               </v-row>
 
@@ -92,36 +92,39 @@
                 <v-col cols="4">
                   <v-text-field
                     v-model.number="selectedMaterial.height"
+                    hide-details
                     label="Height (inches)"
-                    type="number"
                     min="0"
                     required
-                    hide-details
+                    :rules="[numberRequiredRule]"
+                    type="number"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
                     v-model.number="selectedMaterial.width"
+                    hide-details
                     label="Width (inches)"
-                    type="number"
                     min="0"
                     required
-                    hide-details
+                    :rules="[numberRequiredRule]"
+                    type="number"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
                     v-model.number="selectedMaterial.wallThickness"
+                    clearable
+                    hide-details
                     label="Wall Thickness"
-                    type="number"
                     min="0"
                     required
-                    hide-details
-                    clearable
+                    :rules="[numberOptionalRule]"
+                    type="number"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
 
@@ -129,89 +132,104 @@
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="selectedMaterial.diameter"
+                    hide-details
                     label="Diameter (inches)"
-                    type="number"
                     min="0"
                     required
-                    hide-details
+                    :rules="[numberRequiredRule]"
+                    type="number"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="selectedMaterial.wallThickness"
+                    hide-details
                     label="Wall Thickness"
-                    type="number"
                     min="0"
                     required
-                    hide-details
+                    :rules="[numberOptionalRule]"
+                    type="number"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="selectedMaterial.length"
+                    hide-details
                     label="Length (inches)"
-                    type="number"
                     min="0"
                     required
-                    hide-details
+                    :rules="[numberRequiredRule]"
+                    type="number"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
-                <v-col cols="6"> <SupplierSelect v-model="selectedMaterial.supplier" /> </v-col>
+                <v-col cols="6">
+                  <SupplierSelect v-model="selectedMaterial.supplier" :rules="[requiredRule]" />
+                </v-col>
               </v-row>
 
               <v-row>
                 <v-col>
                   <v-text-field
-                    :model-value="formatCost(selectedMaterial.rate)"
                     label="Cost per Pound (lb)"
-                    type="number"
+                    :model-value="formatCost(selectedMaterial.rate)"
                     prefix="$"
+                    :rules="[numberRequiredRule]"
+                    type="number"
                     @input="onCostInputField($event, 'rate')"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
                 <v-col>
                   <v-text-field
-                    :model-value="formatCost(selectedMaterial.costPerFoot)"
                     label="Cost per Foot"
-                    type="number"
+                    :model-value="formatCost(selectedMaterial.costPerFoot)"
                     prefix="$"
+                    :rules="[numberRequiredRule]"
+                    type="number"
                     @input="onCostInputField($event, 'costPerFoot')"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
                 <v-col>
                   <v-text-field
-                    :model-value="formatCost(selectedMaterial.cost)"
                     label="Cost per Bar"
-                    type="number"
+                    :model-value="formatCost(selectedMaterial.cost)"
                     prefix="$"
+                    :rules="[numberRequiredRule]"
+                    type="number"
                     @input="onCostInputField($event, 'cost')"
                     @keydown="onlyAllowNumeric($event)"
-                  ></v-text-field>
+                  />
                 </v-col>
                 <v-col>
                   <v-text-field
-                    :model-value="formatWeight(selectedMaterial.weight)"
-                    label="Estimated Weight (lbs)"
-                    hint="Auto Generated"
                     class="readonly-field"
+                    hint="Auto Generated"
+                    label="Estimated Weight (lbs)"
+                    :model-value="formatWeight(selectedMaterial.weight)"
                     readonly
-                  ></v-text-field>
+                  />
                 </v-col>
               </v-row>
-            </v-form>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="green" variant="elevated" @click="saveMaterial">Save</v-btn>
-          </v-card-actions>
-        </v-card>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="green"
+                :disabled="!formValid"
+                variant="elevated"
+                @click="validateAndSave"
+              >
+                Save
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-form>
       </v-col>
     </v-row>
   </v-container>
@@ -234,7 +252,7 @@ const defaultMaterial: Material = {
   diameter: null,
   wallThickness: null,
   length: 144,
-  supplier: '',
+  supplier: undefined,
   weight: 0,
   rate: 0,
   cost: 0,
@@ -270,6 +288,7 @@ const items = [
 const search = ref('');
 const selectedMaterial = ref<Material>({ ...defaultMaterial });
 const lastCostField = ref<'rate' | 'costPerFoot' | 'cost'>('rate');
+const formValid = ref(true);
 
 const materials = computed(() => materialsStore.materials);
 
@@ -287,8 +306,15 @@ function selectMaterial(material: Material) {
   selectedMaterial.value = { ...material };
 }
 
-function addNewMaterial() {
+function addNewMaterial(this: any) {
   selectedMaterial.value = { ...defaultMaterial };
+  this.$refs.form.resetValidation();
+}
+
+function validateAndSave(this: any) {
+  this.$refs.form.validate();
+  if (!formValid.value) return;
+  saveMaterial();
 }
 
 function saveMaterial() {
@@ -300,6 +326,18 @@ function saveMaterial() {
     materialsStore.update(selectedMaterial.value);
   }
 }
+// Validation rules
+const requiredRule = (v: any) => (v !== null && v !== undefined && v !== '') || 'Required';
+
+const numberRequiredRule = (v: any) =>
+  (v !== null && v !== undefined && !Number.isNaN(v) && v !== '') ||
+  'Required and must be a valid number';
+const numberOptionalRule = (v: any) =>
+  v === null ||
+  v === undefined ||
+  v === '' ||
+  (!Number.isNaN(v) && Number(v) >= 0) ||
+  'Must be a valid number';
 
 watch(
   selectedMaterial,

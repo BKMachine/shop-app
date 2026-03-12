@@ -3,11 +3,11 @@
     <v-card-title class="d-flex align-center justify-space-between">
       <span>Recent uploads</span>
       <v-btn
+        :disabled="loading"
+        icon="mdi-refresh"
         size="small"
         variant="text"
-        icon="mdi-refresh"
         @click="loadRecent"
-        :disabled="loading"
       />
     </v-card-title>
 
@@ -21,9 +21,9 @@
       <div v-else-if="!images.length" class="text-medium-emphasis">No recent images.</div>
 
       <v-row v-else dense>
-        <v-col v-for="img in images" :key="img.id" cols="6" sm="4" md="3" lg="2">
+        <v-col v-for="img in images" :key="img.id" cols="6" lg="2" md="3" sm="4">
           <v-card class="pa-1" elevation="1" hover>
-            <v-img :src="img.url" aspect-ratio="1" cover />
+            <v-img aspect-ratio="1" cover :src="img.url" />
 
             <v-card-subtitle class="text-caption mt-1">
               {{ new Date(img.createdAt).toLocaleString() }}

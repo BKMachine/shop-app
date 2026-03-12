@@ -2,8 +2,8 @@
   <div class="machine" :class="[status, { online: isOnline, alarmed: hasAlarm, blink }]">
     <div class="header">
       <div>{{ data.name }}</div>
-      <img v-if="!isOnline" class="offline" :src="offlineImg" alt="OFFLINE" />
-      <img class="logo" :src="logos.brand[data.brand]" :alt="data.brand" aria-label="brand" />
+      <img v-if="!isOnline" alt="OFFLINE" class="offline" :src="offlineImg" />
+      <img :alt="data.brand" aria-label="brand" class="logo" :src="logos.brand[data.brand]" />
     </div>
     <div v-if="isOnline">
       <div class="details">
