@@ -97,6 +97,7 @@
                     min="0"
                     required
                     hide-details
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="4">
@@ -107,6 +108,7 @@
                     min="0"
                     required
                     hide-details
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="4">
@@ -118,6 +120,7 @@
                     required
                     hide-details
                     clearable
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -131,6 +134,7 @@
                     min="0"
                     required
                     hide-details
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6">
@@ -141,6 +145,7 @@
                     min="0"
                     required
                     hide-details
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -153,6 +158,7 @@
                     min="0"
                     required
                     hide-details
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6"> <SupplierSelect v-model="selectedMaterial.supplier" /> </v-col>
@@ -166,6 +172,7 @@
                     type="number"
                     prefix="$"
                     @input="onCostInputField($event, 'rate')"
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col>
@@ -175,6 +182,7 @@
                     type="number"
                     prefix="$"
                     @input="onCostInputField($event, 'costPerFoot')"
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col>
@@ -184,6 +192,7 @@
                     type="number"
                     prefix="$"
                     @input="onCostInputField($event, 'cost')"
+                    @keydown="onlyAllowNumeric($event)"
                   ></v-text-field>
                 </v-col>
                 <v-col>
@@ -407,6 +416,38 @@ function formatWeight(weight: number | null | undefined): string {
   if (weight == null || Number.isNaN(weight)) return '';
   // Show up to 2 decimals, but no trailing zeros
   return parseFloat(weight.toFixed(2)).toString();
+}
+
+// Only allow numbers, decimal, and control keys in numeric fields
+function onlyAllowNumeric(e: KeyboardEvent) {
+  // Allow: backspace, delete, tab, escape, enter, arrows, home/end, etc.
+  if (
+    [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ].includes(e.key)
+  ) {
+    return;
+  }
+  // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+  if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+    return;
+  }
+  // Allow: numbers and decimal point
+  if (/^[0-9.]$/.test(e.key)) {
+    return;
+  }
+  // Prevent anything else
+  e.preventDefault();
 }
 </script>
 
