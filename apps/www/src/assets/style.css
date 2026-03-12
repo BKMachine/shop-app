@@ -15,3 +15,7 @@
   font-weight: bolder;
   font-size: 1.1em;
 }
+
+.readonly-field {
+  color: #8d6a00 !important; /* darker gold text for distinction */
+}

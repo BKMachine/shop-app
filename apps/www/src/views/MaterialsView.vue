@@ -52,9 +52,11 @@
                     label="Description"
                     readonly
                     hint="Auto Generated"
+                    class="readonly-field"
                   ></v-text-field>
                 </v-col>
               </v-row>
+
               <v-row>
                 <v-col cols="6">
                   <v-select
@@ -81,7 +83,7 @@
                     :items="['Flat', 'Round']"
                     label="Type"
                     required
-                    hide-details  
+                    hide-details
                   ></v-select>
                 </v-col>
               </v-row>
@@ -89,17 +91,17 @@
               <v-row v-if="selectedMaterial.type === 'Flat'">
                 <v-col cols="4">
                   <v-text-field
-                    v-model="selectedMaterial.height"
+                    v-model.number="selectedMaterial.height"
                     label="Height (inches)"
                     type="number"
                     min="0"
                     required
                     hide-details
-                                      ></v-text-field>
+                  ></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
-                    v-model="selectedMaterial.width"
+                    v-model.number="selectedMaterial.width"
                     label="Width (inches)"
                     type="number"
                     min="0"
@@ -109,12 +111,13 @@
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
-                    v-model="selectedMaterial.wallThickness"
+                    v-model.number="selectedMaterial.wallThickness"
                     label="Wall Thickness"
                     type="number"
                     min="0"
                     required
                     hide-details
+                    clearable
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -122,7 +125,7 @@
               <v-row v-if="selectedMaterial.type === 'Round'">
                 <v-col cols="6">
                   <v-text-field
-                    v-model="selectedMaterial.diameter"
+                    v-model.number="selectedMaterial.diameter"
                     label="Diameter (inches)"
                     type="number"
                     min="0"
@@ -132,24 +135,24 @@
                 </v-col>
                 <v-col cols="6">
                   <v-text-field
-                    v-model="selectedMaterial.wallThickness"
+                    v-model.number="selectedMaterial.wallThickness"
                     label="Wall Thickness"
                     type="number"
                     min="0"
                     required
-                    hide-details  
+                    hide-details
                   ></v-text-field>
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="6">
                   <v-text-field
-                    v-model="selectedMaterial.length"
+                    v-model.number="selectedMaterial.length"
                     label="Length (inches)"
                     type="number"
                     min="0"
                     required
-                    hide-details  
+                    hide-details
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6"> <SupplierSelect v-model="selectedMaterial.supplier" /> </v-col>
@@ -165,22 +168,21 @@
                 </v-col>
                 <v-col>
                   <v-text-field
-                    :model-value="selectedMaterial.weight"
+                    :model-value="formatWeight(selectedMaterial.weight)"
                     label="Estimated Weight (lbs)"
-                    type="number"
                     readonly
-                    hint="Auto Generated" 
+                    hint="Auto Generated"
+                    class="readonly-field"
                   ></v-text-field>
                 </v-col>
                 <v-col>
                   <v-text-field
-                    :model-value.number="selectedMaterial.cost"
+                    :model-value="selectedMaterial.cost?.toFixed(2)"
                     label="Estimated Cost"
-                    type="number"
                     readonly
                     prefix="$"
                     hint="Auto Generated"
-
+                    class="readonly-field"
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -211,10 +213,10 @@ const defaultMaterial: Material = {
   height: null,
   width: null,
   diameter: null,
-  wallThickness: 0,
+  wallThickness: null,
   length: 144,
   supplier: '',
-  weight: null,
+  weight: 0,
   rate: 0,
   cost: 0,
 };
@@ -236,6 +238,12 @@ const items = [
   { name: '17-4PH', value: '17-4PH', density: 0.284 },
   { name: '420', value: '420', density: 0.284 },
   { name: '440C', value: '440C', density: 0.284 },
+  { props: { divider: true } },
+  { props: { header: 'Other' } },
+  { name: 'Grade 5 Titanium', value: 'Grade 5 Titanium', density: 0.16 },
+  { name: 'Brass', value: 'Brass', density: 0.305 },
+  { name: 'Bronze', value: 'Bronze', density: 0.32 },
+  { name: 'Copper', value: 'Copper', density: 0.32 },
 ];
 
 const search = ref('');
@@ -341,7 +349,13 @@ function calcWeight(selectedMaterial: Material) {
       volume = Math.PI * radius ** 2 * length;
     }
   }
-  return Math.round(volume * density); // Weight in lbs
+  return volume * density; // Weight in lbs
+}
+
+function formatWeight(weight: number | null | undefined): string {
+  if (weight == null || Number.isNaN(weight)) return '';
+  // Show up to 2 decimals, but no trailing zeros
+  return parseFloat(weight.toFixed(2)).toString();
 }
 </script>
 
