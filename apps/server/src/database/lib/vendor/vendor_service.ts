@@ -11,7 +11,7 @@ async function create(data: VendorDoc): Promise<VendorDoc> {
 }
 
 async function update(doc: VendorDoc): Promise<VendorDoc | null> {
-  return await Vendor.findByIdAndUpdate(doc._id, doc, { new: true });
+  return await Vendor.findByIdAndUpdate(doc._id, doc, { returnDocument: 'after' });
 }
 
 export default {

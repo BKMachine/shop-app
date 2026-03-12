@@ -22,7 +22,7 @@ async function update(newPart: PartDoc): Promise<PartDoc | null> {
   const id = newPart._id;
   const oldPart: PartDoc | null = await Part.findById(id);
   if (!oldPart) throw new Error(`Missing part document id: ${id}`);
-  const updatedPart = await Part.findByIdAndUpdate(id, newPart, { new: true });
+  const updatedPart = await Part.findByIdAndUpdate(id, newPart, { returnDocument: 'after' });
   if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);
   await Audit.addPartAudit(oldPart, updatedPart);
   emit('part', updatedPart);

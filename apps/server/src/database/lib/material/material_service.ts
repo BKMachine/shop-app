@@ -18,7 +18,9 @@ async function update(newMaterial: Material): Promise<MaterialDoc | null> {
   const id = newMaterial._id;
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
-  const updatedMaterial = await Material.findByIdAndUpdate(id, newMaterial, { new: true });
+  const updatedMaterial = await Material.findByIdAndUpdate(id, newMaterial, {
+    returnDocument: 'after',
+  });
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial);
   emit('material', updatedMaterial);

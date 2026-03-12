@@ -10,7 +10,7 @@ async function update(image: ImageDoc): Promise<ImageDoc | null> {
   return await Image.findByIdAndUpdate(
     image._id,
     { ...image, updatedAt: new Date() },
-    { new: true },
+    { returnDocument: 'after' },
   );
 }
 
