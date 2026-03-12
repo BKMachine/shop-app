@@ -65,6 +65,7 @@ declare global {
     weight: number | null;
     rate: number | null;
     cost: number | null;
+    costPerFoot: number | null;
   }
 
   interface MaterialDoc extends Omit<Material, '_id'>, Document<Types.ObjectId> {

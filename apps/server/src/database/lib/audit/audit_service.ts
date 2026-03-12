@@ -93,6 +93,20 @@ async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
   );
 }
 
+async function addMaterialAudit(
+  oldMaterial: MaterialDoc | null,
+  newMaterial: MaterialDoc,
+): Promise<void> {
+  const doc = new Audit({
+    type: 'material',
+    timestamp: new Date(),
+    old: oldMaterial,
+    new: newMaterial,
+  });
+  await doc.save();
+  emit('material_audit');
+}
+
 export default {
   addToolAudit,
   getToolAudits,
@@ -100,4 +114,5 @@ export default {
   getPartAudits,
   getAllToolAudits,
   getAllPartAudits,
+  addMaterialAudit,
 };

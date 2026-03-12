@@ -157,32 +157,42 @@
                 </v-col>
                 <v-col cols="6"> <SupplierSelect v-model="selectedMaterial.supplier" /> </v-col>
               </v-row>
+
               <v-row>
                 <v-col>
                   <v-text-field
-                    v-model.number="selectedMaterial.rate"
-                    label="Cost per Pound"
+                    :model-value="formatCost(selectedMaterial.rate)"
+                    label="Cost per Pound (lb)"
                     type="number"
                     prefix="$"
+                    @input="onCostInputField($event, 'rate')"
+                  ></v-text-field>
+                </v-col>
+                <v-col>
+                  <v-text-field
+                    :model-value="formatCost(selectedMaterial.costPerFoot)"
+                    label="Cost per Foot"
+                    type="number"
+                    prefix="$"
+                    @input="onCostInputField($event, 'costPerFoot')"
+                  ></v-text-field>
+                </v-col>
+                <v-col>
+                  <v-text-field
+                    :model-value="formatCost(selectedMaterial.cost)"
+                    label="Cost per Bar"
+                    type="number"
+                    prefix="$"
+                    @input="onCostInputField($event, 'cost')"
                   ></v-text-field>
                 </v-col>
                 <v-col>
                   <v-text-field
                     :model-value="formatWeight(selectedMaterial.weight)"
                     label="Estimated Weight (lbs)"
-                    readonly
                     hint="Auto Generated"
                     class="readonly-field"
-                  ></v-text-field>
-                </v-col>
-                <v-col>
-                  <v-text-field
-                    :model-value="selectedMaterial.cost?.toFixed(2)"
-                    label="Estimated Cost"
                     readonly
-                    prefix="$"
-                    hint="Auto Generated"
-                    class="readonly-field"
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -219,6 +229,7 @@ const defaultMaterial: Material = {
   weight: 0,
   rate: 0,
   cost: 0,
+  costPerFoot: 0,
 };
 
 const items = [
@@ -228,6 +239,7 @@ const items = [
   { props: { divider: true } },
   { props: { header: 'Steel' } },
   { name: '1018', value: '1018', density: 0.284 },
+  { name: '1020', value: '1020', density: 0.284 },
   { name: '4140', value: '4140', density: 0.284 },
   { name: '4130', value: '4130', density: 0.284 },
   { props: { divider: true } },
@@ -248,6 +260,7 @@ const items = [
 
 const search = ref('');
 const selectedMaterial = ref<Material>({ ...defaultMaterial });
+const lastCostField = ref<'rate' | 'costPerFoot' | 'cost'>('rate');
 
 const materials = computed(() => materialsStore.materials);
 
@@ -271,7 +284,9 @@ function addNewMaterial() {
 
 function saveMaterial() {
   if (selectedMaterial.value._id === '0') {
-    materialsStore.add(selectedMaterial.value);
+    materialsStore.add(selectedMaterial.value).then(() => {
+      selectedMaterial.value = { ...defaultMaterial };
+    });
   } else {
     materialsStore.update(selectedMaterial.value);
   }
@@ -282,11 +297,47 @@ watch(
   (newMaterial) => {
     recomputeDescription(newMaterial);
     newMaterial.weight = calcWeight(newMaterial);
-    newMaterial.cost =
-      newMaterial.weight && newMaterial.rate ? newMaterial.weight * newMaterial.rate : 0;
+    autoCalculateCosts(newMaterial);
   },
   { deep: true },
 );
+
+function onCostInputField(event: any, field: 'rate' | 'costPerFoot' | 'cost') {
+  // Parse and update the model with full precision, but display with 2 decimals
+  const value = parseFloat(event.target.value);
+  if (!Number.isNaN(value)) {
+    selectedMaterial.value[field] = value;
+    lastCostField.value = field;
+    autoCalculateCosts(selectedMaterial.value);
+  }
+}
+
+function formatCost(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(2)).toString();
+}
+
+function autoCalculateCosts(material: any) {
+  // Avoid recursion by only updating non-last fields
+  const weight = material.weight || 0;
+  const lengthInFeet = (material.length || 0) / 12;
+  if (!weight || !lengthInFeet) {
+    material.rate = 0;
+    material.costPerFoot = 0;
+    material.cost = 0;
+    return;
+  }
+  if (lastCostField.value === 'rate') {
+    material.cost = weight * material.rate;
+    material.costPerFoot = material.cost / lengthInFeet;
+  } else if (lastCostField.value === 'costPerFoot') {
+    material.cost = material.costPerFoot * lengthInFeet;
+    material.rate = material.cost / weight;
+  } else if (lastCostField.value === 'cost') {
+    material.rate = material.cost / weight;
+    material.costPerFoot = material.cost / lengthInFeet;
+  }
+}
 
 function recomputeDescription(material: Material) {
   if (!material.type || !material.materialType) {
