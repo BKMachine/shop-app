@@ -63,6 +63,7 @@
                     readonly
                   />
                 </v-col>
+                <v-col cols="4"> <MaterialSketch :material="selectedMaterial" /> </v-col>
               </v-row>
 
               <v-row>
@@ -245,6 +246,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import MaterialSketch from '@/components/MaterialSketch.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import { useMaterialsStore } from '@/stores/materials_store';
 
