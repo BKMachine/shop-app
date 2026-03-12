@@ -45,13 +45,16 @@
           </v-card-title>
           <v-card-text>
             <v-form ref="form">
-              <v-text-field
-                v-model="selectedMaterial.description"
-                label="Description"
-                readonly
-                disabled
-              ></v-text-field>
-
+              <v-row class="mt-4">
+                <v-col>
+                  <v-text-field
+                    :model-value="selectedMaterial.description"
+                    label="Description"
+                    readonly
+                    hint="Auto Generated"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
               <v-row>
                 <v-col cols="6">
                   <v-select
@@ -61,6 +64,7 @@
                     item-value="value"
                     label="Material Type"
                     required
+                    hide-details
                   >
                     <template #item="data">
                       <v-list-item v-if="data.props.header">{{ data.props.header }}</v-list-item>
@@ -77,6 +81,7 @@
                     :items="['Flat', 'Round']"
                     label="Type"
                     required
+                    hide-details  
                   ></v-select>
                 </v-col>
               </v-row>
@@ -89,7 +94,8 @@
                     type="number"
                     min="0"
                     required
-                  ></v-text-field>
+                    hide-details
+                                      ></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
@@ -98,6 +104,7 @@
                     type="number"
                     min="0"
                     required
+                    hide-details
                   ></v-text-field>
                 </v-col>
                 <v-col cols="4">
@@ -107,6 +114,7 @@
                     type="number"
                     min="0"
                     required
+                    hide-details
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -119,6 +127,7 @@
                     type="number"
                     min="0"
                     required
+                    hide-details
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6">
@@ -128,6 +137,7 @@
                     type="number"
                     min="0"
                     required
+                    hide-details  
                   ></v-text-field>
                 </v-col>
               </v-row>
@@ -139,6 +149,7 @@
                     type="number"
                     min="0"
                     required
+                    hide-details  
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6"> <SupplierSelect v-model="selectedMaterial.supplier" /> </v-col>
@@ -154,19 +165,22 @@
                 </v-col>
                 <v-col>
                   <v-text-field
-                    v-model="selectedMaterial.weight"
+                    :model-value="selectedMaterial.weight"
                     label="Estimated Weight (lbs)"
                     type="number"
-                    disabled
+                    readonly
+                    hint="Auto Generated" 
                   ></v-text-field>
                 </v-col>
                 <v-col>
                   <v-text-field
-                    v-model.number="selectedMaterial.cost"
+                    :model-value.number="selectedMaterial.cost"
                     label="Estimated Cost"
                     type="number"
-                    disabled
+                    readonly
                     prefix="$"
+                    hint="Auto Generated"
+
                   ></v-text-field>
                 </v-col>
               </v-row>
