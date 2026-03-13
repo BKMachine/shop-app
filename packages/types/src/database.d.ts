@@ -62,9 +62,6 @@ declare global {
     length: number | null;
     materialType: string;
     supplier?: Supplier | string;
-    weight: number | null;
-    rate: number | null;
-    cost: number | null;
     costPerFoot: number | null;
   }
 

@@ -21,3 +21,33 @@ export function isNumber(evt: KeyboardEvent) {
     evt.preventDefault();
   }
 }
+
+export function onlyAllowNumeric(e: KeyboardEvent) {
+  if (
+    [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'Escape',
+      'Enter',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ].includes(e.key)
+  ) {
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+    return;
+  }
+
+  if (/^[0-9.]$/.test(e.key)) {
+    return;
+  }
+
+  e.preventDefault();
+}

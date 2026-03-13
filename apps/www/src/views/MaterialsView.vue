@@ -59,11 +59,13 @@
                     class="readonly-field"
                     hint="Auto Generated"
                     label="Description"
-                    :model-value="selectedMaterial.description"
+                    :model-value="description"
                     readonly
                   />
                 </v-col>
-                <v-col cols="4"> <MaterialSketch :material="selectedMaterial" /> </v-col>
+                <v-col cols="4">
+                  <div class="text-end"><MaterialSketch :material="selectedMaterial" /></div>
+                </v-col>
               </v-row>
 
               <v-row>
@@ -105,7 +107,7 @@
                     label="Height (inches)"
                     min="0"
                     required
-                    :rules="[numberRequiredRule]"
+                    :rules="[requiredRule, numberRequiredRule]"
                     type="number"
                     @keydown="onlyAllowNumeric($event)"
                   />
@@ -117,7 +119,7 @@
                     label="Width (inches)"
                     min="0"
                     required
-                    :rules="[numberRequiredRule]"
+                    :rules="[requiredRule, numberRequiredRule]"
                     type="number"
                     @keydown="onlyAllowNumeric($event)"
                   />
@@ -145,7 +147,7 @@
                     label="Diameter (inches)"
                     min="0"
                     required
-                    :rules="[numberRequiredRule]"
+                    :rules="[requiredRule, numberRequiredRule]"
                     type="number"
                     @keydown="onlyAllowNumeric($event)"
                   />
@@ -171,7 +173,7 @@
                     label="Length (inches)"
                     min="0"
                     required
-                    :rules="[numberRequiredRule]"
+                    :rules="[requiredRule, numberRequiredRule]"
                     type="number"
                     @keydown="onlyAllowNumeric($event)"
                   />
@@ -184,21 +186,23 @@
               <v-row>
                 <v-col>
                   <v-text-field
-                    label="Cost per Pound (lb)"
-                    :model-value="formatCost(selectedMaterial.rate)"
+                    :disabled="!weight"
+                    label="Cost per Pound (lbs)"
+                    :model-value="formatCost(costPerPound)"
                     prefix="$"
-                    :rules="[numberRequiredRule]"
+                    :rules="[requiredRule, numberRequiredRule]"
                     type="number"
-                    @input="onCostInputField($event, 'rate')"
+                    @input="onCostInputField($event, 'costPerPound')"
                     @keydown="onlyAllowNumeric($event)"
                   />
                 </v-col>
                 <v-col>
                   <v-text-field
-                    label="Cost per Foot"
+                    :disabled="!weight"
+                    label="Cost per Foot (ft)"
                     :model-value="formatCost(selectedMaterial.costPerFoot)"
                     prefix="$"
-                    :rules="[numberRequiredRule]"
+                    :rules="[requiredRule, numberRequiredRule]"
                     type="number"
                     @input="onCostInputField($event, 'costPerFoot')"
                     @keydown="onlyAllowNumeric($event)"
@@ -206,12 +210,13 @@
                 </v-col>
                 <v-col>
                   <v-text-field
-                    label="Cost per Bar"
-                    :model-value="formatCost(selectedMaterial.cost)"
+                    :disabled="!weight"
+                    label="Cost per Bar (ea)"
+                    :model-value="formatCost(costPerBar)"
                     prefix="$"
-                    :rules="[numberRequiredRule]"
+                    :rules="[requiredRule, numberRequiredRule]"
                     type="number"
-                    @input="onCostInputField($event, 'cost')"
+                    @input="onCostInputField($event, 'costPerBar')"
                     @keydown="onlyAllowNumeric($event)"
                   />
                 </v-col>
@@ -220,7 +225,7 @@
                     class="readonly-field"
                     hint="Auto Generated"
                     label="Estimated Weight (lbs)"
-                    :model-value="formatWeight(selectedMaterial.weight)"
+                    :model-value="formatWeight(weight)"
                     readonly
                   />
                 </v-col>
@@ -228,12 +233,7 @@
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn
-                color="green"
-                :disabled="!formValid"
-                variant="elevated"
-                @click="validateAndSave"
-              >
+              <v-btn color="green" :disabled="!formValid" variant="elevated" @click="saveMaterial">
                 Save
               </v-btn>
             </v-card-actions>
@@ -248,9 +248,12 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import MaterialSketch from '@/components/MaterialSketch.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
+import { onlyAllowNumeric } from '@/plugins/utils';
+import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useMaterialsStore } from '@/stores/materials_store';
 
 const materialsStore = useMaterialsStore();
+const materials = computed(() => materialsStore.materials);
 
 const defaultMaterial: Material = {
   _id: '0',
@@ -263,9 +266,6 @@ const defaultMaterial: Material = {
   wallThickness: null,
   length: 144,
   supplier: undefined,
-  weight: 0,
-  rate: 0,
-  cost: 0,
   costPerFoot: 0,
 };
 
@@ -297,16 +297,190 @@ const items = [
 
 const search = ref('');
 const selectedMaterial = ref<Material>({ ...defaultMaterial });
-const lastCostField = ref<'rate' | 'costPerFoot' | 'cost'>('rate');
 const formValid = ref(true);
 const typeFilter = ref<'All' | 'Flat' | 'Round'>('All');
 const tubingFilter = ref<'All' | 'Tubing' | 'Bar'>('All');
-
-const materials = computed(() => materialsStore.materials);
+const form = ref();
 
 onMounted(() => {
   materialsStore.fetch();
 });
+
+function selectMaterial(material: Material) {
+  selectedMaterial.value = { ...material };
+}
+
+function addNewMaterial() {
+  selectedMaterial.value = { ...defaultMaterial };
+  form.value.resetValidation();
+}
+
+function saveMaterial() {
+  form.value.validate();
+  if (!formValid.value) return;
+
+  if (selectedMaterial.value._id === '0') {
+    materialsStore
+      .add(selectedMaterial.value)
+      .then(() => {
+        addNewMaterial();
+        toastSuccess('Material added successfully');
+      })
+      .catch(() => {
+        toastError('Failed to add material');
+      });
+  } else {
+    materialsStore
+      .update(selectedMaterial.value)
+      .then(() => {
+        toastSuccess('Material updated successfully');
+      })
+      .catch(() => {
+        toastError('Failed to update material');
+      });
+  }
+}
+
+const description = computed(() => {
+  const material = selectedMaterial.value;
+  if (!material.type || !material.materialType) return '';
+
+  const type = material.wallThickness ? 'Tubing' : 'Bar';
+  let description = '';
+
+  if (material.type === 'Flat') {
+    const materialInfo = material.wallThickness
+      ? `${material.height}" x ${material.width}" x ${material.wallThickness}"`
+      : `${material.height}" x ${material.width}"`;
+    description = `${material.materialType} Flat ${type} - ${materialInfo}`;
+  } else if (material.type === 'Round') {
+    const diameterInfo = material.wallThickness
+      ? `${material.diameter}" ⌀ x ${material.wallThickness}"`
+      : `${material.diameter}" ⌀`;
+    description = `${material.materialType} Round ${type} - ${diameterInfo}`;
+  } else {
+    description = `${material.materialType}`;
+  }
+
+  selectedMaterial.value.description = description;
+  return description;
+});
+
+const weight = computed(() => {
+  const material = selectedMaterial.value;
+  const materialInfo = items.find((item) => item.value === material.materialType);
+  if (!materialInfo) return 0;
+
+  const density = materialInfo.density || 0;
+
+  let volume = 0;
+  const height = material.height || 0;
+  const width = material.width || 0;
+  const diameter = material.diameter || 0;
+  const wallThickness = material.wallThickness || 0;
+  const length = material.length || 0;
+
+  if (material.type === 'Flat') {
+    if (wallThickness > 0) {
+      const outerVolume = height * width * length;
+      const innerVolume = (height - 2 * wallThickness) * (width - 2 * wallThickness) * length;
+      volume = outerVolume - innerVolume;
+    } else {
+      volume = height * width * length;
+    }
+  } else if (material.type === 'Round') {
+    const radius = diameter / 2;
+    if (wallThickness > 0) {
+      const outerVolume = Math.PI * radius ** 2 * length;
+      const innerRadius = radius - wallThickness;
+      const innerVolume = Math.PI * innerRadius ** 2 * length;
+      volume = outerVolume - innerVolume;
+    } else {
+      volume = Math.PI * radius ** 2 * length;
+    }
+  }
+
+  return volume * density;
+});
+
+const costPerPound = computed(() => {
+  if (!weight.value) return 0;
+  const material = selectedMaterial.value;
+  return material.costPerFoot && material.length
+    ? (material.costPerFoot * (material.length / 12)) / weight.value
+    : 0;
+});
+
+const costPerBar = computed(() => {
+  const material = selectedMaterial.value;
+  return material.costPerFoot && material.length
+    ? material.costPerFoot * (material.length / 12)
+    : 0;
+});
+
+function onCostInputField(event: Event, field: 'costPerPound' | 'costPerFoot' | 'costPerBar') {
+  const value = parseFloat((event.target as HTMLInputElement).value);
+  if (Number.isNaN(value)) return;
+
+  if (field === 'costPerFoot') {
+    selectedMaterial.value.costPerFoot = value;
+  } else if (field === 'costPerPound') {
+    const lengthInFeet = (selectedMaterial.value.length || 0) / 12;
+    selectedMaterial.value.costPerFoot = lengthInFeet ? (value * weight.value) / lengthInFeet : 0;
+  } else if (field === 'costPerBar') {
+    const lengthInFeet = (selectedMaterial.value.length || 0) / 12;
+    selectedMaterial.value.costPerFoot = lengthInFeet ? value / lengthInFeet : 0;
+  }
+}
+
+const requiredRule = (v: unknown) => (v !== null && v !== undefined && v !== '') || 'Required';
+
+const numberRequiredRule = (v: unknown) =>
+  (v !== null && v !== undefined && !Number.isNaN(v) && v !== '') || 'Must be a valid number';
+
+const numberOptionalRule = (v: unknown) =>
+  v === null ||
+  v === undefined ||
+  v === '' ||
+  (!Number.isNaN(v) && Number(v) >= 0) ||
+  'Must be a valid number';
+
+function formatWeight(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(2)).toString();
+}
+
+function formatNumber(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(3)).toString();
+}
+
+function formatCost(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(2)).toString();
+}
+
+function formatMaterialTitle(material: Material): string {
+  const type = material.wallThickness ? 'Tubing' : 'Bar';
+  return `${material.materialType} ${material.type} ${type}`;
+}
+
+function formatMaterialSize(material: Material): string {
+  if (material.type === 'Flat') {
+    const h = formatNumber(material.height);
+    const w = formatNumber(material.width);
+    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
+    return `${h} × ${w}${wall}`;
+  }
+
+  if (material.type === 'Round') {
+    const d = formatNumber(material.diameter);
+    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
+    return `Ø${d}${wall}`;
+  }
+
+  return '';
+}
 
 const sortedFilteredMaterials = computed(() => {
   const q = search.value.trim().toLowerCase();
@@ -379,216 +553,6 @@ function getSortDimensions(material: Material): number[] {
 
   return [length];
 }
-
-function formatNumber(val: number | null | undefined): string {
-  if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(3)).toString();
-}
-
-function formatMaterialTitle(material: Material): string {
-  const type = material.wallThickness ? 'Tubing' : 'Bar';
-  return `${material.materialType} ${material.type} ${type}`;
-}
-
-function formatMaterialSize(material: Material): string {
-  const length = material.length ? ` × ${formatNumber(material.length)}` : '';
-
-  if (material.type === 'Flat') {
-    const h = formatNumber(material.height);
-    const w = formatNumber(material.width);
-    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
-    return `${h} × ${w}${wall}${length}`;
-  }
-
-  if (material.type === 'Round') {
-    const d = formatNumber(material.diameter);
-    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
-    return `Ø${d}${wall}${length}`;
-  }
-
-  return '';
-}
-
-function selectMaterial(material: Material) {
-  selectedMaterial.value = { ...material };
-}
-
-function addNewMaterial(this: any) {
-  selectedMaterial.value = { ...defaultMaterial };
-  this.$refs.form.resetValidation();
-}
-
-function validateAndSave(this: any) {
-  this.$refs.form.validate();
-  if (!formValid.value) return;
-  saveMaterial();
-}
-
-function saveMaterial() {
-  if (selectedMaterial.value._id === '0') {
-    materialsStore.add(selectedMaterial.value).then(() => {
-      selectedMaterial.value = { ...defaultMaterial };
-    });
-  } else {
-    materialsStore.update(selectedMaterial.value);
-  }
-}
-
-const requiredRule = (v: any) => (v !== null && v !== undefined && v !== '') || 'Required';
-
-const numberRequiredRule = (v: any) =>
-  (v !== null && v !== undefined && !Number.isNaN(v) && v !== '') ||
-  'Required and must be a valid number';
-
-const numberOptionalRule = (v: any) =>
-  v === null ||
-  v === undefined ||
-  v === '' ||
-  (!Number.isNaN(v) && Number(v) >= 0) ||
-  'Must be a valid number';
-
-watch(
-  selectedMaterial,
-  (newMaterial) => {
-    recomputeDescription(newMaterial);
-    newMaterial.weight = calcWeight(newMaterial);
-    autoCalculateCosts(newMaterial);
-  },
-  { deep: true },
-);
-
-function onCostInputField(event: any, field: 'rate' | 'costPerFoot' | 'cost') {
-  const value = parseFloat(event.target.value);
-  if (!Number.isNaN(value)) {
-    selectedMaterial.value[field] = value;
-    lastCostField.value = field;
-    autoCalculateCosts(selectedMaterial.value);
-  }
-}
-
-function formatCost(val: number | null | undefined): string {
-  if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(2)).toString();
-}
-
-function autoCalculateCosts(material: any) {
-  const weight = material.weight || 0;
-  const lengthInFeet = (material.length || 0) / 12;
-
-  if (!weight || !lengthInFeet) {
-    material.rate = 0;
-    material.costPerFoot = 0;
-    material.cost = 0;
-    return;
-  }
-
-  if (lastCostField.value === 'rate') {
-    material.cost = weight * material.rate;
-    material.costPerFoot = material.cost / lengthInFeet;
-  } else if (lastCostField.value === 'costPerFoot') {
-    material.cost = material.costPerFoot * lengthInFeet;
-    material.rate = material.cost / weight;
-  } else if (lastCostField.value === 'cost') {
-    material.rate = material.cost / weight;
-    material.costPerFoot = material.cost / lengthInFeet;
-  }
-}
-
-function recomputeDescription(material: Material) {
-  if (!material.type || !material.materialType) {
-    material.description = '';
-    return;
-  }
-
-  const type = material.wallThickness ? 'Tubing' : 'Bar';
-
-  if (material.type === 'Flat') {
-    const materialInfo = material.wallThickness
-      ? `${material.height}" x ${material.width}" x ${material.wallThickness}"`
-      : `${material.height}" x ${material.width}"`;
-
-    material.description = `${material.materialType} Flat ${type} - ${materialInfo}`;
-  } else if (material.type === 'Round') {
-    const diameterInfo = material.wallThickness
-      ? `${material.diameter}" ⌀ x ${material.wallThickness}"`
-      : `${material.diameter}" ⌀`;
-
-    material.description = `${material.materialType} Round ${type} - ${diameterInfo}`;
-  } else {
-    material.description = `${material.materialType}`;
-  }
-}
-
-function calcWeight(selectedMaterial: Material) {
-  const materialInfo = items.find((item) => item.value === selectedMaterial.materialType);
-  if (!materialInfo) return 0;
-
-  const density = materialInfo.density || 0;
-
-  let volume = 0;
-  const height = selectedMaterial.height || 0;
-  const width = selectedMaterial.width || 0;
-  const diameter = selectedMaterial.diameter || 0;
-  const wallThickness = selectedMaterial.wallThickness || 0;
-  const length = selectedMaterial.length || 0;
-
-  if (selectedMaterial.type === 'Flat') {
-    if (wallThickness > 0) {
-      const outerVolume = height * width * length;
-      const innerVolume = (height - 2 * wallThickness) * (width - 2 * wallThickness) * length;
-      volume = outerVolume - innerVolume;
-    } else {
-      volume = height * width * length;
-    }
-  } else if (selectedMaterial.type === 'Round') {
-    const radius = diameter / 2;
-    if (wallThickness > 0) {
-      const outerVolume = Math.PI * radius ** 2 * length;
-      const innerRadius = radius - wallThickness;
-      const innerVolume = Math.PI * innerRadius ** 2 * length;
-      volume = outerVolume - innerVolume;
-    } else {
-      volume = Math.PI * radius ** 2 * length;
-    }
-  }
-
-  return volume * density;
-}
-
-function formatWeight(weight: number | null | undefined): string {
-  if (weight == null || Number.isNaN(weight)) return '';
-  return parseFloat(weight.toFixed(2)).toString();
-}
-
-function onlyAllowNumeric(e: KeyboardEvent) {
-  if (
-    [
-      'Backspace',
-      'Delete',
-      'Tab',
-      'Escape',
-      'Enter',
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowUp',
-      'ArrowDown',
-      'Home',
-      'End',
-    ].includes(e.key)
-  ) {
-    return;
-  }
-
-  if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
-    return;
-  }
-
-  if (/^[0-9.]$/.test(e.key)) {
-    return;
-  }
-
-  e.preventDefault();
-}
 </script>
 
 <style scoped>
@@ -598,7 +562,7 @@ function onlyAllowNumeric(e: KeyboardEvent) {
 }
 
 .material-row {
-  min-height: 48px !important;
+  min-height: 48px;
   padding-top: 4px;
   padding-bottom: 4px;
   border-radius: 6px;

@@ -1,6 +1,5 @@
 <template>
   <svg
-    v-if="sketchProps"
     aria-labelledby="sketchTitle"
     :height="svgSize"
     style="border:1px solid #ccc; background:#fafafa"
@@ -8,8 +7,8 @@
     :width="svgSize"
   >
     <title id="sketchTitle">Material Sketch</title>
-    <!-- Rectangle (Flat Solid) -->
-    <g v-if="sketchProps.type === 'rect'">
+    <!-- Material sketch shapes -->
+    <g v-if="sketchProps && sketchProps.type === 'rect'">
       <rect
         fill="#b3d1ff"
         :height="sketchProps.h ?? 0"
@@ -19,7 +18,6 @@
         :x="sketchProps.x ?? 0"
         :y="sketchProps.y ?? 0"
       />
-      <!-- Pseudo-3D lines at +45 degrees (up and right), extending off the SVG -->
       <line
         stroke="#888"
         stroke-width="1"
@@ -45,8 +43,7 @@
         :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 120"
       />
     </g>
-    <!-- Round (Solid) -->
-    <g v-else-if="sketchProps.type === 'circle'">
+    <g v-else-if="sketchProps && sketchProps.type === 'circle'">
       <circle
         :cx="sketchProps.cx ?? 0"
         :cy="sketchProps.cy ?? 0"
@@ -55,7 +52,6 @@
         stroke="#333"
         stroke-width="2"
       />
-      <!-- Pseudo-3D lines for round bar (tangential, up and right) -->
       <line
         stroke="#888"
         stroke-width="1"
@@ -73,8 +69,7 @@
         :y2="(sketchProps.cy ?? 0) + (sketchProps.r ?? 0) * Math.sin(45 * Math.PI / 180) + 120 * Math.sin(-Math.PI/4)"
       />
     </g>
-    <!-- Rectangular Tube -->
-    <g v-else-if="sketchProps.type === 'rect-tube'">
+    <g v-else-if="sketchProps && sketchProps.type === 'rect-tube'">
       <rect
         fill="#b3d1ff"
         :height="sketchProps.h ?? 0"
@@ -93,61 +88,42 @@
         :x="(sketchProps.x ?? 0) + (sketchProps.wall ?? 0)"
         :y="(sketchProps.y ?? 0) + (sketchProps.wall ?? 0)"
       />
-      <!-- Pseudo-3D lines -->
-      <polyline
-        fill="none"
-        :points="`
-          ${sketchProps.x ?? 0},${sketchProps.y ?? 0}
-          ${(sketchProps.x ?? 0) - 8},${(sketchProps.y ?? 0) - 8}
-          ${(sketchProps.x ?? 0) + (sketchProps.w ?? 0) - 8},${(sketchProps.y ?? 0) - 8}
-          ${(sketchProps.x ?? 0) + (sketchProps.w ?? 0)},${sketchProps.y ?? 0}
-        `"
-        stroke="#888"
-        stroke-width="1"
-      />
-      <line
-        stroke="#888"
-        stroke-width="1"
-        :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
-        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) - 8"
-        :y1="sketchProps.y ?? 0"
-        :y2="(sketchProps.y ?? 0) - 8"
-      />
-      <line
-        stroke="#888"
-        stroke-width="1"
-        :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
-        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) - 8"
-        :y1="(sketchProps.y ?? 0) + (sketchProps.h ?? 0)"
-        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 8"
-      />
+      <!-- Mimic normal rect 3D lines -->
       <line
         stroke="#888"
         stroke-width="1"
         :x1="sketchProps.x ?? 0"
-        :x2="(sketchProps.x ?? 0) - 8"
+        :x2="(sketchProps.x ?? 0) + 120"
+        :y1="sketchProps.y ?? 0"
+        :y2="(sketchProps.y ?? 0) - 120"
+      />
+      <line
+        stroke="#888"
+        stroke-width="1"
+        :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
+        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + 120"
+        :y1="sketchProps.y ?? 0"
+        :y2="(sketchProps.y ?? 0) - 120"
+      />
+      <line
+        stroke="#888"
+        stroke-width="1"
+        :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
+        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + 120"
         :y1="(sketchProps.y ?? 0) + (sketchProps.h ?? 0)"
-        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 8"
+        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 120"
       />
+      <!-- 4th 3D line for inner tube wall corner (bottom left, down and left) -->
       <line
         stroke="#888"
         stroke-width="1"
-        :x1="(sketchProps.x ?? 0) - 8"
-        :x2="(sketchProps.x ?? 0) - 8"
-        :y1="(sketchProps.y ?? 0) - 8"
-        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 8"
-      />
-      <line
-        stroke="#888"
-        stroke-width="1"
-        :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) - 8"
-        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) - 8"
-        :y1="(sketchProps.y ?? 0) - 8"
-        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 8"
+        :x1="(sketchProps.x ?? 0) + (sketchProps.wall ?? 0)"
+        :x2="(sketchProps.x ?? 0) + (sketchProps.wall ?? 0) + ((sketchProps.h ?? 0) - 2 * (sketchProps.wall ?? 0))"
+        :y1="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - (sketchProps.wall ?? 0)"
+        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - (sketchProps.wall ?? 0) - ((sketchProps.h ?? 0) - 2 * (sketchProps.wall ?? 0))"
       />
     </g>
-    <!-- Round Tube -->
-    <g v-else-if="sketchProps.type === 'circle-tube'">
+    <g v-else-if="sketchProps && sketchProps.type === 'circle-tube'">
       <circle
         :cx="sketchProps.cx ?? 0"
         :cy="sketchProps.cy ?? 0"
@@ -164,7 +140,6 @@
         stroke="#333"
         stroke-width="1"
       />
-      <!-- Pseudo-3D lines for round tube bar (tangential, up and right) -->
       <line
         stroke="#888"
         stroke-width="1"
@@ -182,8 +157,11 @@
         :y2="(sketchProps.cy ?? 0) + (sketchProps.r ?? 0) * Math.sin(45 * Math.PI / 180) + 120 * Math.sin(-Math.PI/4)"
       />
     </g>
-    <!-- Fallback -->
-    <text v-else fill="red" font-size="12" x="10" y="50">Invalid material</text>
+    <!-- Placeholder when no material is selected -->
+    <g v-else>
+      <rect fill="#fafafa" height="100" stroke="#ccc" stroke-width="0" width="100" x="0" y="0" />
+      <text fill="#888" font-size="9" text-anchor="middle" x="50" y="55">No material selected</text>
+    </g>
   </svg>
 </template>
 
