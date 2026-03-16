@@ -148,12 +148,13 @@
                     </v-col>
                     <v-col cols="6">
                       <v-text-field
-                        v-model="part.materialLength"
+                        v-model.number="part.materialLength"
                         hint="Material usage per part"
                         label="Length per Part (in)"
                         min="0"
                         :rules="[partLengthRule]"
                         type="number"
+                        @keydown="onlyAllowNumeric($event)"
                       />
                     </v-col>
                   </v-row>
@@ -161,20 +162,22 @@
                     <template v-if="part.materialCutType === 'bars'">
                       <v-col cols="6">
                         <v-text-field
-                          v-model="part.barLength"
+                          v-model.number="part.barLength"
                           label="Cut Bar Length (in)"
                           min="0"
                           :rules="[cutBarLengthRule]"
                           type="number"
+                          @keydown="onlyAllowNumeric($event)"
                         />
                       </v-col>
                       <v-col cols="6">
                         <v-text-field
-                          v-model="part.remnantLength"
+                          v-model.number="part.remnantLength"
                           label="Remnant Length (in)"
                           min="0"
                           :rules="[remnantLengthRule]"
                           type="number"
+                          @keydown="onlyAllowNumeric($event)"
                         />
                       </v-col>
                     </template>
@@ -415,7 +418,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import PartStockGraph from '@/components/PartStockGraph.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
-import { isNumber } from '@/plugins/utils';
+import { isNumber, onlyAllowNumeric } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';

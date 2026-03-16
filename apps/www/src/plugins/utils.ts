@@ -51,3 +51,18 @@ export function onlyAllowNumeric(e: KeyboardEvent) {
 
   e.preventDefault();
 }
+
+export function formatWeight(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(2)).toString();
+}
+
+export function formatNumber(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(3)).toString();
+}
+
+export function formatCost(val: number | null | undefined): string {
+  if (val == null || Number.isNaN(val)) return '';
+  return parseFloat(val.toFixed(2)).toString();
+}

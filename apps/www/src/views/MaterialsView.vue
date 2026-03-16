@@ -269,7 +269,7 @@ import fixDims from '@repo/utilities/fixDims';
 import { computed, onMounted, ref, watch } from 'vue';
 import MaterialSketch from '@/components/MaterialSketch.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
-import { onlyAllowNumeric } from '@/plugins/utils';
+import { formatCost, formatNumber, formatWeight, onlyAllowNumeric } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useMaterialsStore } from '@/stores/materials_store';
 
@@ -497,21 +497,6 @@ const numberOptionalRule = (v: unknown) =>
   v === '' ||
   (!Number.isNaN(v) && Number(v) >= 0) ||
   'Must be a valid number';
-
-function formatWeight(val: number | null | undefined): string {
-  if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(2)).toString();
-}
-
-function formatNumber(val: number | null | undefined): string {
-  if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(3)).toString();
-}
-
-function formatCost(val: number | null | undefined): string {
-  if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(2)).toString();
-}
 
 function formatMaterialTitle(material: Material): string {
   const type = material.wallThickness ? 'Tubing' : 'Bar';
