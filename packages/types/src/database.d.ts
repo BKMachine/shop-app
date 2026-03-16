@@ -87,7 +87,10 @@ declare global {
     img?: string;
     revision?: string;
     material?: Material | string;
+    materialCutType: 'blanks' | 'bars';
     materialLength: number;
+    barLength: number;
+    remnantLength: number;
     createdAt: Date;
     cycleTimes: CycleTimes[];
     price: number;
