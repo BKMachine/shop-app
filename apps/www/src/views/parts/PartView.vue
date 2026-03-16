@@ -235,6 +235,19 @@
                           >
                         </td>
                       </tr>
+                      <tr>
+                        <td class="text-medium-emphasis text-caption row-1">Waste</td>
+                        <td class="text-body-2">
+                          {{ partsPerBarDetails.fullBarLength }}" − ({{ partsPerBarDetails.totalParts
+                          }} × {{ partsPerBarDetails.materialLength }}") =
+                          {{ wasteDetails.wasteLength }}"
+                        </td>
+                        <td class="text-right">
+                          <v-chip color="warning" size="small" variant="tonal"
+                            >${{ wasteDetails.wasteCost }}</v-chip
+                          >
+                        </td>
+                      </tr>
                     </tbody>
                   </v-table>
                   <v-table v-else class="rounded bg-transparent" density="compact">
@@ -291,6 +304,19 @@
                           <v-chip class="yield-chip" color="success" size="small" variant="elevated"
                             >{{ partsPerBarDetails.totalParts }}
                             parts / bar</v-chip
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="text-medium-emphasis text-caption row-1">Waste</td>
+                        <td class="text-body-2">
+                          {{ partsPerBarDetails.fullBarLength }}" − ({{ partsPerBarDetails.totalParts
+                          }} × {{ partsPerBarDetails.materialLength }}") =
+                          {{ wasteDetails.wasteLength }}"
+                        </td>
+                        <td class="text-right">
+                          <v-chip color="warning" size="small" variant="tonal"
+                            >${{ wasteDetails.wasteCost }}</v-chip
                           >
                         </td>
                       </tr>
@@ -707,6 +733,17 @@ const partsPerBarDetails = computed(() => {
 
 const partsPerBar = computed(() => {
   return partsPerBarDetails.value.totalParts;
+});
+
+const wasteDetails = computed(() => {
+  const d = partsPerBarDetails.value;
+  if (!d.fullBarLength) return { wasteLength: 0, wasteCost: 0 };
+  const wasteLength = Math.round((d.fullBarLength - d.totalParts * d.materialLength) * 1000) / 1000;
+  const wasteCost =
+    materialCost.value > 0
+      ? Math.round((wasteLength / d.fullBarLength) * materialCost.value * 100) / 100
+      : 0;
+  return { wasteLength, wasteCost };
 });
 
 function assignMaterial() {
