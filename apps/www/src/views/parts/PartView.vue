@@ -145,6 +145,17 @@
                         <v-radio label="Blanks" value="blanks" />
                         <v-radio label="Bars" value="bars" />
                       </v-radio-group>
+                      <v-btn
+                        v-if="part.materialCutType === 'bars'"
+                        class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
+                        color="primary"
+                        density="compact"
+                        size="x-small"
+                        variant="text"
+                        @click="setSwissMaterial"
+                      >
+                        Use Swiss defaults
+                      </v-btn>
                     </v-col>
                     <v-col cols="6">
                       <v-text-field
@@ -709,6 +720,11 @@ const sortedMaterials = computed(() => {
     return 0;
   });
 });
+
+function setSwissMaterial() {
+  part.value.barLength = part.value.material?.length || 0;
+  part.value.remnantLength = 12;
+}
 </script>
 
 <style scoped>
@@ -748,5 +764,10 @@ const sortedMaterials = computed(() => {
 
 .row-1 {
   width: 140px;
+}
+
+.swiss-defaults-btn {
+  position: relative;
+  left: 16px;
 }
 </style>
