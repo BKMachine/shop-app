@@ -72,6 +72,7 @@
                 <v-col cols="6">
                   <v-select
                     v-model="selectedMaterial.materialType"
+                    :disabled="!isNewMaterial"
                     hide-details
                     item-title="name"
                     item-value="value"
@@ -91,6 +92,7 @@
                 <v-col cols="6">
                   <v-select
                     v-model="selectedMaterial.type"
+                    :disabled="!isNewMaterial"
                     hide-details
                     :items="['Flat', 'Round']"
                     label="Type"
@@ -103,6 +105,7 @@
                 <v-col cols="4">
                   <v-text-field
                     v-model.number="selectedMaterial.height"
+                    :disabled="!isNewMaterial"
                     hide-details
                     label="Height (inches)"
                     min="0"
@@ -115,6 +118,7 @@
                 <v-col cols="4">
                   <v-text-field
                     v-model.number="selectedMaterial.width"
+                    :disabled="!isNewMaterial"
                     hide-details
                     label="Width (inches)"
                     min="0"
@@ -128,6 +132,7 @@
                   <v-text-field
                     v-model.number="selectedMaterial.wallThickness"
                     clearable
+                    :disabled="!isNewMaterial"
                     hide-details
                     label="Wall Thickness"
                     min="0"
@@ -315,11 +320,13 @@ function addNewMaterial() {
   form.value.resetValidation();
 }
 
+const isNewMaterial = computed(() => selectedMaterial.value._id === '0');
+
 function saveMaterial() {
   form.value.validate();
   if (!formValid.value) return;
 
-  if (selectedMaterial.value._id === '0') {
+  if (isNewMaterial.value) {
     materialsStore
       .add(selectedMaterial.value)
       .then(() => {

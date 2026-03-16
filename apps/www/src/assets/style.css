@@ -19,3 +19,7 @@
 .readonly-field {
   color: #8d6a00 !important; /* darker gold text for distinction */
 }
+
+.v-field--disabled {
+  opacity: 0.6;
+}
