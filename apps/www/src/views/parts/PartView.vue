@@ -145,17 +145,32 @@
                         <v-radio label="Blanks" value="blanks" />
                         <v-radio label="Bars" value="bars" />
                       </v-radio-group>
-                      <v-btn
-                        v-if="part.materialCutType === 'bars'"
-                        class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
-                        color="primary"
-                        density="compact"
-                        size="x-small"
-                        variant="text"
-                        @click="setSwissMaterial"
-                      >
-                        Use Swiss defaults
-                      </v-btn>
+                      <div>
+                        <v-btn
+                          v-if="part.materialCutType === 'bars'"
+                          class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
+                          color="primary"
+                          density="compact"
+                          size="x-small"
+                          variant="text"
+                          @click="setMaterialDefaults('lathe')"
+                        >
+                          Lathe defaults
+                        </v-btn>
+                      </div>
+                      <div>
+                        <v-btn
+                          v-if="part.materialCutType === 'bars'"
+                          class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
+                          color="primary"
+                          density="compact"
+                          size="x-small"
+                          variant="text"
+                          @click="setMaterialDefaults('swiss')"
+                        >
+                          Swiss defaults
+                        </v-btn>
+                      </div>
                     </v-col>
                     <v-col cols="6">
                       <v-text-field
@@ -721,9 +736,14 @@ const sortedMaterials = computed(() => {
   });
 });
 
-function setSwissMaterial() {
-  part.value.barLength = part.value.material?.length || 0;
-  part.value.remnantLength = 12;
+function setMaterialDefaults(type: 'lathe' | 'swiss') {
+  if (type === 'lathe') {
+    part.value.barLength = 36;
+    part.value.remnantLength = 2;
+  } else if (type === 'swiss') {
+    part.value.barLength = part.value.material?.length || 0;
+    part.value.remnantLength = 12;
+  }
 }
 </script>
 
