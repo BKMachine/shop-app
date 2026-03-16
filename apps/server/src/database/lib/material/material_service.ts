@@ -1,3 +1,4 @@
+import fixDims from '@repo/utilities/fixDims';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
 import Material from './material_model.js';
@@ -25,17 +26,6 @@ async function update(newMaterial: Material): Promise<MaterialDoc | null> {
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial);
   emit('material', updatedMaterial);
   return updatedMaterial;
-}
-
-function fixDims(material: Material): Material {
-  if (material.type === 'Flat' && material.width && material.height) {
-    if (material.width < material.height) {
-      const temp = material.width;
-      material.width = material.height;
-      material.height = temp;
-    }
-  }
-  return material;
 }
 
 export default {

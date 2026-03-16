@@ -263,6 +263,7 @@
 </template>
 
 <script setup lang="ts">
+import fixDims from '@repo/utilities/fixDims';
 import { computed, onMounted, ref, watch } from 'vue';
 import MaterialSketch from '@/components/MaterialSketch.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
@@ -364,8 +365,9 @@ const existsInStore = computed<boolean>(() => {
 });
 
 function saveMaterial() {
+  fixDims(selectedMaterial.value);
   form.value.validate();
-  if (!formValid.value || existsInStore.value) return;
+  if (!formValid.value || (existsInStore.value && isNewMaterial.value)) return;
 
   if (isNewMaterial.value) {
     materialsStore

@@ -11,6 +11,10 @@
     "./logger": {
       "import": "./dist/logger.js",
       "types": "./dist/logger.d.ts"
+    },
+    "./fixDims": {
+      "import": "./dist/fixDims.js",
+      "types": "./dist/fixDims.d.ts"
     }
   },
   "scripts": {

@@ -273,6 +273,9 @@ importers:
       '@mdi/font':
         specifier: ^7.4.47
         version: 7.4.47
+      '@repo/utilities':
+        specifier: workspace:*
+        version: link:../../packages/utilities
       axios:
         specifier: ^1.13.5
         version: 1.13.5
