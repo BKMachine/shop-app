@@ -238,7 +238,20 @@
             </v-card-text>
             <v-card-actions>
               <v-spacer />
-              <v-btn color="green" :disabled="!formValid" variant="elevated" @click="saveMaterial">
+              <v-alert
+                v-if="existsInStore && isNewMaterial"
+                density="compact"
+                icon="mdi-alert-circle-outline"
+                text="This material already exists."
+                type="error"
+                variant="tonal"
+              />
+              <v-btn
+                color="green"
+                :disabled="!formValid || (existsInStore && isNewMaterial)"
+                variant="elevated"
+                @click="saveMaterial"
+              >
                 Save
               </v-btn>
             </v-card-actions>
@@ -322,9 +335,37 @@ function addNewMaterial() {
 
 const isNewMaterial = computed(() => selectedMaterial.value._id === '0');
 
+const existsInStore = computed<boolean>(() => {
+  // Check via material type, type, and dimensions excluding length
+  const material = selectedMaterial.value;
+  return materials.value.some((m) => {
+    if (m._id === material._id) return true;
+    if (m.materialType !== material.materialType) return false;
+    if (m.type !== material.type) return false;
+
+    if (material.type === 'Flat') {
+      const mDims = [m.height, m.width, m.wallThickness].sort((a, b) => (a ?? 0) - (b ?? 0));
+      const matDims = [material.height, material.width, material.wallThickness].sort(
+        (a, b) => (a ?? 0) - (b ?? 0),
+      );
+      return mDims.every((dim, i) => dim === matDims[i]);
+    }
+
+    if (material.type === 'Round') {
+      const mDims = [m.diameter, m.wallThickness].sort((a, b) => (a ?? 0) - (b ?? 0));
+      const matDims = [material.diameter, material.wallThickness].sort(
+        (a, b) => (a ?? 0) - (b ?? 0),
+      );
+      return mDims.every((dim, i) => dim === matDims[i]);
+    }
+
+    return false;
+  });
+});
+
 function saveMaterial() {
   form.value.validate();
-  if (!formValid.value) return;
+  if (!formValid.value || existsInStore.value) return;
 
   if (isNewMaterial.value) {
     materialsStore

@@ -7,7 +7,7 @@ async function list(): Promise<MaterialDoc[]> {
 }
 
 async function add(data: Material): Promise<MaterialDoc> {
-  const material = new Material(data);
+  const material = new Material(fixDims(data));
   await material.save();
   await Audit.addMaterialAudit(null, material);
   emit('material', material);
@@ -18,13 +18,24 @@ async function update(newMaterial: Material): Promise<MaterialDoc | null> {
   const id = newMaterial._id;
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
-  const updatedMaterial = await Material.findByIdAndUpdate(id, newMaterial, {
+  const updatedMaterial = await Material.findByIdAndUpdate(id, fixDims(newMaterial), {
     returnDocument: 'after',
   });
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial);
   emit('material', updatedMaterial);
   return updatedMaterial;
+}
+
+function fixDims(material: Material): Material {
+  if (material.type === 'Flat' && material.width && material.height) {
+    if (material.width < material.height) {
+      const temp = material.width;
+      material.width = material.height;
+      material.height = temp;
+    }
+  }
+  return material;
 }
 
 export default {
