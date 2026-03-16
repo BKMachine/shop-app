@@ -148,6 +148,7 @@
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="selectedMaterial.diameter"
+                    :disabled="!isNewMaterial"
                     hide-details
                     label="Diameter (inches)"
                     min="0"
@@ -160,6 +161,7 @@
                 <v-col cols="6">
                   <v-text-field
                     v-model.number="selectedMaterial.wallThickness"
+                    :disabled="!isNewMaterial"
                     hide-details
                     label="Wall Thickness"
                     min="0"
@@ -304,6 +306,7 @@ const items = [
   { name: '304', value: '304', density: 0.284 },
   { name: '316', value: '316', density: 0.284 },
   { name: '17-4PH', value: '17-4PH', density: 0.284 },
+  { name: '416', value: '416', density: 0.284 },
   { name: '420', value: '420', density: 0.284 },
   { name: '440C', value: '440C', density: 0.284 },
   { props: { divider: true } },
