@@ -78,7 +78,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import PartsAdjustStockDialog from '@/components/PartsAdjustStockDialog.vue';
+import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import router from '@/router';
 import { usePartStore } from '@/stores/parts_store';
 

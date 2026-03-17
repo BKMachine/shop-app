@@ -20,20 +20,16 @@
             </div>
           </div>
         </div>
-        <div class="d-flex flex-column align-end justify-center">
-          <!--   <v-chip :class="{ active: part.autoReorder }" class="mb-2" density="comfortable">
-            Auto Reorder
-          </v-chip>
-          <v-chip :class="{ active: part.onOrder }" density="comfortable">On Order</v-chip>-->
-        </div>
       </div>
     </div>
+
     <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="secondary">
       <v-tab value="general"> General </v-tab>
       <v-tab value="material"> Material </v-tab>
       <v-tab value="cost"> Cost </v-tab>
       <v-tab value="stock"> Stock </v-tab>
       <v-tab value="docs"> Documents </v-tab>
+      <v-tab value="images"> Images </v-tab>
       <v-tab value="notes"> Notes </v-tab>
       <v-spacer />
       <div class="d-flex align-center">
@@ -116,327 +112,9 @@
           </v-row>
         </v-window-item>
 
-        <v-window-item value="material">
-          <v-row>
-            <v-col cols="6">
-              <v-card class="mb-4" variant="outlined">
-                <v-card-text>
-                  <v-row>
-                    <v-col cols="12">
-                      <v-autocomplete
-                        v-model="part.material"
-                        hide-details
-                        item-title="description"
-                        item-value="_id"
-                        :items="sortedMaterials"
-                        label="Material"
-                        @update:model-value="assignMaterial"
-                      />
-                    </v-col>
-                  </v-row>
-                  <v-row>
-                    <v-col cols="6">
-                      <v-radio-group
-                        v-model="part.materialCutType"
-                        hide-details
-                        inline
-                        label="Cut Type"
-                      >
-                        <v-radio label="Blanks" value="blanks" />
-                        <v-radio label="Bars" value="bars" />
-                      </v-radio-group>
-                      <div>
-                        <v-btn
-                          v-if="part.materialCutType === 'bars'"
-                          class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
-                          color="primary"
-                          density="compact"
-                          size="x-small"
-                          variant="text"
-                          @click="setMaterialDefaults('lathe')"
-                        >
-                          Lathe defaults
-                        </v-btn>
-                        <v-btn
-                          v-if="part.materialCutType === 'bars'"
-                          class="mt-1 px-0 ml-4 text-caption-2 swiss-defaults-btn"
-                          color="primary"
-                          density="compact"
-                          size="x-small"
-                          variant="text"
-                          @click="setMaterialDefaults('2from1')"
-                        >
-                          2 from 1
-                        </v-btn>
-                      </div>
-                      <div>
-                        <v-btn
-                          v-if="part.materialCutType === 'bars'"
-                          class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
-                          color="primary"
-                          density="compact"
-                          size="x-small"
-                          variant="text"
-                          @click="setMaterialDefaults('swiss')"
-                        >
-                          Swiss defaults
-                        </v-btn>
-                      </div>
-                    </v-col>
-                    <v-col cols="6">
-                      <v-text-field
-                        v-model.number="part.materialLength"
-                        hint="Material usage per part"
-                        label="Length per Part (in)"
-                        min="0"
-                        :rules="[partLengthRule]"
-                        type="number"
-                        @keydown="onlyAllowNumeric($event)"
-                      />
-                    </v-col>
-                  </v-row>
-                  <v-row>
-                    <template v-if="part.materialCutType === 'bars'">
-                      <v-col cols="6">
-                        <v-text-field
-                          v-model.number="part.barLength"
-                          label="Cut Bar Length (in)"
-                          min="0"
-                          :rules="[cutBarLengthRule]"
-                          type="number"
-                          @keydown="onlyAllowNumeric($event)"
-                        />
-                      </v-col>
-                      <v-col cols="6">
-                        <v-text-field
-                          v-model.number="part.remnantLength"
-                          label="Remnant Length (in)"
-                          min="0"
-                          :rules="[remnantLengthRule]"
-                          type="number"
-                          @keydown="onlyAllowNumeric($event)"
-                        />
-                      </v-col>
-                    </template>
-                  </v-row>
-                </v-card-text>
-              </v-card>
-            </v-col>
+        <v-window-item value="material"> <PartMaterialDetails :part="part" /> </v-window-item>
 
-            <v-col cols="6">
-              <v-card color="blue-grey" variant="tonal">
-                <v-card-title class="text-subtitle-2 pa-3 pb-2"> Yield Summary </v-card-title>
-                <v-card-text>
-                  <v-table
-                    v-if="part.materialCutType !== 'bars'"
-                    class="rounded bg-transparent"
-                    density="compact"
-                  >
-                    <tbody>
-                      <tr>
-                        <td class="text-medium-emphasis text-caption row-1">Full Bar</td>
-                        <td class="text-body-2">
-                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" ÷
-                          {{ formatNumber(partsPerBarDetails.materialLength) }}"
-                        </td>
-                        <td class="text-right">
-                          <v-chip
-                            class="yield-chip"
-                            color="success"
-                            size="small"
-                            variant="elevated"
-                          >
-                            {{ partsPerBarDetails.totalParts }}
-                            parts / bar
-                          </v-chip>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-medium-emphasis text-caption row-1">Waste</td>
-                        <td class="text-body-2">
-                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
-                          × {{ formatNumber(partsPerBarDetails.materialLength) }}") =
-                          {{ formatNumber(wasteDetails.wasteLength) }}"
-                        </td>
-                        <td class="text-right">
-                          <v-chip color="warning" size="small" variant="tonal"
-                            >${{ formatCost(wasteDetails.wasteCost) }}</v-chip
-                          >
-                        </td>
-                      </tr>
-                    </tbody>
-                  </v-table>
-                  <v-table v-else class="rounded bg-transparent" density="compact">
-                    <tbody>
-                      <tr>
-                        <td class="text-medium-emphasis text-caption row-1">Full Bar</td>
-                        <td class="text-body-2">
-                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" ÷
-                          {{ formatNumber(partsPerBarDetails.barLength) }}"
-                        </td>
-                        <td class="text-right">
-                          <v-chip color="primary" size="small" variant="tonal">
-                            {{ partsPerBarDetails.subBars }}
-                            cut bars
-                          </v-chip>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-medium-emphasis text-caption row-1">Cut Bar</td>
-                        <td class="text-body-2">
-                          {{ formatNumber(partsPerBarDetails.barLength) }}" −
-                          {{ formatNumber(partsPerBarDetails.remnantLength) }}" =
-                          {{ formatNumber(partsPerBarDetails.usablePerSubBar) }}" usable
-                        </td>
-                        <td class="text-right">
-                          <v-chip color="primary" size="small" variant="tonal">
-                            {{ partsPerBarDetails.partsPerSubBar }}
-                            parts / cut bar
-                          </v-chip>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-medium-emphasis text-caption row-1">Remainder</td>
-                        <td class="text-body-2">
-                          {{ formatNumber(partsPerBarDetails.remainderLength) }}" −
-                          {{ formatNumber(partsPerBarDetails.remnantLength) }}" =
-                          {{ formatNumber(partsPerBarDetails.usableRemainder) }}" usable
-                        </td>
-                        <td class="text-right">
-                          <v-chip color="primary" size="small" variant="tonal">
-                            {{ partsPerBarDetails.remainderParts }}
-                            parts / remainder
-                          </v-chip>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-medium-emphasis text-caption font-weight-bold">Total</td>
-                        <td class="text-body-2">
-                          ({{ partsPerBarDetails.subBars }}
-                          × {{ partsPerBarDetails.partsPerSubBar }}) +
-                          {{ partsPerBarDetails.remainderParts }}
-                        </td>
-                        <td class="text-right">
-                          <v-chip
-                            class="yield-chip"
-                            color="success"
-                            size="small"
-                            variant="elevated"
-                          >
-                            {{ partsPerBarDetails.totalParts }}
-                            parts / bar
-                          </v-chip>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-medium-emphasis text-caption row-1">Waste</td>
-                        <td class="text-body-2">
-                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
-                          × {{ formatNumber(partsPerBarDetails.materialLength) }}") =
-                          {{ formatNumber(wasteDetails.wasteLength) }}"
-                        </td>
-                        <td class="text-right">
-                          <v-chip color="warning" size="small" variant="tonal">
-                            ${{ formatCost(wasteDetails.wasteCost) }}
-                          </v-chip>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </v-table>
-                </v-card-text>
-                <v-divider />
-                <v-card-text class="py-2">
-                  <v-table class="rounded bg-transparent" density="compact">
-                    <tbody>
-                      <tr>
-                        <td class="text-medium-emphasis text-body-2 row-1">Material Cost:</td>
-                        <td class="text-body-2">
-                          <div class="d-flex align-center ga-2">
-                            <v-chip color="purple-darken-2" variant="tonal"
-                              >${{ formatCost(materialCost) }}</v-chip
-                            >
-                            <span class="text-medium-emphasis">÷</span>
-                            <v-chip variant="outlined">{{ partsPerBar }} parts</v-chip>
-                          </div>
-                        </td>
-                        <td class="text-right">
-                          <v-chip
-                            class="font-weight-bold yield-chip"
-                            color="success"
-                            variant="elevated"
-                            >${{ formatCost(partMaterialCost) }}
-                            / part</v-chip
-                          >
-                        </td>
-                      </tr>
-                    </tbody>
-                  </v-table>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-        </v-window-item>
-
-        <v-window-item value="cost">
-          <v-row no-gutters>
-            <v-col cols="4">
-              <v-text-field
-                v-model.number="part.price"
-                label="Product Price (Customer)"
-                min="0"
-                prefix="$"
-                type="number"
-              />
-            </v-col>
-          </v-row>
-          <v-divider class="my-1" />
-          <div class="mb-2 font-weight-bold">Cycle Times</div>
-          <v-row v-for="(cycle, idx) in part.cycleTimes || []" :key="idx" class="mb-2">
-            <v-col cols="5">
-              <v-text-field v-model="cycle.operation" dense label="Operation Name" />
-            </v-col>
-            <v-col cols="5">
-              <v-text-field
-                v-model.number="cycle.time"
-                dense
-                label="Cycle Time (min)"
-                min="0"
-                type="number"
-              />
-            </v-col>
-            <v-col cols="2">
-              <v-btn color="red" icon @click="part.cycleTimes.splice(idx, 1)">
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </v-col>
-          </v-row>
-          <v-btn
-            color="primary"
-            variant="outlined"
-            @click="part.cycleTimes ? part.cycleTimes.push({operation: '', time: 0}) : part.cycleTimes = [{operation: '', time: 0}]"
-          >
-            <v-icon left> mdi-plus </v-icon>Add Cycle Time
-          </v-btn>
-          <v-divider class="my-4" />
-          <v-row>
-            <v-col cols="4">
-              <div>
-                <b>Total Cycle Time:</b>
-                {{ (part.cycleTimes || []).reduce((t, c) => t + (c.time || 0), 0) }}
-                min
-              </div>
-            </v-col>
-            <v-col cols="4">
-              <div><b>Estimated Material Cost:</b> ${{ formatCost(partMaterialCost) }}</div>
-            </v-col>
-            <v-col cols="4">
-              <div>
-                <b>Estimated Profit:</b>
-                ${{ (part.price && materialCost) ? formatCost(part.price - materialCost) : '0.00' }}
-              </div>
-            </v-col>
-          </v-row>
-        </v-window-item>
+        <v-window-item value="cost"> <PartCostDetails :part="part" /> </v-window-item>
 
         <v-window-item value="stock">
           <v-row no-gutters>
@@ -464,12 +142,7 @@
                 class="ml-2"
                 label="Position"
                 @update:model-value="part.position = part.position?.toUpperCase()"
-              >
-                <template #append-inner>
-                  <!--                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation"></v-icon>
-                  <v-icon icon="mdi-printer-outline" class="ml-2" @click="printLocation" />-->
-                </template>
-              </v-text-field>
+              > </v-text-field>
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -478,7 +151,7 @@
         </v-window-item>
 
         <v-window-item value="docs"> DOCS </v-window-item>
-
+        <v-window-item value="images"> IMAGES </v-window-item>
         <v-window-item value="notes"> NOTES </v-window-item>
       </v-window>
     </v-form>
@@ -488,22 +161,22 @@
 <script setup lang="ts">
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import PartStockGraph from '@/components/PartStockGraph.vue';
+import PartCostDetails from '@/components/parts/PartCostDetails.vue';
+import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
+import PartStockGraph from '@/components/parts/PartStockGraph.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
-import { formatCost, formatNumber, isNumber, onlyAllowNumeric } from '@/plugins/utils';
+import { isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
-import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
 
 const partStore = usePartStore();
 const customerStore = useCustomerStore();
-const materialsStore = useMaterialsStore();
 
 const showAdd = computed(() => {
-  const tabs = ['docs', 'notes'];
+  const tabs = ['docs', 'notes', 'images'];
   return tabs.includes(tab.value);
 });
 
@@ -516,8 +189,8 @@ const defaultPartValues = {
 const part = ref<Part>({} as Part);
 const partOriginal = ref<Part>({} as Part);
 
-const tab = ref<'general' | 'material' | 'stock' | 'docs' | 'notes'>(
-  import.meta.env.PROD ? 'general' : 'material',
+const tab = ref<'general' | 'material' | 'cost' | 'stock' | 'docs' | 'notes' | 'images'>(
+  import.meta.env.PROD ? 'general' : 'cost',
 );
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
@@ -611,28 +284,6 @@ function openLink(link: string | undefined) {
 
 const partIsAltered = computed<boolean>(() => !isEqual(part.value, partOriginal.value));
 
-const partLengthRule = (val: string) => {
-  const partLength = Number(val) || 0;
-  const totalBarLength = Number(selectedMaterialLength.value) || 0;
-  return partLength <= totalBarLength || 'Length per part cannot exceed total bar length';
-};
-
-const cutBarLengthRule = (val: string) => {
-  if (part.value.materialCutType !== 'bars') return true;
-  const cutBarLength = Number(val) || 0;
-  const totalBarLength = Number(selectedMaterialLength.value) || 0;
-  if (!cutBarLength || !totalBarLength) return true;
-  return cutBarLength <= totalBarLength || 'Cut bar length cannot exceed total bar length';
-};
-
-const remnantLengthRule = (val: string) => {
-  if (part.value.materialCutType !== 'bars') return true;
-  const remnantLength = Number(val) || 0;
-  const cutBarLength = Number(part.value.barLength) || 0;
-  if (!cutBarLength) return true;
-  return remnantLength <= cutBarLength || 'Remnant length cannot exceed cut bar length';
-};
-
 const requiredRule = (val: string) => !!val || 'Required';
 
 function printItem() {}
@@ -662,149 +313,6 @@ function addDoc() {
 }
 function addNote() {
   alert('add note');
-}
-
-const selectedMaterialLength = computed(() => {
-  if (!part.value.material) return 0;
-  if (typeof part.value.material !== 'string') return part.value.material.length || 0;
-  const material = materialsStore.materials.find((x) => x._id === part.value.material);
-  return material?.length || 0;
-});
-
-const partsPerBarDetails = computed(() => {
-  const cutType = part.value.materialCutType || 'blanks';
-  const fullBarLength = Number(selectedMaterialLength.value) || 0;
-  const materialLength = Number(part.value.materialLength) || 0;
-
-  if (!fullBarLength || !materialLength) {
-    return {
-      cutType,
-      fullBarLength,
-      materialLength,
-      barLength: Number(part.value.barLength) || 0,
-      remnantLength: Number(part.value.remnantLength) || 0,
-      subBars: 0,
-      usablePerSubBar: 0,
-      partsPerSubBar: 0,
-      remainderLength: 0,
-      usableRemainder: 0,
-      remainderParts: 0,
-      totalParts: 0,
-    };
-  }
-
-  if (cutType !== 'bars') {
-    return {
-      cutType,
-      fullBarLength,
-      materialLength,
-      barLength: 0,
-      remnantLength: 0,
-      subBars: 0,
-      usablePerSubBar: 0,
-      partsPerSubBar: 0,
-      remainderLength: 0,
-      usableRemainder: 0,
-      remainderParts: 0,
-      totalParts: Math.floor(fullBarLength / materialLength),
-    };
-  }
-
-  const barLength = Number(part.value.barLength) || 0;
-  const remnantLength = Number(part.value.remnantLength) || 0;
-  if (!barLength || barLength <= remnantLength) {
-    return {
-      cutType,
-      fullBarLength,
-      materialLength,
-      barLength,
-      remnantLength,
-      subBars: 0,
-      usablePerSubBar: 0,
-      partsPerSubBar: 0,
-      remainderLength: 0,
-      usableRemainder: 0,
-      remainderParts: 0,
-      totalParts: 0,
-    };
-  }
-
-  const subBars = Math.floor(fullBarLength / barLength);
-  const remainderLength = fullBarLength % barLength;
-  const usablePerSubBar = barLength - remnantLength;
-  const partsPerSubBar = Math.floor(usablePerSubBar / materialLength);
-  const usableRemainder = Math.max(remainderLength - remnantLength, 0);
-  const remainderParts = Math.floor(usableRemainder / materialLength);
-
-  return {
-    cutType,
-    fullBarLength,
-    materialLength,
-    barLength,
-    remnantLength,
-    subBars,
-    usablePerSubBar,
-    partsPerSubBar,
-    remainderLength,
-    usableRemainder,
-    remainderParts,
-    totalParts: subBars * partsPerSubBar + remainderParts,
-  };
-});
-
-const partsPerBar = computed(() => {
-  return partsPerBarDetails.value.totalParts;
-});
-
-const wasteDetails = computed(() => {
-  const d = partsPerBarDetails.value;
-  if (!d.fullBarLength) return { wasteLength: 0, wasteCost: 0 };
-  const wasteLength = Math.round((d.fullBarLength - d.totalParts * d.materialLength) * 1000) / 1000;
-  const wasteCost =
-    materialCost.value > 0
-      ? Math.round((wasteLength / d.fullBarLength) * materialCost.value * 100) / 100
-      : 0;
-  return { wasteLength, wasteCost };
-});
-
-function assignMaterial() {
-  if (!part.value.material) return;
-  const material = materialsStore.materials.find((x) => x._id === part.value.material);
-  if (!material) return;
-  part.value.material = material;
-}
-
-const materialCost = computed(() => {
-  if (!part.value.material) return 0;
-  if (typeof part.value.material === 'string') return 0;
-  const feet = (part.value.material.length || 0) / 12;
-  return feet * (part.value.material.costPerFoot || 0);
-});
-
-const partMaterialCost = computed(() => {
-  if (!partsPerBar.value) return 0;
-  return Math.round((materialCost.value / partsPerBar.value) * 100) / 100;
-});
-
-const sortedMaterials = computed(() => {
-  return materialsStore.materials.slice().sort((a, b) => {
-    if (a.description < b.description) return -1;
-    if (a.description > b.description) return 1;
-    return 0;
-  });
-});
-
-function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
-  if (type === 'lathe') {
-    part.value.barLength = 36;
-    part.value.remnantLength = 2;
-  } else if (type === 'swiss') {
-    part.value.barLength = part.value.material?.length || 0;
-    part.value.remnantLength = 12;
-  } else if (type === '2from1') {
-    part.value.barLength = ((part.value.materialLength || 0) + 0.1) * 2 + 0.15;
-    part.value.remnantLength = 0;
-  }
 }
 </script>
 
@@ -836,19 +344,5 @@ function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
 }
 .loading {
   height: 100%;
-}
-
-.yield-chip {
-  min-width: 120px;
-  justify-content: center;
-}
-
-.row-1 {
-  width: 140px;
-}
-
-.swiss-defaults-btn {
-  position: relative;
-  left: 16px;
 }
 </style>
