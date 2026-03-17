@@ -7,15 +7,15 @@ async function list(): Promise<MaterialDoc[]> {
   return await Material.find();
 }
 
-async function add(data: Material): Promise<MaterialDoc> {
+async function add(data: Material, device: string): Promise<MaterialDoc> {
   const material = new Material(fixDims(data));
   await material.save();
-  await Audit.addMaterialAudit(null, material);
+  await Audit.addMaterialAudit(null, material, device);
   emit('material', material);
   return material;
 }
 
-async function update(newMaterial: Material): Promise<MaterialDoc | null> {
+async function update(newMaterial: Material, device: string): Promise<MaterialDoc | null> {
   const id = newMaterial._id;
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -23,7 +23,7 @@ async function update(newMaterial: Material): Promise<MaterialDoc | null> {
     returnDocument: 'after',
   });
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  await Audit.addMaterialAudit(oldMaterial, updatedMaterial);
+  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
   emit('material', updatedMaterial);
   return updatedMaterial;
 }

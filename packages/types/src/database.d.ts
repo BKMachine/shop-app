@@ -11,6 +11,7 @@ declare global {
     _id: string;
     type: 'newTool' | 'updateTool';
     timestamp: string;
+    device: Device;
     old: any | null;
     new: any;
   }

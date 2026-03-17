@@ -42,8 +42,12 @@ router.post('/tools', requireKnownDevice, async (req, res, next) => {
     res.sendStatus(400);
     return;
   }
+  if (!req.device) {
+    res.sendStatus(401);
+    return;
+  }
   try {
-    const doc = await Tools.add(data);
+    const doc = await Tools.add(data, req.device._id.toString());
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -56,36 +60,48 @@ router.put('/tools', requireKnownDevice, async (req, res, next) => {
     res.sendStatus(400);
     return;
   }
+  if (!req.device) {
+    res.sendStatus(401);
+    return;
+  }
   try {
-    const response = await Tools.update(data);
+    const response = await Tools.update(data, req.device._id.toString());
     res.status(200).json(response);
   } catch (e) {
     next(e);
   }
 });
 
-router.put('/tools/pick',  async (req, res, next) => {
+router.put('/tools/pick', requireKnownDevice, async (req, res, next) => {
   const { scanCode }: { scanCode: string | undefined } = req.body;
   if (!scanCode) {
     res.sendStatus(400);
     return;
   }
+  if (!req.device) {
+    res.sendStatus(401);
+    return;
+  }
   try {
-    const { status, tool } = await Tools.pick(scanCode);
+    const { status, tool } = await Tools.pick(scanCode, req.device._id.toString());
     res.status(status).json(tool);
   } catch (e) {
     next(e);
   }
 });
 
-router.put('/tools/stock',  async (req, res, next) => {
+router.put('/tools/stock', requireKnownDevice, async (req, res, next) => {
   const { id, amount }: { id: string; amount: number } = req.body;
   if (!id || !amount) {
     res.sendStatus(400);
     return;
   }
+  if (!req.device) {
+    res.sendStatus(401);
+    return;
+  }
   try {
-    const { status, tool } = await Tools.stock(id, amount);
+    const { status, tool } = await Tools.stock(id, amount, req.device._id.toString());
     res.status(status).json(tool);
   } catch (e) {
     next(e);

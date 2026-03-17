@@ -2,10 +2,15 @@ import { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import Audit from './audit_model.js';
 
-async function addToolAudit(oldTool: ToolDoc | null, newTool: ToolDoc): Promise<void> {
+async function addToolAudit(
+  oldTool: ToolDoc | null,
+  newTool: ToolDoc,
+  device: string,
+): Promise<void> {
   const doc = new Audit({
     type: 'tool',
     timestamp: new Date(),
+    device: new Types.ObjectId(device),
     old: oldTool,
     new: newTool,
   });
@@ -48,10 +53,15 @@ async function getAllToolAudits(from: string, to: string): Promise<AuditDoc[]> {
   );
 }
 
-async function addPartAudit(oldPart: PartDoc | null, newPart: PartDoc): Promise<void> {
+async function addPartAudit(
+  oldPart: PartDoc | null,
+  newPart: PartDoc,
+  device: string,
+): Promise<void> {
   const doc = new Audit({
     type: 'part',
     timestamp: new Date(),
+    device: new Types.ObjectId(device),
     old: oldPart,
     new: newPart,
   });
@@ -96,10 +106,12 @@ async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
 async function addMaterialAudit(
   oldMaterial: MaterialDoc | null,
   newMaterial: MaterialDoc,
+  device: string,
 ): Promise<void> {
   const doc = new Audit({
     type: 'material',
     timestamp: new Date(),
+    device: new Types.ObjectId(device),
     old: oldMaterial,
     new: newMaterial,
   });

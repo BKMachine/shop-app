@@ -33,8 +33,12 @@ router.post('/parts', requireKnownDevice, async (req, res, next) => {
     res.sendStatus(400);
     return;
   }
+  if (!req.device) {
+    res.sendStatus(401);
+    return;
+  }
   try {
-    const doc = await Parts.add(data);
+    const doc = await Parts.add(data, req.device._id.toString());
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -47,8 +51,12 @@ router.put('/parts', requireKnownDevice, async (req, res, next) => {
     res.sendStatus(400);
     return;
   }
+  if (!req.device) {
+    res.sendStatus(401);
+    return;
+  }
   try {
-    const response = await Parts.update(data);
+    const response = await Parts.update(data, req.device._id.toString());
     res.status(200).json(response);
   } catch (e) {
     next(e);
