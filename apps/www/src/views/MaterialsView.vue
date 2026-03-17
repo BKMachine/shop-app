@@ -250,7 +250,7 @@
               />
               <v-btn
                 color="green"
-                :disabled="!formValid || (existsInStore && isNewMaterial)"
+                :disabled="!formValid || (existsInStore && isNewMaterial) || !materialChanged"
                 variant="elevated"
                 @click="saveMaterial"
               >
@@ -266,6 +266,7 @@
 
 <script setup lang="ts">
 import fixDims from '@repo/utilities/fixDims';
+import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref, watch } from 'vue';
 import MaterialSketch from '@/components/MaterialSketch.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
@@ -333,11 +334,31 @@ function selectMaterial(material: Material) {
 }
 
 function addNewMaterial() {
-  selectedMaterial.value = { ...defaultMaterial };
+  form.value.reset();
   form.value.resetValidation();
+  selectedMaterial.value = { ...defaultMaterial };
 }
 
 const isNewMaterial = computed(() => selectedMaterial.value._id === '0');
+
+const materialChanged = computed(() => {
+  const material = selectedMaterial.value;
+  const original = materials.value.find((m) => m._id === material._id);
+  if (!original) return true;
+
+  const supplierChanged = (() => {
+    if (typeof material.supplier === 'string' && typeof original.supplier === 'object') {
+      return original.supplier._id !== material.supplier;
+    }
+    return !isEqual(material.supplier, original.supplier);
+  })();
+
+  if (supplierChanged) return true;
+
+  const { supplier: _, ...materialWithoutSupplier } = material;
+  const { supplier: __, ...originalWithoutSupplier } = original;
+  return !isEqual(materialWithoutSupplier, originalWithoutSupplier);
+});
 
 const existsInStore = computed<boolean>(() => {
   // Check via material type, type, and dimensions excluding length
