@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Materials from '../../../database/lib/material/material_service.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -12,7 +13,7 @@ router.get('/materials', async (_req, res, next) => {
   }
 });
 
-router.post('/materials', async (req, res, next) => {
+router.post('/materials', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: Material | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
@@ -26,7 +27,7 @@ router.post('/materials', async (req, res, next) => {
   }
 });
 
-router.put('/materials', async (req, res, next) => {
+router.put('/materials', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: Material | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);

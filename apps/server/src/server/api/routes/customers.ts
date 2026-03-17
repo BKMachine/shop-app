@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Customers from '../../../database/lib/customer/customer_service.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -12,7 +13,7 @@ router.get('/customers', async (_req, res, next) => {
   }
 });
 
-router.post('/customers', async (req, res, next) => {
+router.post('/customers', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: CustomerDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
@@ -26,7 +27,7 @@ router.post('/customers', async (req, res, next) => {
   }
 });
 
-router.put('/customers', async (req, res, next) => {
+router.put('/customers', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: CustomerDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import SMTPService from '../../services/smtp_service.js';
 import AuditRoutes from './routes/audits.js';
 import CustomerRoutes from './routes/customers.js';
+import DeviceRoutes from './routes/devices.js';
 import ImageRoutes from './routes/images.js';
 import MaterialRoutes from './routes/materials.js';
 import PartRoutes from './routes/parts.js';
@@ -35,6 +36,7 @@ router.use(AuditRoutes);
 router.use(PrintRoutes);
 router.use(PartRoutes);
 router.use(MaterialRoutes);
+router.use(DeviceRoutes);
 router.use(ReportRoutes);
 
 router.use('/images', ImageRoutes);

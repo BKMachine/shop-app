@@ -4,6 +4,7 @@
 /// <reference path="./src/mtconnect.d.ts" />
 /// <reference path="./src/remote_serial_port.d.ts" />
 /// <reference path="./src/socket.io.d.ts" />
+/// <reference path="./src/express.d.ts" />
 
 interface Rules {
   [key: string]: (value: string) => boolean | string;

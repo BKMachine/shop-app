@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Tools from '../../../database/lib/tool/tool_service.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -35,7 +36,7 @@ router.get('/tools/:id', async (req, res, next) => {
   }
 });
 
-router.post('/tools', async (req, res, next) => {
+router.post('/tools', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: ToolDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
@@ -49,7 +50,7 @@ router.post('/tools', async (req, res, next) => {
   }
 });
 
-router.put('/tools', async (req, res, next) => {
+router.put('/tools', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: ToolDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
@@ -63,7 +64,7 @@ router.put('/tools', async (req, res, next) => {
   }
 });
 
-router.put('/tools/pick', async (req, res, next) => {
+router.put('/tools/pick',  async (req, res, next) => {
   const { scanCode }: { scanCode: string | undefined } = req.body;
   if (!scanCode) {
     res.sendStatus(400);
@@ -77,7 +78,7 @@ router.put('/tools/pick', async (req, res, next) => {
   }
 });
 
-router.put('/tools/stock', async (req, res, next) => {
+router.put('/tools/stock',  async (req, res, next) => {
   const { id, amount }: { id: string; amount: number } = req.body;
   if (!id || !amount) {
     res.sendStatus(400);

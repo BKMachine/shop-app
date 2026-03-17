@@ -150,4 +150,24 @@ declare global {
   interface ImageDoc extends Omit<Image, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
+
+  /* DEVICE */
+
+  interface Device {
+    _id: string;
+    deviceId: string;
+    displayName: string;
+    approved: boolean;
+    blocked: boolean;
+    firstSeenAt: Date;
+    lastSeenAt: Date;
+    lastIp: string | null;
+    lastUserAgent: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+
+  interface DeviceDoc extends Omit<Device, '_id'>, Document<Types.ObjectId> {
+    _id: Types.ObjectId;
+  }
 }

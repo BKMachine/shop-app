@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Parts from '../../../database/lib/part/part_service.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -26,7 +27,7 @@ router.get('/parts/:id', async (req, res, next) => {
   }
 });
 
-router.post('/parts', async (req, res, next) => {
+router.post('/parts', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: PartDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
@@ -40,7 +41,7 @@ router.post('/parts', async (req, res, next) => {
   }
 });
 
-router.put('/parts', async (req, res, next) => {
+router.put('/parts', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: PartDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);

@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import DymoService from '../../../services/dymo_service.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
-router.post('/print/location', async (req, res, next) => {
+router.post('/print/location', requireKnownDevice, async (req, res, next) => {
   const { loc, pos }: PrintLocationBody = req.body;
   if (!loc || !pos) {
     res.sendStatus(400);
@@ -17,7 +18,7 @@ router.post('/print/location', async (req, res, next) => {
   }
 });
 
-router.post('/print/item', async (req, res, next) => {
+router.post('/print/item', requireKnownDevice, async (req, res, next) => {
   const { item, description, brand }: PrintItemBody = req.body;
   if (!item || !description) {
     res.sendStatus(400);

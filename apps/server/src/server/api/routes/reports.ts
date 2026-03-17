@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Reports from '../../../database/lib/report/report_service.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -12,7 +13,7 @@ router.get('/reports', async (_req, res, next) => {
   }
 });
 
-router.post('/reports', async (req, res, next) => {
+router.post('/reports', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: ReportDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
@@ -26,7 +27,7 @@ router.post('/reports', async (req, res, next) => {
   }
 });
 
-router.put('/reports', async (req, res, next) => {
+router.put('/reports', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: ReportDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);

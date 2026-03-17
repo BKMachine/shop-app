@@ -55,12 +55,14 @@
       <ScanDialogTool v-if="scannerStore.type === 'tool'" />
       <ScanDialog404 v-else-if="scannerStore.type === '404'" />
     </v-dialog>
+    <DisplayNameDialog />
   </v-app>
 </template>
 
 <script setup lang="ts">
 import onScan from 'onscan.js';
 import { computed, onBeforeMount, ref } from 'vue';
+import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import router from '@/router';

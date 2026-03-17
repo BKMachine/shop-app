@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Vendors from '../../../database/lib/vendor/vendor_service.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -12,7 +13,7 @@ router.get('/vendors', async (_req, res, next) => {
   }
 });
 
-router.post('/vendors', async (req, res, next) => {
+router.post('/vendors', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: VendorDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
@@ -26,7 +27,7 @@ router.post('/vendors', async (req, res, next) => {
   }
 });
 
-router.put('/vendors', async (req, res, next) => {
+router.put('/vendors', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: VendorDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
