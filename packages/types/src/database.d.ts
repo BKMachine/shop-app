@@ -157,6 +157,7 @@ declare global {
     _id: string;
     deviceId: string;
     displayName: string;
+    deviceType: 'pc' | 'android' | 'unknown';
     approved: boolean;
     blocked: boolean;
     firstSeenAt: Date;

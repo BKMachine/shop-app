@@ -8,6 +8,10 @@ router.post('/devices/register', async (req, res, next) => {
   try {
     const deviceId = String(req.body.deviceId ?? '').trim();
     const displayName = String(req.body.displayName ?? '').trim();
+    const deviceType = String(req.body.deviceType ?? 'unknown').trim() as
+      | 'pc'
+      | 'android'
+      | 'unknown';
 
     if (!deviceId) {
       return res.status(400).json({
@@ -39,6 +43,7 @@ router.post('/devices/register', async (req, res, next) => {
     const device = await DeviceService.addDevice({
       deviceId,
       displayName,
+      deviceType,
       approved: true,
       blocked: false,
       firstSeenAt: new Date(),
@@ -52,6 +57,7 @@ router.post('/devices/register', async (req, res, next) => {
         id: device._id,
         deviceId: device.deviceId,
         displayName: device.displayName,
+        deviceType: device.deviceType,
         approved: device.approved,
         blocked: device.blocked,
       },
