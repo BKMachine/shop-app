@@ -54,6 +54,7 @@ async function onSave() {
     await api.post('/devices/register', {
       deviceId: getOrCreateDeviceId(),
       displayName: normalizedName,
+      deviceType: 'pc',
     });
 
     localStorage.setItem('shop-device-display-name', normalizedName);
