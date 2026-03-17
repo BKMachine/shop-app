@@ -157,6 +157,17 @@
                         >
                           Lathe defaults
                         </v-btn>
+                        <v-btn
+                          v-if="part.materialCutType === 'bars'"
+                          class="mt-1 px-0 ml-4 text-caption-2 swiss-defaults-btn"
+                          color="primary"
+                          density="compact"
+                          size="x-small"
+                          variant="text"
+                          @click="setMaterialDefaults('2from1')"
+                        >
+                          2 from 1
+                        </v-btn>
                       </div>
                       <div>
                         <v-btn
@@ -225,26 +236,31 @@
                       <tr>
                         <td class="text-medium-emphasis text-caption row-1">Full Bar</td>
                         <td class="text-body-2">
-                          {{ partsPerBarDetails.fullBarLength }}" ÷
-                          {{ partsPerBarDetails.materialLength }}"
+                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" ÷
+                          {{ formatNumber(partsPerBarDetails.materialLength) }}"
                         </td>
                         <td class="text-right">
-                          <v-chip class="yield-chip" color="success" size="small" variant="elevated"
-                            >{{ partsPerBarDetails.totalParts }}
-                            parts / bar</v-chip
+                          <v-chip
+                            class="yield-chip"
+                            color="success"
+                            size="small"
+                            variant="elevated"
                           >
+                            {{ partsPerBarDetails.totalParts }}
+                            parts / bar
+                          </v-chip>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-medium-emphasis text-caption row-1">Waste</td>
                         <td class="text-body-2">
-                          {{ partsPerBarDetails.fullBarLength }}" − ({{ partsPerBarDetails.totalParts
-                          }} × {{ partsPerBarDetails.materialLength }}") =
-                          {{ wasteDetails.wasteLength }}"
+                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
+                          × {{ formatNumber(partsPerBarDetails.materialLength) }}") =
+                          {{ formatNumber(wasteDetails.wasteLength) }}"
                         </td>
                         <td class="text-right">
                           <v-chip color="warning" size="small" variant="tonal"
-                            >${{ wasteDetails.wasteCost }}</v-chip
+                            >${{ formatCost(wasteDetails.wasteCost) }}</v-chip
                           >
                         </td>
                       </tr>
@@ -255,42 +271,42 @@
                       <tr>
                         <td class="text-medium-emphasis text-caption row-1">Full Bar</td>
                         <td class="text-body-2">
-                          {{ partsPerBarDetails.fullBarLength }}" ÷
-                          {{ partsPerBarDetails.barLength }}"
+                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" ÷
+                          {{ formatNumber(partsPerBarDetails.barLength) }}"
                         </td>
                         <td class="text-right">
-                          <v-chip color="primary" size="small" variant="tonal"
-                            >{{ partsPerBarDetails.subBars }}
-                            cut bars</v-chip
-                          >
+                          <v-chip color="primary" size="small" variant="tonal">
+                            {{ partsPerBarDetails.subBars }}
+                            cut bars
+                          </v-chip>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-medium-emphasis text-caption row-1">Cut Bar</td>
                         <td class="text-body-2">
-                          {{ partsPerBarDetails.barLength }}" −
-                          {{ partsPerBarDetails.remnantLength }}" =
-                          {{ partsPerBarDetails.usablePerSubBar }}" usable
+                          {{ formatNumber(partsPerBarDetails.barLength) }}" −
+                          {{ formatNumber(partsPerBarDetails.remnantLength) }}" =
+                          {{ formatNumber(partsPerBarDetails.usablePerSubBar) }}" usable
                         </td>
                         <td class="text-right">
-                          <v-chip color="primary" size="small" variant="tonal"
-                            >{{ partsPerBarDetails.partsPerSubBar }}
-                            parts / cut bar</v-chip
-                          >
+                          <v-chip color="primary" size="small" variant="tonal">
+                            {{ partsPerBarDetails.partsPerSubBar }}
+                            parts / cut bar
+                          </v-chip>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-medium-emphasis text-caption row-1">Remainder</td>
                         <td class="text-body-2">
-                          {{ partsPerBarDetails.remainderLength }}" −
-                          {{ partsPerBarDetails.remnantLength }}" =
-                          {{ partsPerBarDetails.usableRemainder }}" usable
+                          {{ formatNumber(partsPerBarDetails.remainderLength) }}" −
+                          {{ formatNumber(partsPerBarDetails.remnantLength) }}" =
+                          {{ formatNumber(partsPerBarDetails.usableRemainder) }}" usable
                         </td>
                         <td class="text-right">
-                          <v-chip color="primary" size="small" variant="tonal"
-                            >{{ partsPerBarDetails.remainderParts }}
-                            parts / remainder</v-chip
-                          >
+                          <v-chip color="primary" size="small" variant="tonal">
+                            {{ partsPerBarDetails.remainderParts }}
+                            parts / remainder
+                          </v-chip>
                         </td>
                       </tr>
                       <tr>
@@ -301,23 +317,28 @@
                           {{ partsPerBarDetails.remainderParts }}
                         </td>
                         <td class="text-right">
-                          <v-chip class="yield-chip" color="success" size="small" variant="elevated"
-                            >{{ partsPerBarDetails.totalParts }}
-                            parts / bar</v-chip
+                          <v-chip
+                            class="yield-chip"
+                            color="success"
+                            size="small"
+                            variant="elevated"
                           >
+                            {{ partsPerBarDetails.totalParts }}
+                            parts / bar
+                          </v-chip>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-medium-emphasis text-caption row-1">Waste</td>
                         <td class="text-body-2">
-                          {{ partsPerBarDetails.fullBarLength }}" − ({{ partsPerBarDetails.totalParts
-                          }} × {{ partsPerBarDetails.materialLength }}") =
-                          {{ wasteDetails.wasteLength }}"
+                          {{ formatNumber(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
+                          × {{ formatNumber(partsPerBarDetails.materialLength) }}") =
+                          {{ formatNumber(wasteDetails.wasteLength) }}"
                         </td>
                         <td class="text-right">
-                          <v-chip color="warning" size="small" variant="tonal"
-                            >${{ wasteDetails.wasteCost }}</v-chip
-                          >
+                          <v-chip color="warning" size="small" variant="tonal">
+                            ${{ formatCost(wasteDetails.wasteCost) }}
+                          </v-chip>
                         </td>
                       </tr>
                     </tbody>
@@ -332,7 +353,7 @@
                         <td class="text-body-2">
                           <div class="d-flex align-center ga-2">
                             <v-chip color="purple-darken-2" variant="tonal"
-                              >${{ materialCost.toFixed(2) }}</v-chip
+                              >${{ formatCost(materialCost) }}</v-chip
                             >
                             <span class="text-medium-emphasis">÷</span>
                             <v-chip variant="outlined">{{ partsPerBar }} parts</v-chip>
@@ -343,7 +364,7 @@
                             class="font-weight-bold yield-chip"
                             color="success"
                             variant="elevated"
-                            >${{ partMaterialCost }}
+                            >${{ formatCost(partMaterialCost) }}
                             / part</v-chip
                           >
                         </td>
@@ -406,12 +427,12 @@
               </div>
             </v-col>
             <v-col cols="4">
-              <div><b>Estimated Material Cost:</b> ${{ partMaterialCost }}</div>
+              <div><b>Estimated Material Cost:</b> ${{ formatCost(partMaterialCost) }}</div>
             </v-col>
             <v-col cols="4">
               <div>
                 <b>Estimated Profit:</b>
-                ${{ (part.price && materialCost) ? (part.price - materialCost).toFixed(2) : '0.00' }}
+                ${{ (part.price && materialCost) ? formatCost(part.price - materialCost) : '0.00' }}
               </div>
             </v-col>
           </v-row>
@@ -470,7 +491,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import PartStockGraph from '@/components/PartStockGraph.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
-import { isNumber, onlyAllowNumeric } from '@/plugins/utils';
+import { formatCost, formatNumber, isNumber, onlyAllowNumeric } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
@@ -773,13 +794,16 @@ const sortedMaterials = computed(() => {
   });
 });
 
-function setMaterialDefaults(type: 'lathe' | 'swiss') {
+function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
   if (type === 'lathe') {
     part.value.barLength = 36;
     part.value.remnantLength = 2;
   } else if (type === 'swiss') {
     part.value.barLength = part.value.material?.length || 0;
     part.value.remnantLength = 12;
+  } else if (type === '2from1') {
+    part.value.barLength = ((part.value.materialLength || 0) + 0.1) * 2 + 0.15;
+    part.value.remnantLength = 0;
   }
 }
 </script>
