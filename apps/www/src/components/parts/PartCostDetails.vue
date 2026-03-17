@@ -12,7 +12,7 @@
   </v-row>
   <v-divider class="my-1" />
   <div class="mb-2 font-weight-bold">Cycle Times</div>
-  <v-row v-for="(cycle, idx) in part.cycleTimes || []" :key="idx" class="mb-2">
+  <!-- <v-row v-for="(cycle, idx) in part.cycleTimes || []" :key="idx" class="mb-2">
     <v-col cols="5">
       <v-text-field v-model="cycle.operation" dense label="Operation Name" />
     </v-col>
@@ -30,7 +30,7 @@
         <v-icon>mdi-delete</v-icon>
       </v-btn>
     </v-col>
-  </v-row>
+  </v-row> -->
   <v-btn
     color="primary"
     variant="outlined"
@@ -49,7 +49,7 @@
     <v-col cols="4">
       <div>
         <b>Estimated Profit:</b>
-        ${{ (part.price && materialCost) ? formatCost(part.price - materialCost) : '0.00' }}
+        ${{ (part.price && partMaterialCost) ? formatCost(part.price - partMaterialCost) : '0.00' }}
       </div>
     </v-col>
   </v-row>
@@ -61,49 +61,12 @@ import { formatCost } from '@/plugins/utils';
 
 const { part } = defineProps<{
   part: Part;
+  partMaterialCost: number;
 }>();
 
 const totalCycleTime = computed(() =>
   (part.cycleTimes || []).reduce((total, cycle) => total + (cycle.time || 0), 0),
 );
-
-const materialCost = computed(() => {
-  if (!part.material) return 0;
-  if (typeof part.material === 'string') return 0;
-  const feet = (part.material.length || 0) / 12;
-  return feet * (part.material.costPerFoot || 0);
-});
-
-const partMaterialCost = computed(() => {
-  if (!part.material || typeof part.material === 'string') return 0;
-
-  const fullBarLength = part.material.length || 0;
-  const materialLength = Number(part.materialLength) || 0;
-
-  if (!fullBarLength || !materialLength) return 0;
-
-  const cutType = part.materialCutType || 'blanks';
-
-  let partsPerBar = 0;
-  if (cutType !== 'bars') {
-    partsPerBar = Math.floor(fullBarLength / materialLength);
-  } else {
-    const barLength = Number(part.barLength) || 0;
-    const remnantLength = Number(part.remnantLength) || 0;
-    if (barLength > 0 && barLength > remnantLength) {
-      const subBars = Math.floor(fullBarLength / barLength);
-      const remainderLength = fullBarLength % barLength;
-      const usablePerSubBar = barLength - remnantLength;
-      const partsPerSubBar = Math.floor(usablePerSubBar / materialLength);
-      const usableRemainder = Math.max(remainderLength - remnantLength, 0);
-      const remainderParts = Math.floor(usableRemainder / materialLength);
-      partsPerBar = subBars * partsPerSubBar + remainderParts;
-    }
-  }
-
-  if (!partsPerBar) return 0;
-  return Math.round((materialCost.value / partsPerBar) * 100) / 100;
-});
 </script>
 
 <style scoped></style>

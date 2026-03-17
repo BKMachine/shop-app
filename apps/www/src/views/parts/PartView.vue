@@ -112,9 +112,13 @@
           </v-row>
         </v-window-item>
 
-        <v-window-item value="material"> <PartMaterialDetails :part="part" /> </v-window-item>
+        <v-window-item eager value="material">
+          <PartMaterialDetails :part="part" @update:partMaterialCost="partMaterialCost = $event" />
+        </v-window-item>
 
-        <v-window-item value="cost"> <PartCostDetails :part="part" /> </v-window-item>
+        <v-window-item eager value="cost">
+          <PartCostDetails :part="part" :partMaterialCost="partMaterialCost" />
+        </v-window-item>
 
         <v-window-item value="stock">
           <v-row no-gutters>
@@ -196,6 +200,7 @@ const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);
 const saveFlag = ref(false);
+const partMaterialCost = ref(0);
 
 onMounted(() => {
   const routeName = router.currentRoute.value.name;

@@ -242,7 +242,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { formatCost, formatNumber, onlyAllowNumeric } from '@/plugins/utils';
 import { useMaterialsStore } from '@/stores/materials_store';
 
@@ -251,6 +251,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<(e: 'update:partMaterialCost', value: number) => void>();
 const materialsStore = useMaterialsStore();
 
 const selectedMaterialLength = computed(() => {
@@ -372,8 +373,16 @@ const materialCost = computed(() => {
 
 const partMaterialCost = computed(() => {
   if (!partsPerBar.value) return 0;
-  return Math.round((materialCost.value / partsPerBar.value) * 100) / 100;
+  return materialCost.value / partsPerBar.value;
 });
+
+watch(
+  partMaterialCost,
+  (value) => {
+    emit('update:partMaterialCost', value);
+  },
+  { immediate: true },
+);
 
 const sortedMaterials = computed(() => {
   return materialsStore.materials.slice().sort((a, b) => {
