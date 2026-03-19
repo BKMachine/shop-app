@@ -30,7 +30,7 @@
           Images
         </v-list-item>
         <v-list-item
-          v-if="showTestScan"
+          v-if="showTest"
           prepend-icon="mdi-barcode-scan"
           @click="scannerStore.scan('120850')"
         >
@@ -122,8 +122,8 @@ onBeforeMount(() => {
   toolStore.fetch();
 });
 
-const showTestScan = computed<boolean>(() => {
-  return location.host.includes('localhost');
+const showTest = computed<boolean>(() => {
+  return location.host.includes('localhost') || location.host.includes('127.0.0.1');
 });
 </script>
 

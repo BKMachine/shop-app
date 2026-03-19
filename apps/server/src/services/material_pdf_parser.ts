@@ -4,13 +4,15 @@ import { PDFParse } from 'pdf-parse';
 // import MaterialService from '../database/lib/material/material_service.js';
 // import logger from '../logger.js';
 
-export default async function parseMaterialPdf(data: Buffer): Promise<void> {
+export default async function parseMaterialPdf(data: Buffer): Promise<ParserResults[]> {
   const text = await extractPdfText(data);
   if (text.includes('AFFILIATED METALS')) {
     const results = await AffiliatedMetalsParser(cleanLines(text));
     console.log(results);
-    // await updateMaterial(materialData, costPerFoot);
+    return results;
   }
+
+  return [];
 }
 
 export async function extractPdfText(data: Buffer): Promise<string> {
@@ -27,12 +29,34 @@ export function cleanLines(text: string): string[] {
     .filter(Boolean);
 }
 
-interface ParserResults {
-  material: Partial<Material>;
-  costPerFoot: number;
+export interface LineHighlight {
+  text: string;
+  label: string;
 }
 
-export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResults[] | undefined> {
+export interface ParsedLineContext {
+  separator: string;
+  header: string;
+  sizes: string;
+  override: string;
+  amounts: string;
+  headerHighlights: LineHighlight[];
+  sizesHighlights: LineHighlight[];
+  overrideHighlights: LineHighlight[];
+  amountsHighlights: LineHighlight[];
+}
+
+export interface ParserResults {
+  material: Partial<Material>;
+  costPerFoot: number;
+  unitType: string;
+  rate: number;
+  weight: number; // lbs per bar (>0 only when unitType === 'lb')
+  feet: number;
+  lineContext: ParsedLineContext;
+}
+
+export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResults[]> {
   const separatorIndexes = text
     .map((line, index) => (/^-+$/.test(line) ? index : -1))
     .filter((index) => index !== -1);
@@ -44,7 +68,26 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
     const end = separatorIndexes[i + 1];
     if (start === undefined || end === undefined) continue;
 
-    const [header, sizes, amounts] = text.slice(start + 1, end);
+    const blockLines = text.slice(start + 1, end).filter(Boolean);
+    if (!blockLines.length) continue;
+
+    const header = blockLines[0] ?? '';
+    const amounts =
+      blockLines.find(
+        (line) =>
+          /\bMATERIAL\b/i.test(line) && Object.values(costRegex).some((regex) => regex.test(line)),
+      ) ?? '';
+
+    const amountsIndex = blockLines.indexOf(amounts);
+    const candidateLines =
+      amountsIndex > 0 ? blockLines.slice(1, amountsIndex) : blockLines.slice(1);
+    const sizes =
+      candidateLines.find((line) => /\bX\b/.test(line) && /\d/.test(line)) ??
+      candidateLines[0] ??
+      '';
+    const actualDimensionsLine =
+      candidateLines.find((line) => /\bACTUAL\s+D(?:IMENSIONS|IMENTIONS)\b/i.test(line)) ?? '';
+
     console.log({ header, sizes, amounts });
     if (!header || !sizes || !amounts) continue;
 
@@ -54,7 +97,40 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
     const type = types.find((t) => header.includes(t));
     console.log({ type });
 
-    const dimensions = sizes.split('X').map((s) => parseDimension(s.replace(/"/g, '').trim()));
+    const rawDimensionSegments = sizes
+      .split('X')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const dimensions = rawDimensionSegments.map((s) => parseDimension(s.replace(/"/g, '')));
+    const originalDimensions = [...dimensions];
+    const actualDimensionSegments = extractActualDimensionSegments(actualDimensionsLine);
+    const actualDimensions = actualDimensionSegments.map((s) =>
+      parseDimension(s.replace(/"/g, '')),
+    );
+    let overrideApplied = false;
+
+    if ((type === 'PIPE' || type === 'TUBE') && actualDimensions.length >= 2) {
+      const actualDiameter = actualDimensions[0] ?? 0;
+      const actualWall = actualDimensions[1] ?? 0;
+
+      if (
+        Number.isFinite(actualDiameter) &&
+        actualDiameter > 0 &&
+        actualDiameter !== (originalDimensions[0] ?? 0)
+      ) {
+        dimensions[0] = actualDiameter;
+        overrideApplied = true;
+      }
+      if (
+        Number.isFinite(actualWall) &&
+        actualWall > 0 &&
+        actualWall !== (originalDimensions[1] ?? 0)
+      ) {
+        dimensions[1] = actualWall;
+        overrideApplied = true;
+      }
+    }
+
     if (type === 'SQUARE' && dimensions.length === 2) dimensions.splice(1, 0, dimensions[0] ?? 0);
     console.log({ dimensions });
 
@@ -95,7 +171,7 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
       material.diameter = dimensions[0] ?? null;
       material.wallThickness = dimensions[1] ?? null;
       material.length = dimensions[2] ?? null;
-    } else if (type === 'RND') {
+    } else if (type === 'RND' || type === 'ROUND') {
       material.type = 'Round';
       material.diameter = dimensions[0] ?? null;
       material.length = dimensions[1] ?? null;
@@ -123,7 +199,33 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
       }
     });
 
-    results.push({ material, costPerFoot });
+    const lineContext: ParsedLineContext = {
+      separator: text[start] ?? '',
+      header,
+      sizes,
+      override: overrideApplied ? actualDimensionsLine : '',
+      amounts,
+      headerHighlights: [
+        { text: materialType, label: 'materialType' },
+        ...(type ? [{ text: type, label: 'type' }] : []),
+      ],
+      sizesHighlights: rawDimensionSegments
+        .map((seg, index) => {
+          if (overrideApplied && (type === 'PIPE' || type === 'TUBE') && index < 2) {
+            return null;
+          }
+          return extractDimensionHighlightToken(seg);
+        })
+        .filter((token): token is string => Boolean(token))
+        .map((token) => ({ text: token, label: 'dimension' })),
+      overrideHighlights: (overrideApplied ? actualDimensionSegments : [])
+        .map((seg) => extractDimensionHighlightToken(seg))
+        .filter((token): token is string => Boolean(token))
+        .map((token) => ({ text: token, label: 'dimension' })),
+      amountsHighlights: costMatch?.[0] ? [{ text: costMatch[0], label: 'rate' }] : [],
+    };
+
+    results.push({ material, costPerFoot, unitType, rate, weight, feet, lineContext });
   }
   return results;
 }
@@ -143,11 +245,11 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
 //   }
 // }
 
-const types = ['FLAT BAR', 'SQUARE', 'PIPE', 'RND', 'TUBE'];
+const types = ['FLAT BAR', 'SQUARE', 'PIPE', 'RND', 'TUBE', 'ROUND'];
 const costRegex: Record<string, RegExp> = {
-  lb: /LBS @ (\d+\.\d+) LBS/,
-  ea: /PCS @ (\d+\.\d+) EA/,
-  ft: /FT @ (\d+\.\d+) FT/,
+  lb: /LBS\s*@\s*(\d+\.\d+)\s*LBS/,
+  ea: /PCS\s*@\s*(\d+\.\d+)\s*EA/,
+  ft: /FT\s*@\s*(\d+\.\d+)\s*FT/,
 };
 
 const parseDimension = (dim: string): number => {
@@ -195,4 +297,33 @@ const parseDimension = (dim: string): number => {
 
   const numeric = Number.parseFloat(normalizedToken);
   return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const extractDimensionHighlightToken = (segment: string): string | null => {
+  const value = segment.trim();
+  if (!value) return null;
+
+  const wallToken = value.match(/^(\d*\.?\d+\s*W)\b/i)?.[1]?.replace(/\s+/g, '');
+  if (wallToken) return wallToken;
+
+  const numericToken = value.match(/^(\d+[-\s]\d+\/\d+|\d+\/\d+|\d*\.\d+|\d+)/)?.[1];
+  if (!numericToken) return null;
+
+  const normalizedToken = numericToken.replace(/\s+/g, '-');
+  const suffix = value.slice(numericToken.length).trimStart();
+
+  return suffix.startsWith('"') ? `${normalizedToken}"` : normalizedToken;
+};
+
+const extractActualDimensionSegments = (line: string): string[] => {
+  if (!line) return [];
+
+  const cleaned = line.replace(/^.*\bACTUAL\s+D(?:IMENSIONS|IMENTIONS)\b\s*:?/i, '').trim();
+
+  if (!cleaned) return [];
+
+  return cleaned
+    .split(/\bX\b/i)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
 };

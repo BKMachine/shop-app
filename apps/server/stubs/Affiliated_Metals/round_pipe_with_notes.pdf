@@ -10,7 +10,7 @@ BT
 11 TL
 0.500000 w
 T* (
-17Mar26 12:04      S A L E S   A C K N O W L E D G M E N T     No: 16  CU-543722) Tj
+17Mar26 13:02      S A L E S   A C K N O W L E D G M E N T     No: 16  CU-543777) Tj
 T* (     Sold By:) Tj
 T* (     AFFILIATED METALS-BRALCO #16) Tj
 T* (     123 INDUSTRY PARKWAY DR) Tj
@@ -33,12 +33,13 @@ T* (Con ALEX                           PO/Rel 031726) Tj
 T* (Slp SHIPPING DESK                  Tel 555-000-0003 Fax 555 000-0004) Tj
 T* (    JORGE CHOLICO) Tj
 T* (================================================================================) Tj
-T* (                  S A L E S   A C K N O W L E D G M E N T    SO No 16  CU-543722) Tj
+T* (                  S A L E S   A C K N O W L E D G M E N T    SO No 16  CU-543777) Tj
 T* (    HAND UNLOAD - 300 LBS MAX) Tj
 T* (--------------------------------------------------------------------------------) Tj
-T* (  1 STAINLESS ROUND T-416 R/L ANNEALED-COLD DRAWN        5 PCS            62 LBS) Tj
-T* (    5/8" DIA. X 144.0000") Tj
-T* (    MATERIAL                          62 LBS @      4.9000  LBS           303.80) Tj
+T* (  1 STAINLESS PIPE T-304L SEAMLESS                      30 PCS         1,798 LBS) Tj
+T* (    1-1/4" X .191W SCH 80 X 240.0000"                                    600 FT) Tj
+T* (    17-24 FT RANDOM LENGTHS) Tj
+T* (    MATERIAL                         600 FT  @     17.4100  FT         10,446.00) Tj
 T* (--------------------------------------------------------------------------------) Tj
 T* (    **************************************************) Tj
 T* (    NORMAL RECEIVING HOURS 8:00 - 5:00 WEEKDAYS) Tj
@@ -51,12 +52,11 @@ T* (    EFFECTIVE 3/1/2024, ALL CREDIT CARD TRANSACTIONS) Tj
 T* (    WILL INCURE A 2.5% SURCHARGE. NO FEES FOR ANY ACH,) Tj
 T* (    CHECK, OR DEBIT CARD PAYMENTS) Tj
 T* () Tj
-T* (                                       Order Totals:      1 Items         62 LBS) Tj
+T* (                                       Order Totals:      1 Items      1,798 LBS) Tj
 T* (********************************************************************************) Tj
 T* (     Material   Processing      Freight        Other      Taxes    ORDER AMT) Tj
-T* (       303.80                                                         303.80 $) Tj
+T* (    10,446.00                                                      10,446.00 $) Tj
 T* (********************************************************************************) Tj
-T* () Tj
 T* () Tj
 T* () Tj
 T* () Tj
@@ -81,7 +81,7 @@ ET
 endstream
 endobj
 3 0 obj
-2740
+2821
 endobj
 4 0 obj
 <<
@@ -127,20 +127,20 @@ endobj
 xref
 0 10
 0000000000 65535 f 
-0000003289 00000 n 
+0000003370 00000 n 
 0000000009 00000 n 
-0000002801 00000 n 
-0000002821 00000 n 
-0000002884 00000 n 
-0000002979 00000 n 
-0000003079 00000 n 
-0000003182 00000 n 
-0000003457 00000 n 
+0000002882 00000 n 
+0000002902 00000 n 
+0000002965 00000 n 
+0000003060 00000 n 
+0000003160 00000 n 
+0000003263 00000 n 
+0000003538 00000 n 
 trailer
 <<
 /Size 10
 /Root 9 0 R
 >>
 startxref
-3506
+3587
 %%EOF

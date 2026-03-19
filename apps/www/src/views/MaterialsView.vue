@@ -51,6 +51,14 @@
               Material Details
               <v-spacer />
               <v-btn color="primary" @click="addNewMaterial"> Add New </v-btn>
+              <v-btn
+                class="ml-2"
+                color="primary"
+                variant="outlined"
+                @click="pdfReviewDialog = true"
+              >
+                Import PDF
+              </v-btn>
             </v-card-title>
             <v-card-text>
               <v-row class="mt-4">
@@ -258,6 +266,23 @@
               </v-btn>
             </v-card-actions>
           </v-card>
+
+          <v-dialog v-model="pdfReviewDialog" max-width="1400" scrollable>
+            <v-card>
+              <v-card-title class="d-flex align-center">
+                Material PDF Review
+                <v-spacer />
+                <v-btn
+                  density="comfortable"
+                  icon="mdi-close"
+                  variant="text"
+                  @click="pdfReviewDialog = false"
+                />
+              </v-card-title>
+              <v-divider />
+              <v-card-text class="pa-0"> <MaterialPdfReview /> </v-card-text>
+            </v-card>
+          </v-dialog>
         </v-form>
       </v-col>
     </v-row>
@@ -271,6 +296,7 @@ import calculateMaterialWeight, {
 import normalizeDimensions from '@repo/utilities/normalizeDimensions';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref, watch } from 'vue';
+import MaterialPdfReview from '@/components/MaterialPdfReview.vue';
 import MaterialSketch from '@/components/MaterialSketch.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import { formatCost, formatNumber, formatWeight, onlyAllowNumeric } from '@/plugins/utils';
@@ -343,6 +369,7 @@ const formValid = ref(true);
 const typeFilter = ref<'All' | 'Flat' | 'Round'>('All');
 const tubingFilter = ref<'All' | 'Tubing' | 'Bar'>('All');
 const form = ref();
+const pdfReviewDialog = ref(false);
 
 onMounted(() => {
   materialsStore.fetch();
