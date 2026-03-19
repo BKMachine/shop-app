@@ -36,6 +36,7 @@ COPY --from=www-prune /app/out/full/ .
 FROM server-installer AS server-builder
 RUN pnpm run format --filter=server
 RUN pnpm run ci --filter=server
+RUN pnpm run test --filter=server
 RUN pnpm run build --filter=server
 
 FROM www-installer AS www-builder

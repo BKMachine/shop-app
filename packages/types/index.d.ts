@@ -84,3 +84,12 @@ interface RecentImage {
   url: string;
   createdAt: string;
 }
+
+type MaterialCategory = 'aluminum' | 'steel' | 'stainless' | 'other';
+
+interface MaterialList {
+  [key: string]: {
+    density: number;
+    category: MaterialCategory;
+  };
+}

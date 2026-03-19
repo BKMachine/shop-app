@@ -265,7 +265,10 @@
 </template>
 
 <script setup lang="ts">
-import fixDims from '@repo/utilities/fixDims';
+import calculateMaterialWeight, {
+  materials as materialsList,
+} from '@repo/utilities/calculateMaterialWeight';
+import normalizeDimensions from '@repo/utilities/normalizeDimensions';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref, watch } from 'vue';
 import MaterialSketch from '@/components/MaterialSketch.vue';
@@ -291,32 +294,48 @@ const defaultMaterial: Material = {
   costPerFoot: 0,
 };
 
-const items = [
-  { props: { header: 'Aluminum' } },
-  { name: '6061', value: '6061', density: 0.098 },
-  { name: '7075', value: '7075', density: 0.101 },
-  { props: { divider: true } },
-  { props: { header: 'Steel' } },
-  { name: '1018', value: '1018', density: 0.284 },
-  { name: '1020', value: '1020', density: 0.284 },
-  { name: '4140', value: '4140', density: 0.284 },
-  { name: '4130', value: '4130', density: 0.284 },
-  { props: { divider: true } },
-  { props: { header: 'Stainless Steel' } },
-  { name: '303', value: '303', density: 0.284 },
-  { name: '304', value: '304', density: 0.284 },
-  { name: '316', value: '316', density: 0.284 },
-  { name: '17-4PH', value: '17-4PH', density: 0.284 },
-  { name: '416', value: '416', density: 0.284 },
-  { name: '420', value: '420', density: 0.284 },
-  { name: '440C', value: '440C', density: 0.284 },
-  { props: { divider: true } },
-  { props: { header: 'Other' } },
-  { name: 'Grade 5 Titanium', value: 'Grade 5 Titanium', density: 0.16 },
-  { name: 'Brass', value: 'Brass', density: 0.305 },
-  { name: 'Bronze', value: 'Bronze', density: 0.32 },
-  { name: 'Copper', value: 'Copper', density: 0.32 },
-];
+// This ensures that all MaterialCategory values are included in the categoryOrder array
+const categoryOrder = [
+  'aluminum',
+  'steel',
+  'stainless',
+  'other',
+] as const satisfies readonly MaterialCategory[];
+type MissingMaterialCategories = Exclude<MaterialCategory, (typeof categoryOrder)[number]>;
+const hasAllMaterialCategories: MissingMaterialCategories extends never ? true : never = true;
+
+const items = computed(() => {
+  const groupedMaterials = Object.entries(materialsList).reduce(
+    (groups, [name, data]) => {
+      const category = data.category;
+      groups[category] ??= [];
+      groups[category].push({ name, value: name });
+      return groups;
+    },
+    {} as Partial<Record<MaterialCategory, { name: string; value: string }[]>>,
+  );
+
+  const groupedMaterialEntries = Object.entries(groupedMaterials) as [
+    MaterialCategory,
+    { name: string; value: string }[],
+  ][];
+
+  return groupedMaterialEntries
+    .sort(
+      ([categoryA], [categoryB]) =>
+        categoryOrder.indexOf(categoryA) - categoryOrder.indexOf(categoryB),
+    )
+    .flatMap(([category, categoryItems], index, categories) => {
+      const headerName = category.charAt(0).toUpperCase() + category.slice(1);
+      const sortedCategoryItems = [...categoryItems].sort((a, b) => a.name.localeCompare(b.name));
+
+      return [
+        { props: { header: headerName } },
+        ...sortedCategoryItems,
+        ...(index < categories.length - 1 ? [{ props: { divider: true } }] : []),
+      ];
+    });
+});
 
 const search = ref('');
 const selectedMaterial = ref<Material>({ ...defaultMaterial });
@@ -389,7 +408,7 @@ const existsInStore = computed<boolean>(() => {
 });
 
 function saveMaterial() {
-  fixDims(selectedMaterial.value);
+  normalizeDimensions(selectedMaterial.value);
   form.value.validate();
   if (!formValid.value || (existsInStore.value && isNewMaterial.value)) return;
 
@@ -441,40 +460,7 @@ const description = computed(() => {
 });
 
 const weight = computed(() => {
-  const material = selectedMaterial.value;
-  const materialInfo = items.find((item) => item.value === material.materialType);
-  if (!materialInfo) return 0;
-
-  const density = materialInfo.density || 0;
-
-  let volume = 0;
-  const height = material.height || 0;
-  const width = material.width || 0;
-  const diameter = material.diameter || 0;
-  const wallThickness = material.wallThickness || 0;
-  const length = material.length || 0;
-
-  if (material.type === 'Flat') {
-    if (wallThickness > 0) {
-      const outerVolume = height * width * length;
-      const innerVolume = (height - 2 * wallThickness) * (width - 2 * wallThickness) * length;
-      volume = outerVolume - innerVolume;
-    } else {
-      volume = height * width * length;
-    }
-  } else if (material.type === 'Round') {
-    const radius = diameter / 2;
-    if (wallThickness > 0) {
-      const outerVolume = Math.PI * radius ** 2 * length;
-      const innerRadius = radius - wallThickness;
-      const innerVolume = Math.PI * innerRadius ** 2 * length;
-      volume = outerVolume - innerVolume;
-    } else {
-      volume = Math.PI * radius ** 2 * length;
-    }
-  }
-
-  return volume * density;
+  return calculateMaterialWeight(selectedMaterial.value) || 0;
 });
 
 const costPerPound = computed(() => {
