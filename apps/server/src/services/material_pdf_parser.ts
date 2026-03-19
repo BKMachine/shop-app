@@ -8,7 +8,6 @@ export default async function parseMaterialPdf(data: Buffer): Promise<ParserResu
   const text = await extractPdfText(data);
   if (text.includes('AFFILIATED METALS')) {
     const results = await AffiliatedMetalsParser(cleanLines(text));
-    console.log(results);
     return results;
   }
 
@@ -88,14 +87,11 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
     const actualDimensionsLine =
       candidateLines.find((line) => /\bACTUAL\s+D(?:IMENSIONS|IMENTIONS)\b/i.test(line)) ?? '';
 
-    console.log({ header, sizes, amounts });
     if (!header || !sizes || !amounts) continue;
 
     const materialType = Object.keys(materials).find((m) => header.includes(m));
-    console.log({ materialType });
     if (!materialType) continue;
     const type = types.find((t) => header.includes(t));
-    console.log({ type });
 
     const rawDimensionSegments = sizes
       .split('X')
@@ -132,13 +128,11 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
     }
 
     if (type === 'SQUARE' && dimensions.length === 2) dimensions.splice(1, 0, dimensions[0] ?? 0);
-    console.log({ dimensions });
 
     const costEntry = Object.entries(costRegex).find(([, regex]) => amounts.match(regex));
     const costMatch = costEntry ? amounts.match(costEntry[1]) : null;
     const rate = costMatch?.[1] ? parseFloat(costMatch[1]) : undefined;
     const unitType = costEntry?.[0];
-    console.log({ rate, unitType });
     if (!rate || !unitType) continue;
 
     let weight = 0;
