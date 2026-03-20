@@ -3,8 +3,25 @@ import {
   costRegex,
   extractActualDimensionSegments,
   extractDimensionHighlightToken,
+  extractPdfDate,
+  parseCompactDate,
+  parseSlashDate,
   parseDimension,
+  type DateExtraction,
 } from '../parser_utils.js';
+
+export function extractAffiliatedTopLeftDate(lines: string[]): DateExtraction | null {
+  for (const line of lines) {
+    const ordMatch = line.match(
+      /\bOrd\s+(\d{1,2}(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d{2,4}|\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\b/i,
+    );
+    if (!ordMatch?.[1]) continue;
+    const token = ordMatch[1];
+    const parsed = parseCompactDate(token) ?? parseSlashDate(token);
+    if (parsed) return { date: parsed, line, token };
+  }
+  return null;
+}
 
 const types = ['FLAT', 'SQUARE', 'PIPE', 'RND', 'TUBE', 'ROUND'];
 
@@ -26,6 +43,10 @@ interface ParsedAffiliatedBlock {
 }
 
 export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResults[]> {
+  const extracted = extractAffiliatedTopLeftDate(text) ?? extractPdfDate(text);
+  const createdAt = extracted?.date ?? new Date();
+  const dateLine = extracted?.line ?? '';
+  const dateToken = extracted?.token ?? '';
   const separatorIndexes = getSeparatorIndexes(text);
   const results: ParserResults[] = [];
 
@@ -103,6 +124,8 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
       sizes: block.sizes,
       override: block.overrideApplied ? block.actualDimensionsLine : '',
       amounts: block.amounts,
+      date: '',
+      dateHighlights: [],
       headerHighlights: [
         { text: block.materialType, label: 'materialType' },
         { text: block.typeToken, label: 'type' },
@@ -134,7 +157,12 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
       rate: block.rate,
       weight,
       feet,
-      lineContext,
+      lineContext: {
+        ...lineContext,
+        date: dateLine,
+        dateHighlights: dateToken ? [{ text: dateToken, label: 'date' }] : [],
+      },
+      createdAt,
     });
   }
   return results;

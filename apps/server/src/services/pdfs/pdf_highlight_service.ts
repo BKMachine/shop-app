@@ -2,7 +2,7 @@ import { PDFDocument, PDFName, PDFNumber, type PDFPage, PDFString } from 'pdf-li
 import { getDocument, PDFWorker } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import logger from '../../logger.js';
 
-type HighlightLabel = 'materialType' | 'type' | 'dimension' | 'rate';
+type HighlightLabel = 'materialType' | 'type' | 'dimension' | 'rate' | 'date';
 
 interface HighlightTarget {
   text: string;
@@ -43,6 +43,7 @@ const HIGHLIGHT_COLORS: Record<HighlightLabel, [number, number, number]> = {
   type: [0.647, 0.839, 0.655],
   dimension: [0.565, 0.792, 0.976],
   rate: [1.0, 0.8, 0.502],
+  date: [0.867, 0.757, 0.976],
 };
 
 const HIGHLIGHT_OPACITY = 0.45;
@@ -119,6 +120,7 @@ function collectTargets(parsedResults: ParserResults[]): HighlightTarget[] {
       { line: result.lineContext.sizes, highlights: result.lineContext.sizesHighlights },
       { line: result.lineContext.override, highlights: result.lineContext.overrideHighlights },
       { line: result.lineContext.amounts, highlights: result.lineContext.amountsHighlights },
+      { line: result.lineContext.date, highlights: result.lineContext.dateHighlights },
     ];
 
     for (const group of groups) {
@@ -137,7 +139,11 @@ function collectTargets(parsedResults: ParserResults[]): HighlightTarget[] {
           existing.remaining += 1;
         } else {
           const lineAnchor =
-            highlight.label === 'materialType' ? extractLineAnchor(normalizedLine) : null;
+            highlight.label === 'materialType'
+              ? extractLineAnchor(normalizedLine)
+              : highlight.label === 'date' && normalizedLine === normalizedText
+                ? normalizedText
+                : null;
 
           targetMap.set(key, {
             text: normalizedText,
@@ -165,8 +171,10 @@ function applyTargetsToLine(
 
   for (const target of targets) {
     if (target.remaining <= 0) continue;
-    if (target.label !== 'materialType' && target.line !== normalizedLine) continue;
-    if (target.label === 'materialType' && target.line !== normalizedLine) {
+    const usesAnchorMatching =
+      target.label === 'materialType' || (target.label === 'date' && target.lineAnchor !== null);
+    if (!usesAnchorMatching && target.line !== normalizedLine) continue;
+    if (usesAnchorMatching && target.line !== normalizedLine) {
       if (target.lineAnchor && !normalizedLine.includes(target.lineAnchor)) continue;
       if (!target.lineAnchor) continue;
     }
@@ -393,7 +401,13 @@ function normalizeText(text: string): string {
 }
 
 function isHighlightLabel(label: string): label is HighlightLabel {
-  return label === 'materialType' || label === 'type' || label === 'dimension' || label === 'rate';
+  return (
+    label === 'materialType' ||
+    label === 'type' ||
+    label === 'dimension' ||
+    label === 'rate' ||
+    label === 'date'
+  );
 }
 
 function asPdfTextItem(value: unknown): PdfTextItemLike | null {

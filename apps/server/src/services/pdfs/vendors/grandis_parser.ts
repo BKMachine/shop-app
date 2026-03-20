@@ -1,9 +1,13 @@
-import { extractDimensionHighlightToken } from '../parser_utils.js';
+import { extractDimensionHighlightToken, extractPdfDate } from '../parser_utils.js';
 
 const grandis64Regex = /(?:\bTi\b|\bTitanium\b)\s*6\s*(?:AL|Al|al)?\s*[-/]?\s*4V\b/i;
 const GRANDIS_ASSUMED_LENGTH_INCHES = 144;
 
 export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
+  const extracted = extractPdfDate(text);
+  const createdAt = extracted?.date ?? new Date();
+  const dateLine = extracted?.line ?? '';
+  const dateToken = extracted?.token ?? '';
   const results: ParserResults[] = [];
 
   for (let i = 0; i < text.length; i += 1) {
@@ -82,6 +86,8 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
       sizes,
       override: '',
       amounts,
+      date: '',
+      dateHighlights: [],
       headerHighlights: [{ text: materialTypeToken, label: 'materialType' }],
       sizesHighlights: [
         { text: typeToken, label: 'type' },
@@ -91,7 +97,20 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
       amountsHighlights: rateMatch[0] ? [{ text: rateMatch[0], label: 'rate' }] : [],
     };
 
-    results.push({ material, costPerFoot, unitType: 'lb', rate, weight, feet, lineContext });
+    results.push({
+      material,
+      costPerFoot,
+      unitType: 'lb',
+      rate,
+      weight,
+      feet,
+      lineContext: {
+        ...lineContext,
+        date: dateLine,
+        dateHighlights: dateToken ? [{ text: dateToken, label: 'date' }] : [],
+      },
+      createdAt,
+    });
     i += 2;
   }
 
@@ -108,6 +127,6 @@ function extractGrandisMaterialType(header: string): string | null {
 }
 
 function extractGrandisMaterialTypeToken(header: string): string | null {
-  const token = header.match(/\b6\s*(?:AL|Al|al)?\s*[-\/]?\s*4V\b/i)?.[0];
+  const token = header.match(/\b6\s*(?:AL|Al|al)?\s*[-/]?\s*4V\b/i)?.[0];
   return token ?? null;
 }

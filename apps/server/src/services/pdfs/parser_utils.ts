@@ -1,3 +1,64 @@
+import { DateTime } from 'luxon';
+
+export interface DateExtraction {
+  date: Date;
+  line: string;
+  token: string;
+}
+
+export function parseSlashDate(value: string): Date | null {
+  for (const fmt of ['M/d/yyyy', 'M/d/yy']) {
+    const dt = DateTime.fromFormat(value.trim(), fmt, { locale: 'en-US' });
+    if (dt.isValid) return dt.toJSDate();
+  }
+  return null;
+}
+
+export function parseCompactDate(value: string): Date | null {
+  for (const fmt of ['dMMMyyyy', 'dMMMyy']) {
+    const dt = DateTime.fromFormat(value.trim(), fmt, { locale: 'en-US' });
+    if (dt.isValid) return dt.toJSDate();
+  }
+  return null;
+}
+
+export function extractPdfDate(lines: string[]): DateExtraction | null {
+  const lineDateLabelIndex = lines.findIndex((line) => /^Date\s*:?$/i.test(line));
+  if (lineDateLabelIndex >= 0) {
+    const nextLine = lines[lineDateLabelIndex + 1] ?? '';
+    const token = nextLine.match(/\b(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\b/)?.[1] ?? '';
+    const parsed = parseSlashDate(token);
+    if (parsed) return { date: parsed, line: nextLine, token };
+  }
+
+  for (const line of lines) {
+    const printedMatch = line.match(/\bPrinted\s*:\s*(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\b/i);
+    if (printedMatch?.[1]) {
+      const parsed = parseSlashDate(printedMatch[1]);
+      if (parsed) return { date: parsed, line, token: printedMatch[1] };
+    }
+  }
+
+  for (const line of lines) {
+    const compactMatch = line.match(
+      /\b(\d{1,2}(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d{2,4})\b/i,
+    );
+    if (!compactMatch?.[0]) continue;
+    const parsed = parseCompactDate(compactMatch[0]);
+    if (parsed) return { date: parsed, line, token: compactMatch[0] };
+  }
+
+  for (const line of lines) {
+    const directMatch = line.match(/\b(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\b/);
+    if (directMatch?.[1]) {
+      const parsed = parseSlashDate(directMatch[1]);
+      if (parsed) return { date: parsed, line, token: directMatch[1] };
+    }
+  }
+
+  return null;
+}
+
 export const costRegex: Record<string, RegExp> = {
   lb: /LBS\s*@\s*(\d+\.\d+)\s*LBS/,
   ea: /PCS\s*@\s*(\d+\.\d+)\s*EA/,

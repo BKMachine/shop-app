@@ -7,15 +7,23 @@ async function list(): Promise<MaterialDoc[]> {
   return await Material.find();
 }
 
-async function add(data: Material, device: string): Promise<MaterialDoc> {
+async function add(
+  data: Material,
+  device: string,
+  auditTimestamp?: Date | string,
+): Promise<MaterialDoc> {
   const material = new Material(normalizeDimensions(data));
   await material.save();
-  await Audit.addMaterialAudit(null, material, device);
+  await Audit.addMaterialAudit(null, material, device, auditTimestamp);
   emit('material', material);
   return material;
 }
 
-async function update(newMaterial: Material, device: string): Promise<MaterialDoc | null> {
+async function update(
+  newMaterial: Material,
+  device: string,
+  auditTimestamp?: Date | string,
+): Promise<MaterialDoc | null> {
   const id = newMaterial._id;
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -23,7 +31,7 @@ async function update(newMaterial: Material, device: string): Promise<MaterialDo
     returnDocument: 'after',
   });
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
+  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device, auditTimestamp);
   emit('material', updatedMaterial);
   return updatedMaterial;
 }
@@ -60,6 +68,7 @@ async function updateCostPerFoot(
   id: string,
   costPerFoot: number,
   device = '77f542a0-c09e-4b14-9634-40f2ede31a3e',
+  auditTimestamp?: Date | string,
 ): Promise<MaterialDoc | null> {
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -69,7 +78,7 @@ async function updateCostPerFoot(
     { returnDocument: 'after' },
   );
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
+  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device, auditTimestamp);
   return updatedMaterial;
 }
 

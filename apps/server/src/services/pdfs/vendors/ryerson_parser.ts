@@ -1,5 +1,22 @@
 import { calculateMaterialWeight, materials } from '@repo/utilities/materials';
-import { costRegex, extractDimensionHighlightToken, parseDimension } from '../parser_utils.js';
+import {
+  costRegex,
+  extractDimensionHighlightToken,
+  extractPdfDate,
+  parseSlashDate,
+  parseDimension,
+  type DateExtraction,
+} from '../parser_utils.js';
+
+export function extractRyersonEnteredDate(lines: string[]): DateExtraction | null {
+  for (const line of lines) {
+    const enteredMatch = line.match(/\bEntered\s*:\s*(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\b/i);
+    if (!enteredMatch?.[1]) continue;
+    const parsed = parseSlashDate(enteredMatch[1]);
+    if (parsed) return { date: parsed, line, token: enteredMatch[1] };
+  }
+  return null;
+}
 
 const ryersonNumberPattern = '(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?';
 const ryersonItemRegex = new RegExp(
@@ -31,6 +48,10 @@ const tubeWallGaugeToInches: Record<number, number> = {
 };
 
 export async function RyersonParser(text: string[]): Promise<ParserResults[]> {
+  const extracted = extractRyersonEnteredDate(text) ?? extractPdfDate(text);
+  const createdAt = extracted?.date ?? new Date();
+  const dateLine = extracted?.line ?? '';
+  const dateToken = extracted?.token ?? '';
   const results: ParserResults[] = [];
 
   for (let i = 0; i < text.length; i += 1) {
@@ -104,6 +125,8 @@ export async function RyersonParser(text: string[]): Promise<ParserResults[]> {
       sizes,
       override: '',
       amounts: header,
+      date: '',
+      dateHighlights: [],
       headerHighlights: [
         { text: materialType, label: 'materialType' },
         ...extractRyersonTypeHighlights(description, type),
@@ -130,7 +153,20 @@ export async function RyersonParser(text: string[]): Promise<ParserResults[]> {
       lineContext.overrideHighlights = gaugeOverride.highlights;
     }
 
-    results.push({ material, costPerFoot, unitType, rate, weight, feet, lineContext });
+    results.push({
+      material,
+      costPerFoot,
+      unitType,
+      rate,
+      weight,
+      feet,
+      lineContext: {
+        ...lineContext,
+        date: dateLine,
+        dateHighlights: dateToken ? [{ text: dateToken, label: 'date' }] : [],
+      },
+      createdAt,
+    });
     i += 1;
   }
 

@@ -294,10 +294,11 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import api from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+import { useMaterialsStore } from '@/stores/materials_store';
 
-const emit = defineEmits<{
-  (event: 'has-preview-change', hasPreview: boolean): void;
-}>();
+const materialsStore = useMaterialsStore();
+
+const emit = defineEmits<(event: 'has-preview-change', hasPreview: boolean) => void>();
 
 interface LineHighlight {
   text: string;
@@ -314,6 +315,8 @@ interface ParsedLineContext {
   sizesHighlights: LineHighlight[];
   overrideHighlights: LineHighlight[];
   amountsHighlights: LineHighlight[];
+  date: string;
+  dateHighlights: LineHighlight[];
 }
 
 interface ParserResults {
@@ -324,6 +327,7 @@ interface ParserResults {
   weight: number;
   feet: number;
   lineContext: ParsedLineContext;
+  createdAt: string;
 }
 
 interface MaterialParsePreview {
@@ -359,6 +363,7 @@ const FIELD_COLORS: Record<string, string> = {
   type: '#A5D6A7',
   dimension: '#90CAF9',
   rate: '#FFCC80',
+  date: '#CE93D8',
 };
 
 const isDragging = ref(false);
@@ -486,6 +491,12 @@ function formatNum(value: number): string {
   return Number.isFinite(value) ? parseFloat(value.toFixed(4)).toString() : '—';
 }
 
+function formatExtractedDate(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'Unknown';
+  return date.toLocaleDateString();
+}
+
 function displayCurrentCost(result: MaterialParsePreview, index: number): number | null {
   if (decisions.value[index] === 'applied' && index in acceptedFromCostPerFoot.value) {
     return acceptedFromCostPerFoot.value[index] ?? null;
@@ -557,8 +568,16 @@ function buildMaterialFromParsedResult(result: MaterialParsePreview): Material |
   return material;
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function fieldColor(label: string): string {
-  return FIELD_COLORS[label] ?? '#E0E0E0';
+  const hex = FIELD_COLORS[label] ?? '#E0E0E0';
+  return hexToRgba(hex, 0.35);
 }
 
 interface LineEntry {
@@ -576,6 +595,7 @@ function lineEntries(result: MaterialParsePreview): LineEntry[] {
       ? [{ label: 'override', line: ctx.override, highlights: ctx.overrideHighlights }]
       : []),
     { label: 'pricing', line: ctx.amounts, highlights: ctx.amountsHighlights },
+    ...(ctx.date ? [{ label: 'date', line: ctx.date, highlights: ctx.dateHighlights }] : []),
   ];
 }
 
@@ -600,6 +620,7 @@ function segmentLine(line: string, highlights: LineHighlight[]): LineSeg[] {
 
 function rejectChange(index: number) {
   decisions.value[index] = 'rejected';
+  toastError('Material cost change rejected.');
 }
 
 async function acceptChange(index: number) {
@@ -611,7 +632,11 @@ async function acceptChange(index: number) {
     const previousCostPerFoot = result.currentCostPerFoot;
     await api.post<Material[]>('/materials/parse-pdf/apply', {
       updates: [
-        { materialId: result.existingMaterial._id, costPerFoot: result.proposedCostPerFoot },
+        {
+          materialId: result.existingMaterial._id,
+          costPerFoot: result.proposedCostPerFoot,
+          auditTimestamp: result.parsed.createdAt,
+        },
       ],
     });
     acceptedFromCostPerFoot.value[index] = previousCostPerFoot;
@@ -629,7 +654,11 @@ async function acceptChange(index: number) {
 
 async function addMaterial(index: number) {
   const result = previews.value[index];
-  if (!result || result.existingMaterial) return;
+  if (!result) return;
+  if (result.existingMaterial) {
+    toastError('Material already exists in database.');
+    return;
+  }
 
   const material = buildMaterialFromParsedResult(result);
   if (!material) {
@@ -639,7 +668,7 @@ async function addMaterial(index: number) {
 
   try {
     decisionLoading.value[index] = true;
-    const { data } = await api.post<Material>('/materials', { data: material });
+    const data = await materialsStore.add(material, result.parsed.createdAt);
     result.existingMaterial = data;
     result.currentCostPerFoot = data.costPerFoot;
     result.proposedCostPerFoot = data.costPerFoot ?? result.proposedCostPerFoot;

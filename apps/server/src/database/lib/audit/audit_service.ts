@@ -107,16 +107,24 @@ async function addMaterialAudit(
   oldMaterial: MaterialDoc | null,
   newMaterial: MaterialDoc,
   device: string,
+  timestamp?: Date | string,
 ): Promise<void> {
+  const auditTimestamp = parseAuditTimestamp(timestamp) ?? new Date();
   const doc = new Audit({
     type: 'material',
-    timestamp: new Date(),
+    timestamp: auditTimestamp,
     device: new Types.ObjectId(device),
     old: oldMaterial,
     new: newMaterial,
   });
   await doc.save();
   emit('material_audit');
+}
+
+function parseAuditTimestamp(timestamp?: Date | string): Date | null {
+  if (!timestamp) return null;
+  const value = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  return Number.isFinite(value.getTime()) ? value : null;
 }
 
 export default {

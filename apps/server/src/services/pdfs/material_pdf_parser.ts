@@ -5,19 +5,11 @@ import { RyersonParser } from './vendors/ryerson_parser.js';
 
 export default async function parseMaterialPdf(data: Buffer): Promise<ParserResults[]> {
   const text = await extractPdfText(data);
+  const lines = cleanLines(text);
 
-  if (text.includes('AFFILIATED METALS')) {
-    const results = await AffiliatedMetalsParser(cleanLines(text));
-    return results;
-  }
-  if (text.includes('Ryerson & Son')) {
-    const results = await RyersonParser(cleanLines(text));
-    return results;
-  }
-  if (text.includes('Grandis Titanium')) {
-    const results = await GrandisParser(cleanLines(text));
-    return results;
-  }
+  if (text.includes('AFFILIATED METALS')) return AffiliatedMetalsParser(lines);
+  if (text.includes('Ryerson & Son')) return RyersonParser(lines);
+  if (text.includes('Grandis Titanium')) return GrandisParser(lines);
 
   return [];
 }

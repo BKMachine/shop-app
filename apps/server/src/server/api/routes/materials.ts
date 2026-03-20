@@ -19,6 +19,7 @@ interface MaterialParsePreview {
 interface MaterialApplyUpdate {
   materialId: string;
   costPerFoot: number;
+  auditTimestamp?: string;
 }
 
 interface ParsePdfResponse {
@@ -36,7 +37,8 @@ router.get('/materials', async (_req, res, next) => {
 });
 
 router.post('/materials', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: Material | undefined } = req.body;
+  const { data, auditTimestamp }: { data: Material | undefined; auditTimestamp?: string } =
+    req.body;
   if (!data) {
     res.sendStatus(400);
     return;
@@ -47,7 +49,7 @@ router.post('/materials', requireKnownDevice, async (req, res, next) => {
   }
 
   try {
-    const doc = await Materials.add(data, req.device._id.toString());
+    const doc = await Materials.add(data, req.device._id.toString(), auditTimestamp);
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -141,8 +143,8 @@ router.post('/materials/parse-pdf/apply', requireKnownDevice, async (req, res, n
 
   try {
     const updated = await Promise.all(
-      updates.map(async ({ materialId, costPerFoot }) => {
-        return await Materials.updateCostPerFoot(materialId, costPerFoot, deviceId);
+      updates.map(async ({ materialId, costPerFoot, auditTimestamp }) => {
+        return await Materials.updateCostPerFoot(materialId, costPerFoot, deviceId, auditTimestamp);
       }),
     );
 

@@ -30,12 +30,12 @@ export const useMaterialsStore = defineStore('materials', () => {
       });
   }
 
-  async function add(material: Material) {
+  async function add(material: Material, auditTimestamp?: string): Promise<Material> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { _id, ...rest } = material;
-    await axios.post<Material>('/materials', { data: rest }).then(({ data }) => {
-      rawMaterials.value.push(data);
-    });
+    const { data } = await axios.post<Material>('/materials', { data: rest, auditTimestamp });
+    rawMaterials.value.push(data);
+    return data;
   }
 
   async function update(material: Material) {

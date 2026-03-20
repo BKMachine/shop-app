@@ -12,10 +12,12 @@ declare global {
     sizes: string;
     override: string;
     amounts: string;
+    date: string;
     headerHighlights: LineHighlight[];
     sizesHighlights: LineHighlight[];
     overrideHighlights: LineHighlight[];
     amountsHighlights: LineHighlight[];
+    dateHighlights: LineHighlight[];
   }
 
   interface ParserResults {
@@ -26,6 +28,7 @@ declare global {
     weight: number;
     feet: number;
     lineContext: ParsedLineContext;
+    createdAt: Date;
   }
 }
 

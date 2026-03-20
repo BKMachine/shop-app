@@ -1,6 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import parseMaterialPdf, { cleanLines, extractPdfText } from '../material_pdf_parser.js';
+import parseMaterialPdf, {
+  cleanLines,
+  extractAffiliatedTopLeftDate,
+  extractPdfDate,
+  extractPdfText,
+  extractRyersonEnteredDate,
+} from '../material_pdf_parser.js';
 import { AffiliatedMetalsParser } from '../vendors/affiliated_metals_parser.js';
 import { GrandisParser } from '../vendors/grandis_parser.js';
 import { RyersonParser } from '../vendors/ryerson_parser.js';
@@ -378,4 +384,89 @@ test('parseMaterialPdf should route Grandis invoices', async () => {
 
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]?.material.materialType).toBe('6Al-4V');
+});
+
+test('extractPdfDate should parse Affiliated compact date format', async () => {
+  const file = path.resolve(process.cwd(), 'stubs/Affiliated_Metals/single_flat_bar_lb.pdf');
+  const data = await fs.readFile(file);
+  const text = await extractPdfText(data);
+  const extracted = extractPdfDate(cleanLines(text));
+
+  expect(extracted).not.toBeNull();
+  expect(extracted?.date.getFullYear()).toBe(2026);
+  expect(extracted?.date.getMonth()).toBe(1);
+  expect(extracted?.date.getDate()).toBe(24);
+});
+
+test('extractAffiliatedTopLeftDate should read Ord date from Trm line', () => {
+  const lines = cleanLines(`
+24Feb26 10:35 SALES ACKNOWLEDGMENT
+Trm ***** C.O.D. ***** Ord 24Feb26 Due25Feb26
+EFFECTIVE 3/1/2024, ALL CREDIT CARD TRANSACTIONS
+  `);
+
+  const extracted = extractAffiliatedTopLeftDate(lines);
+
+  expect(extracted).not.toBeNull();
+  expect(extracted?.date.getFullYear()).toBe(2026);
+  expect(extracted?.date.getMonth()).toBe(1);
+  expect(extracted?.date.getDate()).toBe(24);
+  expect(extracted?.token).toBe('24Feb26');
+});
+
+test('extractAffiliatedTopLeftDate should not be fooled by footer slash dates', () => {
+  const lines = cleanLines(`
+24Feb26 10:35 SALES ACKNOWLEDGMENT
+Trm ***** C.O.D. ***** Ord 15Mar26 Due16Mar26
+EFFECTIVE 3/1/2024, ALL CREDIT CARD TRANSACTIONS
+  `);
+
+  const extracted = extractAffiliatedTopLeftDate(lines);
+
+  expect(extracted?.date.getFullYear()).toBe(2026);
+  expect(extracted?.date.getMonth()).toBe(2); // March
+  expect(extracted?.date.getDate()).toBe(15);
+});
+
+test('parseMaterialPdf should include createdAt from Ryerson Entered date', async () => {
+  const file = path.resolve(
+    process.cwd(),
+    'stubs/Ryerson/Order#18587819-PO#Jeff 3122026-BK MACHINE INC.pdf',
+  );
+  const data = await fs.readFile(file);
+  const results = await parseMaterialPdf(data);
+
+  expect(results.length).toBeGreaterThan(0);
+  expect(results[0]?.createdAt).toBeInstanceOf(Date);
+  expect(results[0]?.createdAt.getFullYear()).toBe(2026);
+  expect(results[0]?.createdAt.getMonth()).toBe(2);
+  expect(results[0]?.createdAt.getDate()).toBe(12);
+});
+
+test('extractRyersonEnteredDate should parse Entered: date line', () => {
+  const lines = cleanLines(`
+Joseph T. Ryerson & Son, Inc.
+Printed: 03/12/2026
+Entered:03/12/2026
+  `);
+
+  const extracted = extractRyersonEnteredDate(lines);
+
+  expect(extracted).not.toBeNull();
+  expect(extracted?.token).toBe('03/12/2026');
+  expect(extracted?.date.getFullYear()).toBe(2026);
+  expect(extracted?.date.getMonth()).toBe(2);
+  expect(extracted?.date.getDate()).toBe(12);
+});
+
+test('extractRyersonEnteredDate should prefer Entered over Printed', () => {
+  const lines = cleanLines(`
+Printed: 01/01/2025
+Entered:03/12/2026
+  `);
+
+  const extracted = extractRyersonEnteredDate(lines);
+
+  expect(extracted?.date.getFullYear()).toBe(2026);
+  expect(extracted?.date.getDate()).toBe(12);
 });
