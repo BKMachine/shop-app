@@ -1,10 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import Materials from '../../../database/lib/material/material_service.js';
-import parseMaterialPdf, {
-  type ParserResults,
-} from '../../../services/pdfs/material_pdf_parser.js';
-import { buildHighlightedPdf } from '../../../services/pdf_highlight_service.js';
+import parseMaterialPdf from '../../../services/pdfs/material_pdf_parser.js';
+import { buildHighlightedPdf } from '../../../services/pdfs/pdf_highlight_service.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();

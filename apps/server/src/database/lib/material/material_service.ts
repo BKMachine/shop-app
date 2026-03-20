@@ -1,4 +1,4 @@
-import normalizeDimensions from '@repo/utilities/normalizeDimensions';
+import { normalizeDimensions } from '@repo/utilities/materials';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
 import Material from './material_model.js';

@@ -8,6 +8,7 @@ interface HighlightTarget {
   text: string;
   label: HighlightLabel;
   line: string;
+  lineAnchor: string | null;
   remaining: number;
 }
 
@@ -135,10 +136,14 @@ function collectTargets(parsedResults: ParserResults[]): HighlightTarget[] {
         if (existing) {
           existing.remaining += 1;
         } else {
+          const lineAnchor =
+            highlight.label === 'materialType' ? extractLineAnchor(normalizedLine) : null;
+
           targetMap.set(key, {
             text: normalizedText,
             line: normalizedLine,
             label: highlight.label,
+            lineAnchor,
             remaining: 1,
           });
         }
@@ -160,19 +165,65 @@ function applyTargetsToLine(
 
   for (const target of targets) {
     if (target.remaining <= 0) continue;
-    if (target.line !== normalizedLine) continue;
+    if (target.label !== 'materialType' && target.line !== normalizedLine) continue;
+    if (target.label === 'materialType' && target.line !== normalizedLine) {
+      if (target.lineAnchor && !normalizedLine.includes(target.lineAnchor)) continue;
+      if (!target.lineAnchor) continue;
+    }
 
     let searchStart = 0;
     while (target.remaining > 0) {
-      const matchIndex = lineLayout.text.indexOf(target.text, searchStart);
-      if (matchIndex === -1) break;
+      const match = findHighlightMatch(lineLayout.text, target.text, target.label, searchStart);
+      if (!match) break;
 
-      addLineSpanHighlights(pdfDoc, page, lineLayout, matchIndex, target.text.length, target.label);
+      addLineSpanHighlights(pdfDoc, page, lineLayout, match.index, match.length, target.label);
       target.remaining -= 1;
 
-      searchStart = matchIndex + target.text.length;
+      searchStart = match.index + match.length;
     }
   }
+}
+
+function findHighlightMatch(
+  lineText: string,
+  targetText: string,
+  label: HighlightLabel,
+  searchStart: number,
+): { index: number; length: number } | null {
+  const exactIndex = lineText.indexOf(targetText, searchStart);
+  if (exactIndex !== -1) {
+    return { index: exactIndex, length: targetText.length };
+  }
+
+  if (label !== 'materialType') {
+    return null;
+  }
+
+  const flexiblePattern = createFlexibleTokenPattern(targetText);
+  if (!flexiblePattern) return null;
+
+  const regex = new RegExp(flexiblePattern, 'gi');
+  regex.lastIndex = searchStart;
+  const match = regex.exec(lineText);
+  if (!match || match.index < 0) return null;
+
+  return { index: match.index, length: match[0]?.length ?? targetText.length };
+}
+
+function createFlexibleTokenPattern(token: string): string | null {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!escaped) return null;
+  return escaped.replace(/\\[-/]/g, '\\s*[-/]\\s*');
+}
+
+function extractLineAnchor(line: string): string | null {
+  const gtToken = line.match(/\bGT#\S+\b/i)?.[0];
+  if (gtToken) return gtToken;
+
+  const poToken = line.match(/\bPO#\S+\b/i)?.[0];
+  if (poToken) return poToken;
+
+  return null;
 }
 
 function addLineSpanHighlights(

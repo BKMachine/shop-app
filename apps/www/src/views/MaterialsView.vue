@@ -267,7 +267,7 @@
             </v-card-actions>
           </v-card>
 
-          <v-dialog v-model="pdfReviewDialog" max-width="1400" scrollable>
+          <v-dialog v-model="pdfReviewDialog" :max-width="pdfReviewDialogMaxWidth" scrollable>
             <v-card>
               <v-card-title class="d-flex align-center">
                 Material PDF Review
@@ -280,7 +280,9 @@
                 />
               </v-card-title>
               <v-divider />
-              <v-card-text class="pa-0"> <MaterialPdfReview /> </v-card-text>
+              <v-card-text class="pa-0">
+                <MaterialPdfReview @has-preview-change="onPdfReviewHasPreviewChange" />
+              </v-card-text>
             </v-card>
           </v-dialog>
         </v-form>
@@ -290,10 +292,11 @@
 </template>
 
 <script setup lang="ts">
-import calculateMaterialWeight, {
+import {
+  calculateMaterialWeight,
   materials as materialsList,
-} from '@repo/utilities/calculateMaterialWeight';
-import normalizeDimensions from '@repo/utilities/normalizeDimensions';
+  normalizeDimensions,
+} from '../../../../packages/utilities/dist/materials';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref, watch } from 'vue';
 import MaterialPdfReview from '@/components/MaterialPdfReview.vue';
@@ -325,6 +328,7 @@ const categoryOrder = [
   'aluminum',
   'steel',
   'stainless',
+  'titanium',
   'other',
 ] as const satisfies readonly MaterialCategory[];
 type MissingMaterialCategories = Exclude<MaterialCategory, (typeof categoryOrder)[number]>;
@@ -370,10 +374,23 @@ const typeFilter = ref<'All' | 'Flat' | 'Round'>('All');
 const tubingFilter = ref<'All' | 'Tubing' | 'Bar'>('All');
 const form = ref();
 const pdfReviewDialog = ref(false);
+const pdfReviewHasPreview = ref(false);
+
+const pdfReviewDialogMaxWidth = computed(() => (pdfReviewHasPreview.value ? 1400 : 720));
 
 onMounted(() => {
   materialsStore.fetch();
 });
+
+watch(pdfReviewDialog, (isOpen) => {
+  if (!isOpen) {
+    pdfReviewHasPreview.value = false;
+  }
+});
+
+function onPdfReviewHasPreviewChange(hasPreview: boolean) {
+  pdfReviewHasPreview.value = hasPreview;
+}
 
 function selectMaterial(material: Material) {
   selectedMaterial.value = { ...material };

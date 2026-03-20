@@ -86,7 +86,7 @@ interface RecentImage {
   createdAt: string;
 }
 
-type MaterialCategory = 'aluminum' | 'steel' | 'stainless' | 'other';
+type MaterialCategory = 'aluminum' | 'steel' | 'stainless' | 'titanium' | 'other';
 
 interface MaterialList {
   [key: string]: {

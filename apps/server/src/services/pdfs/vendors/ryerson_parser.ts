@@ -1,4 +1,4 @@
-import calculateMaterialWeight, { materials } from '@repo/utilities/calculateMaterialWeight';
+import { calculateMaterialWeight, materials } from '@repo/utilities/materials';
 import { costRegex, extractDimensionHighlightToken, parseDimension } from '../parser_utils.js';
 
 const ryersonNumberPattern = '(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?';

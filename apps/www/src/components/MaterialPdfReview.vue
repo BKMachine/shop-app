@@ -69,6 +69,22 @@
         <v-progress-linear v-if="uploading" class="mb-3" indeterminate />
         <v-alert v-if="error" class="mb-3" type="error" variant="tonal">{{ error }}</v-alert>
 
+        <div v-if="previews.length > 0" class="d-flex align-center justify-space-between mb-2">
+          <div class="text-caption text-medium-emphasis">
+            {{ visibleEntries.length }}
+            visible
+            <template v-if="hiddenResolvedCount > 0"> · {{ hiddenResolvedCount }} hidden</template>
+          </div>
+          <v-btn
+            density="compact"
+            size="small"
+            variant="text"
+            @click="hideResolved = !hideResolved"
+          >
+            {{ hideResolved ? 'Show completed' : 'Hide completed' }}
+          </v-btn>
+        </div>
+
         <div
           v-if="!uploading && previews.length === 0"
           class="text-body-2 text-medium-emphasis pa-2"
@@ -76,24 +92,43 @@
           No recognized materials found in this PDF.
         </div>
 
-        <v-card v-for="(result, index) in previews" :key="index" class="mb-4" variant="outlined">
-          <div :style="{ height: '4px', background: resultColor(result, index) }" />
+        <v-alert
+          v-else-if="!uploading && visibleEntries.length === 0"
+          class="mb-3"
+          density="compact"
+          type="success"
+          variant="tonal"
+        >
+          All materials costs are up to date.
+        </v-alert>
 
-          <v-card-title class="text-subtitle-1 pt-3"> {{ materialTitle(result) }} </v-card-title>
+        <div
+          v-if="!uploading && visibleEntries.length === 0"
+          class="text-caption text-medium-emphasis mb-3"
+        >
+          Use “Show completed” above to toggle finished cards.
+        </div>
+
+        <v-card v-for="entry in visibleEntries" :key="entry.index" class="mb-4" variant="outlined">
+          <div :style="{ height: '4px', background: resultColor(entry.result, entry.index) }" />
+
+          <v-card-title class="text-subtitle-1 pt-3">
+            {{ materialTitle(entry.result) }}
+          </v-card-title>
 
           <v-card-text>
             <div class="parsed-lines mb-3">
               <div
-                v-for="(entry, li) in lineEntries(result)"
+                v-for="(lineEntry, li) in lineEntries(entry.result)"
                 :key="li"
                 class="parsed-line-row mb-1"
               >
                 <span class="line-label text-caption text-medium-emphasis mr-1"
-                  >{{ entry.label }}:</span
+                  >{{ lineEntry.label }}:</span
                 >
                 <code class="text-caption line-value">
                   <template
-                    v-for="(seg, si) in segmentLine(entry.line, entry.highlights)"
+                    v-for="(seg, si) in segmentLine(lineEntry.line, lineEntry.highlights)"
                     :key="si"
                   >
                     <mark
@@ -110,44 +145,67 @@
 
             <v-divider class="mb-3" />
 
-            <div v-if="result.parsed.unitType === 'lb'" class="cost-math text-caption mb-3">
-              <span class="text-medium-emphasis">{{ formatNum(result.parsed.weight) }} lbs</span>
+            <div v-if="entry.result.parsed.unitType === 'lb'" class="cost-math text-caption mb-3">
+              <span class="text-medium-emphasis"
+                >{{ formatNum(entry.result.parsed.weight) }}
+                lbs</span
+              >
               <span class="mx-1">×</span>
-              <span class="text-medium-emphasis">{{ formatMoney(result.parsed.rate) }}/lb</span>
+              <span class="text-medium-emphasis"
+                >{{ formatMoney(entry.result.parsed.rate) }}/lb</span
+              >
               <span class="mx-1">=</span>
               <span class="text-medium-emphasis"
-                >{{ formatMoney(result.parsed.weight * result.parsed.rate) }}
+                >{{ formatMoney(entry.result.parsed.weight * entry.result.parsed.rate) }}
                 total</span
               >
               <span class="mx-1">÷</span>
-              <span class="text-medium-emphasis">{{ formatNum(result.parsed.feet) }} ft</span>
+              <span class="text-medium-emphasis">{{ formatNum(entry.result.parsed.feet) }} ft</span>
               <span class="mx-1">=</span>
-              <strong>{{ formatMoney(result.proposedCostPerFoot) }}/ft</strong>
+              <strong>{{ formatMoney(entry.result.proposedCostPerFoot) }}/ft</strong>
             </div>
-            <div v-else-if="result.parsed.unitType === 'ea'" class="cost-math text-caption mb-3">
-              <span class="text-medium-emphasis">{{ formatMoney(result.parsed.rate) }}/bar</span>
+            <div
+              v-else-if="entry.result.parsed.unitType === 'ea'"
+              class="cost-math text-caption mb-3"
+            >
+              <span class="text-medium-emphasis"
+                >{{ formatMoney(entry.result.parsed.rate) }}/bar</span
+              >
               <span class="mx-1">÷</span>
-              <span class="text-medium-emphasis">{{ formatNum(result.parsed.feet) }} ft</span>
+              <span class="text-medium-emphasis">{{ formatNum(entry.result.parsed.feet) }} ft</span>
               <span class="mx-1">=</span>
-              <strong>{{ formatMoney(result.proposedCostPerFoot) }}/ft</strong>
+              <strong>{{ formatMoney(entry.result.proposedCostPerFoot) }}/ft</strong>
             </div>
 
             <div class="d-flex align-center" style="gap: 16px;">
               <div>
-                <div class="text-caption text-medium-emphasis">Current ($/ft)</div>
-                <div class="text-body-2">{{ formatMoney(result.currentCostPerFoot) }}</div>
+                <div class="text-caption text-medium-emphasis">
+                  {{ fromCostLabel(entry.index) }}
+                </div>
+                <div class="text-body-2">
+                  {{ formatMoney(displayCurrentCost(entry.result, entry.index)) }}
+                </div>
               </div>
               <v-icon size="small">mdi-arrow-right</v-icon>
               <div>
-                <div class="text-caption text-medium-emphasis">Proposed ($/ft)</div>
+                <div class="text-caption text-medium-emphasis">{{ toCostLabel(entry.index) }}</div>
                 <div class="text-body-2 font-weight-bold">
-                  {{ formatMoney(result.proposedCostPerFoot) }}
+                  {{ formatMoney(entry.result.proposedCostPerFoot) }}
                 </div>
               </div>
             </div>
 
             <v-alert
-              v-if="!result.existingMaterial"
+              v-if="decisions[entry.index] === 'added'"
+              class="mt-3"
+              density="compact"
+              type="success"
+              variant="tonal"
+            >
+              Material added.
+            </v-alert>
+            <v-alert
+              v-else-if="!entry.result.existingMaterial"
               class="mt-3"
               density="compact"
               type="warning"
@@ -156,7 +214,7 @@
               No matching material in database.
             </v-alert>
             <v-alert
-              v-else-if="decisions[index] === 'applied'"
+              v-else-if="decisions[entry.index] === 'applied'"
               class="mt-3"
               density="compact"
               type="success"
@@ -165,7 +223,7 @@
               Cost updated.
             </v-alert>
             <v-alert
-              v-else-if="decisions[index] === 'rejected'"
+              v-else-if="decisions[entry.index] === 'rejected'"
               class="mt-3"
               density="compact"
               type="info"
@@ -174,7 +232,7 @@
               Change rejected.
             </v-alert>
             <v-alert
-              v-else-if="!result.hasCostChange"
+              v-else-if="!entry.result.hasCostChange"
               class="mt-3"
               density="compact"
               type="info"
@@ -185,24 +243,36 @@
           </v-card-text>
 
           <v-card-actions
-            v-if="result.existingMaterial && result.hasCostChange && !decisions[index]"
+            v-if="entry.result.existingMaterial && entry.result.hasCostChange && !decisions[entry.index]"
           >
             <v-spacer />
             <v-btn
               color="red"
-              :disabled="decisionLoading[index]"
+              :disabled="decisionLoading[entry.index]"
               variant="outlined"
-              @click="rejectChange(index)"
+              @click="rejectChange(entry.index)"
             >
               Reject
             </v-btn>
             <v-btn
               color="green"
-              :loading="decisionLoading[index]"
+              :loading="decisionLoading[entry.index]"
               variant="elevated"
-              @click="acceptChange(index)"
+              @click="acceptChange(entry.index)"
             >
               Accept
+            </v-btn>
+          </v-card-actions>
+
+          <v-card-actions v-else-if="!entry.result.existingMaterial && !decisions[entry.index]">
+            <v-spacer />
+            <v-btn
+              color="green"
+              :loading="decisionLoading[entry.index]"
+              variant="elevated"
+              @click="addMaterial(entry.index)"
+            >
+              Add material
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -221,9 +291,13 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, ref } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import api from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+
+const emit = defineEmits<{
+  (event: 'has-preview-change', hasPreview: boolean): void;
+}>();
 
 interface LineHighlight {
   text: string;
@@ -270,7 +344,7 @@ interface LineSeg {
   label: string | null;
 }
 
-type DecisionState = 'rejected' | 'applied';
+type DecisionState = 'rejected' | 'applied' | 'added';
 
 const RESULT_COLORS = {
   waiting: '#7B1FA2',
@@ -296,6 +370,24 @@ const previews = ref<MaterialParsePreview[]>([]);
 const fileInput = ref<HTMLInputElement | null>(null);
 const decisions = ref<Record<number, DecisionState>>({});
 const decisionLoading = ref<Record<number, boolean>>({});
+const acceptedFromCostPerFoot = ref<Record<number, number | null>>({});
+const hideResolved = ref(true);
+
+watch(
+  pdfBlobUrl,
+  (value) => {
+    emit('has-preview-change', Boolean(value));
+  },
+  { immediate: true },
+);
+
+const visibleEntries = computed(() => {
+  return previews.value
+    .map((result, index) => ({ result, index }))
+    .filter((entry) => !hideResolved.value || !isResolved(entry.result, entry.index));
+});
+
+const hiddenResolvedCount = computed(() => previews.value.length - visibleEntries.value.length);
 
 onUnmounted(() => {
   if (pdfBlobUrl.value) URL.revokeObjectURL(pdfBlobUrl.value);
@@ -323,6 +415,8 @@ function reset() {
   previews.value = [];
   decisions.value = {};
   decisionLoading.value = {};
+  acceptedFromCostPerFoot.value = {};
+  hideResolved.value = true;
   error.value = '';
   fileName.value = '';
 }
@@ -392,12 +486,75 @@ function formatNum(value: number): string {
   return Number.isFinite(value) ? parseFloat(value.toFixed(4)).toString() : '—';
 }
 
+function displayCurrentCost(result: MaterialParsePreview, index: number): number | null {
+  if (decisions.value[index] === 'applied' && index in acceptedFromCostPerFoot.value) {
+    return acceptedFromCostPerFoot.value[index] ?? null;
+  }
+  return result.currentCostPerFoot;
+}
+
+function fromCostLabel(index: number): string {
+  return decisions.value[index] === 'applied' ? 'Original ($/ft)' : 'Current ($/ft)';
+}
+
+function toCostLabel(index: number): string {
+  return decisions.value[index] === 'applied' ? 'Changed to ($/ft)' : 'Proposed ($/ft)';
+}
+
 function resultColor(result: MaterialParsePreview, index: number): string {
+  if (decisions.value[index] === 'added') return RESULT_COLORS.applied;
   if (!result.existingMaterial) return RESULT_COLORS.missingMaterial;
   if (decisions.value[index] === 'applied') return RESULT_COLORS.applied;
   if (decisions.value[index] === 'rejected') return RESULT_COLORS.rejected;
   if (!result.hasCostChange) return RESULT_COLORS.noChange;
   return RESULT_COLORS.waiting;
+}
+
+function isResolved(result: MaterialParsePreview, index: number): boolean {
+  const decision = decisions.value[index];
+  if (decision === 'added' || decision === 'applied' || decision === 'rejected') return true;
+  if (result.existingMaterial && !result.hasCostChange) return true;
+  return false;
+}
+
+function buildMaterialDescription(material: Material): string {
+  if (!material.type || !material.materialType) return '';
+
+  const form = material.wallThickness ? 'Tubing' : 'Bar';
+
+  if (material.type === 'Flat') {
+    const dims = material.wallThickness
+      ? `${material.height}" x ${material.width}" x ${material.wallThickness}"`
+      : `${material.height}" x ${material.width}"`;
+    return `${material.materialType} Flat ${form} - ${dims}`;
+  }
+
+  const roundDims = material.wallThickness
+    ? `${material.diameter}" ⌀ x ${material.wallThickness}"`
+    : `${material.diameter}" ⌀`;
+  return `${material.materialType} Round ${form} - ${roundDims}`;
+}
+
+function buildMaterialFromParsedResult(result: MaterialParsePreview): Material | null {
+  const parsedMaterial = result.parsed.material;
+  if (!parsedMaterial.materialType || !parsedMaterial.type) return null;
+
+  const material: Material = {
+    _id: '0',
+    description: '',
+    materialType: parsedMaterial.materialType,
+    type: parsedMaterial.type,
+    height: parsedMaterial.height ?? null,
+    width: parsedMaterial.width ?? null,
+    diameter: parsedMaterial.diameter ?? null,
+    wallThickness: parsedMaterial.wallThickness ?? null,
+    length: parsedMaterial.length ?? null,
+    supplier: undefined,
+    costPerFoot: result.proposedCostPerFoot,
+  };
+
+  material.description = buildMaterialDescription(material);
+  return material;
 }
 
 function fieldColor(label: string): string {
@@ -451,11 +608,13 @@ async function acceptChange(index: number) {
 
   try {
     decisionLoading.value[index] = true;
+    const previousCostPerFoot = result.currentCostPerFoot;
     await api.post<Material[]>('/materials/parse-pdf/apply', {
       updates: [
         { materialId: result.existingMaterial._id, costPerFoot: result.proposedCostPerFoot },
       ],
     });
+    acceptedFromCostPerFoot.value[index] = previousCostPerFoot;
     decisions.value[index] = 'applied';
     result.currentCostPerFoot = result.proposedCostPerFoot;
     result.hasCostChange = false;
@@ -463,6 +622,33 @@ async function acceptChange(index: number) {
   } catch (e) {
     console.error(e);
     toastError('Failed to update material cost.');
+  } finally {
+    decisionLoading.value[index] = false;
+  }
+}
+
+async function addMaterial(index: number) {
+  const result = previews.value[index];
+  if (!result || result.existingMaterial) return;
+
+  const material = buildMaterialFromParsedResult(result);
+  if (!material) {
+    toastError('Missing parsed material fields. Cannot add material.');
+    return;
+  }
+
+  try {
+    decisionLoading.value[index] = true;
+    const { data } = await api.post<Material>('/materials', { data: material });
+    result.existingMaterial = data;
+    result.currentCostPerFoot = data.costPerFoot;
+    result.proposedCostPerFoot = data.costPerFoot ?? result.proposedCostPerFoot;
+    result.hasCostChange = false;
+    decisions.value[index] = 'added';
+    toastSuccess('Material added successfully.');
+  } catch (e) {
+    console.error(e);
+    toastError('Failed to add material.');
   } finally {
     decisionLoading.value[index] = false;
   }

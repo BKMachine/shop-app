@@ -12,13 +12,9 @@
       "import": "./dist/logger.js",
       "types": "./dist/logger.d.ts"
     },
-    "./normalizeDimensions": {
-      "import": "./dist/normalizeDimensions.js",
-      "types": "./dist/normalizeDimensions.d.ts"
-    },
-    "./calculateMaterialWeight": {
-      "import": "./dist/calculateMaterialWeight.js",
-      "types": "./dist/calculateMaterialWeight.d.ts"
+    "./materials": {
+      "import": "./dist/materials.js",
+      "types": "./dist/materials.d.ts"
     }
   },
   "scripts": {

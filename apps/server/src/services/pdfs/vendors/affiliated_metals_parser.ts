@@ -1,4 +1,4 @@
-import calculateMaterialWeight, { materials } from '@repo/utilities/calculateMaterialWeight';
+import { calculateMaterialWeight, materials } from '@repo/utilities/materials';
 import {
   costRegex,
   extractActualDimensionSegments,
@@ -6,7 +6,7 @@ import {
   parseDimension,
 } from '../parser_utils.js';
 
-const types = ['FLAT BAR', 'SQUARE', 'PIPE', 'RND', 'TUBE', 'ROUND'];
+const types = ['FLAT', 'SQUARE', 'PIPE', 'RND', 'TUBE', 'ROUND'];
 
 export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResults[]> {
   const separatorIndexes = text
@@ -108,7 +108,7 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
       length: null,
     };
 
-    if (type === 'FLAT BAR' || type === 'SQUARE') {
+    if (type === 'FLAT' || type === 'SQUARE') {
       material.type = 'Flat';
       material.height = dimensions[0] ?? null;
       material.width = dimensions[1] ?? null;

@@ -1,9 +1,10 @@
 import { PDFParse } from 'pdf-parse';
 import { AffiliatedMetalsParser } from './vendors/affiliated_metals_parser.js';
+import { GrandisParser } from './vendors/grandis_parser.js';
 import { RyersonParser } from './vendors/ryerson_parser.js';
-export type LineHighlight = globalThis.LineHighlight;
-export type ParsedLineContext = globalThis.ParsedLineContext;
-export type ParserResults = globalThis.ParserResults;
+
+const grandisCandidateRegex =
+  /Grandis\s+Titanium\s+LLC|(?:\bTi\b|\bTitanium\b)\s*6\s*(?:AL|Al|al)?\s*[-\/]?\s*4V\b/i;
 
 export default async function parseMaterialPdf(data: Buffer): Promise<ParserResults[]> {
   const text = await extractPdfText(data);
@@ -13,6 +14,10 @@ export default async function parseMaterialPdf(data: Buffer): Promise<ParserResu
   }
   if (text.includes('Ryerson & Son')) {
     const results = await RyersonParser(cleanLines(text));
+    return results;
+  }
+  if (grandisCandidateRegex.test(text)) {
+    const results = await GrandisParser(cleanLines(text));
     return results;
   }
 

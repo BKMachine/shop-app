@@ -1,11 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-  AffiliatedMetalsParser,
-  RyersonParser,
-  cleanLines,
-  extractPdfText,
-} from '../material_pdf_parser.js';
+import parseMaterialPdf, { cleanLines, extractPdfText } from '../material_pdf_parser.js';
+import { AffiliatedMetalsParser } from '../vendors/affiliated_metals_parser.js';
+import { GrandisParser } from '../vendors/grandis_parser.js';
+import { RyersonParser } from '../vendors/ryerson_parser.js';
 
 test('AffiliatedMetalsParser should parse PDF with single flat bar', async () => {
   const file = path.resolve(process.cwd(), 'stubs/Affiliated_Metals/single_flat_bar_lb.pdf');
@@ -333,4 +331,51 @@ Pieces: 7 P/N Delivery Date 02/12/2026
   expect(results[0]?.lineContext.amountsHighlights).toEqual([
     { text: '$117.8100 PC', label: 'rate' },
   ]);
+});
+
+test('GrandisParser should parse 6AL-4V invoice rows and key Round from Dia', async () => {
+  const file = path.resolve(
+    process.cwd(),
+    'stubs/Grandis/Inv_8764167918_from_Grandis_Titanium_LLC_26648.pdf',
+  );
+  const data = await fs.readFile(file);
+  const text = await extractPdfText(data);
+  const results = await GrandisParser(cleanLines(text));
+
+  expect(results).toHaveLength(2);
+  expect(results[0]).toEqual(
+    expect.objectContaining({
+      unitType: 'lb',
+      rate: 21.75,
+      material: expect.objectContaining({
+        materialType: '6Al-4V',
+        type: 'Round',
+        diameter: 1,
+        length: 144,
+      }),
+    }),
+  );
+
+  expect(results[0]?.lineContext.headerHighlights).toEqual(
+    expect.arrayContaining([{ text: '6Al-4V', label: 'materialType' }]),
+  );
+
+  expect(results[0]?.lineContext.sizesHighlights).toEqual(
+    expect.arrayContaining([
+      { text: 'Dia', label: 'type' },
+      { text: '1.0"', label: 'dimension' },
+    ]),
+  );
+});
+
+test('parseMaterialPdf should route Grandis invoices', async () => {
+  const file = path.resolve(
+    process.cwd(),
+    'stubs/Grandis/Inv_8764167918_from_Grandis_Titanium_LLC_26648.pdf',
+  );
+  const data = await fs.readFile(file);
+  const results = await parseMaterialPdf(data);
+
+  expect(results.length).toBeGreaterThan(0);
+  expect(results[0]?.material.materialType).toBe('6Al-4V');
 });
