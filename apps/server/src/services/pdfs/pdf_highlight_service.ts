@@ -1,7 +1,6 @@
 import { PDFDocument, PDFName, PDFNumber, type PDFPage, PDFString } from 'pdf-lib';
 import { getDocument, PDFWorker } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import logger from '../logger.js';
-import type { ParserResults } from './material_pdf_parser.js';
+import logger from '../../logger.js';
 
 type HighlightLabel = 'materialType' | 'type' | 'dimension' | 'rate';
 

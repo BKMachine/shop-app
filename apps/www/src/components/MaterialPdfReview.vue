@@ -77,7 +77,7 @@
         </div>
 
         <v-card v-for="(result, index) in previews" :key="index" class="mb-4" variant="outlined">
-          <div :style="{ height: '4px', background: resultColor(index) }" />
+          <div :style="{ height: '4px', background: resultColor(result, index) }" />
 
           <v-card-title class="text-subtitle-1 pt-3"> {{ materialTitle(result) }} </v-card-title>
 
@@ -272,16 +272,13 @@ interface LineSeg {
 
 type DecisionState = 'rejected' | 'applied';
 
-const RESULT_COLORS = [
-  '#1976D2',
-  '#388E3C',
-  '#F57C00',
-  '#7B1FA2',
-  '#00838F',
-  '#C62828',
-  '#37474F',
-  '#6A1B9A',
-];
+const RESULT_COLORS = {
+  waiting: '#7B1FA2',
+  noChange: '#81D4FA',
+  applied: '#2E7D32',
+  rejected: '#C62828',
+  missingMaterial: '#F57C00',
+} as const;
 
 const FIELD_COLORS: Record<string, string> = {
   materialType: '#FFF176',
@@ -383,7 +380,7 @@ function materialTitle(result: MaterialParsePreview): string {
   const type = m.type ?? 'Unknown';
   return type === 'Flat'
     ? `${mType} Flat  ${m.height ?? '?'} × ${m.width ?? '?'} × ${m.length ?? '?'}`
-    : `${mType} Round  ⌀${m.diameter ?? '?'} × ${m.length ?? '?'}`;
+    : `${mType} Round  ⌀${m.diameter ?? '?'}${m.wallThickness ? ` × ${m.wallThickness}` : ''} × ${m.length ?? '?'}`;
 }
 
 function formatMoney(value: number | null): string {
@@ -395,8 +392,12 @@ function formatNum(value: number): string {
   return Number.isFinite(value) ? parseFloat(value.toFixed(4)).toString() : '—';
 }
 
-function resultColor(index: number): string {
-  return RESULT_COLORS[index % RESULT_COLORS.length] ?? '#1976D2';
+function resultColor(result: MaterialParsePreview, index: number): string {
+  if (!result.existingMaterial) return RESULT_COLORS.missingMaterial;
+  if (decisions.value[index] === 'applied') return RESULT_COLORS.applied;
+  if (decisions.value[index] === 'rejected') return RESULT_COLORS.rejected;
+  if (!result.hasCostChange) return RESULT_COLORS.noChange;
+  return RESULT_COLORS.waiting;
 }
 
 function fieldColor(label: string): string {

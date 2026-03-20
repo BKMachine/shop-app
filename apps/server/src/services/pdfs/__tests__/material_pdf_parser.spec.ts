@@ -1,6 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { AffiliatedMetalsParser, cleanLines, extractPdfText } from '../material_pdf_parser.js';
+import {
+  AffiliatedMetalsParser,
+  RyersonParser,
+  cleanLines,
+  extractPdfText,
+} from '../material_pdf_parser.js';
 
 test('AffiliatedMetalsParser should parse PDF with single flat bar', async () => {
   const file = path.resolve(process.cwd(), 'stubs/Affiliated_Metals/single_flat_bar_lb.pdf');
@@ -181,5 +186,151 @@ test('AffiliatedMetalsParser should override pipe dimensions from ACTUAL DIMENTI
   expect(results[0]?.lineContext.overrideHighlights).toEqual([
     { text: '.84"', label: 'dimension' },
     { text: '.083', label: 'dimension' },
+  ]);
+});
+
+test('RyersonParser should parse ryerson order with decimal pricing units', async () => {
+  const file = path.resolve(
+    process.cwd(),
+    'stubs/Ryerson/Order#18587819-PO#Jeff 3122026-BK MACHINE INC.pdf',
+  );
+  const data = await fs.readFile(file);
+  const text = await extractPdfText(data);
+  const results = await RyersonParser(cleanLines(text));
+
+  expect(results).toHaveLength(3);
+  expect(results[0]).toEqual(
+    expect.objectContaining({
+      unitType: 'lb',
+      rate: 3.2,
+      material: {
+        diameter: 1,
+        length: 144,
+        materialType: '304',
+        type: 'Round',
+      },
+      costPerFoot: expect.any(Number),
+    }),
+  );
+
+  expect(results[1]).toEqual(
+    expect.objectContaining({
+      unitType: 'lb',
+      rate: 3.2,
+      material: {
+        diameter: 1.25,
+        length: 144,
+        materialType: '304',
+        type: 'Round',
+      },
+    }),
+  );
+
+  expect(results[2]).toEqual(
+    expect.objectContaining({
+      unitType: 'ft',
+      rate: 3.85,
+      material: {
+        diameter: 1.375,
+        length: 264,
+        materialType: '1020',
+        type: 'Round',
+        wallThickness: 0.095,
+      },
+      costPerFoot: 3.85,
+    }),
+  );
+
+  expect(results[0]?.lineContext.headerHighlights).toEqual(
+    expect.arrayContaining([
+      { text: '304', label: 'materialType' },
+      { text: 'RD', label: 'type' },
+    ]),
+  );
+
+  expect(results[2]?.lineContext.headerHighlights).toEqual(
+    expect.arrayContaining([
+      { text: '1020', label: 'materialType' },
+      { text: 'Tube', label: 'type' },
+      { text: 'RD', label: 'type' },
+    ]),
+  );
+
+  expect(results[2]?.lineContext.override).toBe('GAUGE CONVERSION: 13GA W -> 0.095 WALL');
+  expect(results[2]?.lineContext.overrideHighlights).toEqual([
+    { text: '13GA', label: 'dimension' },
+    { text: '0.095', label: 'dimension' },
+  ]);
+
+  expect(results[2]?.lineContext.amounts).toBe(results[2]?.lineContext.header);
+  expect(results[2]?.lineContext.amountsHighlights).toEqual([
+    { text: '$3.8500 FT', label: 'rate' },
+  ]);
+});
+
+test('RyersonParser should parse line items with comma-separated weights', async () => {
+  const text = cleanLines(`
+Joseph T. Ryerson & Son, Inc.
+10 6 PC Stnls Bar RD CF 303 Ann 1,084.320 1,084.3200 $2.9200 LB
+2.375in X 144in RL
+160008265 Extended Amount $3,166.21
+Pieces: 6 P/N Delivery Date 02/26/2026
+  `);
+
+  const results = await RyersonParser(text);
+
+  expect(results).toHaveLength(1);
+  expect(results[0]).toEqual(
+    expect.objectContaining({
+      unitType: 'lb',
+      rate: 2.92,
+      material: {
+        diameter: 2.375,
+        length: 144,
+        materialType: '303',
+        type: 'Round',
+      },
+      costPerFoot: expect.any(Number),
+    }),
+  );
+  expect(results[0]?.lineContext.amountsHighlights).toEqual([
+    { text: '$2.9200 LB', label: 'rate' },
+  ]);
+});
+
+test('RyersonParser should parse flat bar rows priced per piece', async () => {
+  const text = cleanLines(`
+Joseph T. Ryerson & Son, Inc.
+10 7 PC CARB Bar FLT CF 1018 499.800 7.0000 $117.8100 PC
+1in X 1.75in X 144in RL
+160002897 Extended Amount $824.67
+Pieces: 7 P/N Delivery Date 02/12/2026
+  `);
+
+  const results = await RyersonParser(text);
+
+  expect(results).toHaveLength(1);
+  expect(results[0]).toEqual(
+    expect.objectContaining({
+      unitType: 'ea',
+      rate: 117.81,
+      material: {
+        height: 1,
+        width: 1.75,
+        length: 144,
+        materialType: '1018',
+        type: 'Flat',
+      },
+      costPerFoot: 9.8175,
+    }),
+  );
+  expect(results[0]?.lineContext.headerHighlights).toEqual(
+    expect.arrayContaining([
+      { text: '1018', label: 'materialType' },
+      { text: 'FLT', label: 'type' },
+    ]),
+  );
+  expect(results[0]?.lineContext.amountsHighlights).toEqual([
+    { text: '$117.8100 PC', label: 'rate' },
   ]);
 });
