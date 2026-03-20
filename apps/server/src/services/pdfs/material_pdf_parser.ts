@@ -3,11 +3,9 @@ import { AffiliatedMetalsParser } from './vendors/affiliated_metals_parser.js';
 import { GrandisParser } from './vendors/grandis_parser.js';
 import { RyersonParser } from './vendors/ryerson_parser.js';
 
-const grandisCandidateRegex =
-  /Grandis\s+Titanium\s+LLC|(?:\bTi\b|\bTitanium\b)\s*6\s*(?:AL|Al|al)?\s*[-\/]?\s*4V\b/i;
-
 export default async function parseMaterialPdf(data: Buffer): Promise<ParserResults[]> {
   const text = await extractPdfText(data);
+
   if (text.includes('AFFILIATED METALS')) {
     const results = await AffiliatedMetalsParser(cleanLines(text));
     return results;
@@ -16,7 +14,7 @@ export default async function parseMaterialPdf(data: Buffer): Promise<ParserResu
     const results = await RyersonParser(cleanLines(text));
     return results;
   }
-  if (grandisCandidateRegex.test(text)) {
+  if (text.includes('Grandis Titanium')) {
     const results = await GrandisParser(cleanLines(text));
     return results;
   }

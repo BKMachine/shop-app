@@ -1,6 +1,6 @@
 import { extractDimensionHighlightToken } from '../parser_utils.js';
 
-const grandis64Regex = /(?:\bTi\b|\bTitanium\b)\s*6\s*(?:AL|Al|al)?\s*[-\/]?\s*4V\b/i;
+const grandis64Regex = /(?:\bTi\b|\bTitanium\b)\s*6\s*(?:AL|Al|al)?\s*[-/]?\s*4V\b/i;
 const GRANDIS_ASSUMED_LENGTH_INCHES = 144;
 
 export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
