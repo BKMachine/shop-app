@@ -635,7 +635,6 @@ async function acceptChange(index: number) {
         {
           materialId: result.existingMaterial._id,
           costPerFoot: result.proposedCostPerFoot,
-          auditTimestamp: result.parsed.createdAt,
         },
       ],
     });
@@ -668,7 +667,7 @@ async function addMaterial(index: number) {
 
   try {
     decisionLoading.value[index] = true;
-    const data = await materialsStore.add(material, result.parsed.createdAt);
+    const data = await materialsStore.add(material);
     result.existingMaterial = data;
     result.currentCostPerFoot = data.costPerFoot;
     result.proposedCostPerFoot = data.costPerFoot ?? result.proposedCostPerFoot;

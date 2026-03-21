@@ -1,13 +1,13 @@
 import { calculateMaterialWeight, materials } from '@repo/utilities/materials';
 import {
   costRegex,
+  type DateExtraction,
   extractActualDimensionSegments,
   extractDimensionHighlightToken,
   extractPdfDate,
   parseCompactDate,
-  parseSlashDate,
   parseDimension,
-  type DateExtraction,
+  parseSlashDate,
 } from '../parser_utils.js';
 
 export function extractAffiliatedTopLeftDate(lines: string[]): DateExtraction | null {

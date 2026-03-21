@@ -1,15 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import parseMaterialPdf, {
-  cleanLines,
+import parseMaterialPdf, { cleanLines, extractPdfText } from '../material_pdf_parser.js';
+import { extractPdfDate } from '../parser_utils.js';
+import {
+  AffiliatedMetalsParser,
   extractAffiliatedTopLeftDate,
-  extractPdfDate,
-  extractPdfText,
-  extractRyersonEnteredDate,
-} from '../material_pdf_parser.js';
-import { AffiliatedMetalsParser } from '../vendors/affiliated_metals_parser.js';
+} from '../vendors/affiliated_metals_parser.js';
 import { GrandisParser } from '../vendors/grandis_parser.js';
-import { RyersonParser } from '../vendors/ryerson_parser.js';
+import { extractRyersonEnteredDate, RyersonParser } from '../vendors/ryerson_parser.js';
 
 test('AffiliatedMetalsParser should parse PDF with single flat bar', async () => {
   const file = path.resolve(process.cwd(), 'stubs/Affiliated_Metals/single_flat_bar_lb.pdf');

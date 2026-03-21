@@ -1,11 +1,11 @@
 import { calculateMaterialWeight, materials } from '@repo/utilities/materials';
 import {
   costRegex,
+  type DateExtraction,
   extractDimensionHighlightToken,
   extractPdfDate,
-  parseSlashDate,
   parseDimension,
-  type DateExtraction,
+  parseSlashDate,
 } from '../parser_utils.js';
 
 export function extractRyersonEnteredDate(lines: string[]): DateExtraction | null {

@@ -296,7 +296,7 @@ import {
   calculateMaterialWeight,
   materials as materialsList,
   normalizeDimensions,
-} from '../../../../packages/utilities/dist/materials';
+} from '@repo/utilities/materials';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref, watch } from 'vue';
 import MaterialPdfReview from '@/components/MaterialPdfReview.vue';
