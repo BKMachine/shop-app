@@ -5,18 +5,31 @@ import vueDevTools from 'vite-plugin-vue-devtools';
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue({
       template: { transformAssetUrls },
     }),
     vuetify(),
-    vueDevTools(),
+    mode !== 'production' && vueDevTools(),
   ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-core': ['vue', 'vue-router', 'pinia'],
+          vuetify: ['vuetify'],
+          charts: ['chart.js', 'vue-chartjs', 'chartjs-adapter-luxon', 'chartjs-plugin-annotation'],
+          socket: ['socket.io-client'],
+        },
+      },
+    },
+    assetsInlineLimit: 0,
   },
   server: {
     port: 8080,
@@ -39,4 +52,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
