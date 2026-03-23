@@ -311,7 +311,6 @@
                 <v-col cols="4">
                   <v-text-field
                     v-model.number="tool.reorderThreshold"
-                    class="ml-2"
                     label="Min Stock Qty"
                     min="0"
                     type="number"
