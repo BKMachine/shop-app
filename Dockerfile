@@ -4,6 +4,7 @@ ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV PATH="${PATH}:${PNPM_HOME}"
 RUN npm install -g pnpm@latest-10
 RUN pnpm add turbo --global
+COPY .npmrc .npmrc
 COPY package.json package.json
 COPY pnpm-lock.yaml pnpm-lock.yaml
 COPY pnpm-workspace.yaml pnpm-workspace.yaml
@@ -21,16 +22,14 @@ RUN turbo prune www --docker
 
 FROM server-prune AS server-installer
 COPY --from=server-prune /app/out/json/ .
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 COPY apps/server apps/server
-RUN turbo prune server --docker
 COPY --from=server-prune /app/out/full/ .
 
 FROM www-prune AS www-installer
 COPY --from=www-prune /app/out/json/ .
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 COPY apps/www apps/www
-RUN turbo prune www --docker
 COPY --from=www-prune /app/out/full/ .
 
 FROM server-installer AS server-builder
@@ -39,6 +38,9 @@ RUN pnpm run ci --filter=server
 RUN pnpm run test --filter=server
 RUN pnpm run build --filter=server
 
+FROM server-builder AS server-deploy
+RUN pnpm deploy --filter=server --prod /app/deploy/server
+
 FROM www-installer AS www-builder
 RUN pnpm run format --filter=www
 RUN pnpm run ci --filter=www 
@@ -46,10 +48,7 @@ RUN pnpm run build --filter=www
 
 FROM node:22-slim AS runner
 WORKDIR /app
-COPY --from=server-builder /app/node_modules /app/node_modules
-COPY --from=server-builder /app/packages /app/packages
-COPY --from=server-builder /app/apps/server/dist /app/apps/server/dist
-COPY --from=server-builder /app/apps/server/node_modules /app/apps/server/node_modules
+COPY --from=server-deploy /app/deploy/server /app/apps/server
 COPY --from=www-builder /app/apps/www/dist /app/apps/www/dist
 ENV NODE_ENV=production
 EXPOSE 3000
