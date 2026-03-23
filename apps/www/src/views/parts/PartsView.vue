@@ -21,13 +21,19 @@
       />
       <v-data-table
         v-model:items-per-page="itemsPerPage"
-        v-model:page="page"
         :headers="headers"
-        :items="filteredItems"
+        :items="tableItems"
         :loading="partStore.loading"
         :search="search"
         @click:row="openPart"
       >
+        <template #['item.marginRate']="{ item }">
+          <div class="rate-swatch-cell">
+            <span
+              :class="['rate-swatch', `rate-swatch--${item.marginTone}`, `text-${item.marginTone}`]"
+            />
+          </div>
+        </template>
         <template #['item.img']="{ item }">
           <v-hover>
             <template #default="{ isHovering, props }">
@@ -77,12 +83,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
+import {
+  calculatePartMaterialCost,
+  calculateRatePerHour,
+  calculateTotalCycleMinutes,
+  getToneForRate,
+} from '@/plugins/utils';
 import router from '@/router';
+import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
 
 const partStore = usePartStore();
+const materialsStore = useMaterialsStore();
 
 const page = ref(1);
 const itemsPerPage = ref(10);
@@ -108,6 +122,11 @@ const headers = [
     title: 'Customer',
   },
   {
+    title: '$/hr',
+    key: 'marginRate',
+    width: 80,
+  },
+  {
     title: 'Location',
     key: 'location',
   },
@@ -120,6 +139,30 @@ const headers = [
 const filteredItems = computed(() => {
   return [...partStore.parts];
 });
+
+onMounted(() => {
+  if (!materialsStore.materials.length && !materialsStore.loading) {
+    materialsStore.fetch();
+  }
+});
+
+const tableItems = computed(() =>
+  filteredItems.value.map((part) => {
+    const material =
+      typeof part.material === 'string'
+        ? materialsStore.materials.find((x) => x._id === part.material)
+        : part.material;
+    const partMaterialCost = calculatePartMaterialCost(part, material);
+    const totalCycleMinutes = calculateTotalCycleMinutes(part.cycleTimes);
+    const marginRate = calculateRatePerHour(part.price, partMaterialCost, totalCycleMinutes);
+
+    return {
+      ...part,
+      marginRate,
+      marginTone: getToneForRate(marginRate),
+    };
+  }),
+);
 
 function openPart(event: unknown, { item }: { item: Part }) {
   router.push({ name: 'viewPart', params: { id: item._id } });
@@ -182,5 +225,38 @@ function hideExpandedImage() {
   border: 1px solid #ccc;
   background: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.rate-swatch-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.rate-swatch {
+  width: 30px;
+  height: 18px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.rate-swatch--error {
+  background: rgb(var(--v-theme-error));
+}
+
+.rate-swatch--warning {
+  background: rgb(var(--v-theme-warning));
+}
+
+.rate-swatch--success {
+  background: rgb(var(--v-theme-success));
+}
+
+.rate-swatch--info {
+  background: rgb(var(--v-theme-info));
+}
+
+.rate-swatch--primary {
+  background: rgb(var(--v-theme-primary));
 }
 </style>

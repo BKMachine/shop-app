@@ -268,7 +268,12 @@
               </v-select>
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model="tool.orderLink" class="ml-2" label="Order Link" />
+              <v-text-field
+                v-model="tool.orderLink"
+                append-inner-icon="mdi-link"
+                class="ml-2"
+                label="Order Link"
+              />
             </v-col>
           </v-row>
           <v-row no-gutters>

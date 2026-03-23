@@ -243,7 +243,13 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { formatCost, formatNumber, onlyAllowNumeric } from '@/plugins/utils';
+import {
+  calculatePartMaterialCost,
+  calculatePartsPerBar,
+  formatCost,
+  formatNumber,
+  onlyAllowNumeric,
+} from '@/plugins/utils';
 import { useMaterialsStore } from '@/stores/materials_store';
 
 interface Props {
@@ -296,7 +302,7 @@ const partsPerBarDetails = computed(() => {
       remainderLength: 0,
       usableRemainder: 0,
       remainderParts: 0,
-      totalParts: Math.floor(fullBarLength / materialLength),
+      totalParts: calculatePartsPerBar(props.part, fullBarLength),
     };
   }
 
@@ -338,7 +344,7 @@ const partsPerBarDetails = computed(() => {
     remainderLength,
     usableRemainder,
     remainderParts,
-    totalParts: subBars * partsPerSubBar + remainderParts,
+    totalParts: calculatePartsPerBar(props.part, fullBarLength),
   };
 });
 
@@ -372,8 +378,8 @@ const materialCost = computed(() => {
 });
 
 const partMaterialCost = computed(() => {
-  if (!partsPerBar.value) return 0;
-  return materialCost.value / partsPerBar.value;
+  if (!props.part.material || typeof props.part.material === 'string') return 0;
+  return calculatePartMaterialCost(props.part, props.part.material);
 });
 
 watch(

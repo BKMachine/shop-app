@@ -64,7 +64,7 @@ export function formatNumber(val: number | null | undefined): string {
 
 export function formatCost(val: number | null | undefined): string {
   if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(2)).toString();
+  return val.toFixed(2);
 }
 
 export function parseCycle(val: string | number | null | undefined): number {
@@ -108,4 +108,79 @@ export function formatCycle(val: number | string | null | undefined): string {
   const seconds = totalSeconds % 60;
 
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+export function formatCycleLonghand(val: number | string | null | undefined): string {
+  const minutesDecimal = parseCycle(val);
+  const totalSeconds = Math.max(0, Math.round(minutesDecimal * 60));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+}
+
+export function getToneForRate(rate: number): 'error' | 'warning' | 'success' | 'info' | 'primary' {
+  if (rate < 100) return 'error';
+  if (rate < 125) return 'warning';
+  if (rate < 150) return 'success';
+  if (rate < 175) return 'info';
+  return 'primary';
+}
+
+export function calculatePartsPerBar(
+  part: Pick<Part, 'materialCutType' | 'materialLength' | 'barLength' | 'remnantLength'>,
+  fullBarLength: number,
+): number {
+  const cutType = part.materialCutType || 'blanks';
+  const materialLength = Number(part.materialLength) || 0;
+  const barLength = Number(part.barLength) || 0;
+  const remnantLength = Number(part.remnantLength) || 0;
+
+  if (!fullBarLength || !materialLength) return 0;
+
+  if (cutType !== 'bars') {
+    return Math.floor(fullBarLength / materialLength);
+  }
+
+  if (!barLength || barLength <= remnantLength) {
+    return 0;
+  }
+
+  const subBars = Math.floor(fullBarLength / barLength);
+  const remainderLength = fullBarLength % barLength;
+  const usablePerSubBar = barLength - remnantLength;
+  const partsPerSubBar = Math.floor(usablePerSubBar / materialLength);
+  const usableRemainder = Math.max(remainderLength - remnantLength, 0);
+  const remainderParts = Math.floor(usableRemainder / materialLength);
+
+  return subBars * partsPerSubBar + remainderParts;
+}
+
+export function calculatePartMaterialCost(
+  part: Pick<Part, 'materialCutType' | 'materialLength' | 'barLength' | 'remnantLength'>,
+  material: Pick<Material, 'length' | 'costPerFoot'> | null | undefined,
+): number {
+  if (!material) return 0;
+
+  const fullBarLength = Number(material.length) || 0;
+  const partsPerBar = calculatePartsPerBar(part, fullBarLength);
+  if (!partsPerBar) return 0;
+
+  const materialCost = (fullBarLength / 12) * (Number(material.costPerFoot) || 0);
+  return materialCost / partsPerBar;
+}
+
+export function calculateTotalCycleMinutes(cycleTimes: CycleTimes[] | null | undefined): number {
+  return (cycleTimes || []).reduce((total, cycle) => total + (Number(cycle.time) || 0), 0);
+}
+
+export function calculateRatePerHour(
+  price: number | null | undefined,
+  partMaterialCost: number,
+  totalCycleMinutes: number,
+): number {
+  if (!totalCycleMinutes) return 0;
+
+  const amountMinusMaterial = (Number(price) || 0) - partMaterialCost;
+  return amountMinusMaterial / (totalCycleMinutes / 60);
 }
