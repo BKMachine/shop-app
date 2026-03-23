@@ -28,6 +28,7 @@ interface ToolDocBase {
   reorderThreshold: number;
   productLink?: string;
   techDataLink?: string;
+  orderLink?: string;
   cost: number;
   onOrder: boolean;
   orderedOn?: string;

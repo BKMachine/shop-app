@@ -13,6 +13,9 @@
         <span class="line"> - </span>
         <span class="subtotal">{{ getCost(tool) }}</span>
         <span> <v-icon class="ml-2" icon="mdi-open-in-app" size="16" @click="open(tool)" /> </span>
+        <span v-if="tool.orderLink">
+          <v-icon class="ml-1" icon="mdi-cart-outline" size="16" @click="openOrder(tool)" />
+        </span>
         <div v-if="j === item[1].length - 1" class="space" />
       </div>
     </div>
@@ -112,6 +115,12 @@ function toggleOnOrder(tool: Tool) {
 
 function open(tool: Tool) {
   router.push({ name: 'viewTool', params: { id: tool._id } });
+}
+
+function openOrder(tool: Tool) {
+  if (tool.orderLink) {
+    window.open(tool.orderLink, '_blank');
+  }
 }
 
 function mail() {

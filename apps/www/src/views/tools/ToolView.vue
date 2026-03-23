@@ -34,6 +34,17 @@
       <v-spacer />
       <div class="d-flex align-center">
         <v-btn
+          v-if="tool.orderLink"
+          class="mr-2"
+          color="teal-lighten-2"
+          density="comfortable"
+          prepend-icon="mdi-cart-outline"
+          variant="elevated"
+          @click="openLink(tool.orderLink)"
+        >
+          Order Page
+        </v-btn>
+        <v-btn
           v-if="tool.productLink"
           class="mr-2"
           color="yellow"
@@ -222,8 +233,9 @@
               @click="tool.orderedOn = undefined"
             />
           </v-row>
+
           <v-row no-gutters>
-            <v-col cols="6">
+            <v-col cols="3">
               <v-text-field
                 v-model.number="tool.stock"
                 class="mr-2"
@@ -232,28 +244,11 @@
                 type="number"
                 @keydown="isNumber($event)"
               />
-              <v-combobox
-                v-model="tool.location"
-                class="mr-2"
-                :items="toolStore.locations"
-                label="Location"
-              />
-              <v-text-field
-                v-model="tool.position"
-                class="mr-2"
-                label="Position"
-                @update:model-value="tool.position = tool.position?.toUpperCase()"
-              >
-                <template #append-inner>
-                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation" />
-                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printLocation" />
-                </template>
-              </v-text-field>
             </v-col>
-            <v-col cols="6">
+            <v-col cols="3">
               <v-select
                 v-model="tool.supplier"
-                class="ml-2"
+                class="mr-2"
                 clearable
                 item-title="name"
                 item-value="_id"
@@ -271,9 +266,39 @@
                   </v-list-item>
                 </template>
               </v-select>
-              <CurrencyInput v-model="tool.cost" class="ml-2" label="Cost" />
+            </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="tool.orderLink" class="ml-2" label="Order Link" />
+            </v-col>
+          </v-row>
+          <v-row no-gutters>
+            <v-col cols="3">
+              <v-combobox
+                v-model="tool.location"
+                class="mr-2"
+                :items="toolStore.locations"
+                label="Location"
+              />
+            </v-col>
+            <v-col cols="3">
+              <v-text-field
+                v-model="tool.position"
+                class="mr-2"
+                label="Position"
+                @update:model-value="tool.position = tool.position?.toUpperCase()"
+              >
+                <template #append-inner>
+                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printLocation" />
+                </template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="6">
               <v-row no-gutters>
-                <v-col cols="6">
+                <v-col cols="4">
+                  <CurrencyInput v-model="tool.cost" class="ml-2" label="Cost" />
+                </v-col>
+                <v-col cols="4">
                   <v-text-field
                     v-model.number="tool.reorderQty"
                     class="mx-2"
@@ -283,7 +308,7 @@
                     @keydown="isNumber($event)"
                   />
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="4">
                   <v-text-field
                     v-model.number="tool.reorderThreshold"
                     class="ml-2"
@@ -296,6 +321,7 @@
               </v-row>
             </v-col>
           </v-row>
+          <v-row no-gutters> <v-col cols="12"> </v-col> </v-row>
           <ToolStockGraph
             v-if="tool._id"
             :id="tool._id"

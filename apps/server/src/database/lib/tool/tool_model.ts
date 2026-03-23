@@ -16,6 +16,7 @@ const schema = new Schema<ToolDoc>({
   reorderThreshold: { type: Number, default: 0 },
   productLink: String,
   techDataLink: String,
+  orderLink: String,
   cost: { type: Number, default: 0 },
   onOrder: { type: Boolean, default: false },
   orderedOn: Date,

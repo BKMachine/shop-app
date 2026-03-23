@@ -51,7 +51,8 @@ async function reorders() {
       vendor = x.vendor.name;
       html += `<h4 style="margin-bottom: 0; padding-bottom: 0">${vendor}:</h4>`;
     }
-    html += `${x.item} - Qty: ${x.reorderQty} - $${x.cost}/ea.<br>`;
+    const orderLink = x.orderLink ? ` - <a href="${x.orderLink}">[Order]</a>` : '';
+    html += `${x.item} - Qty: ${x.reorderQty} - $${x.cost}/ea.${orderLink}<br>`;
   });
 
   const to: string[] = ['dave@bkmachine.net'];
