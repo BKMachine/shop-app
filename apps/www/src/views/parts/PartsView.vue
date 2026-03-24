@@ -39,13 +39,26 @@
           <v-hover>
             <template #default="{ isHovering, props }">
               <v-img
+                v-if="hasPartImage(item)"
                 v-bind="props"
                 :id="item._id"
                 class="part-img"
                 :src="item.img"
-                @mouseenter="showExpandedImage(item.img, $event)"
+                @error="markImageMissing(item._id)"
+                @mouseenter="showExpandedImage(item, $event)"
                 @mouseleave="hideExpandedImage"
-              />
+              >
+                <template #error>
+                  <div class="part-img-fallback">
+                    <v-icon icon="mdi-image-off-outline" />
+                    <span>Missing image</span>
+                  </div>
+                </template>
+              </v-img>
+              <div v-else class="part-img part-img-fallback">
+                <v-icon icon="mdi-image-off-outline" />
+                <span>Missing image</span>
+              </div>
             </template>
           </v-hover>
         </template>
@@ -102,6 +115,7 @@ const materialsStore = useMaterialsStore();
 const page = ref(1);
 const itemsPerPage = ref(10);
 const search = ref('');
+const missingImageIds = ref<Record<string, boolean>>({});
 
 const headers = [
   {
@@ -175,27 +189,49 @@ function location(part: Part) {
   return text;
 }
 
+function hasPartImage(part: Part) {
+  return Boolean(part.img?.trim()) && !missingImageIds.value[part._id];
+}
+
+function markImageMissing(partId: string) {
+  missingImageIds.value = {
+    ...missingImageIds.value,
+    [partId]: true,
+  };
+  if (expandedImage.value.visible && expandedImage.value.partId === partId) {
+    hideExpandedImage();
+  }
+}
+
 const expandedImage = ref({
   visible: false,
+  partId: '',
   src: '',
   top: 0,
   left: 0,
 });
 
-function showExpandedImage(src: string | undefined, event: MouseEvent) {
-  if (!src) return;
+function showExpandedImage(part: Part, event: MouseEvent) {
+  if (!hasPartImage(part) || !part.img) return;
   const target = event.target as HTMLElement;
   const rect = target.getBoundingClientRect();
   expandedImage.value = {
     visible: true,
-    src,
+    partId: part._id,
+    src: part.img,
     top: rect.top,
     left: rect.right,
   };
 }
 
 function hideExpandedImage() {
-  expandedImage.value.visible = false;
+  expandedImage.value = {
+    visible: false,
+    partId: '',
+    src: '',
+    top: 0,
+    left: 0,
+  };
 }
 </script>
 
@@ -215,6 +251,26 @@ function hideExpandedImage() {
 .part-img {
   max-height: 50px;
 }
+
+.part-img-fallback {
+  width: 75%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  margin: 4px auto;
+  border: 1px dashed rgba(var(--v-theme-on-surface), 0.2);
+  border-radius: 8px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .expanded-img-container {
   position: absolute;
   z-index: 10;
@@ -222,7 +278,8 @@ function hideExpandedImage() {
 }
 
 .expanded-img {
-  width: 500px;
+  width: 360px;
+  max-height: 360px;
   border: 1px solid #ccc;
   background: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
