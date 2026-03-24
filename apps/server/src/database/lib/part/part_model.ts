@@ -16,6 +16,7 @@ const schema = new Schema<PartDoc>({
   remnantLength: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   cycleTimes: [{ operation: String, time: Number }],
+  additionalCosts: [{ name: String, cost: Number, url: String }],
   price: { type: Number, default: 0 },
 });
 

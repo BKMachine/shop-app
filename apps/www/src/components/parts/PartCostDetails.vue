@@ -24,7 +24,7 @@
                 class="mr-1"
                 dense
                 hide-details
-                label="Operation Name"
+                label="Operation"
               />
             </v-col>
             <v-col cols="6">
@@ -54,10 +54,113 @@
       <v-btn color="primary" variant="outlined" @click="addCycleTime">
         <v-icon left> mdi-plus </v-icon>Add Cycle Time
       </v-btn>
+
+      <v-divider class="my-4" />
+
+      <v-expansion-panels class="mb-2">
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            <span class="font-weight-bold">Additional Costs</span>
+            <template #actions>
+              <span class="text-medium-emphasis mr-2">
+                {{ additionalCostEntries.length ? `${additionalCostEntries.length} item${additionalCostEntries.length > 1 ? 's' : ''} — $${formatCost(totalAdditionalCost)}` : 'None' }}
+              </span>
+              <v-icon icon="mdi-chevron-down" />
+            </template>
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <v-row
+              v-for="entry in additionalCostEntries"
+              :key="entry.rowId"
+              class="mb-1 align-center"
+              no-gutters
+            >
+              <v-col cols="12">
+                <v-row class="mb-1" no-gutters>
+                  <v-col cols="8">
+                    <v-text-field
+                      v-model="entry.item.name"
+                      :append-inner-icon="entry.item.url ? 'mdi-open-in-new' : undefined"
+                      class="mr-1"
+                      dense
+                      hide-details
+                      label="Name"
+                      @click:append-inner="openAdditionalCostLink(entry.item.url)"
+                    />
+                  </v-col>
+                  <v-col cols="3">
+                    <v-text-field
+                      v-model.number="entry.item.cost"
+                      class="mx-1"
+                      dense
+                      hide-details
+                      label="Cost (ea)"
+                      min="0"
+                      prefix="$"
+                      type="number"
+                    />
+                  </v-col>
+                  <v-col class="d-flex align-center justify-end ga-0" cols="1">
+                    <v-btn
+                      class="ma-0 pa-0 ml-1"
+                      color="secondary"
+                      density="compact"
+                      icon
+                      size="22"
+                      :title="entry.item.url ? 'Edit Link' : 'Add Link'"
+                      variant="text"
+                      @click="openLinkDialog(entry.idx)"
+                    >
+                      <v-icon :icon="entry.item.url ? 'mdi-link-edit' : 'mdi-link-plus'" />
+                    </v-btn>
+                    <v-btn
+                      class="ma-0 pa-0 ml-1"
+                      color="error"
+                      density="compact"
+                      icon
+                      size="22"
+                      title="Remove Cost"
+                      variant="text"
+                      @click="removeAdditionalCost(entry.idx)"
+                    >
+                      <v-icon icon="mdi-delete-circle" />
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+            <v-btn color="primary" variant="outlined" @click="addAdditionalCost">
+              <v-icon left>mdi-plus</v-icon>Add Cost
+            </v-btn>
+
+            <v-dialog v-model="linkDialogOpen" max-width="600">
+              <v-card>
+                <v-card-title>Purchase Link</v-card-title>
+                <v-card-text>
+                  <div v-if="activeAdditionalCostName" class="text-medium-emphasis mb-2">
+                    Additional Cost: {{ activeAdditionalCostName }}
+                  </div>
+                  <v-text-field
+                    v-model="linkInput"
+                    clearable
+                    label="URL"
+                    placeholder="https://example.com"
+                  />
+                </v-card-text>
+                <v-card-actions>
+                  <v-spacer />
+                  <v-btn variant="text" @click="closeLinkDialog">Cancel</v-btn>
+                  <v-btn color="primary" variant="flat" @click="saveLinkDialog">Save</v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
     </v-col>
 
     <v-col cols="12" md="5">
-      <v-sheet border class="pa-4 rounded-lg">
+      <v-sheet border class="pa-4 rounded-lg mb-6">
         <div class="text-subtitle-1 font-weight-bold mb-3">Summary & Details</div>
 
         <div class="summary-row mb-2">
@@ -68,14 +171,19 @@
           <span>Estimated Material Cost</span>
           <b>${{ formatCost(partMaterialCost) }}</b>
         </div>
+        <div v-if="totalAdditionalCost" class="summary-row mb-2">
+          <span>Additional Costs</span>
+          <b>${{ formatCost(totalAdditionalCost) }}</b>
+        </div>
         <div class="summary-row mb-2">
-          <span>Amount Minus Material Cost</span>
-          <b>${{ formatCost(amountMinusMaterialCost) }}</b>
+          <span>Amount Minus Total Costs</span>
+          <b>${{ formatCost(amountMinusTotalCosts) }}</b>
         </div>
         <div class="summary-row mb-4">
           <span>Current Rate</span>
           <b :class="`text-${currentMarginTone}`">
-            ${{ formatCost(currentAmountMinusMaterialPerHour) }}/hr
+            ${{ formatCost(currentAmountMinusMaterialPerHour) }}
+            / hr
           </b>
         </div>
 
@@ -100,11 +208,11 @@
         />
 
         <div class="summary-row mb-2">
-          <span>Required Amount Minus Material</span>
-          <b>${{ formatCost(requiredAmountMinusMaterialAtTarget) }}</b>
+          <span>Required Amount Minus Costs</span>
+          <b>${{ formatCost(requiredAmountMinusCostsAtTarget) }}</b>
         </div>
         <div class="summary-row mb-2">
-          <span>Equivalent Product Price (Current Material)</span>
+          <span>Equivalent Product Price</span>
           <b>${{ formatCost(requiredProductPriceAtTarget) }}</b>
         </div>
         <div class="summary-row mb-2">
@@ -169,12 +277,20 @@ const totalCycleTime = computed(() =>
   ),
 );
 
-const amountMinusMaterialCost = computed(() =>
-  part.price ? part.price - (partMaterialCost || 0) : 0,
+const totalAdditionalCost = computed(() =>
+  (part.additionalCosts || []).reduce((sum, item) => sum + (Number(item.cost) || 0), 0),
 );
 
+const additionalCostEntries = computed(() =>
+  (part.additionalCosts || []).map((item, idx) => ({ item, idx, rowId: `ac-${idx}` })),
+);
+
+const totalCostBase = computed(() => (partMaterialCost || 0) + totalAdditionalCost.value);
+
+const amountMinusTotalCosts = computed(() => (part.price ? part.price - totalCostBase.value : 0));
+
 const currentAmountMinusMaterialPerHour = computed(() => {
-  return calculateRatePerHour(part.price, partMaterialCost || 0, totalCycleTime.value);
+  return calculateRatePerHour(part.price, totalCostBase.value, totalCycleTime.value);
 });
 
 const hourlyTargetMin = 50;
@@ -187,7 +303,7 @@ const targetVisualTone = computed(() => getToneForRate(targetHourlyRate.value));
 
 const currentMarginTone = computed(() => getToneForRate(currentAmountMinusMaterialPerHour.value));
 
-const requiredAmountMinusMaterialAtTarget = computed(() => {
+const requiredAmountMinusCostsAtTarget = computed(() => {
   if (!totalCycleTime.value) {
     return 0;
   }
@@ -196,17 +312,17 @@ const requiredAmountMinusMaterialAtTarget = computed(() => {
 });
 
 const requiredProductPriceAtTarget = computed(
-  () => requiredAmountMinusMaterialAtTarget.value + (partMaterialCost || 0),
+  () => requiredAmountMinusCostsAtTarget.value + totalCostBase.value,
 );
 
 const priceDeltaToTarget = computed(() => requiredProductPriceAtTarget.value - (part.price || 0));
 
 const requiredCycleTimeAtTarget = computed(() => {
-  if (!targetHourlyRate.value || amountMinusMaterialCost.value <= 0) {
+  if (!targetHourlyRate.value || amountMinusTotalCosts.value <= 0) {
     return 0;
   }
 
-  return (amountMinusMaterialCost.value / targetHourlyRate.value) * 60;
+  return (amountMinusTotalCosts.value / targetHourlyRate.value) * 60;
 });
 
 const cycleTimeDeltaToTarget = computed(
@@ -285,6 +401,76 @@ const addCycleTime = () => {
   part.cycleTimes = [{ operation: '', time: 0 }];
   const rowId = createCycleRowId();
   cycleRowIds.value = [rowId];
+};
+
+// Additional Costs
+const addAdditionalCost = () => {
+  if (!part.additionalCosts) {
+    part.additionalCosts = [];
+  }
+  part.additionalCosts.push({ name: '', cost: 0, url: '' });
+};
+
+const removeAdditionalCost = (idx: number) => {
+  part.additionalCosts.splice(idx, 1);
+};
+
+const linkDialogOpen = ref(false);
+const linkDialogIndex = ref<number | null>(null);
+const linkInput = ref('');
+
+const activeAdditionalCostName = computed(() => {
+  const idx = linkDialogIndex.value;
+  if (idx == null) {
+    return '';
+  }
+
+  return part.additionalCosts?.[idx]?.name || '';
+});
+
+const normalizeUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+};
+
+const openLinkDialog = (idx: number) => {
+  linkDialogIndex.value = idx;
+  linkInput.value = part.additionalCosts?.[idx]?.url || '';
+  linkDialogOpen.value = true;
+};
+
+const closeLinkDialog = () => {
+  linkDialogOpen.value = false;
+  linkDialogIndex.value = null;
+  linkInput.value = '';
+};
+
+const saveLinkDialog = () => {
+  const idx = linkDialogIndex.value;
+  if (idx == null || !part.additionalCosts?.[idx]) {
+    closeLinkDialog();
+    return;
+  }
+
+  part.additionalCosts[idx].url = normalizeUrl(linkInput.value);
+  closeLinkDialog();
+};
+
+const openAdditionalCostLink = (url: string | undefined) => {
+  const normalized = normalizeUrl(url || '');
+  if (!normalized) {
+    return;
+  }
+
+  window.open(normalized, '_blank', 'noopener,noreferrer');
 };
 </script>
 

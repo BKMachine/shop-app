@@ -77,6 +77,12 @@ declare global {
     time: number;
   }
 
+  interface AdditionalCost {
+    name: string;
+    cost: number;
+    url?: string;
+  }
+
   interface Part {
     _id: string;
     customer: Customer | string;
@@ -94,6 +100,7 @@ declare global {
     remnantLength: number;
     createdAt: Date;
     cycleTimes: CycleTimes[];
+    additionalCosts: AdditionalCost[];
     price: number;
   }
 

@@ -25,6 +25,7 @@
         :items="tableItems"
         :loading="partStore.loading"
         :search="search"
+        :sort-by="[{ key: 'part', order: 'asc' }]"
         @click:row="openPart"
       >
         <template #['item.marginRate']="{ item }">
