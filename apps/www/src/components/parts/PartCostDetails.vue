@@ -220,7 +220,7 @@
           <div
             class="current-rate-indicator"
             :class="`text-${currentMarginTone}`"
-            :style="{ left: `${currentRateSliderPercent}%` }"
+            :style="{ left: `calc(10px + (100% - 20px) * ${currentRateSliderPercent / 100})` }"
           >
             <span class="current-rate-label">Current</span>
             <div class="current-rate-arrow" />
@@ -237,8 +237,12 @@
           />
 
           <div class="slider-limits mb-6">
-            <span>${{ hourlyTargetMin }}/hr</span>
-            <span>${{ hourlyTargetMax }}/hr</span>
+            <span>
+              {{ currentAmountMinusMaterialPerHour < hourlyTargetMin ? `$${formatCost(currentAmountMinusMaterialPerHour)}/hr` : `$${hourlyTargetMin}/hr` }}
+            </span>
+            <span>
+              {{ currentAmountMinusMaterialPerHour > hourlyTargetMax ? `$${formatCost(currentAmountMinusMaterialPerHour)}/hr` : `$${hourlyTargetMax}/hr` }}
+            </span>
           </div>
         </div>
 
@@ -578,7 +582,8 @@ function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
 .current-rate-indicator {
   position: absolute;
   top: 0;
-  transform: translateX(-50%);
+  width: 0;
+  overflow: visible;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
