@@ -57,7 +57,7 @@ export function formatWeight(val: number | null | undefined): string {
   return parseFloat(val.toFixed(2)).toString();
 }
 
-export function formatNumber(val: number | null | undefined): string {
+export function formatDimension(val: number | null | undefined): string {
   if (val == null || Number.isNaN(val)) return '';
   return parseFloat(val.toFixed(3)).toString();
 }

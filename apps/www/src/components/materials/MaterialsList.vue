@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { formatNumber } from '@/plugins/utils';
+import { formatDimension } from '@/plugins/utils';
 
 const props = defineProps<{
   materials: Material[];
@@ -97,15 +97,15 @@ function formatMaterialTitle(material: Material): string {
 
 function formatMaterialSize(material: Material): string {
   if (material.type === 'Flat') {
-    const height = formatNumber(material.height);
-    const width = formatNumber(material.width);
-    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
+    const height = formatDimension(material.height);
+    const width = formatDimension(material.width);
+    const wall = material.wallThickness ? ` × ${formatDimension(material.wallThickness)} wall` : '';
     return `${height} × ${width}${wall}`;
   }
 
   if (material.type === 'Round') {
-    const diameter = formatNumber(material.diameter);
-    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
+    const diameter = formatDimension(material.diameter);
+    const wall = material.wallThickness ? ` × ${formatDimension(material.wallThickness)} wall` : '';
     return `Ø${diameter}${wall}`;
   }
 

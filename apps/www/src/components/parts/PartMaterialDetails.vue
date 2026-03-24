@@ -113,8 +113,8 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Full Bar</td>
                 <td class="text-body-2">
-                  {{ formatNumber(partsPerBarDetails.fullBarLength) }}" ÷
-                  {{ formatNumber(partsPerBarDetails.materialLength) }}"
+                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" ÷
+                  {{ formatDimension(partsPerBarDetails.materialLength) }}"
                 </td>
                 <td class="text-right">
                   <v-chip class="yield-chip" color="success" size="small" variant="elevated">
@@ -126,9 +126,9 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Waste</td>
                 <td class="text-body-2">
-                  {{ formatNumber(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
-                  × {{ formatNumber(partsPerBarDetails.materialLength) }}") =
-                  {{ formatNumber(wasteDetails.wasteLength) }}"
+                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
+                  × {{ formatDimension(partsPerBarDetails.materialLength) }}") =
+                  {{ formatDimension(wasteDetails.wasteLength) }}"
                 </td>
                 <td class="text-right">
                   <v-chip color="warning" size="small" variant="tonal"
@@ -143,8 +143,8 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Full Bar</td>
                 <td class="text-body-2">
-                  {{ formatNumber(partsPerBarDetails.fullBarLength) }}" ÷
-                  {{ formatNumber(partsPerBarDetails.barLength) }}"
+                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" ÷
+                  {{ formatDimension(partsPerBarDetails.barLength) }}"
                 </td>
                 <td class="text-right">
                   <v-chip color="primary" size="small" variant="tonal">
@@ -156,9 +156,9 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Cut Bar</td>
                 <td class="text-body-2">
-                  {{ formatNumber(partsPerBarDetails.barLength) }}" −
-                  {{ formatNumber(partsPerBarDetails.remnantLength) }}" =
-                  {{ formatNumber(partsPerBarDetails.usablePerSubBar) }}" usable
+                  {{ formatDimension(partsPerBarDetails.barLength) }}" −
+                  {{ formatDimension(partsPerBarDetails.remnantLength) }}" =
+                  {{ formatDimension(partsPerBarDetails.usablePerSubBar) }}" usable
                 </td>
                 <td class="text-right">
                   <v-chip color="primary" size="small" variant="tonal">
@@ -170,9 +170,9 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Remainder</td>
                 <td class="text-body-2">
-                  {{ formatNumber(partsPerBarDetails.remainderLength) }}" −
-                  {{ formatNumber(partsPerBarDetails.remnantLength) }}" =
-                  {{ formatNumber(partsPerBarDetails.usableRemainder) }}" usable
+                  {{ formatDimension(partsPerBarDetails.remainderLength) }}" −
+                  {{ formatDimension(partsPerBarDetails.remnantLength) }}" =
+                  {{ formatDimension(partsPerBarDetails.usableRemainder) }}" usable
                 </td>
                 <td class="text-right">
                   <v-chip color="primary" size="small" variant="tonal">
@@ -198,9 +198,9 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Waste</td>
                 <td class="text-body-2">
-                  {{ formatNumber(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
-                  × {{ formatNumber(partsPerBarDetails.materialLength) }}") =
-                  {{ formatNumber(wasteDetails.wasteLength) }}"
+                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
+                  × {{ formatDimension(partsPerBarDetails.materialLength) }}") =
+                  {{ formatDimension(wasteDetails.wasteLength) }}"
                 </td>
                 <td class="text-right">
                   <v-chip color="warning" size="small" variant="tonal">
@@ -247,7 +247,7 @@ import {
   calculatePartMaterialCost,
   calculatePartsPerBar,
   formatCost,
-  formatNumber,
+  formatDimension,
   onlyAllowNumeric,
 } from '@/plugins/utils';
 import { useMaterialsStore } from '@/stores/materials_store';
