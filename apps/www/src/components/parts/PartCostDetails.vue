@@ -7,13 +7,13 @@
             inputmode="decimal"
             label="Product Price"
             min="0"
-            :model-value="getPriceInputValue()"
+            :model-value="priceInput ?? formatCost(part.price)"
             prefix="$"
             type="text"
             @blur="onPriceBlur"
-            @focus="onPriceFocus"
+            @focus="priceInput = part.price ? formatCost(part.price) : ''"
             @keydown="onlyAllowNumeric($event)"
-            @update:model-value="onPriceInput"
+            @update:model-value="onPriceUpdate"
           />
         </v-col>
       </v-row>
@@ -101,13 +101,13 @@
                       inputmode="decimal"
                       label="Cost (ea)"
                       min="0"
-                      :model-value="getAdditionalCostInputValue(entry.rowId, entry.item.cost)"
+                      :model-value="costInputs[entry.rowId] ?? formatCost(entry.item.cost)"
                       prefix="$"
                       type="text"
-                      @blur="onAdditionalCostBlur(entry.rowId, entry.idx)"
-                      @focus="onAdditionalCostFocus(entry.rowId, entry.item.cost)"
+                      @blur="onCostBlur(entry.rowId, entry.idx)"
+                      @focus="costInputs[entry.rowId] = entry.item.cost ? formatCost(entry.item.cost) : ''"
                       @keydown="onlyAllowNumeric($event)"
-                      @update:model-value="onAdditionalCostInput(entry.rowId, $event)"
+                      @update:model-value="costInputs[entry.rowId] = $event"
                     />
                   </v-col>
                   <v-col class="d-flex align-center justify-end ga-0" cols="1">
@@ -260,14 +260,12 @@ const { part, partMaterialCost } = defineProps<{
   partMaterialCost: number;
 }>();
 
+// Cycle Times
+
 const cycleTimeInputs = ref<Record<string, string>>({});
 const editingCycleInputs = ref<Record<string, boolean>>({});
 const cycleRowIds = ref<string[]>([]);
 let nextCycleRowId = 0;
-const priceInput = ref('');
-const editingPriceInput = ref(false);
-const additionalCostInputs = ref<Record<string, string>>({});
-const editingAdditionalCostInputs = ref<Record<string, boolean>>({});
 
 const cycleEntries = computed(() =>
   (part.cycleTimes || []).map((cycle, idx) => ({
@@ -277,28 +275,98 @@ const cycleEntries = computed(() =>
   })),
 );
 
-const getEffectiveCycleTime = (rowId: string, cycleTime: number) => {
-  if (editingCycleInputs.value[rowId]) {
-    return parseCycle(cycleTimeInputs.value[rowId]);
+const totalCycleTime = computed(() =>
+  cycleEntries.value.reduce((total, entry) => {
+    if (editingCycleInputs.value[entry.rowId]) {
+      return total + parseCycle(cycleTimeInputs.value[entry.rowId]);
+    }
+
+    return total + (entry.cycle.time || 0);
+  }, 0),
+);
+
+const createCycleRowId = () => `cycle-${nextCycleRowId++}`;
+
+const syncCycleRowIds = (count: number) => {
+  while (cycleRowIds.value.length < count) {
+    cycleRowIds.value.push(createCycleRowId());
   }
 
-  return cycleTime || 0;
+  if (cycleRowIds.value.length > count) {
+    cycleRowIds.value.splice(count);
+  }
 };
 
-const totalCycleTime = computed(() =>
-  cycleEntries.value.reduce(
-    (total, entry) => total + getEffectiveCycleTime(entry.rowId, entry.cycle.time),
-    0,
-  ),
+watch(
+  () => part.cycleTimes?.length ?? 0,
+  (count) => {
+    syncCycleRowIds(count);
+  },
+  { immediate: true },
 );
 
-const totalAdditionalCost = computed(() =>
-  (part.additionalCosts || []).reduce((sum, item) => sum + (Number(item.cost) || 0), 0),
-);
+const getCycleInputValue = (rowId: string, cycleTime: number) => {
+  if (editingCycleInputs.value[rowId]) {
+    return cycleTimeInputs.value[rowId] ?? formatCycle(cycleTime);
+  }
 
-const additionalCostEntries = computed(() =>
-  (part.additionalCosts || []).map((item, idx) => ({ item, idx, rowId: `ac-${idx}` })),
-);
+  return formatCycle(cycleTime);
+};
+
+const onCycleFocus = (rowId: string, cycleTime: number) => {
+  editingCycleInputs.value[rowId] = true;
+
+  if (formatCycle(cycleTime) === '0:00') {
+    cycleTimeInputs.value[rowId] = '';
+    return;
+  }
+
+  cycleTimeInputs.value[rowId] = formatCycle(cycleTime);
+};
+
+const onCycleInput = (rowId: string, value: string) => {
+  editingCycleInputs.value[rowId] = true;
+  cycleTimeInputs.value[rowId] = value;
+};
+
+const onCycleBlur = (rowId: string, idx: number) => {
+  if (!part.cycleTimes?.[idx]) {
+    return;
+  }
+
+  const parsed = parseCycle(cycleTimeInputs.value[rowId]);
+  part.cycleTimes[idx].time = parsed;
+  cycleTimeInputs.value[rowId] = formatCycle(parsed);
+  editingCycleInputs.value[rowId] = false;
+};
+
+const addCycleTime = () => {
+  if (part.cycleTimes) {
+    part.cycleTimes.push({ operation: '', time: 0 });
+    const rowId = createCycleRowId();
+    cycleRowIds.value.push(rowId);
+    return;
+  }
+
+  part.cycleTimes = [{ operation: '', time: 0 }];
+  const rowId = createCycleRowId();
+  cycleRowIds.value = [rowId];
+};
+
+const removeCycleTime = (rowId: string, idx: number) => {
+  part.cycleTimes.splice(idx, 1);
+  cycleRowIds.value.splice(idx, 1);
+  delete cycleTimeInputs.value[rowId];
+  delete editingCycleInputs.value[rowId];
+};
+
+// Pricing
+
+const priceInput = ref<string | null>(null);
+const targetHourlyRate = ref(125);
+const hourlyTargetMin = 50;
+const hourlyTargetMax = 200;
+const hourlyTargetStep = 5;
 
 const totalCostBase = computed(() => (partMaterialCost || 0) + totalAdditionalCost.value);
 
@@ -307,12 +375,6 @@ const amountMinusTotalCosts = computed(() => (part.price ? part.price - totalCos
 const currentAmountMinusMaterialPerHour = computed(() => {
   return calculateRatePerHour(part.price, totalCostBase.value, totalCycleTime.value);
 });
-
-const hourlyTargetMin = 50;
-const hourlyTargetMax = 200;
-const hourlyTargetStep = 5;
-
-const targetHourlyRate = ref(125);
 
 const targetVisualTone = computed(() => getToneForRate(targetHourlyRate.value));
 
@@ -344,136 +406,44 @@ const cycleTimeDeltaToTarget = computed(
   () => totalCycleTime.value - requiredCycleTimeAtTarget.value,
 );
 
-const createCycleRowId = () => `cycle-${nextCycleRowId++}`;
-
-const syncCycleRowIds = (count: number) => {
-  while (cycleRowIds.value.length < count) {
-    cycleRowIds.value.push(createCycleRowId());
-  }
-
-  if (cycleRowIds.value.length > count) {
-    cycleRowIds.value.splice(count);
-  }
-};
-
-watch(
-  () => part.cycleTimes?.length ?? 0,
-  (count) => {
-    syncCycleRowIds(count);
-  },
-  { immediate: true },
-);
-
-const getCycleInputValue = (rowId: string, cycleTime: number) => {
-  if (editingCycleInputs.value[rowId]) {
-    return cycleTimeInputs.value[rowId] ?? formatCycle(cycleTime);
-  }
-  return formatCycle(cycleTime);
-};
-
-const onCycleFocus = (rowId: string, cycleTime: number) => {
-  editingCycleInputs.value[rowId] = true;
-
-  if (formatCycle(cycleTime) === '0:00') {
-    cycleTimeInputs.value[rowId] = '';
-    return;
-  }
-
-  cycleTimeInputs.value[rowId] = formatCycle(cycleTime);
-};
-
-const onCycleInput = (rowId: string, value: string) => {
-  editingCycleInputs.value[rowId] = true;
-  cycleTimeInputs.value[rowId] = value;
-};
-
-const onCycleBlur = (rowId: string, idx: number) => {
-  if (!part.cycleTimes?.[idx]) {
-    return;
-  }
-
-  const parsed = parseCycle(cycleTimeInputs.value[rowId]);
-  part.cycleTimes[idx].time = parsed;
-  cycleTimeInputs.value[rowId] = formatCycle(parsed);
-  editingCycleInputs.value[rowId] = false;
-};
-
-const removeCycleTime = (rowId: string, idx: number) => {
-  part.cycleTimes.splice(idx, 1);
-  cycleRowIds.value.splice(idx, 1);
-  delete cycleTimeInputs.value[rowId];
-  delete editingCycleInputs.value[rowId];
-};
-
-const addCycleTime = () => {
-  if (part.cycleTimes) {
-    part.cycleTimes.push({ operation: '', time: 0 });
-    const rowId = createCycleRowId();
-    cycleRowIds.value.push(rowId);
-    return;
-  }
-
-  part.cycleTimes = [{ operation: '', time: 0 }];
-  const rowId = createCycleRowId();
-  cycleRowIds.value = [rowId];
-};
-
-const getPriceInputValue = () => {
-  if (editingPriceInput.value) {
-    return priceInput.value;
-  }
-
-  return formatCost(part.price);
-};
-
-const onPriceFocus = () => {
-  editingPriceInput.value = true;
-  if (!part.price) {
-    priceInput.value = '';
-    return;
-  }
-
-  priceInput.value = formatCost(part.price);
-};
-
-const onPriceInput = (value: string) => {
-  editingPriceInput.value = true;
+function onPriceUpdate(value: string) {
   priceInput.value = value;
-};
+  part.price = Number(value) || 0;
+}
 
 const onPriceBlur = () => {
-  const parsed = Number(priceInput.value);
-  part.price = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
-  priceInput.value = formatCost(part.price);
-  editingPriceInput.value = false;
+  part.price = Math.max(0, Number(priceInput.value) || 0);
+  priceInput.value = null;
 };
 
-// Additional Costs
-const getAdditionalCostInputValue = (rowId: string, cost: number) => {
-  if (editingAdditionalCostInputs.value[rowId]) {
-    return additionalCostInputs.value[rowId] ?? formatCost(cost);
+// Costs
+
+const costInputs = ref<Record<string, string | null>>({});
+const linkDialogOpen = ref(false);
+const linkDialogIndex = ref<number | null>(null);
+const linkInput = ref('');
+
+const totalAdditionalCost = computed(() =>
+  (part.additionalCosts || []).reduce((sum, item) => sum + (Number(item.cost) || 0), 0),
+);
+
+const additionalCostEntries = computed(() =>
+  (part.additionalCosts || []).map((item, idx) => ({ item, idx, rowId: `ac-${idx}` })),
+);
+
+const activeAdditionalCostName = computed(() => {
+  const idx = linkDialogIndex.value;
+  if (idx == null) {
+    return '';
   }
 
-  return formatCost(cost);
-};
+  return part.additionalCosts?.[idx]?.name || '';
+});
 
-const onAdditionalCostFocus = (rowId: string, cost: number) => {
-  editingAdditionalCostInputs.value[rowId] = true;
-  additionalCostInputs.value[rowId] = cost ? formatCost(cost) : '';
-};
-
-const onAdditionalCostInput = (rowId: string, value: string) => {
-  editingAdditionalCostInputs.value[rowId] = true;
-  additionalCostInputs.value[rowId] = value;
-};
-
-const onAdditionalCostBlur = (rowId: string, idx: number) => {
+const onCostBlur = (rowId: string, idx: number) => {
   if (!part.additionalCosts?.[idx]) return;
-
-  const parsed = Number(additionalCostInputs.value[rowId]);
-  part.additionalCosts[idx].cost = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
-  additionalCostInputs.value[rowId] = formatCost(part.additionalCosts[idx].cost);
-  editingAdditionalCostInputs.value[rowId] = false;
+  part.additionalCosts[idx].cost = Math.max(0, Number(costInputs.value[rowId]) || 0);
+  costInputs.value[rowId] = null;
 };
 
 const addAdditionalCost = () => {
@@ -484,24 +454,9 @@ const addAdditionalCost = () => {
 };
 
 const removeAdditionalCost = (idx: number) => {
-  const rowId = `ac-${idx}`;
+  delete costInputs.value[`ac-${idx}`];
   part.additionalCosts.splice(idx, 1);
-  delete additionalCostInputs.value[rowId];
-  delete editingAdditionalCostInputs.value[rowId];
 };
-
-const linkDialogOpen = ref(false);
-const linkDialogIndex = ref<number | null>(null);
-const linkInput = ref('');
-
-const activeAdditionalCostName = computed(() => {
-  const idx = linkDialogIndex.value;
-  if (idx == null) {
-    return '';
-  }
-
-  return part.additionalCosts?.[idx]?.name || '';
-});
 
 const normalizeUrl = (value: string) => {
   const trimmed = value.trim();
