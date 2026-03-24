@@ -345,8 +345,7 @@ function selectMaterial(material: Material) {
 }
 
 function addNewMaterial() {
-  form.value.reset();
-  form.value.resetValidation();
+  form.value?.resetValidation();
   selectedMaterial.value = { ...defaultMaterial };
 }
 
