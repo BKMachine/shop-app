@@ -4,11 +4,16 @@
       <v-row no-gutters>
         <v-col cols="11">
           <v-text-field
-            v-model.number="part.price"
+            inputmode="decimal"
             label="Product Price"
             min="0"
+            :model-value="getPriceInputValue()"
             prefix="$"
-            type="number"
+            type="text"
+            @blur="onPriceBlur"
+            @focus="onPriceFocus"
+            @keydown="onlyAllowNumeric($event)"
+            @update:model-value="onPriceInput"
           />
         </v-col>
       </v-row>
@@ -90,14 +95,19 @@
                   </v-col>
                   <v-col cols="3">
                     <v-text-field
-                      v-model.number="entry.item.cost"
                       class="mx-1"
                       dense
                       hide-details
+                      inputmode="decimal"
                       label="Cost (ea)"
                       min="0"
+                      :model-value="getAdditionalCostInputValue(entry.rowId, entry.item.cost)"
                       prefix="$"
-                      type="number"
+                      type="text"
+                      @blur="onAdditionalCostBlur(entry.rowId, entry.idx)"
+                      @focus="onAdditionalCostFocus(entry.rowId, entry.item.cost)"
+                      @keydown="onlyAllowNumeric($event)"
+                      @update:model-value="onAdditionalCostInput(entry.rowId, $event)"
                     />
                   </v-col>
                   <v-col class="d-flex align-center justify-end ga-0" cols="1">
@@ -193,7 +203,7 @@
         <div class="d-flex justify-space-between align-center mb-2">
           <span class="text-medium-emphasis">Target</span>
           <v-chip :color="targetVisualTone" size="small" variant="flat"
-            >${{ targetHourlyRate }}/hr</v-chip
+            >${{ formatCost(targetHourlyRate) }}/hr</v-chip
           >
         </div>
 
@@ -241,6 +251,7 @@ import {
   formatCycle,
   formatCycleLonghand,
   getToneForRate,
+  onlyAllowNumeric,
   parseCycle,
 } from '@/plugins/utils';
 
@@ -253,6 +264,10 @@ const cycleTimeInputs = ref<Record<string, string>>({});
 const editingCycleInputs = ref<Record<string, boolean>>({});
 const cycleRowIds = ref<string[]>([]);
 let nextCycleRowId = 0;
+const priceInput = ref('');
+const editingPriceInput = ref(false);
+const additionalCostInputs = ref<Record<string, string>>({});
+const editingAdditionalCostInputs = ref<Record<string, boolean>>({});
 
 const cycleEntries = computed(() =>
   (part.cycleTimes || []).map((cycle, idx) => ({
@@ -403,7 +418,64 @@ const addCycleTime = () => {
   cycleRowIds.value = [rowId];
 };
 
+const getPriceInputValue = () => {
+  if (editingPriceInput.value) {
+    return priceInput.value;
+  }
+
+  return formatCost(part.price);
+};
+
+const onPriceFocus = () => {
+  editingPriceInput.value = true;
+  if (!part.price) {
+    priceInput.value = '';
+    return;
+  }
+
+  priceInput.value = formatCost(part.price);
+};
+
+const onPriceInput = (value: string) => {
+  editingPriceInput.value = true;
+  priceInput.value = value;
+};
+
+const onPriceBlur = () => {
+  const parsed = Number(priceInput.value);
+  part.price = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+  priceInput.value = formatCost(part.price);
+  editingPriceInput.value = false;
+};
+
 // Additional Costs
+const getAdditionalCostInputValue = (rowId: string, cost: number) => {
+  if (editingAdditionalCostInputs.value[rowId]) {
+    return additionalCostInputs.value[rowId] ?? formatCost(cost);
+  }
+
+  return formatCost(cost);
+};
+
+const onAdditionalCostFocus = (rowId: string, cost: number) => {
+  editingAdditionalCostInputs.value[rowId] = true;
+  additionalCostInputs.value[rowId] = cost ? formatCost(cost) : '';
+};
+
+const onAdditionalCostInput = (rowId: string, value: string) => {
+  editingAdditionalCostInputs.value[rowId] = true;
+  additionalCostInputs.value[rowId] = value;
+};
+
+const onAdditionalCostBlur = (rowId: string, idx: number) => {
+  if (!part.additionalCosts?.[idx]) return;
+
+  const parsed = Number(additionalCostInputs.value[rowId]);
+  part.additionalCosts[idx].cost = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+  additionalCostInputs.value[rowId] = formatCost(part.additionalCosts[idx].cost);
+  editingAdditionalCostInputs.value[rowId] = false;
+};
+
 const addAdditionalCost = () => {
   if (!part.additionalCosts) {
     part.additionalCosts = [];
@@ -412,7 +484,10 @@ const addAdditionalCost = () => {
 };
 
 const removeAdditionalCost = (idx: number) => {
+  const rowId = `ac-${idx}`;
   part.additionalCosts.splice(idx, 1);
+  delete additionalCostInputs.value[rowId];
+  delete editingAdditionalCostInputs.value[rowId];
 };
 
 const linkDialogOpen = ref(false);
