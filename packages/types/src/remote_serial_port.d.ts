@@ -1,12 +1,13 @@
-module 'remote-serial-port-client';
-declare global {
-  interface RSPC {
-    open(callback: (error: Error) => void);
-    write(text: string);
-    read(callback: (error: Error, result: Buffer) => void);
-    close: () => void;
-    on(event: 'read' | 'error', listener: () => void): void;
+declare module 'remote-serial-port-client' {
+  export class RemoteSerialPort {
+    constructor(options: { mode: 'tcp'; host: string; port: string; reconnect: boolean });
+    open(callback: (error?: Error) => void): void;
+    write(text: string): void;
+    read(callback: (error: Error, result: { data: Buffer }) => void): void;
+    close(): void;
+    on(event: 'read', listener: (result: { data: Buffer }) => void): void;
+    on(event: 'error', listener: (error: Error) => void): void;
   }
 }
 
-export {};
+type RSPC = import('remote-serial-port-client').RemoteSerialPort;

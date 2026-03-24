@@ -110,7 +110,7 @@ function open(tcp: RSPC): Promise<void> {
 
     tcp.on('error', handleError);
 
-    tcp.open((error) => {
+    tcp.open((error?: Error) => {
       if (finished) return;
       clearTimeout(timeout);
       finished = true;
