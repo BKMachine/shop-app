@@ -244,6 +244,7 @@
           <span>Price Adjustment Needed</span>
           <b :class="priceDeltaToTarget >= 0 ? 'text-rateOk' : 'text-rateLow'">
             {{ priceDeltaToTarget >= 0 ? '+' : '-' }}${{ formatCost(Math.abs(priceDeltaToTarget)) }}
+            <span class="text-medium-emphasis">({{ priceDeltaPercentLabel }})</span>
           </b>
         </div>
         <div class="summary-row">
@@ -408,6 +409,17 @@ const requiredProductPriceAtTarget = computed(
 );
 
 const priceDeltaToTarget = computed(() => requiredProductPriceAtTarget.value - (part.price || 0));
+
+const priceDeltaPercentLabel = computed(() => {
+  const basePrice = part.price || 0;
+  if (basePrice <= 0) {
+    return 'n/a';
+  }
+
+  const percent = (priceDeltaToTarget.value / basePrice) * 100;
+  const sign = percent >= 0 ? '+' : '-';
+  return `${sign}${Math.abs(percent).toFixed(1)}%`;
+});
 
 const requiredCycleTimeAtTarget = computed(() => {
   if (!targetHourlyRate.value || amountMinusTotalCosts.value <= 0) {
