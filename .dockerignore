@@ -1,16 +1,28 @@
 .github
 .idea
 .git
+.gitignore
 .editorconfig
 .turbo
 .vscode
 README.md
 node_modules
 Dockerfile
+Dockerfile-*
+
+*.log
+logs
+coverage
+.nyc_output
 
 **/dist
 **/logs
 **/node_modules
+**/.turbo
+**/.cache
+**/coverage
+**/*.tsbuildinfo
+**/.DS_Store
 
 apps/printer
 **/.env

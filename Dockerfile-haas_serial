@@ -4,6 +4,7 @@ ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV PATH="${PATH}:${PNPM_HOME}"
 RUN npm install -g pnpm@latest-10
 RUN pnpm add turbo --global
+COPY .npmrc .npmrc
 COPY package.json package.json
 COPY pnpm-lock.yaml pnpm-lock.yaml
 COPY pnpm-workspace.yaml pnpm-workspace.yaml
@@ -18,21 +19,20 @@ RUN turbo prune haas_serial --docker
 FROM haas_serial-prune AS haas_serial-installer
 COPY --from=haas_serial-prune /app/out/json/ .
 RUN pnpm install
-COPY apps/haas_serial apps/haas_serial
-RUN turbo prune haas_serial --docker
 COPY --from=haas_serial-prune /app/out/full/ .
 
 FROM haas_serial-installer AS haas_serial-builder
+COPY apps/haas_serial apps/haas_serial
 RUN pnpm run format --filter=haas_serial
 RUN pnpm run ci --filter=haas_serial
 RUN pnpm run build --filter=haas_serial
 
+FROM haas_serial-builder AS haas_serial-deploy
+RUN pnpm deploy --filter=haas_serial --prod /app/deploy/haas_serial
+
 FROM node:22-slim AS runner
 WORKDIR /app
-COPY --from=haas_serial-builder /app/node_modules /app/node_modules
-COPY --from=haas_serial-builder /app/packages /app/packages
-COPY --from=haas_serial-builder /app/apps/haas_serial/dist /app/apps/haas_serial/dist
-COPY --from=haas_serial-builder /app/apps/haas_serial/node_modules /app/apps/haas_serial/node_modules
+COPY --from=haas_serial-deploy /app/deploy/haas_serial /app/apps/haas_serial
 ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["node", "/app/apps/haas_serial/dist/index.js"]

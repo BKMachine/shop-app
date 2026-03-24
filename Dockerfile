@@ -23,16 +23,15 @@ RUN turbo prune www --docker
 FROM server-prune AS server-installer
 COPY --from=server-prune /app/out/json/ .
 RUN pnpm install --frozen-lockfile
-COPY apps/server apps/server
 COPY --from=server-prune /app/out/full/ .
 
 FROM www-prune AS www-installer
 COPY --from=www-prune /app/out/json/ .
 RUN pnpm install --frozen-lockfile
-COPY apps/www apps/www
 COPY --from=www-prune /app/out/full/ .
 
 FROM server-installer AS server-builder
+COPY apps/server apps/server
 RUN pnpm run format --filter=server
 RUN pnpm run ci --filter=server
 RUN pnpm run test --filter=server
@@ -42,6 +41,7 @@ FROM server-builder AS server-deploy
 RUN pnpm deploy --filter=server --prod /app/deploy/server
 
 FROM www-installer AS www-builder
+COPY apps/www apps/www
 RUN pnpm run format --filter=www
 RUN pnpm run ci --filter=www 
 RUN pnpm run build --filter=www
