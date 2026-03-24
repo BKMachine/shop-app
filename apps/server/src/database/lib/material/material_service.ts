@@ -1,3 +1,4 @@
+import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import { normalizeDimensions } from '@repo/utilities/materials';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
@@ -7,15 +8,18 @@ async function list(): Promise<MaterialDoc[]> {
   return await Material.find();
 }
 
-async function add(data: Material, device: string): Promise<MaterialDoc> {
+async function add(data: Material, device = SERVER_DEVICE_ID): Promise<MaterialDoc> {
   const material = new Material(normalizeDimensions(data));
   await material.save();
-  await Audit.addMaterialAudit(null, material, device);
   emit('material', material);
+  await Audit.addMaterialAudit(null, material, device);
   return material;
 }
 
-async function update(newMaterial: Material, device: string): Promise<MaterialDoc | null> {
+async function update(
+  newMaterial: Material,
+  device = SERVER_DEVICE_ID,
+): Promise<MaterialDoc | null> {
   const id = newMaterial._id;
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -23,8 +27,8 @@ async function update(newMaterial: Material, device: string): Promise<MaterialDo
     returnDocument: 'after',
   });
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
   emit('material', updatedMaterial);
+  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
   return updatedMaterial;
 }
 
@@ -37,7 +41,7 @@ async function findByParsedMaterial(data: Partial<Material>): Promise<MaterialDo
     return null;
   }
 
-  const query: Partial<Material> = {
+  const query = {
     materialType: data.materialType,
     type: data.type,
     height: data.height ?? null,
@@ -47,19 +51,13 @@ async function findByParsedMaterial(data: Partial<Material>): Promise<MaterialDo
     length: data.length ?? null,
   };
 
-  if (query.type === 'Flat' && query.width && query.height && query.width < query.height) {
-    const temp = query.width;
-    query.width = query.height;
-    query.height = temp;
-  }
-
-  return await Material.findOne(query);
+  return await Material.findOne(normalizeDimensions(query));
 }
 
 async function updateCostPerFoot(
   id: string,
   costPerFoot: number,
-  device = '77f542a0-c09e-4b14-9634-40f2ede31a3e',
+  device = SERVER_DEVICE_ID,
 ): Promise<MaterialDoc | null> {
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -69,6 +67,7 @@ async function updateCostPerFoot(
     { returnDocument: 'after' },
   );
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
+  emit('material', updatedMaterial);
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
   return updatedMaterial;
 }

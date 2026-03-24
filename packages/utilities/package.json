@@ -15,6 +15,10 @@
     "./materials": {
       "import": "./dist/materials.js",
       "types": "./dist/materials.d.ts"
+    },
+    "./constants": {
+      "import": "./dist/constants.js",
+      "types": "./dist/constants.d.ts"
     }
   },
   "scripts": {
