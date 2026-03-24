@@ -207,15 +207,31 @@
           >
         </div>
 
-        <v-slider
-          v-model="targetHourlyRate"
-          class="mb-3 target-slider"
-          color="primary"
-          :max="hourlyTargetMax"
-          :min="hourlyTargetMin"
-          :step="hourlyTargetStep"
-          thumb-label
-        />
+        <div class="target-slider-wrap mb-3">
+          <div
+            class="current-rate-indicator"
+            :class="`text-${currentMarginTone}`"
+            :style="{ left: `${currentRateSliderPercent}%` }"
+          >
+            <span class="current-rate-label">Current</span>
+            <div class="current-rate-arrow" />
+          </div>
+
+          <v-slider
+            v-model="targetHourlyRate"
+            class="target-slider"
+            color="primary"
+            :max="hourlyTargetMax"
+            :min="hourlyTargetMin"
+            :step="hourlyTargetStep"
+            thumb-label
+          />
+
+          <div class="slider-limits mb-6">
+            <span>${{ hourlyTargetMin }}/hr</span>
+            <span>${{ hourlyTargetMax }}/hr</span>
+          </div>
+        </div>
 
         <div class="summary-row mb-2">
           <span>Required Amount Minus Costs</span>
@@ -406,6 +422,17 @@ const cycleTimeDeltaToTarget = computed(
   () => totalCycleTime.value - requiredCycleTimeAtTarget.value,
 );
 
+const currentRateSliderPercent = computed(() => {
+  const range = hourlyTargetMax - hourlyTargetMin;
+  if (range <= 0) {
+    return 0;
+  }
+
+  const normalized = ((currentAmountMinusMaterialPerHour.value - hourlyTargetMin) / range) * 100;
+
+  return Math.max(0, Math.min(100, normalized));
+});
+
 function onPriceUpdate(value: string) {
   priceInput.value = value;
   part.price = Number(value) || 0;
@@ -516,20 +543,65 @@ const openAdditionalCostLink = (url: string | undefined) => {
   height: 10px;
 }
 
+.target-slider-wrap {
+  position: relative;
+  padding-top: 18px;
+}
+
+.current-rate-indicator {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.current-rate-label {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  color: currentColor;
+}
+
+.current-rate-arrow {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid currentColor;
+}
+
 .target-slider .v-slider-track__background {
   opacity: 1;
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    rgb(var(--v-theme-error)) 0%,
-    rgb(var(--v-theme-error)) 6.67%,
-    rgb(var(--v-theme-warning)) 33.33%,
-    rgb(var(--v-theme-success)) 50%,
-    rgb(var(--v-theme-success)) 66.67%,
-    rgb(var(--v-theme-info)) 83.33%,
-    rgb(var(--v-theme-primary)) 100%
+    rgb(var(--v-theme-rateLow)) 0%,
+    rgb(var(--v-theme-rateLow)) 33.33%,
+    rgb(var(--v-theme-rateWarn)) 33.33%,
+    rgb(var(--v-theme-rateWarn)) 50%,
+    rgb(var(--v-theme-rateOk)) 50%,
+    rgb(var(--v-theme-rateOk)) 66.67%,
+    rgb(var(--v-theme-rateGood)) 66.67%,
+    rgb(var(--v-theme-rateGood)) 83.33%,
+    rgb(var(--v-theme-rateTurbo)) 83.33%,
+    rgb(var(--v-theme-rateTurbo)) 100%
   );
   background-color: transparent;
+}
+
+.slider-limits {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgb(var(--v-theme-on-surface));
+  opacity: 0.5;
+  margin-top: -30px;
+  padding: 0 2px;
 }
 
 .target-slider .v-slider-track__fill {

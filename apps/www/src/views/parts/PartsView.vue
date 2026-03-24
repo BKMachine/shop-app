@@ -241,23 +241,23 @@ function hideExpandedImage() {
   display: inline-block;
 }
 
-.rate-swatch--error {
-  background: rgb(var(--v-theme-error));
+.rate-swatch--rateLow {
+  background: rgb(var(--v-theme-rateLow));
 }
 
-.rate-swatch--warning {
-  background: rgb(var(--v-theme-warning));
+.rate-swatch--rateWarn {
+  background: rgb(var(--v-theme-rateWarn));
 }
 
-.rate-swatch--success {
-  background: rgb(var(--v-theme-success));
+.rate-swatch--rateOk {
+  background: rgb(var(--v-theme-rateOk));
 }
 
-.rate-swatch--info {
-  background: rgb(var(--v-theme-info));
+.rate-swatch--rateGood {
+  background: rgb(var(--v-theme-rateGood));
 }
 
-.rate-swatch--primary {
-  background: rgb(var(--v-theme-primary));
+.rate-swatch--rateTurbo {
+  background: rgb(var(--v-theme-rateTurbo));
 }
 </style>
