@@ -163,6 +163,7 @@
 </template>
 
 <script setup lang="ts">
+import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
@@ -245,8 +246,9 @@ function fetchPart(showSpinner: boolean = true) {
   axios
     .get<Part>(`/parts/${id}`)
     .then(({ data }) => {
-      part.value = { ...defaultPartValues, ...data };
-      partOriginal.value = { ...defaultPartValues, ...data };
+      const mergedPart = { ...defaultPartValues, ...data };
+      part.value = cloneDeep(mergedPart);
+      partOriginal.value = cloneDeep(mergedPart);
     })
     .catch(() => {
       alert('Part not found.');
@@ -287,7 +289,27 @@ function openLink(link: string | undefined) {
   window.open(link, '_blank');
 }
 
-const partIsAltered = computed<boolean>(() => !isEqual(part.value, partOriginal.value));
+function getCustomerId(customer: Part['customer'] | undefined): string | undefined {
+  if (!customer) return undefined;
+  return typeof customer === 'string' ? customer : customer._id;
+}
+
+function getMaterialId(material: Part['material'] | undefined): string | undefined {
+  if (!material) return undefined;
+  return typeof material === 'string' ? material : material._id;
+}
+
+function toComparablePart(value: Part) {
+  return {
+    ...value,
+    customer: getCustomerId(value.customer),
+    material: getMaterialId(value.material),
+  };
+}
+
+const partIsAltered = computed<boolean>(() => {
+  return !isEqual(toComparablePart(part.value), toComparablePart(partOriginal.value));
+});
 
 const requiredRule = (val: string) => !!val || 'Required';
 

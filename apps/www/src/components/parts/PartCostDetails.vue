@@ -107,7 +107,7 @@
                       @blur="onCostBlur(entry.rowId, entry.idx)"
                       @focus="costInputs[entry.rowId] = entry.item.cost ? formatCost(entry.item.cost) : ''"
                       @keydown="onlyAllowNumeric($event)"
-                      @update:model-value="costInputs[entry.rowId] = $event"
+                      @update:model-value="onAdditionalCostsUpdate($event, entry.rowId, entry.idx)"
                     />
                   </v-col>
                   <v-col class="d-flex align-center justify-end ga-0" cols="1">
@@ -540,6 +540,12 @@ const openAdditionalCostLink = (url: string | undefined) => {
 
   window.open(normalized, '_blank', 'noopener,noreferrer');
 };
+
+function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
+  costInputs.value[rowId] = value;
+  if (part.additionalCosts[idx])
+    part.additionalCosts[idx].cost = Math.max(0, Number(costInputs.value[rowId]) || 0);
+}
 </script>
 
 <style>
