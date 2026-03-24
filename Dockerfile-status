@@ -27,12 +27,14 @@ RUN pnpm run format --filter=status
 RUN pnpm run ci --filter=status
 RUN pnpm run build --filter=status
 
-FROM status-builder AS status-deploy
+FROM status-installer AS status-deploy
+RUN pnpm run build --filter=@repo/utilities
 RUN pnpm deploy --filter=status --prod /app/deploy/status
 
 FROM node:22-slim AS runner
 WORKDIR /app
-COPY --from=status-deploy /app/deploy/status /app/apps/status
+COPY --from=status-deploy /app/deploy/status/node_modules /app/apps/status/node_modules
+COPY --from=status-builder /app/apps/status/dist /app/apps/status/dist
 ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["node", "/app/apps/status/dist/index.js"]

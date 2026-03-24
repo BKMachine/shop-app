@@ -37,7 +37,8 @@ RUN pnpm run ci --filter=server
 RUN pnpm run test --filter=server
 RUN pnpm run build --filter=server
 
-FROM server-builder AS server-deploy
+FROM server-installer AS server-deploy
+RUN pnpm run build --filter=@repo/utilities
 RUN pnpm deploy --filter=server --prod /app/deploy/server
 
 FROM www-installer AS www-builder
@@ -48,7 +49,8 @@ RUN pnpm run build --filter=www
 
 FROM node:22-slim AS runner
 WORKDIR /app
-COPY --from=server-deploy /app/deploy/server /app/apps/server
+COPY --from=server-deploy /app/deploy/server/node_modules /app/apps/server/node_modules 
+COPY --from=server-builder /app/apps/server/dist /app/apps/server/dist
 COPY --from=www-builder /app/apps/www/dist /app/apps/www/dist
 ENV NODE_ENV=production
 EXPOSE 3000
