@@ -95,7 +95,7 @@
                   </v-col>
                   <v-col cols="3">
                     <v-text-field
-                      class="mx-1"
+                      class="ml-1 mr-2"
                       dense
                       hide-details
                       inputmode="decimal"
@@ -112,7 +112,7 @@
                   </v-col>
                   <v-col class="d-flex align-center justify-end ga-0" cols="1">
                     <v-btn
-                      class="ma-0 pa-0 ml-1"
+                      class="ma-0 pa-0 mr-1"
                       color="secondary"
                       density="compact"
                       icon
