@@ -3,44 +3,11 @@
     <v-row>
       <!-- Left Column: Material List -->
       <v-col cols="4">
-        <v-text-field
-          v-model="search"
-          class="mb-0"
-          clearable
-          label="Search Materials"
-          prepend-inner-icon="mdi-magnify"
-          @click:clear="search = ''"
+        <MaterialsList
+          :materials="materials"
+          :selected-material-id="selectedMaterial._id"
+          @select="selectMaterial"
         />
-        <div class="d-flex mb-2 align-center" style="gap: 8px;">
-          <v-btn-toggle v-model="typeFilter" dense mandatory>
-            <v-btn size="small" value="All">All</v-btn>
-            <v-btn size="small" value="Flat">Flat</v-btn>
-            <v-btn size="small" value="Round">Round</v-btn>
-          </v-btn-toggle>
-          <v-btn-toggle v-model="tubingFilter" dense mandatory>
-            <v-btn size="small" value="All">All</v-btn>
-            <v-btn size="small" value="Tubing">Tubing</v-btn>
-            <v-btn size="small" value="Bar">Bar</v-btn>
-          </v-btn-toggle>
-        </div>
-
-        <v-list class="materials-list" density="compact" nav>
-          <v-list-item
-            v-for="material in sortedFilteredMaterials"
-            :key="material._id"
-            :active="material._id === selectedMaterial._id"
-            class="material-row"
-            @click="selectMaterial(material)"
-          >
-            <v-list-item-title class="material-title">
-              {{ formatMaterialTitle(material) }}
-            </v-list-item-title>
-
-            <v-list-item-subtitle class="material-subtitle">
-              {{ formatMaterialSize(material) }}
-            </v-list-item-subtitle>
-          </v-list-item>
-        </v-list>
       </v-col>
 
       <!-- Right Column: Material Details -->
@@ -78,24 +45,10 @@
 
               <v-row>
                 <v-col cols="6">
-                  <v-select
+                  <MaterialSelection
                     v-model="selectedMaterial.materialType"
                     :disabled="!isNewMaterial"
-                    hide-details
-                    item-title="name"
-                    item-value="value"
-                    :items="items"
-                    label="Material Type"
-                    required
-                  >
-                    <template #item="data">
-                      <v-list-item v-if="data.props.header"> {{ data.props.header }} </v-list-item>
-                      <v-divider v-else-if="data.props.divider" />
-                      <v-list-subheader v-else v-bind="data.props" class="material-select-item">
-                        {{ data.item.value }}
-                      </v-list-subheader>
-                    </template>
-                  </v-select>
+                  />
                 </v-col>
                 <v-col cols="6">
                   <v-select
@@ -258,7 +211,7 @@
               />
               <v-btn
                 color="green"
-                :disabled="!formValid || (existsInStore && isNewMaterial) || !materialChanged"
+                :disabled="!formValid || (existsInStore && isNewMaterial) || !isMaterialChanged"
                 variant="elevated"
                 @click="saveMaterial"
               >
@@ -267,7 +220,12 @@
             </v-card-actions>
           </v-card>
 
-          <v-dialog v-model="pdfReviewDialog" :max-width="pdfReviewDialogMaxWidth" scrollable>
+          <v-dialog
+            v-model="pdfReviewDialog"
+            :max-width="pdfReviewDialogMaxWidth"
+            scrollable
+            @update:model-value="!$event && (pdfReviewHasPreview = false)"
+          >
             <v-card>
               <v-card-title class="d-flex align-center">
                 Material PDF Review
@@ -281,7 +239,7 @@
               </v-card-title>
               <v-divider />
               <v-card-text class="pa-0">
-                <MaterialPdfReview @has-preview-change="onPdfReviewHasPreviewChange" />
+                <MaterialPdfReview @has-preview-change="pdfReviewHasPreview = $event" />
               </v-card-text>
             </v-card>
           </v-dialog>
@@ -292,17 +250,15 @@
 </template>
 
 <script setup lang="ts">
-import {
-  calculateMaterialWeight,
-  materials as materialsList,
-  normalizeDimensions,
-} from '@repo/utilities/materials';
+import { calculateMaterialWeight, normalizeDimensions } from '@repo/utilities/materials';
 import isEqual from 'lodash/isEqual';
-import { computed, onMounted, ref, watch } from 'vue';
-import MaterialPdfReview from '@/components/MaterialPdfReview.vue';
-import MaterialSketch from '@/components/MaterialSketch.vue';
+import { computed, onMounted, ref } from 'vue';
+import MaterialPdfReview from '@/components/materials/MaterialPdfReview.vue';
+import MaterialSelection from '@/components/materials/MaterialSelection.vue';
+import MaterialSketch from '@/components/materials/MaterialSketch.vue';
+import MaterialsList from '@/components/materials/MaterialsList.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
-import { formatCost, formatNumber, formatWeight, onlyAllowNumeric } from '@/plugins/utils';
+import { formatCost, formatWeight, onlyAllowNumeric } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useMaterialsStore } from '@/stores/materials_store';
 
@@ -324,88 +280,20 @@ const defaultMaterial: Material = {
   stock: 0,
 };
 
-// This ensures that all MaterialCategory values are included in the categoryOrder array
-const categoryOrder = [
-  'aluminum',
-  'steel',
-  'stainless',
-  'titanium',
-  'other',
-] as const satisfies readonly MaterialCategory[];
-type MissingMaterialCategories = Exclude<MaterialCategory, (typeof categoryOrder)[number]>;
-const hasAllMaterialCategories: MissingMaterialCategories extends never ? true : never = true;
-
-const items = computed(() => {
-  const groupedMaterials = Object.entries(materialsList).reduce(
-    (groups, [name, data]) => {
-      const category = data.category;
-      groups[category] ??= [];
-      groups[category].push({ name, value: name });
-      return groups;
-    },
-    {} as Partial<Record<MaterialCategory, { name: string; value: string }[]>>,
-  );
-
-  const groupedMaterialEntries = Object.entries(groupedMaterials) as [
-    MaterialCategory,
-    { name: string; value: string }[],
-  ][];
-
-  return groupedMaterialEntries
-    .sort(
-      ([categoryA], [categoryB]) =>
-        categoryOrder.indexOf(categoryA) - categoryOrder.indexOf(categoryB),
-    )
-    .flatMap(([category, categoryItems], index, categories) => {
-      const headerName = category.charAt(0).toUpperCase() + category.slice(1);
-      const sortedCategoryItems = [...categoryItems].sort((a, b) => a.name.localeCompare(b.name));
-
-      return [
-        { props: { header: headerName } },
-        ...sortedCategoryItems,
-        ...(index < categories.length - 1 ? [{ props: { divider: true } }] : []),
-      ];
-    });
-});
-
-const search = ref('');
 const selectedMaterial = ref<Material>({ ...defaultMaterial });
 const formValid = ref(true);
-const typeFilter = ref<'All' | 'Flat' | 'Round'>('All');
-const tubingFilter = ref<'All' | 'Tubing' | 'Bar'>('All');
 const form = ref();
 const pdfReviewDialog = ref(false);
 const pdfReviewHasPreview = ref(false);
-
 const pdfReviewDialogMaxWidth = computed(() => (pdfReviewHasPreview.value ? 1400 : 720));
 
 onMounted(() => {
   materialsStore.fetch();
 });
 
-watch(pdfReviewDialog, (isOpen) => {
-  if (!isOpen) {
-    pdfReviewHasPreview.value = false;
-  }
-});
+const isNewMaterial = computed<boolean>(() => selectedMaterial.value._id === '0');
 
-function onPdfReviewHasPreviewChange(hasPreview: boolean) {
-  pdfReviewHasPreview.value = hasPreview;
-}
-
-function selectMaterial(material: Material) {
-  selectedMaterial.value = { ...material };
-}
-
-function addNewMaterial() {
-  form.value.reset();
-  form.value.resetValidation();
-  selectedMaterial.value = { ...defaultMaterial };
-}
-
-const isNewMaterial = computed(() => selectedMaterial.value._id === '0');
-
-const materialChanged = computed(() => {
+const isMaterialChanged = computed<boolean>(() => {
   const material = selectedMaterial.value;
   const original = materials.value.find((m) => m._id === material._id);
   if (!original) return true;
@@ -451,6 +339,16 @@ const existsInStore = computed<boolean>(() => {
     return false;
   });
 });
+
+function selectMaterial(material: Material) {
+  selectedMaterial.value = { ...material };
+}
+
+function addNewMaterial() {
+  form.value.reset();
+  form.value.resetValidation();
+  selectedMaterial.value = { ...defaultMaterial };
+}
 
 function saveMaterial() {
   normalizeDimensions(selectedMaterial.value);
@@ -549,136 +447,7 @@ const numberOptionalRule = (v: unknown) =>
   v === '' ||
   (!Number.isNaN(v) && Number(v) >= 0) ||
   'Must be a valid number';
-
-function formatMaterialTitle(material: Material): string {
-  const type = material.wallThickness ? 'Tubing' : 'Bar';
-  return `${material.materialType} ${material.type} ${type}`;
-}
-
-function formatMaterialSize(material: Material): string {
-  if (material.type === 'Flat') {
-    const h = formatNumber(material.height);
-    const w = formatNumber(material.width);
-    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
-    return `${h} × ${w}${wall}`;
-  }
-
-  if (material.type === 'Round') {
-    const d = formatNumber(material.diameter);
-    const wall = material.wallThickness ? ` × ${formatNumber(material.wallThickness)} wall` : '';
-    return `Ø${d}${wall}`;
-  }
-
-  return '';
-}
-
-const sortedFilteredMaterials = computed(() => {
-  const q = search.value.trim().toLowerCase();
-
-  return [...materials.value]
-    .filter((material) => {
-      // Search filter
-      if (
-        q &&
-        ![
-          material.description,
-          material.materialType,
-          material.type,
-          formatMaterialTitle(material),
-          formatMaterialSize(material),
-        ]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(q))
-      ) {
-        return false;
-      }
-      // Type filter
-      if (typeFilter.value !== 'All' && material.type !== typeFilter.value) return false;
-      // Tubing/Bar filter
-      if (tubingFilter.value !== 'All') {
-        const isTubing = !!material.wallThickness;
-        if (tubingFilter.value === 'Tubing' && !isTubing) return false;
-        if (tubingFilter.value === 'Bar' && isTubing) return false;
-      }
-      return true;
-    })
-    .sort((a, b) => compareMaterials(a, b));
-});
-
-function compareMaterials(a: Material, b: Material) {
-  const materialCompare = (a.materialType || '').localeCompare(b.materialType || '');
-  if (materialCompare !== 0) return materialCompare;
-
-  const typeOrder: Record<string, number> = { Flat: 0, Round: 1 };
-  const typeCompare = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
-  if (typeCompare !== 0) return typeCompare;
-
-  const aDims = getSortDimensions(a);
-  const bDims = getSortDimensions(b);
-
-  for (let i = 0; i < Math.max(aDims.length, bDims.length); i++) {
-    const diff = (aDims[i] ?? 0) - (bDims[i] ?? 0);
-    if (diff !== 0) return diff;
-  }
-
-  return (a.description || '').localeCompare(b.description || '');
-}
-
-function getSortDimensions(material: Material): number[] {
-  const length = material.length ?? 0;
-  const wall = material.wallThickness ?? 0;
-
-  if (material.type === 'Flat') {
-    const h = material.height ?? 0;
-    const w = material.width ?? 0;
-    const small = Math.min(h, w);
-    const large = Math.max(h, w);
-    return [small, large, wall, length];
-  }
-
-  if (material.type === 'Round') {
-    const d = material.diameter ?? 0;
-    return [d, wall, length];
-  }
-
-  return [length];
-}
 </script>
 
 <style scoped>
-.materials-list {
-  max-height: calc(100vh - 180px);
-  overflow-y: auto;
-}
-
-.material-row {
-  min-height: 48px;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  border-radius: 6px;
-}
-
-.material-title {
-  font-size: 0.95rem;
-  font-weight: 500;
-  line-height: 1.15rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.material-subtitle {
-  font-size: 0.8rem;
-  line-height: 1rem;
-  color: rgb(var(--v-theme-on-surface), 0.7);
-}
-
-.selected-item,
-.v-list-item--active {
-  background-color: #e3f2fd;
-}
-
-.material-select-item {
-  cursor: pointer;
-}
 </style>
