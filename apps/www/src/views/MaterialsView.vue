@@ -293,23 +293,23 @@ onMounted(() => {
 
 const isNewMaterial = computed<boolean>(() => selectedMaterial.value._id === '0');
 
+function getSupplierId(supplier: Material['supplier']): string | undefined {
+  if (!supplier) return undefined;
+  return typeof supplier === 'string' ? supplier : supplier._id;
+}
+
+function toComparableMaterial(material: Material) {
+  return {
+    ...material,
+    supplier: getSupplierId(material.supplier),
+  };
+}
+
 const isMaterialChanged = computed<boolean>(() => {
   const material = selectedMaterial.value;
   const original = materials.value.find((m) => m._id === material._id);
   if (!original) return true;
-
-  const supplierChanged = (() => {
-    if (typeof material.supplier === 'string' && typeof original.supplier === 'object') {
-      return original.supplier._id !== material.supplier;
-    }
-    return !isEqual(material.supplier, original.supplier);
-  })();
-
-  if (supplierChanged) return true;
-
-  const { supplier: _, ...materialWithoutSupplier } = material;
-  const { supplier: __, ...originalWithoutSupplier } = original;
-  return !isEqual(materialWithoutSupplier, originalWithoutSupplier);
+  return !isEqual(toComparableMaterial(material), toComparableMaterial(original));
 });
 
 const existsInStore = computed<boolean>(() => {
