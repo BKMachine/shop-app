@@ -1,7 +1,7 @@
 import { PDFParse } from 'pdf-parse';
-import { AffiliatedMetalsParser } from './vendors/affiliated_metals_parser.js';
-import { GrandisParser } from './vendors/grandis_parser.js';
-import { RyersonParser } from './vendors/ryerson_parser.js';
+import { AffiliatedMetalsParser } from './suppliers/affiliated_metals_parser.js';
+import { GrandisParser } from './suppliers/grandis_parser.js';
+import { RyersonParser } from './suppliers/ryerson_parser.js';
 
 export default async function parseMaterialPdf(data: Buffer): Promise<ParserResults[]> {
   const text = await extractPdfText(data);

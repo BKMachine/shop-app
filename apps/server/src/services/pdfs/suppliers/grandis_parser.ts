@@ -2,6 +2,7 @@ import { extractDimensionHighlightToken, extractPdfDate } from '../parser_utils.
 
 const grandis64Regex = /(?:\bTi\b|\bTitanium\b)\s*6\s*(?:AL|Al|al)?\s*[-/]?\s*4V\b/i;
 const GRANDIS_ASSUMED_LENGTH_INCHES = 144;
+const GRANDIS_SUPPLIER_ID = '69c2d236b0d4b0faf02ef132';
 
 export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
   const extracted = extractPdfDate(text);
@@ -60,6 +61,7 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
       length: number | null;
       height: number | null;
       width: number | null;
+      supplier: string;
     } = {
       materialType,
       type: 'Round',
@@ -68,6 +70,7 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
       length,
       height: null,
       width: null,
+      supplier: GRANDIS_SUPPLIER_ID,
     };
 
     Object.keys(material).forEach((key) => {

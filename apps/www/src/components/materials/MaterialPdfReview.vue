@@ -560,7 +560,7 @@ function buildMaterialFromParsedResult(result: MaterialParsePreview): Material |
     diameter: parsedMaterial.diameter ?? null,
     wallThickness: parsedMaterial.wallThickness ?? null,
     length: parsedMaterial.length ?? null,
-    supplier: undefined,
+    supplier: parsedMaterial.supplier,
     costPerFoot: result.proposedCostPerFoot,
     stock: 0,
   };

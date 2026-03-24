@@ -10,6 +10,8 @@ import {
   parseSlashDate,
 } from '../parser_utils.js';
 
+const AFFILIATED_METALS_SUPPLIER_ID = '65d97c59a6e990cf2a330061';
+
 export function extractAffiliatedTopLeftDate(lines: string[]): DateExtraction | null {
   for (const line of lines) {
     const ordMatch = line.match(
@@ -71,6 +73,7 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
       diameter: number | null;
       wallThickness: number | null;
       length: number | null;
+      supplier: string;
     } = {
       materialType: block.materialType,
       type: 'Flat' as const,
@@ -79,6 +82,7 @@ export async function AffiliatedMetalsParser(text: string[]): Promise<ParserResu
       diameter: null,
       wallThickness: null,
       length: null,
+      supplier: AFFILIATED_METALS_SUPPLIER_ID,
     };
 
     if (block.typeToken === 'FLAT' || block.typeToken === 'SQUARE') {

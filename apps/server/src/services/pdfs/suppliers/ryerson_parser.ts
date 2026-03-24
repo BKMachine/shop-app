@@ -8,6 +8,8 @@ import {
   parseSlashDate,
 } from '../parser_utils.js';
 
+const RYERSON_SUPPLIER_ID = '6819152ea42bd260e8e9340c';
+
 export function extractRyersonEnteredDate(lines: string[]): DateExtraction | null {
   for (const line of lines) {
     const enteredMatch = line.match(/\bEntered\s*:\s*(\d{1,2}\/\d{1,2}\/(?:\d{2}|\d{4}))\b/i);
@@ -86,6 +88,7 @@ export async function RyersonParser(text: string[]): Promise<ParserResults[]> {
       diameter: number | null;
       wallThickness: number | null;
       length: number | null;
+      supplier: string;
     } = {
       materialType,
       type,
@@ -94,6 +97,7 @@ export async function RyersonParser(text: string[]): Promise<ParserResults[]> {
       diameter,
       wallThickness,
       length,
+      supplier: RYERSON_SUPPLIER_ID,
     };
 
     const feet = length / 12;

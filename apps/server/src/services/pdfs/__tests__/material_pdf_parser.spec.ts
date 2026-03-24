@@ -5,9 +5,9 @@ import { extractPdfDate } from '../parser_utils.js';
 import {
   AffiliatedMetalsParser,
   extractAffiliatedTopLeftDate,
-} from '../vendors/affiliated_metals_parser.js';
-import { GrandisParser } from '../vendors/grandis_parser.js';
-import { extractRyersonEnteredDate, RyersonParser } from '../vendors/ryerson_parser.js';
+} from '../suppliers/affiliated_metals_parser.js';
+import { GrandisParser } from '../suppliers/grandis_parser.js';
+import { extractRyersonEnteredDate, RyersonParser } from '../suppliers/ryerson_parser.js';
 
 test('AffiliatedMetalsParser should parse PDF with single flat bar', async () => {
   const file = path.resolve(process.cwd(), 'stubs/Affiliated_Metals/single_flat_bar_lb.pdf');
@@ -18,13 +18,14 @@ test('AffiliatedMetalsParser should parse PDF with single flat bar', async () =>
   expect(results).toEqual([
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         height: 0.5,
         length: 144,
         materialType: '6061',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Flat',
         width: 5,
-      },
+      }),
     }),
   ]);
 });
@@ -39,23 +40,25 @@ test('AffiliatedMetalsParser should parse PDF with multiple flat bars', async ()
   expect(results).toEqual([
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         height: 2.5,
         length: 144,
         materialType: '6061',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Flat',
         width: 3.5,
-      },
+      }),
     }),
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         height: 1.5,
         length: 144,
         materialType: '6061',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Flat',
         width: 1.5,
-      },
+      }),
     }),
   ]);
 });
@@ -69,12 +72,13 @@ test('AffiliatedMetalsParser should parse PDF with rnd bar lb', async () => {
   expect(results).toEqual([
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         diameter: 2.5,
         length: 107,
         materialType: '303',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Round',
-      },
+      }),
     }),
   ]);
 });
@@ -88,12 +92,13 @@ test('AffiliatedMetalsParser should parse PDF with round bar lb', async () => {
   expect(results).toEqual([
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         diameter: 0.625,
         length: 144,
         materialType: '416',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Round',
-      },
+      }),
     }),
   ]);
 });
@@ -107,13 +112,14 @@ test('AffiliatedMetalsParser should parse PDF with round tube ft', async () => {
   expect(results).toEqual([
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         diameter: 0.875,
         length: 240,
         materialType: '304',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Round',
         wallThickness: 0.083,
-      },
+      }),
     }),
   ]);
 });
@@ -127,13 +133,14 @@ test('AffiliatedMetalsParser should parse PDF with round pipe ea', async () => {
   expect(results).toEqual([
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         diameter: 1.25,
         length: 240,
         materialType: '6061',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Round',
         wallThickness: 0.191,
-      },
+      }),
     }),
   ]);
 });
@@ -147,13 +154,14 @@ test('AffiliatedMetalsParser should parse PDF with round pipe with notes', async
   expect(results).toEqual([
     expect.objectContaining({
       costPerFoot: expect.any(Number),
-      material: {
+      material: expect.objectContaining({
         diameter: 1.25,
         length: 240,
         materialType: '304',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Round',
         wallThickness: 0.191,
-      },
+      }),
     }),
   ]);
 });
@@ -169,13 +177,14 @@ test('AffiliatedMetalsParser should override pipe dimensions from ACTUAL DIMENTI
 
   expect(results).toEqual([
     expect.objectContaining({
-      material: {
+      material: expect.objectContaining({
         diameter: 0.84,
         length: 240,
         materialType: '304',
+        supplier: '65d97c59a6e990cf2a330061',
         type: 'Round',
         wallThickness: 0.083,
-      },
+      }),
     }),
   ]);
 
@@ -205,12 +214,13 @@ test('RyersonParser should parse ryerson order with decimal pricing units', asyn
     expect.objectContaining({
       unitType: 'lb',
       rate: 3.2,
-      material: {
+      material: expect.objectContaining({
         diameter: 1,
         length: 144,
         materialType: '304',
+        supplier: '6819152ea42bd260e8e9340c',
         type: 'Round',
-      },
+      }),
       costPerFoot: expect.any(Number),
     }),
   );
@@ -219,12 +229,13 @@ test('RyersonParser should parse ryerson order with decimal pricing units', asyn
     expect.objectContaining({
       unitType: 'lb',
       rate: 3.2,
-      material: {
+      material: expect.objectContaining({
         diameter: 1.25,
         length: 144,
         materialType: '304',
+        supplier: '6819152ea42bd260e8e9340c',
         type: 'Round',
-      },
+      }),
     }),
   );
 
@@ -232,13 +243,14 @@ test('RyersonParser should parse ryerson order with decimal pricing units', asyn
     expect.objectContaining({
       unitType: 'ft',
       rate: 3.85,
-      material: {
+      material: expect.objectContaining({
         diameter: 1.375,
         length: 264,
         materialType: '1020',
+        supplier: '6819152ea42bd260e8e9340c',
         type: 'Round',
         wallThickness: 0.095,
-      },
+      }),
       costPerFoot: 3.85,
     }),
   );
@@ -286,12 +298,13 @@ Pieces: 6 P/N Delivery Date 02/26/2026
     expect.objectContaining({
       unitType: 'lb',
       rate: 2.92,
-      material: {
+      material: expect.objectContaining({
         diameter: 2.375,
         length: 144,
         materialType: '303',
+        supplier: '6819152ea42bd260e8e9340c',
         type: 'Round',
-      },
+      }),
       costPerFoot: expect.any(Number),
     }),
   );
@@ -316,13 +329,14 @@ Pieces: 7 P/N Delivery Date 02/12/2026
     expect.objectContaining({
       unitType: 'ea',
       rate: 117.81,
-      material: {
+      material: expect.objectContaining({
         height: 1,
         width: 1.75,
         length: 144,
         materialType: '1018',
+        supplier: '6819152ea42bd260e8e9340c',
         type: 'Flat',
-      },
+      }),
       costPerFoot: 9.8175,
     }),
   );
@@ -356,6 +370,7 @@ test('GrandisParser should parse 6AL-4V invoice rows and key Round from Dia', as
         type: 'Round',
         diameter: 1,
         length: 144,
+        supplier: '69c2d236b0d4b0faf02ef132',
       }),
     }),
   );
@@ -382,6 +397,7 @@ test('parseMaterialPdf should route Grandis invoices', async () => {
 
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]?.material.materialType).toBe('6Al-4V');
+  expect(results[0]?.material.supplier).toBe('69c2d236b0d4b0faf02ef132');
 });
 
 test('extractPdfDate should parse Affiliated compact date format', async () => {
@@ -436,6 +452,7 @@ test('parseMaterialPdf should include createdAt from Ryerson Entered date', asyn
 
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]?.createdAt).toBeInstanceOf(Date);
+  expect(results[0]?.material.supplier).toBe('6819152ea42bd260e8e9340c');
   expect(results[0]?.createdAt.getFullYear()).toBe(2026);
   expect(results[0]?.createdAt.getMonth()).toBe(2);
   expect(results[0]?.createdAt.getDate()).toBe(12);

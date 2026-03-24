@@ -9,7 +9,7 @@ const schema = new Schema<MaterialDoc>({
   wallThickness: { type: Number, default: null },
   length: { type: Number, default: null },
   materialType: { type: String, required: true },
-  supplier: { type: Schema.Types.ObjectId, ref: 'suppliers', default: null },
+  supplier: { type: Schema.Types.ObjectId, ref: 'suppliers', required: true },
   costPerFoot: { type: Number, default: null },
   stock: { type: Number, required: true, default: 0 },
 });
