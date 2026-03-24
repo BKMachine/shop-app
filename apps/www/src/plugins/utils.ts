@@ -157,9 +157,13 @@ export function calculatePartsPerBar(
 }
 
 export function calculatePartMaterialCost(
-  part: Pick<Part, 'materialCutType' | 'materialLength' | 'barLength' | 'remnantLength'>,
+  part: Pick<
+    Part,
+    'materialCutType' | 'materialLength' | 'barLength' | 'remnantLength' | 'customerSuppliedMaterial'
+  >,
   material: Pick<Material, 'length' | 'costPerFoot'> | null | undefined,
 ): number {
+  if (part.customerSuppliedMaterial) return 0;
   if (!material) return 0;
 
   const fullBarLength = Number(material.length) || 0;

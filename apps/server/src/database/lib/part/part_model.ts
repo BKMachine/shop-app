@@ -10,6 +10,7 @@ const schema = new Schema<PartDoc>({
   img: String,
   revision: String,
   material: { type: Types.ObjectId, ref: 'materials', default: null },
+  customerSuppliedMaterial: { type: Boolean, default: false },
   materialCutType: { type: String, enum: ['blanks', 'bars'], default: 'blanks' },
   materialLength: { type: Number, default: 0 },
   barLength: { type: Number, default: 0 },

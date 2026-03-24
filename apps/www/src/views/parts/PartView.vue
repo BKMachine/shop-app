@@ -186,6 +186,7 @@ const showAdd = computed(() => {
 });
 
 const defaultPartValues = {
+  customerSuppliedMaterial: false,
   materialCutType: 'blanks',
   barLength: 0,
   remnantLength: 0,

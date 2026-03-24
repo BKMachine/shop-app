@@ -94,6 +94,7 @@ declare global {
     img?: string;
     revision?: string;
     material?: Material | string;
+    customerSuppliedMaterial?: boolean;
     materialCutType: 'blanks' | 'bars';
     materialLength: number;
     barLength: number;

@@ -18,6 +18,13 @@
           </v-row>
           <v-row>
             <v-col cols="6">
+              <v-checkbox
+                v-model="part.customerSuppliedMaterial"
+                class="mb-4 customer-supplied-checkbox"
+                density="compact"
+                hide-details
+                label="Material is customer supplied"
+              />
               <v-radio-group v-model="part.materialCutType" hide-details inline label="Cut Type">
                 <v-radio label="Blanks" value="blanks" />
                 <v-radio label="Bars" value="bars" />
@@ -213,6 +220,13 @@
         </v-card-text>
         <v-divider />
         <v-card-text class="py-2">
+          <div
+            v-if="part.customerSuppliedMaterial"
+            class="text-medium-emphasis text-caption mb-2 d-flex align-center ga-2"
+          >
+            <v-chip color="info" size="small" variant="tonal">Customer Supplied</v-chip>
+            Material cost excluded from part cost summary.
+          </div>
           <v-table class="rounded bg-transparent" density="compact">
             <tbody>
               <tr>
@@ -220,7 +234,7 @@
                 <td class="text-body-2">
                   <div class="d-flex align-center ga-2">
                     <v-chip color="purple-darken-2" variant="tonal"
-                      >${{ formatCost(materialCost) }}</v-chip
+                      >${{ formatCost(billableMaterialCost) }}</v-chip
                     >
                     <span class="text-medium-emphasis">÷</span>
                     <v-chip variant="outlined">{{ partsPerBar }} parts</v-chip>
@@ -357,8 +371,8 @@ const wasteDetails = computed(() => {
   if (!d.fullBarLength) return { wasteLength: 0, wasteCost: 0 };
   const wasteLength = Math.round((d.fullBarLength - d.totalParts * d.materialLength) * 1000) / 1000;
   const wasteCost =
-    materialCost.value > 0
-      ? Math.round((wasteLength / d.fullBarLength) * materialCost.value * 100) / 100
+    billableMaterialCost.value > 0
+      ? Math.round((wasteLength / d.fullBarLength) * billableMaterialCost.value * 100) / 100
       : 0;
   return { wasteLength, wasteCost };
 });
@@ -375,6 +389,10 @@ const materialCost = computed(() => {
   if (typeof props.part.material === 'string') return 0;
   const feet = (props.part.material.length || 0) / 12;
   return feet * (props.part.material.costPerFoot || 0);
+});
+
+const billableMaterialCost = computed(() => {
+  return props.part.customerSuppliedMaterial ? 0 : materialCost.value;
 });
 
 const partMaterialCost = computed(() => {
@@ -447,5 +465,9 @@ function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
 .swiss-defaults-btn {
   position: relative;
   left: 16px;
+}
+
+.customer-supplied-checkbox {
+  margin-top: 12px;
 }
 </style>

@@ -178,7 +178,17 @@
           <b>{{ formatCycleLonghand(totalCycleTime) }}</b>
         </div>
         <div class="summary-row mb-2">
-          <span>Estimated Material Cost</span>
+          <span>
+            Estimated Material Cost
+            <v-chip
+              v-if="part.customerSuppliedMaterial"
+              :color="part.customerSuppliedMaterial ? 'info' : 'default'"
+              size="x-small"
+              variant="tonal"
+            >
+              Customer Supplied
+            </v-chip>
+          </span>
           <b>${{ formatCost(partMaterialCost) }}</b>
         </div>
         <div v-if="totalAdditionalCost" class="summary-row mb-2">
