@@ -33,19 +33,19 @@
 import { onMounted, ref } from 'vue';
 import api from '@/plugins/axios';
 
-const emails = ref<Report[]>([]);
+const emails = ref<EmailReport[]>([]);
 
 onMounted(() => {
   fetchEmails();
 });
 
 async function fetchEmails() {
-  api.get<Report[]>('/reports').then(({ data }) => {
+  api.get<EmailReport[]>('/reports').then(({ data }) => {
     emails.value = data;
   });
 }
 
-async function update(email: Report) {
+async function update(email: EmailReport) {
   await api.put('/reports', email);
 }
 

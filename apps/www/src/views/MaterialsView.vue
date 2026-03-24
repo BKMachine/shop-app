@@ -321,6 +321,7 @@ const defaultMaterial: Material = {
   length: 144,
   supplier: undefined,
   costPerFoot: 0,
+  stock: 0,
 };
 
 // This ensures that all MaterialCategory values are included in the categoryOrder array

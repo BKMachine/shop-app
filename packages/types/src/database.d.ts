@@ -1,4 +1,3 @@
-/// <reference path="../index.d.ts" />
 import type { Document, Types } from 'mongoose';
 
 // _id is a string for the frontend
@@ -9,7 +8,7 @@ declare global {
 
   interface Audit {
     _id: string;
-    type: 'newTool' | 'updateTool';
+    type: 'tool' | 'material' | 'part';
     timestamp: string;
     device: Device;
     old: any | null;
@@ -35,7 +34,7 @@ declare global {
 
   /* REPORT */
 
-  interface Report {
+  interface EmailReport {
     _id: string;
     email: string;
     tooling: Email;
@@ -46,7 +45,7 @@ declare global {
     cc: boolean;
   }
 
-  interface ReportDoc extends Omit<Report, '_id'>, Document<Types.ObjectId> {
+  interface EmailReportDoc extends Omit<EmailReport, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 
@@ -64,6 +63,7 @@ declare global {
     materialType: string;
     supplier?: Supplier | string;
     costPerFoot: number | null;
+    stock: number;
   }
 
   interface MaterialDoc extends Omit<Material, '_id'>, Document<Types.ObjectId> {

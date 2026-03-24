@@ -1,26 +1,30 @@
-interface PerformanceResponse {
-  hits: {
-    total: {
-      value: number;
+declare global {
+  interface PerformanceResponse {
+    hits: {
+      total: {
+        value: number;
+      };
+      hits: Performance[];
     };
-    hits: Performance[];
-  };
+  }
+
+  interface Performance {
+    _source: {
+      '@timestamp': string;
+      running: number;
+      notRunning: number;
+      percent: number;
+      machineCount: number;
+    };
+  }
+
+  interface StatsResponse {
+    hits: {
+      total: {
+        value: number;
+      };
+    };
+  }
 }
 
-interface Performance {
-  _source: {
-    '@timestamp': string;
-    running: number;
-    notRunning: number;
-    percent: number;
-    machineCount: number;
-  };
-}
-
-interface StatsResponse {
-  hits: {
-    total: {
-      value: number;
-    };
-  };
-}
+export {};

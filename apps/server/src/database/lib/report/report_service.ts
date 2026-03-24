@@ -1,16 +1,16 @@
 import Report from './report_model.js';
 
-async function list(): Promise<ReportDoc[]> {
+async function list(): Promise<EmailReportDoc[]> {
   return Report.find();
 }
 
-async function create(data: ReportDoc): Promise<ReportDoc> {
+async function create(data: EmailReportDoc): Promise<EmailReportDoc> {
   const doc = new Report(data);
   await doc.save();
   return doc;
 }
 
-async function update(doc: ReportDoc): Promise<void> {
+async function update(doc: EmailReportDoc): Promise<void> {
   await Report.findByIdAndUpdate(doc._id, doc);
 }
 

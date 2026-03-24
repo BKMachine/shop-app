@@ -562,6 +562,7 @@ function buildMaterialFromParsedResult(result: MaterialParsePreview): Material |
     length: parsedMaterial.length ?? null,
     supplier: undefined,
     costPerFoot: result.proposedCostPerFoot,
+    stock: 0,
   };
 
   material.description = buildMaterialDescription(material);

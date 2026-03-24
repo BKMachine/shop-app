@@ -8,24 +8,6 @@ import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-interface MaterialParsePreview {
-  parsed: ParserResults;
-  existingMaterial: Material | null;
-  currentCostPerFoot: number | null;
-  proposedCostPerFoot: number;
-  hasCostChange: boolean;
-}
-
-interface MaterialApplyUpdate {
-  materialId: string;
-  costPerFoot: number;
-}
-
-interface ParsePdfResponse {
-  previews: MaterialParsePreview[];
-  highlightedPdf: string | null;
-}
-
 router.get('/materials', async (_req, res, next) => {
   try {
     const data = await Materials.list();
@@ -113,6 +95,7 @@ router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next)
     );
 
     const highlightedPdfBuffer = await buildHighlightedPdf(req.file.buffer, parsedResults);
+
     const response: ParsePdfResponse = {
       previews: previewResults,
       highlightedPdf: highlightedPdfBuffer ? highlightedPdfBuffer.toString('base64') : null,
