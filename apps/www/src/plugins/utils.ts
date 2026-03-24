@@ -59,7 +59,7 @@ export function formatWeight(val: number | null | undefined): string {
 
 export function formatDimension(val: number | null | undefined): string {
   if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(3)).toString();
+  return parseFloat(val.toFixed(4)).toString();
 }
 
 export function formatCost(val: number | null | undefined): string {
