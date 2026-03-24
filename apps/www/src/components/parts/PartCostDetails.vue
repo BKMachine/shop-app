@@ -192,8 +192,7 @@
         <div class="summary-row mb-4">
           <span>Current Rate</span>
           <b :class="`text-${currentMarginTone}`">
-            ${{ formatCost(currentAmountMinusMaterialPerHour) }}
-            / hr
+            ${{ formatCost(currentAmountMinusMaterialPerHour) }}/hr
           </b>
         </div>
 
@@ -243,13 +242,13 @@
         </div>
         <div class="summary-row mb-2">
           <span>Price Adjustment Needed</span>
-          <b :class="priceDeltaToTarget >= 0 ? 'text-success' : 'text-error'">
+          <b :class="priceDeltaToTarget >= 0 ? 'text-rateOk' : 'text-rateLow'">
             {{ priceDeltaToTarget >= 0 ? '+' : '-' }}${{ formatCost(Math.abs(priceDeltaToTarget)) }}
           </b>
         </div>
         <div class="summary-row">
           <span>Cycle Time Change Needed</span>
-          <b :class="cycleTimeDeltaToTarget >= 0 ? 'text-error' : 'text-success'">
+          <b :class="cycleTimeDeltaToTarget >= 0 ? 'text-rateLow' : 'text-rateOk'">
             {{ `${cycleTimeDeltaToTarget >= 0 ? '-' : '+'}${formatCycle(Math.abs(cycleTimeDeltaToTarget))}` }}
             <span class="text-medium-emphasis">({{ formatCycle(requiredCycleTimeAtTarget) }})</span>
           </b>

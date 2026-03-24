@@ -10,7 +10,7 @@ export default createVuetify({
     themes: {
       light: {
         colors: {
-          rateLow: '#f35c5c',
+          rateLow: '#d44d4d',
           rateWarn: '#FB8C00',
           rateOk: '#4CAF50',
           rateGood: '#2196F3',
