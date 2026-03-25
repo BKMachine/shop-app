@@ -11,8 +11,8 @@ async function list(): Promise<MaterialDoc[]> {
 async function add(data: Material, device = SERVER_DEVICE_ID): Promise<MaterialDoc> {
   const material = new Material(normalizeDimensions(data));
   await material.save();
-  emit('material', material);
   await Audit.addMaterialAudit(null, material, device);
+  emit('material', material);
   return material;
 }
 
@@ -27,8 +27,8 @@ async function update(
     returnDocument: 'after',
   });
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  emit('material', updatedMaterial);
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
+  emit('material', updatedMaterial);
   return updatedMaterial;
 }
 
@@ -67,8 +67,8 @@ async function updateCostPerFoot(
     { returnDocument: 'after' },
   );
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  emit('material', updatedMaterial);
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
+  emit('material', updatedMaterial);
   return updatedMaterial;
 }
 

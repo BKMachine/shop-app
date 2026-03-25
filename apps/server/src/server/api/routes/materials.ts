@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import Materials from '../../../database/lib/material/material_service.js';
-import parseMaterialPdf from '../../../services/pdfs/material_pdf_parser.js';
 import { buildHighlightedPdf } from '../../../services/pdfs/pdf_highlight_service.js';
+import pdfParserService from '../../../services/pdfs/pdf_parser_service.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
@@ -20,11 +20,11 @@ router.get('/materials', async (_req, res, next) => {
 router.post('/materials', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: Material | undefined } = req.body;
   if (!data) {
-    res.sendStatus(400);
+    res.status(400).json({ error: 'No material data provided.' });
     return;
   }
   if (!req.device) {
-    res.sendStatus(401);
+    res.status(401).json({ error: 'Unauthorized: device not recognized.' });
     return;
   }
 
@@ -39,17 +39,18 @@ router.post('/materials', requireKnownDevice, async (req, res, next) => {
 router.put('/materials', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: Material | undefined } = req.body;
   if (!data) {
-    res.sendStatus(400);
+    res.status(400).json({ error: 'No material data provided.' });
     return;
   }
   if (!req.device) {
-    res.sendStatus(401);
+    res.status(401).json({ error: 'Unauthorized: device not recognized.' });
     return;
   }
+
   try {
     const response = await Materials.update(data, req.device._id.toString());
     if (!response) {
-      res.sendStatus(404);
+      res.status(404).json({ error: 'Material not found.' });
       return;
     }
     res.status(200).json(response);
@@ -63,44 +64,18 @@ router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next)
     res.status(400).json({ error: 'No PDF file uploaded.' });
     return;
   }
-
   if (req.file.mimetype !== 'application/pdf') {
     res.status(400).json({ error: 'Uploaded file must be a PDF.' });
     return;
   }
 
   try {
-    const parsedResults: ParserResults[] = await parseMaterialPdf(req.file.buffer);
-
-    const previewResults: MaterialParsePreview[] = await Promise.all(
-      parsedResults.map(async (parsed) => {
-        const existing = await Materials.findByParsedMaterial(parsed.material);
-        const currentCostPerFoot = existing?.costPerFoot ?? null;
-
-        const existingMaterial = existing
-          ? ({
-              ...existing.toObject(),
-              _id: existing._id.toString(),
-            } as Material)
-          : null;
-
-        return {
-          parsed,
-          existingMaterial,
-          currentCostPerFoot,
-          proposedCostPerFoot: parsed.costPerFoot,
-          hasCostChange: existing ? currentCostPerFoot !== parsed.costPerFoot : false,
-        };
-      }),
-    );
-
+    const { parsedResults, previewResults } = await pdfParserService(req.file.buffer);
     const highlightedPdfBuffer = await buildHighlightedPdf(req.file.buffer, parsedResults);
-
     const response: ParsePdfResponse = {
       previews: previewResults,
       highlightedPdf: highlightedPdfBuffer ? highlightedPdfBuffer.toString('base64') : null,
     };
-
     res.status(200).json(response);
   } catch (e) {
     next(e);
@@ -109,14 +84,12 @@ router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next)
 
 router.post('/materials/parse-pdf/apply', requireKnownDevice, async (req, res, next) => {
   const { updates }: { updates: MaterialApplyUpdate[] | undefined } = req.body;
-
   if (!updates || !Array.isArray(updates)) {
     res.status(400).json({ error: 'updates array is required.' });
     return;
   }
-
   if (!req.device) {
-    res.sendStatus(401);
+    res.status(401).json({ error: 'Unauthorized: device not recognized.' });
     return;
   }
 

@@ -63,7 +63,6 @@ declare global {
     materialType: string;
     supplier?: Supplier | string;
     costPerFoot: number | null;
-    stock: number;
   }
 
   interface MaterialDoc extends Omit<Material, '_id'>, Document<Types.ObjectId> {
