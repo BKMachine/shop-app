@@ -104,6 +104,7 @@ declare global {
     cycleTimes: CycleTimes[];
     additionalCosts: AdditionalCost[];
     price: number;
+    imageIds?: string[];
   }
 
   interface PartDoc extends Omit<Part, '_id'>, Document<Types.ObjectId> {
@@ -151,8 +152,9 @@ declare global {
     relPath: string;
     mimeType?: string;
     status: 'temp' | 'attached';
-    entityType: 'tool' | 'part' | 'setup' | null;
+    entityType: 'tool' | 'part' | null;
     entityId: string | null;
+    expiresAt?: Date;
     createdAt: Date;
     updatedAt: Date;
   }

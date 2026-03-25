@@ -20,6 +20,7 @@ const schema = new Schema<PartDoc>({
   cycleTimes: [{ operation: String, time: Number }],
   additionalCosts: [{ name: String, cost: Number, url: String }],
   price: { type: Number, default: 0 },
+  imageIds: [{ type: Types.ObjectId, ref: 'images' }],
 });
 
 export default model<PartDoc>('parts', schema);

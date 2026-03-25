@@ -5,24 +5,26 @@ const schema = new Schema<ImageDoc>(
     filename: { type: String, required: true },
     relPath: { type: String, required: true },
     mimeType: { type: String },
-
     status: {
       type: String,
       enum: ['temp', 'attached'],
       default: 'temp',
       index: true,
     },
-
-    // What this image is used for (optional polymorphic association)
     entityType: {
       type: String,
-      enum: ['tool', 'part', 'setup', null],
+      enum: ['tool', 'part', null],
       default: null,
       index: true,
     },
     entityId: {
       type: Schema.Types.ObjectId,
       default: null,
+      index: true,
+    },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
       index: true,
     },
   },
