@@ -29,11 +29,11 @@
 }
 
 .rate-chip.rate-chip--rateWarn {
-  background-color: rgba(var(--v-theme-rateWarn), 0.18) ;
+  background-color: rgba(var(--v-theme-rateWarn), 0.18);
 }
 
 .rate-chip.rate-chip--rateOk {
-  background-color: rgba(var(--v-theme-rateOk), 0.18) ;
+  background-color: rgba(var(--v-theme-rateOk), 0.18);
 }
 
 .rate-swatch--rateLow {
@@ -61,11 +61,7 @@
   border-radius: 999px;
   background: var(
     --rate-threshold-gradient,
-    linear-gradient(
-      90deg,
-      rgb(var(--v-theme-rateLow)) 0%,
-      rgb(var(--v-theme-rateLow)) 100%
-    )
+    linear-gradient(90deg, rgb(var(--v-theme-rateLow)) 0%, rgb(var(--v-theme-rateLow)) 100%)
   );
   background-color: transparent;
 }

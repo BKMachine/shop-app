@@ -62,18 +62,8 @@
                 @error="markImageMissing(item._id)"
                 @mouseenter="showExpandedImage(item, $event)"
                 @mouseleave="hideExpandedImage"
-              >
-                <template #error>
-                  <div class="part-img-fallback">
-                    <v-icon icon="mdi-image-off-outline" />
-                    <span>Missing image</span>
-                  </div>
-                </template>
-              </v-img>
-              <div v-else class="part-img part-img-fallback">
-                <v-icon icon="mdi-image-off-outline" />
-                <span>Missing image</span>
-              </div>
+              > </v-img>
+              <MissingImage v-else class="part-img part-img-fallback" />
             </template>
           </v-hover>
         </template>
@@ -114,6 +104,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
+import MissingImage from '@/components/MissingImage.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import { getToneForRate } from '@/plugins/rates_theme';
 import {
@@ -269,6 +260,7 @@ function hideExpandedImage() {
   width: 100%;
   justify-content: space-between;
 }
+
 .stock {
   font-weight: bolder;
   font-size: 1.1em;
@@ -276,27 +268,9 @@ function hideExpandedImage() {
   text-align: center;
   display: inline-block;
 }
+
 .part-img {
   max-height: 50px;
-}
-
-.part-img-fallback {
-  width: 75%;
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  box-sizing: border-box;
-  padding: 10px 14px;
-  margin: 4px auto;
-  border: 1px dashed rgba(var(--v-theme-on-surface), 0.2);
-  border-radius: 8px;
-  background: rgba(var(--v-theme-on-surface), 0.04);
-  color: rgba(var(--v-theme-on-surface), 0.6);
-  font-size: 12px;
-  line-height: 1.2;
-  text-align: center;
 }
 
 .expanded-img-container {
@@ -325,5 +299,14 @@ function hideExpandedImage() {
   border-radius: 6px;
   display: inline-block;
   cursor: pointer;
+}
+
+.part-img-fallback {
+  width: 38px;
+  min-height: 38px;
+  margin: 2px auto;
+  padding: 4px 6px;
+  font-size: 10px;
+  border-radius: 4px;
 }
 </style>

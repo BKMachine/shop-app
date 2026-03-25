@@ -16,6 +16,7 @@
         @mouseenter="showExpandedImage($event)"
         @mouseleave="hideExpandedImage"
       />
+      <MissingImage v-else class="part-img part-img-fallback" />
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
           <div class="d-flex flex-column align-center">
@@ -214,6 +215,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
+import MissingImage from '@/components/MissingImage.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
@@ -221,11 +223,7 @@ import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vu
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { getToneForRate } from '@/plugins/rates_theme';
-import {
-  calculateRatePerHour,
-  calculateTotalCycleMinutes,
-  isNumber,
-} from '@/plugins/utils';
+import { calculateRatePerHour, calculateTotalCycleMinutes, isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { usePartStore } from '@/stores/parts_store';
@@ -461,19 +459,30 @@ function hideExpandedImage() {
   height: 200px;
   position: relative;
 }
+
 .title {
   width: 100%;
   border-bottom: 1px solid #d8d8d8;
 }
+
 .title h3 {
   position: relative;
   bottom: 8px;
   font-weight: normal;
 }
+
 .part-img {
   max-width: 400px;
   max-height: 100px;
   cursor: zoom-in;
+}
+
+.part-img.part-img-fallback {
+  width: 100px;
+  max-width: 100px;
+  min-height: 100px;
+  margin: 4px 0;
+  border-radius: 8px;
 }
 
 .expanded-img-container {
@@ -489,14 +498,17 @@ function hideExpandedImage() {
   background: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+
 .stock {
   font-weight: bolder;
   font-size: 3em;
   line-height: 0.8;
 }
+
 .location {
   font-size: 0.8em;
 }
+
 .loading {
   height: 100%;
 }
