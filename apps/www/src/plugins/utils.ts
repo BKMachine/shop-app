@@ -67,6 +67,10 @@ export function formatCost(val: number | null | undefined): string {
   return val.toFixed(2);
 }
 
+export function hasLogoUrl(logo: string | undefined): boolean {
+  return Boolean(logo?.trim());
+}
+
 export function parseCycle(val: string | number | null | undefined): number {
   if (typeof val === 'number') {
     return Number.isNaN(val) ? 0 : Math.max(0, val);
@@ -119,7 +123,9 @@ export function formatCycleLonghand(val: number | string | null | undefined): st
   return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 }
 
-export function getToneForRate(rate: number): 'rateLow' | 'rateWarn' | 'rateOk' | 'rateGood' | 'rateTurbo' {
+export function getToneForRate(
+  rate: number,
+): 'rateLow' | 'rateWarn' | 'rateOk' | 'rateGood' | 'rateTurbo' {
   if (rate < 100) return 'rateLow';
   if (rate < 125) return 'rateWarn';
   if (rate < 150) return 'rateOk';
@@ -159,7 +165,11 @@ export function calculatePartsPerBar(
 export function calculatePartMaterialCost(
   part: Pick<
     Part,
-    'materialCutType' | 'materialLength' | 'barLength' | 'remnantLength' | 'customerSuppliedMaterial'
+    | 'materialCutType'
+    | 'materialLength'
+    | 'barLength'
+    | 'remnantLength'
+    | 'customerSuppliedMaterial'
   >,
   material: Pick<Material, 'length' | 'costPerFoot'> | null | undefined,
 ): number {

@@ -11,7 +11,13 @@
       <v-list-item v-bind="props" title="">
         <template #prepend>
           <div class="customer-logo-frame customer-logo-frame--menu customer-logo-frame--with-gap">
-            <img alt="" class="customer-logo" :src="item.raw.logo" />
+            <img
+              v-if="hasLogoUrl(item.raw.logo)"
+              alt=""
+              class="customer-logo"
+              :src="item.raw.logo"
+            />
+            <v-icon v-else class="customer-logo-fallback" icon="mdi-image-off-outline" size="16" />
           </div>
         </template>
         {{ item.raw.name }}
@@ -21,7 +27,8 @@
     <template #selection="{ item }">
       <div class="customer-selection">
         <div class="customer-logo-frame customer-logo-frame--selection">
-          <img alt="" class="customer-logo" :src="item.raw.logo" />
+          <img v-if="hasLogoUrl(item.raw.logo)" alt="" class="customer-logo" :src="item.raw.logo" />
+          <v-icon v-else class="customer-logo-fallback" icon="mdi-image-off-outline" size="14" />
         </div>
         <span class="customer-selection__text">{{ item.raw.name }}</span>
       </div>
@@ -31,6 +38,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { hasLogoUrl } from '@/plugins/utils';
 import { useCustomerStore } from '@/stores/customer_store';
 
 const props = withDefaults(
@@ -108,5 +116,9 @@ onMounted(() => {
   max-height: 100%;
   width: auto;
   height: auto;
+}
+
+.customer-logo-fallback {
+  opacity: 0.7;
 }
 </style>

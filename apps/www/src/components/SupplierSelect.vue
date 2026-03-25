@@ -11,7 +11,13 @@
       <v-list-item v-bind="props" title="">
         <template #prepend>
           <div class="supplier-logo-frame supplier-logo-frame--menu supplier-logo-frame--with-gap">
-            <img alt="" class="supplier-logo" :src="item.raw.logo" />
+            <img
+              v-if="hasLogoUrl(item.raw.logo)"
+              alt=""
+              class="supplier-logo"
+              :src="item.raw.logo"
+            />
+            <v-icon v-else class="supplier-logo-fallback" icon="mdi-image-off-outline" size="16" />
           </div>
         </template>
         {{ item.raw.name }}
@@ -21,7 +27,8 @@
     <template #selection="{ item }">
       <div class="supplier-selection">
         <div class="supplier-logo-frame supplier-logo-frame--selection">
-          <img alt="" class="supplier-logo" :src="item.raw.logo" />
+          <img v-if="hasLogoUrl(item.raw.logo)" alt="" class="supplier-logo" :src="item.raw.logo" />
+          <v-icon v-else class="supplier-logo-fallback" icon="mdi-image-off-outline" size="14" />
         </div>
         <span class="supplier-selection__text">{{ item.raw.name }}</span>
       </div>
@@ -31,6 +38,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { hasLogoUrl } from '@/plugins/utils';
 import { useSupplierStore } from '@/stores/supplier_store';
 
 const props = withDefaults(
@@ -108,5 +116,9 @@ onMounted(() => {
   max-height: 100%;
   width: auto;
   height: auto;
+}
+
+.supplier-logo-fallback {
+  opacity: 0.7;
 }
 </style>
