@@ -9,16 +9,30 @@
       </div>
     </v-card-title>
     <v-card-text>
-      <v-text-field
-        v-model="search"
-        class="my-2"
-        clearable
-        hide-details
-        label="Search"
-        prepend-inner-icon="mdi-magnify"
-        single-line
-        variant="outlined"
-      />
+      <v-row no-gutters>
+        <v-col cols="8">
+          <v-text-field
+            v-model="search"
+            class="my-2 mr-2"
+            clearable
+            hide-details
+            label="Search"
+            prepend-inner-icon="mdi-magnify"
+            single-line
+            variant="outlined"
+          />
+        </v-col>
+        <v-col cols="4">
+          <CustomerSelect
+            v-model="selectedCustomerId"
+            class="my-2 ml-2"
+            clearable
+            hide-details
+            label="Customer"
+            variant="outlined"
+          />
+        </v-col>
+      </v-row>
       <v-data-table
         v-model:items-per-page="itemsPerPage"
         :headers="headers"
@@ -99,6 +113,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import CustomerSelect from '@/components/CustomerSelect.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import {
   calculatePartMaterialCost,
@@ -116,6 +131,7 @@ const materialsStore = useMaterialsStore();
 const page = ref(1);
 const itemsPerPage = ref(10);
 const search = ref('');
+const selectedCustomerId = ref<string | null>(null);
 const missingImageIds = ref<Record<string, boolean>>({});
 
 const headers = [
@@ -153,7 +169,14 @@ const headers = [
 ];
 
 const filteredItems = computed(() => {
-  return [...partStore.parts];
+  if (!selectedCustomerId.value) {
+    return [...partStore.parts];
+  }
+
+  return partStore.parts.filter((part) => {
+    const customerId = typeof part.customer === 'string' ? part.customer : part.customer?._id;
+    return customerId === selectedCustomerId.value;
+  });
 });
 
 onMounted(() => {

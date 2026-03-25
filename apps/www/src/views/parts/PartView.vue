@@ -81,27 +81,13 @@
             </v-col>
             <v-col cols="1"> <v-text-field v-model="part.revision" label="Rev" /> </v-col>
             <v-col cols="6">
-              <v-select
+              <CustomerSelect
                 v-model="part.customer"
                 class="ml-2"
                 clearable
-                item-title="name"
-                item-value="_id"
-                :items="customerStore.customers"
                 label="Customer"
                 :rules="[requiredRule]"
-              >
-                <template #item="{ props, item }">
-                  <v-list-item v-bind="props" title="">
-                    <template #prepend>
-                      <v-avatar rounded="0">
-                        <v-img class="customer-logo" :src="item.raw.logo" />
-                      </v-avatar>
-                    </template>
-                    {{ item.raw.name }}
-                  </v-list-item>
-                </template>
-              </v-select>
+              />
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -176,6 +162,7 @@
 import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import CustomerSelect from '@/components/CustomerSelect.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
@@ -189,11 +176,9 @@ import {
 } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
-import { useCustomerStore } from '@/stores/customer_store';
 import { usePartStore } from '@/stores/parts_store';
 
 const partStore = usePartStore();
-const customerStore = useCustomerStore();
 
 const showAdd = computed(() => {
   const tabs = ['docs', 'notes', 'images'];
@@ -201,10 +186,10 @@ const showAdd = computed(() => {
 });
 
 const defaultPartValues = {
-  customerSuppliedMaterial: false,
-  materialCutType: 'blanks',
   barLength: 0,
   remnantLength: 0,
+  customerSuppliedMaterial: false,
+  materialCutType: 'blanks',
 } as const;
 
 const part = ref<Part>({} as Part);
