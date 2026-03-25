@@ -8,7 +8,14 @@
       <h3>{{ part.description }}</h3>
     </div>
     <div class="d-flex align-center justify-space-between py-4">
-      <img alt="" class="part-img" :src="part.img" />
+      <img
+        v-if="part.img"
+        alt=""
+        class="part-img"
+        :src="part.img"
+        @mouseenter="showExpandedImage($event)"
+        @mouseleave="hideExpandedImage"
+      />
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
           <div class="d-flex flex-column align-center">
@@ -32,6 +39,16 @@
         </div>
       </div>
     </div>
+
+    <teleport to="body">
+      <div
+        v-if="expandedImage.visible"
+        class="expanded-img-container"
+        :style="{ top: expandedImage.top + 'px', left: expandedImage.left + 'px' }"
+      >
+        <v-img class="expanded-img" :src="expandedImage.src" />
+      </div>
+    </teleport>
 
     <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="secondary">
       <v-tab value="general"> General </v-tab>
@@ -398,6 +415,28 @@ function addDoc() {
 function addNote() {
   alert('add note');
 }
+
+const expandedImage = ref({
+  visible: false,
+  src: '',
+  top: 0,
+  left: 0,
+});
+
+function showExpandedImage(event: MouseEvent) {
+  if (!part.value.img) return;
+  const rect = (event.target as HTMLElement).getBoundingClientRect();
+  expandedImage.value = {
+    visible: true,
+    src: part.value.img,
+    top: rect.top,
+    left: rect.right,
+  };
+}
+
+function hideExpandedImage() {
+  expandedImage.value = { visible: false, src: '', top: 0, left: 0 };
+}
 </script>
 
 <style scoped>
@@ -417,6 +456,21 @@ function addNote() {
 .part-img {
   max-width: 400px;
   max-height: 100px;
+  cursor: zoom-in;
+}
+
+.expanded-img-container {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.expanded-img {
+  width: 360px;
+  max-height: 360px;
+  border: 1px solid #ccc;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 .stock {
   font-weight: bolder;
