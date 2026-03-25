@@ -2,20 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageDir } from '../../../directories.js';
 import logger from '../../../logger.js';
+import { emit } from '../../../server/sockets.js';
 import Image from './image_model.js';
 
 async function add(data: unknown): Promise<ImageDoc> {
   const doc = new Image(data);
   await doc.save();
+  emit('imageUploaded');
   return doc;
 }
 
 async function update(image: ImageDoc): Promise<ImageDoc | null> {
-  return await Image.findByIdAndUpdate(
+  const updated = await Image.findByIdAndUpdate(
     image._id,
     { ...image, updatedAt: new Date() },
     { returnDocument: 'after' },
   );
+  emit('imageUploaded');
+  return updated;
 }
 
 async function listRecents(limit = 50): Promise<ImageDoc[]> {
@@ -67,6 +71,7 @@ async function cleanupExpired(): Promise<{ deleted: number; errors: string[] }> 
 
 async function remove(id: string): Promise<boolean> {
   const result = await Image.findByIdAndDelete(id);
+  emit('imageDeleted');
   return result !== null;
 }
 

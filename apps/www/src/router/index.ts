@@ -7,6 +7,7 @@ import PartsView from '@/views/parts/PartsView.vue';
 import PartView from '@/views/parts/PartView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import StatusView from '@/views/StatusView.vue';
+import TestView from '@/views/TestView.vue';
 import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
 import ToolView from '@/views/tools/ToolView.vue';
@@ -78,6 +79,11 @@ const router = createRouter({
       path: '/activity',
       name: 'activity',
       component: ActivityView,
+    },
+    {
+      path: '/test',
+      name: 'test',
+      component: TestView,
     },
   ],
 });

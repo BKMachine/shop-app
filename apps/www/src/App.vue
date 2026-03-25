@@ -26,6 +26,9 @@
         <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
       </v-list>
       <template #append>
+        <v-list-item v-if="showTest" link prepend-icon="mdi-test-tube" :to="{name: 'test'}">
+          WIP
+        </v-list-item>
         <v-list-item
           v-if="showTest"
           prepend-icon="mdi-barcode-scan"

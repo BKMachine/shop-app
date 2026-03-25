@@ -8,15 +8,27 @@
       <h3>{{ part.description }}</h3>
     </div>
     <div class="d-flex align-center justify-space-between py-4">
-      <img
-        v-if="part.img"
-        alt=""
-        class="part-img"
-        :src="part.img"
-        @mouseenter="showExpandedImage($event)"
-        @mouseleave="hideExpandedImage"
-      />
-      <MissingImage v-else class="part-img part-img-fallback" />
+      <div class="part-img-wrapper">
+        <img
+          v-if="part.img"
+          alt=""
+          class="part-img"
+          :src="part.img"
+          @mouseenter="showExpandedImage($event)"
+          @mouseleave="hideExpandedImage"
+        />
+        <MissingImage v-else class="part-img part-img-fallback" />
+        <v-btn
+          class="part-img-edit"
+          :class="{ 'part-img-edit--always': !part.img }"
+          :disabled="!part._id"
+          icon="mdi-pencil"
+          size="x-small"
+          title="Edit part image"
+          variant="flat"
+          @click="imageManagerVisible = true"
+        />
+      </div>
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
           <div class="d-flex flex-column align-center">
@@ -130,13 +142,6 @@
           </v-row>
           <v-row no-gutters>
             <v-text-field
-              v-model="part.img"
-              append-inner-icon="mdi-image-outline"
-              label="Part Image URL"
-            />
-          </v-row>
-          <v-row no-gutters>
-            <v-text-field
               v-model="part.productLink"
               append-inner-icon="mdi-open-in-new"
               label="Product Page URL"
@@ -203,10 +208,16 @@
         </v-window-item>
 
         <v-window-item value="docs"> DOCS </v-window-item>
-        <v-window-item value="images"> IMAGES </v-window-item>
+        <v-window-item value="images"> <PartImagesDetails :part="part" /> </v-window-item>
         <v-window-item value="notes"> NOTES </v-window-item>
       </v-window>
     </v-form>
+
+    <ImageManagerDialog
+      v-model="imageManagerVisible"
+      :part-id="part._id || ''"
+      @image-selected="onPartImageSelected"
+    />
   </v-container>
 </template>
 
@@ -215,8 +226,10 @@ import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
+import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
+import PartImagesDetails from '@/components/parts/PartImagesDetails.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
@@ -253,6 +266,7 @@ const valid = ref(false);
 const loading = ref(false);
 const saveFlag = ref(false);
 const partMaterialCost = ref(0);
+const imageManagerVisible = ref(false);
 
 const currentRate = computed(() => {
   const totalCycleMinutes = calculateTotalCycleMinutes(part.value.cycleTimes);
@@ -421,6 +435,9 @@ function addNew() {
     addDoc();
   } else if (tab.value === 'notes') {
     addNote();
+  } else if (tab.value === 'images') {
+    // Images are managed via the PartImagesDetails component
+    // No action needed here as the component has its own buttons
   }
 }
 
@@ -429,6 +446,10 @@ function addDoc() {
 }
 function addNote() {
   alert('add note');
+}
+
+function onPartImageSelected(payload: { imageId: string; url: string }) {
+  part.value.img = payload.url;
 }
 
 const expandedImage = ref({
@@ -475,6 +496,32 @@ function hideExpandedImage() {
   max-width: 400px;
   max-height: 100px;
   cursor: zoom-in;
+}
+
+.part-img-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+}
+
+.part-img-edit {
+  position: absolute;
+  bottom: -10px;
+  right: -10px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  transform: translateY(-2px);
+  background: rgba(161, 223, 252, 0.94);
+}
+
+.part-img-wrapper:hover .part-img-edit,
+.part-img-edit--always {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .part-img.part-img-fallback {
