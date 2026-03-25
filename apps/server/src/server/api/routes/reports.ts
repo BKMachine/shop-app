@@ -28,7 +28,7 @@ router.post('/reports', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/reports', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: EmailReportDoc   | undefined } = req.body;
+  const { data }: { data: EmailReportDoc | undefined } = req.body;
   if (!data) {
     res.sendStatus(400);
     return;
