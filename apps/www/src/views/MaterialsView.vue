@@ -277,7 +277,6 @@ const defaultMaterial: Material = {
   length: 144,
   supplier: undefined,
   costPerFoot: 0,
-  stock: 0,
 };
 
 const selectedMaterial = ref<Material>({ ...defaultMaterial });
