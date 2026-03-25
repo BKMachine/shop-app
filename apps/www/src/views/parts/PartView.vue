@@ -161,7 +161,23 @@
                 min="0"
                 type="number"
                 @keydown="isNumber($event)"
-              />
+              >
+                <template #append-inner>
+                  <v-dialog max-width="500">
+                    <template #activator="{ props: activatorProps }">
+                      <v-icon v-bind="activatorProps" icon="mdi-contrast" />
+                    </template>
+                    <template #default="{ isActive }">
+                      <v-card>
+                        <PartsAdjustStockDialog
+                          :part="part"
+                          @close-dialog="isActive.value = false"
+                        />
+                      </v-card>
+                    </template>
+                  </v-dialog>
+                </template>
+              </v-text-field>
             </v-col>
             <v-col cols="4">
               <v-combobox
@@ -201,6 +217,7 @@ import CustomerSelect from '@/components/CustomerSelect.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
+import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import {
