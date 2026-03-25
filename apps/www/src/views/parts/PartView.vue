@@ -20,6 +20,16 @@
             </div>
           </div>
         </div>
+        <div class="d-flex flex-column align-end justify-center">
+          <v-chip
+            class="mb-2 rate-chip"
+            :class="[`rate-chip--${currentRateTone}`, `text-${currentRateTone}`]"
+            density="comfortable"
+            @click="tab = 'cost'"
+          >
+            {{ currentRateDisplay }}
+          </v-chip>
+        </div>
       </div>
     </div>
 
@@ -171,7 +181,12 @@ import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
-import { isNumber } from '@/plugins/utils';
+import {
+  calculateRatePerHour,
+  calculateTotalCycleMinutes,
+  getToneForRate,
+  isNumber,
+} from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useCustomerStore } from '@/stores/customer_store';
@@ -204,9 +219,32 @@ const loading = ref(false);
 const saveFlag = ref(false);
 const partMaterialCost = ref(0);
 
+const currentRate = computed(() => {
+  const totalCycleMinutes = calculateTotalCycleMinutes(part.value.cycleTimes);
+  const rate = calculateRatePerHour(part.value.price, partMaterialCost.value, totalCycleMinutes);
+  return Number.isFinite(rate) ? rate : 0;
+});
+
+const currentRateTone = computed(() => getToneForRate(currentRate.value));
+
+const currentRateDisplay = computed(() => {
+  return `$${currentRate.value.toFixed(2)}/hr`;
+});
+
+function setTabFromQuery() {
+  const routeTab = router.currentRoute.value.query.tab;
+  const validTabs = ['general', 'material', 'cost', 'stock', 'docs', 'notes', 'images'] as const;
+
+  if (typeof routeTab === 'string' && validTabs.includes(routeTab as (typeof validTabs)[number])) {
+    tab.value = routeTab as typeof tab.value;
+  }
+}
+
 onMounted(() => {
   const routeName = router.currentRoute.value.name;
   const routeParams = router.currentRoute.value.params;
+
+  setTabFromQuery();
 
   if (routeName === 'createPart') {
     part.value = { ...part.value, ...defaultPartValues };
@@ -217,7 +255,10 @@ onMounted(() => {
   if (routeName === 'viewPart') fetchPart();
 
   // Fetch the tool from the DB if the route changes
-  watch(id, () => fetchPart());
+  watch(id, () => {
+    setTabFromQuery();
+    fetchPart();
+  });
 
   // Update tool if changed from another user
   /*watch(toolStore.trigger, () => { // TODO
@@ -234,6 +275,18 @@ onMounted(() => {
     tool.value = { ...match };
     toolOriginal.value = { ...match };
   });*/
+});
+
+watch(tab, (newTab) => {
+  const query = router.currentRoute.value.query;
+  if (query.tab === newTab) return;
+
+  router.replace({
+    query: {
+      ...query,
+      tab: newTab,
+    },
+  });
 });
 
 onBeforeUnmount(() => {
@@ -372,5 +425,23 @@ function addNote() {
 }
 .loading {
   height: 100%;
+}
+
+.rate-chip {
+  justify-content: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rate-chip--rateLow {
+  background: rgba(var(--v-theme-rateLow), 0.18);
+}
+
+.rate-chip--rateWarn {
+  background: rgba(var(--v-theme-rateWarn), 0.18);
+}
+
+.rate-chip--rateOk {
+  background: rgba(var(--v-theme-rateOk), 0.18);
 }
 </style>

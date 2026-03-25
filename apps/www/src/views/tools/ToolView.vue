@@ -411,6 +411,15 @@ const valid = ref(false);
 const loading = ref(false);
 const saveFlag = ref(false);
 
+function setTabFromQuery() {
+  const routeTab = router.currentRoute.value.query.tab;
+  const validTabs = ['general', 'stock', 'tech'] as const;
+
+  if (typeof routeTab === 'string' && validTabs.includes(routeTab as (typeof validTabs)[number])) {
+    tab.value = routeTab as typeof tab.value;
+  }
+}
+
 onBeforeMount(() => {
   // Get tool category from local storage to determine which tab to show
   const type = window.localStorage.getItem('type') as ToolCategory | null;
@@ -422,11 +431,16 @@ onMounted(() => {
   const routeName = router.currentRoute.value.name;
   const routeParams = router.currentRoute.value.params;
 
+  setTabFromQuery();
+
   // Fetch the tool from the DB if we are viewing a tool and not creating a new tool
   if (routeName === 'viewTool') fetchTool();
 
   // Fetch the tool from the DB if the route changes
-  watch(id, () => fetchTool());
+  watch(id, () => {
+    setTabFromQuery();
+    fetchTool();
+  });
 
   // Update tool if changed from another user
   watch(toolStore.trigger, () => {
@@ -442,6 +456,18 @@ onMounted(() => {
     }
     tool.value = { ...match };
     toolOriginal.value = { ...match };
+  });
+});
+
+watch(tab, (newTab) => {
+  const query = router.currentRoute.value.query;
+  if (query.tab === newTab) return;
+
+  router.replace({
+    query: {
+      ...query,
+      tab: newTab,
+    },
   });
 });
 

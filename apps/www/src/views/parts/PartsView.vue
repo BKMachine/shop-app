@@ -32,6 +32,7 @@
           <div class="rate-swatch-cell">
             <span
               :class="['rate-swatch', `rate-swatch--${item.marginTone}`, `text-${item.marginTone}`]"
+              @click.stop="openPartCost(item)"
             />
           </div>
         </template>
@@ -183,6 +184,10 @@ function openPart(event: unknown, { item }: { item: Part }) {
   router.push({ name: 'viewPart', params: { id: item._id } });
 }
 
+function openPartCost(item: Part) {
+  router.push({ name: 'viewPart', params: { id: item._id }, query: { tab: 'cost' } });
+}
+
 function location(part: Part) {
   let text = part.location || '';
   if (part.position) text += ' - ' + part.position;
@@ -296,6 +301,7 @@ function hideExpandedImage() {
   height: 18px;
   border-radius: 6px;
   display: inline-block;
+  cursor: pointer;
 }
 
 .rate-swatch--rateLow {
