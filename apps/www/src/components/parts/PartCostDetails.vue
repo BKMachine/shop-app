@@ -277,6 +277,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import {
+  buildRateThresholdGradient,
+  getToneForRate,
+  RATE_TARGET_RANGE,
+} from '@/plugins/rates_theme';
+import {
   calculateRatePerHour,
   formatCost,
   formatCycle,
@@ -284,11 +289,6 @@ import {
   onlyAllowNumeric,
   parseCycle,
 } from '@/plugins/utils';
-import {
-  buildRateThresholdGradient,
-  getToneForRate,
-  RATE_TARGET_RANGE,
-} from '@/plugins/rates_theme';
 
 const { part, partMaterialCost } = defineProps<{
   part: Part;
