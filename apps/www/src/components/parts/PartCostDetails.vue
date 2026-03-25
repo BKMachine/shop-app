@@ -228,11 +228,12 @@
 
           <v-slider
             v-model="targetHourlyRate"
-            class="target-slider"
+            class="target-slider rate-threshold-slider"
             color="primary"
             :max="hourlyTargetMax"
             :min="hourlyTargetMin"
             :step="hourlyTargetStep"
+            :style="rateSliderStyle"
             thumb-label
           />
 
@@ -280,10 +281,14 @@ import {
   formatCost,
   formatCycle,
   formatCycleLonghand,
-  getToneForRate,
   onlyAllowNumeric,
   parseCycle,
 } from '@/plugins/utils';
+import {
+  buildRateThresholdGradient,
+  getToneForRate,
+  RATE_TARGET_RANGE,
+} from '@/plugins/rates_theme';
 
 const { part, partMaterialCost } = defineProps<{
   part: Part;
@@ -394,9 +399,9 @@ const removeCycleTime = (rowId: string, idx: number) => {
 
 const priceInput = ref<string | null>(null);
 const targetHourlyRate = ref(125);
-const hourlyTargetMin = 50;
-const hourlyTargetMax = 200;
-const hourlyTargetStep = 5;
+const hourlyTargetMin = RATE_TARGET_RANGE.min;
+const hourlyTargetMax = RATE_TARGET_RANGE.max;
+const hourlyTargetStep = RATE_TARGET_RANGE.step;
 
 const totalCostBase = computed(() => (partMaterialCost || 0) + totalAdditionalCost.value);
 
@@ -457,6 +462,10 @@ const currentRateSliderPercent = computed(() => {
 
   return Math.max(0, Math.min(100, normalized));
 });
+
+const rateSliderStyle = computed(() => ({
+  '--rate-threshold-gradient': buildRateThresholdGradient(hourlyTargetMin, hourlyTargetMax),
+}));
 
 function onPriceUpdate(value: string) {
   priceInput.value = value;
@@ -605,25 +614,6 @@ function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
   border-top: 7px solid currentColor;
-}
-
-.target-slider .v-slider-track__background {
-  opacity: 1;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgb(var(--v-theme-rateLow)) 0%,
-    rgb(var(--v-theme-rateLow)) 33.33%,
-    rgb(var(--v-theme-rateWarn)) 33.33%,
-    rgb(var(--v-theme-rateWarn)) 50%,
-    rgb(var(--v-theme-rateOk)) 50%,
-    rgb(var(--v-theme-rateOk)) 66.67%,
-    rgb(var(--v-theme-rateGood)) 66.67%,
-    rgb(var(--v-theme-rateGood)) 83.33%,
-    rgb(var(--v-theme-rateTurbo)) 83.33%,
-    rgb(var(--v-theme-rateTurbo)) 100%
-  );
-  background-color: transparent;
 }
 
 .slider-limits {

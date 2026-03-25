@@ -115,11 +115,11 @@
 import { computed, onMounted, ref } from 'vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
+import { getToneForRate } from '@/plugins/rates_theme';
 import {
   calculatePartMaterialCost,
   calculateRatePerHour,
   calculateTotalCycleMinutes,
-  getToneForRate,
 } from '@/plugins/utils';
 import router from '@/router';
 import { useMaterialsStore } from '@/stores/materials_store';
@@ -325,25 +325,5 @@ function hideExpandedImage() {
   border-radius: 6px;
   display: inline-block;
   cursor: pointer;
-}
-
-.rate-swatch--rateLow {
-  background: rgb(var(--v-theme-rateLow));
-}
-
-.rate-swatch--rateWarn {
-  background: rgb(var(--v-theme-rateWarn));
-}
-
-.rate-swatch--rateOk {
-  background: rgb(var(--v-theme-rateOk));
-}
-
-.rate-swatch--rateGood {
-  background: rgb(var(--v-theme-rateGood));
-}
-
-.rate-swatch--rateTurbo {
-  background: rgb(var(--v-theme-rateTurbo));
 }
 </style>

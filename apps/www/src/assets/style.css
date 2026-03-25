@@ -23,3 +23,49 @@
 .v-field--disabled {
   opacity: 0.6;
 }
+
+.rate-chip.rate-chip--rateLow {
+  background-color: rgba(var(--v-theme-rateLow), 0.1);
+}
+
+.rate-chip.rate-chip--rateWarn {
+  background-color: rgba(var(--v-theme-rateWarn), 0.18) ;
+}
+
+.rate-chip.rate-chip--rateOk {
+  background-color: rgba(var(--v-theme-rateOk), 0.18) ;
+}
+
+.rate-swatch--rateLow {
+  background: rgb(var(--v-theme-rateLow));
+}
+
+.rate-swatch--rateWarn {
+  background: rgb(var(--v-theme-rateWarn));
+}
+
+.rate-swatch--rateOk {
+  background: rgb(var(--v-theme-rateOk));
+}
+
+.rate-swatch--rateGood {
+  background: rgb(var(--v-theme-rateGood));
+}
+
+.rate-swatch--rateTurbo {
+  background: rgb(var(--v-theme-rateTurbo));
+}
+
+.rate-threshold-slider .v-slider-track__background {
+  opacity: 1;
+  border-radius: 999px;
+  background: var(
+    --rate-threshold-gradient,
+    linear-gradient(
+      90deg,
+      rgb(var(--v-theme-rateLow)) 0%,
+      rgb(var(--v-theme-rateLow)) 100%
+    )
+  );
+  background-color: transparent;
+}

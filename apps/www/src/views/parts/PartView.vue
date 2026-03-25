@@ -220,10 +220,10 @@ import PartStockGraph from '@/components/parts/PartStockGraph.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
+import { getToneForRate } from '@/plugins/rates_theme';
 import {
   calculateRatePerHour,
   calculateTotalCycleMinutes,
-  getToneForRate,
   isNumber,
 } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
@@ -505,17 +505,5 @@ function hideExpandedImage() {
   justify-content: center;
   font-weight: 600;
   cursor: pointer;
-}
-
-.rate-chip--rateLow {
-  background: rgba(var(--v-theme-rateLow), 0.18);
-}
-
-.rate-chip--rateWarn {
-  background: rgba(var(--v-theme-rateWarn), 0.18);
-}
-
-.rate-chip--rateOk {
-  background: rgba(var(--v-theme-rateOk), 0.18);
 }
 </style>

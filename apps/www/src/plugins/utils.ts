@@ -123,16 +123,6 @@ export function formatCycleLonghand(val: number | string | null | undefined): st
   return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 }
 
-export function getToneForRate(
-  rate: number,
-): 'rateLow' | 'rateWarn' | 'rateOk' | 'rateGood' | 'rateTurbo' {
-  if (rate < 100) return 'rateLow';
-  if (rate < 125) return 'rateWarn';
-  if (rate < 150) return 'rateOk';
-  if (rate < 175) return 'rateGood';
-  return 'rateTurbo';
-}
-
 export function calculatePartsPerBar(
   part: Pick<Part, 'materialCutType' | 'materialLength' | 'barLength' | 'remnantLength'>,
   fullBarLength: number,
