@@ -85,7 +85,7 @@ onMounted(() => {
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-  padding: 2px;
+  padding: 0;
 }
 
 .supplier-logo-frame--menu {
