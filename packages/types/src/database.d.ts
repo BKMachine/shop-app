@@ -92,6 +92,7 @@ declare global {
     location?: string;
     position?: string;
     img?: string;
+    productLink?: string;
     revision?: string;
     material?: Material | string;
     customerSuppliedMaterial?: boolean;

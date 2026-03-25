@@ -44,6 +44,17 @@
       <v-spacer />
       <div class="d-flex align-center">
         <v-btn
+          v-if="part.productLink"
+          class="mr-2"
+          color="yellow"
+          density="comfortable"
+          prepend-icon="mdi-open-in-new"
+          variant="elevated"
+          @click="openLink(part.productLink)"
+        >
+          Product Page
+        </v-btn>
+        <v-btn
           v-if="showAdd"
           class="mr-2"
           color="blue"
@@ -104,6 +115,13 @@
               v-model="part.img"
               append-inner-icon="mdi-image-outline"
               label="Part Image URL"
+            />
+          </v-row>
+          <v-row no-gutters>
+            <v-text-field
+              v-model="part.productLink"
+              append-inner-icon="mdi-open-in-new"
+              label="Product Page URL"
             />
           </v-row>
         </v-window-item>
