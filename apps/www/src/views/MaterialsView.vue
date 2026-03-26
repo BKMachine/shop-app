@@ -155,6 +155,7 @@
                 <v-col>
                   <v-text-field
                     :disabled="!weight"
+                    hide-details
                     label="Cost per Pound (lbs)"
                     :model-value="formatCost(costPerPound)"
                     prefix="$"
@@ -167,6 +168,7 @@
                 <v-col>
                   <v-text-field
                     :disabled="!weight"
+                    hide-details
                     label="Cost per Foot (ft)"
                     :model-value="formatCost(selectedMaterial.costPerFoot)"
                     prefix="$"
@@ -179,6 +181,7 @@
                 <v-col>
                   <v-text-field
                     :disabled="!weight"
+                    hide-details
                     label="Cost per Bar (ea)"
                     :model-value="formatCost(costPerBar)"
                     prefix="$"
@@ -191,6 +194,7 @@
                 <v-col>
                   <v-text-field
                     class="readonly-field"
+                    hide-details
                     hint="Auto Generated"
                     label="Estimated Weight (lbs)"
                     :model-value="formatWeight(weight)"

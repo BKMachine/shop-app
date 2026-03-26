@@ -22,25 +22,25 @@
         stroke="#888"
         stroke-width="1"
         :x1="sketchProps.x ?? 0"
-        :x2="(sketchProps.x ?? 0) + 120"
+        :x2="(sketchProps.x ?? 0) + svgSize"
         :y1="sketchProps.y ?? 0"
-        :y2="(sketchProps.y ?? 0) - 120"
+        :y2="(sketchProps.y ?? 0) - svgSize"
       />
       <line
         stroke="#888"
         stroke-width="1"
         :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
-        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + 120"
+        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + svgSize"
         :y1="sketchProps.y ?? 0"
-        :y2="(sketchProps.y ?? 0) - 120"
+        :y2="(sketchProps.y ?? 0) - svgSize"
       />
       <line
         stroke="#888"
         stroke-width="1"
         :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
-        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + 120"
+        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + svgSize"
         :y1="(sketchProps.y ?? 0) + (sketchProps.h ?? 0)"
-        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 120"
+        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - svgSize"
       />
     </g>
     <g v-else-if="sketchProps && sketchProps.type === 'circle'">
@@ -93,25 +93,25 @@
         stroke="#888"
         stroke-width="1"
         :x1="sketchProps.x ?? 0"
-        :x2="(sketchProps.x ?? 0) + 120"
+        :x2="(sketchProps.x ?? 0) + svgSize"
         :y1="sketchProps.y ?? 0"
-        :y2="(sketchProps.y ?? 0) - 120"
+        :y2="(sketchProps.y ?? 0) - svgSize"
       />
       <line
         stroke="#888"
         stroke-width="1"
         :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
-        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + 120"
+        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + svgSize"
         :y1="sketchProps.y ?? 0"
-        :y2="(sketchProps.y ?? 0) - 120"
+        :y2="(sketchProps.y ?? 0) - svgSize"
       />
       <line
         stroke="#888"
         stroke-width="1"
         :x1="(sketchProps.x ?? 0) + (sketchProps.w ?? 0)"
-        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + 120"
+        :x2="(sketchProps.x ?? 0) + (sketchProps.w ?? 0) + svgSize"
         :y1="(sketchProps.y ?? 0) + (sketchProps.h ?? 0)"
-        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - 120"
+        :y2="(sketchProps.y ?? 0) + (sketchProps.h ?? 0) - svgSize"
       />
       <!-- 4th 3D line for inner tube wall corner (bottom left, down and left) -->
       <line
@@ -173,7 +173,9 @@ const props = defineProps<{
 }>();
 
 // SVG size in px
-const svgSize = 120;
+const svgSize = 100;
+// ViewBox size in SVG units
+const viewBoxSize = 100;
 
 // Compute the sketch properties for SVG rendering
 const sketchProps = computed(() => {
@@ -192,22 +194,22 @@ const sketchProps = computed(() => {
     if (wall > 0 && width > 0 && height > 0) {
       // Rectangular tube
       // Outer: width x height, Inner: subtract wall thickness
-      const scale = Math.min((100 - 2 * pad) / width, (100 - 2 * pad) / height);
+      const scale = Math.min((viewBoxSize - 2 * pad) / width, (viewBoxSize - 2 * pad) / height);
       return {
         type: 'rect-tube',
-        x: (100 - width * scale) / 2,
-        y: (100 - height * scale) / 2,
+        x: (viewBoxSize - width * scale) / 2,
+        y: (viewBoxSize - height * scale) / 2,
         w: width * scale,
         h: height * scale,
         wall: wall * scale,
       };
     } else if (width > 0 && height > 0) {
       // Solid rectangle
-      const scale = Math.min((100 - 2 * pad) / width, (100 - 2 * pad) / height);
+      const scale = Math.min((viewBoxSize - 2 * pad) / width, (viewBoxSize - 2 * pad) / height);
       return {
         type: 'rect',
-        x: (100 - width * scale) / 2,
-        y: (100 - height * scale) / 2,
+        x: (viewBoxSize - width * scale) / 2,
+        y: (viewBoxSize - height * scale) / 2,
         w: width * scale,
         h: height * scale,
       };
@@ -215,21 +217,21 @@ const sketchProps = computed(() => {
   } else if (m.type === 'Round') {
     if (wall > 0 && diameter > 0) {
       // Round tube
-      const scale = (100 - 2 * pad) / diameter;
+      const scale = (viewBoxSize - 2 * pad) / diameter;
       return {
         type: 'circle-tube',
-        cx: 50,
-        cy: 50,
+        cx: viewBoxSize * 0.5,
+        cy: viewBoxSize * 0.5,
         r: (diameter * scale) / 2,
         wall: wall * scale,
       };
     } else if (diameter > 0) {
       // Solid round
-      const scale = (100 - 2 * pad) / diameter;
+      const scale = (viewBoxSize - 2 * pad) / diameter;
       return {
         type: 'circle',
-        cx: 50,
-        cy: 50,
+        cx: viewBoxSize * 0.5,
+        cy: viewBoxSize * 0.5,
         r: (diameter * scale) / 2,
       };
     }

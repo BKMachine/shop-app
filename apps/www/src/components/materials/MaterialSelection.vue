@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { materials as materialsList } from '@repo/utilities/materials';
+import { materials } from '@repo/utilities/materials';
 import { computed } from 'vue';
 
 const props = withDefaults(
@@ -52,7 +52,7 @@ type MissingMaterialCategories = Exclude<MaterialCategory, (typeof categoryOrder
 const hasAllMaterialCategories: MissingMaterialCategories extends never ? true : never = true;
 
 const items = computed(() => {
-  const groupedMaterials = Object.entries(materialsList).reduce(
+  const groupedMaterials = Object.entries(materials).reduce(
     (groups, [name, data]) => {
       const category = data.category;
       groups[category] ??= [];
