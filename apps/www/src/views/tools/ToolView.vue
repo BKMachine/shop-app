@@ -659,4 +659,7 @@ const showMillingOpts = computed<boolean>(() => {
   background: #932c95;
   color: white;
 }
+.v-window-item {
+  padding: 0 1rem 1rem 1rem;
+}
 </style>

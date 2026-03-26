@@ -565,4 +565,7 @@ function hideExpandedImage() {
   font-weight: 600;
   cursor: pointer;
 }
+.v-window-item {
+  padding: 0 1rem 1rem 1rem;
+}
 </style>
