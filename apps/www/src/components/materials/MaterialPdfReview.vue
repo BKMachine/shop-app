@@ -293,6 +293,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import api from '@/plugins/axios';
+import { buildMaterialDescription } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useMaterialsStore } from '@/stores/materials_store';
 
@@ -491,12 +492,6 @@ function formatNum(value: number): string {
   return Number.isFinite(value) ? parseFloat(value.toFixed(4)).toString() : '—';
 }
 
-function formatExtractedDate(value: string): string {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'Unknown';
-  return date.toLocaleDateString();
-}
-
 function displayCurrentCost(result: MaterialParsePreview, index: number): number | null {
   if (decisions.value[index] === 'applied' && index in acceptedFromCostPerFoot.value) {
     return acceptedFromCostPerFoot.value[index] ?? null;
@@ -526,24 +521,6 @@ function isResolved(result: MaterialParsePreview, index: number): boolean {
   if (decision === 'added' || decision === 'applied' || decision === 'rejected') return true;
   if (result.existingMaterial && !result.hasCostChange) return true;
   return false;
-}
-
-function buildMaterialDescription(material: Material): string {
-  if (!material.type || !material.materialType) return '';
-
-  const form = material.wallThickness ? 'Tubing' : 'Bar';
-
-  if (material.type === 'Flat') {
-    const dims = material.wallThickness
-      ? `${material.height}" x ${material.width}" x ${material.wallThickness}"`
-      : `${material.height}" x ${material.width}"`;
-    return `${material.materialType} Flat ${form} - ${dims}`;
-  }
-
-  const roundDims = material.wallThickness
-    ? `${material.diameter}" ⌀ x ${material.wallThickness}"`
-    : `${material.diameter}" ⌀`;
-  return `${material.materialType} Round ${form} - ${roundDims}`;
 }
 
 function buildMaterialFromParsedResult(result: MaterialParsePreview): Material | null {

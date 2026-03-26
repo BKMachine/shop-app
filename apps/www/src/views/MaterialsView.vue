@@ -262,7 +262,12 @@ import MaterialSelection from '@/components/materials/MaterialSelection.vue';
 import MaterialSketch from '@/components/materials/MaterialSketch.vue';
 import MaterialsList from '@/components/materials/MaterialsList.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
-import { formatCost, formatWeight, onlyAllowNumeric } from '@/plugins/utils';
+import {
+  buildMaterialDescription,
+  formatCost,
+  formatWeight,
+  onlyAllowNumeric,
+} from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useMaterialsStore } from '@/stores/materials_store';
 
@@ -380,26 +385,7 @@ function saveMaterial() {
 }
 
 const description = computed(() => {
-  const material = selectedMaterial.value;
-  if (!material.type || !material.materialType) return '';
-
-  const type = material.wallThickness ? 'Tubing' : 'Bar';
-  let description = '';
-
-  if (material.type === 'Flat') {
-    const materialInfo = material.wallThickness
-      ? `${material.height}" x ${material.width}" x ${material.wallThickness}"`
-      : `${material.height}" x ${material.width}"`;
-    description = `${material.materialType} Flat ${type} - ${materialInfo}`;
-  } else if (material.type === 'Round') {
-    const diameterInfo = material.wallThickness
-      ? `${material.diameter}" ⌀ x ${material.wallThickness}"`
-      : `${material.diameter}" ⌀`;
-    description = `${material.materialType} Round ${type} - ${diameterInfo}`;
-  } else {
-    description = `${material.materialType}`;
-  }
-
+  const description = buildMaterialDescription(selectedMaterial.value);
   selectedMaterial.value.description = description;
   return description;
 });

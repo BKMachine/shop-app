@@ -188,3 +188,26 @@ export function calculateRatePerHour(
   const amountMinusMaterial = (Number(price) || 0) - partMaterialCost;
   return amountMinusMaterial / (totalCycleMinutes / 60);
 }
+
+export function buildMaterialDescription(material: Material): string {
+  if (!material.type || !material.materialType) return '';
+
+  const type = material.wallThickness ? 'Tubing' : 'Bar';
+  let description = '';
+
+  if (material.type === 'Flat') {
+    const materialInfo = material.wallThickness
+      ? `${material.height}" x ${material.width}" x ${material.wallThickness}"`
+      : `${material.height}" x ${material.width}"`;
+    description = `${material.materialType} Flat ${type} - ${materialInfo}`;
+  } else if (material.type === 'Round') {
+    const diameterInfo = material.wallThickness
+      ? `${material.diameter}" ⌀ x ${material.wallThickness}"`
+      : `${material.diameter}" ⌀`;
+    description = `${material.materialType} Round ${type} - ${diameterInfo}`;
+  } else {
+    description = `${material.materialType}`;
+  }
+
+  return description;
+}
