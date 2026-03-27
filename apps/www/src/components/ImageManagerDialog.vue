@@ -63,6 +63,7 @@
                   hide-details
                   label="Add image URL"
                   placeholder="https://example.com/image.jpg"
+                  @click:clear="onUrlClear"
                 />
               </div>
               <div v-if="validImageUrl" class="upload-url-preview">
@@ -185,28 +186,19 @@
     </v-card>
   </v-dialog>
 
-  <v-dialog v-model="deleteConfirmVisible" max-width="500">
-    <v-card>
-      <v-card-title>Delete Temp Image?</v-card-title>
-      <v-card-text>This will permanently remove the temporary image.</v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn variant="text" @click="closeDeleteConfirm">Cancel</v-btn>
-        <v-btn
-          color="error"
-          :loading="Boolean(deleteTargetId && deletingId === deleteTargetId)"
-          variant="flat"
-          @click="deleteConfirmedImage"
-        >
-          Delete
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <ConfirmDialog
+    v-model="deleteConfirmVisible"
+    confirm-text="Delete"
+    :loading="Boolean(deleteTargetId && deletingId === deleteTargetId)"
+    message="This will permanently remove the temporary image."
+    title="Delete Temp Image?"
+    @confirm="deleteConfirmedImage"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 
@@ -220,7 +212,7 @@ interface ImageData {
 
 const props = defineProps<{
   modelValue: boolean;
-  entityType?: 'part' | 'tool' | 'setup';
+  entityType?: 'part' | 'tool' | 'customer' | 'supplier' | 'vendor' | 'setup';
   entityId?: string;
   title?: string;
   hasImage?: boolean;
@@ -598,6 +590,12 @@ watch(selectedFile, (file) => {
 watch(urlInput, () => {
   urlPreviewLoaded.value = false;
 });
+
+function onUrlClear() {
+  urlInput.value = '';
+  urlPreviewLoaded.value = false;
+  uploadError.value = '';
+}
 </script>
 
 <style scoped>

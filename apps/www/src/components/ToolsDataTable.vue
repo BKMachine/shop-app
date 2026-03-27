@@ -74,7 +74,8 @@
           @click:row="openTool"
         >
           <template #['item.img']="{ item }">
-            <v-img :id="item._id" class="tool-img" :src="item.img" />
+            <v-img v-if="item.img" :id="item._id" class="tool-img" :src="item.img" />
+            <MissingImage v-else :id="item._id" class="tool-img tool-img-fallback" />
           </template>
           <template #['item.location']="{ item }"> {{ location(item) }} </template>
           <template #['item.stock']="{ item }">
@@ -88,6 +89,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import MissingImage from '@/components/MissingImage.vue';
 import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
 import router from '@/router';
@@ -223,11 +225,19 @@ function location(tool: Tool): string {
 }
 </style>
 
-<style>
+<style scoped>
 .highlighted {
   background: #efefef !important;
 }
 .tool-img {
   max-height: 50px;
+}
+.tool-img-fallback {
+  width: 100px;
+  min-height: 38px;
+  margin: 2px auto;
+  padding: 4px 6px;
+  font-size: 10px;
+  border-radius: 4px;
 }
 </style>

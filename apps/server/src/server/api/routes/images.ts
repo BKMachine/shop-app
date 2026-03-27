@@ -5,8 +5,12 @@ import axios from 'axios';
 import { Router } from 'express';
 import { isValidObjectId } from 'mongoose';
 import multer from 'multer';
+import CustomerService from '../../../database/lib/customer/customer_service.js';
 import ImageService from '../../../database/lib/image/image_service.js';
 import PartService from '../../../database/lib/part/part_service.js';
+import SupplierService from '../../../database/lib/supplier/supplier_service.js';
+import ToolService from '../../../database/lib/tool/tool_service.js';
+import VendorService from '../../../database/lib/vendor/vendor_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
 import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
@@ -31,6 +35,53 @@ function isValidId(value: unknown): value is string {
 async function getPartEntity(entityType: string, entityId: string) {
   if (entityType !== 'part') return null;
   return PartService.findById(entityId);
+}
+
+const singleImageEntityTypes = ['tool', 'customer', 'supplier', 'vendor'] as const;
+
+type SingleImageEntityType = (typeof singleImageEntityTypes)[number];
+
+async function getSingleImageEntity(entityType: SingleImageEntityType, entityId: string) {
+  if (entityType === 'tool') return ToolService.findById(entityId);
+  if (entityType === 'customer') return CustomerService.findById(entityId);
+  if (entityType === 'supplier') return SupplierService.findById(entityId);
+  return VendorService.findById(entityId);
+}
+
+async function updateSingleImageEntity(
+  entityType: SingleImageEntityType,
+  entity: ToolDoc | CustomerDoc | SupplierDoc | VendorDoc,
+  imageUrl: string,
+  deviceId: string,
+) {
+  if (entityType === 'tool') {
+    const tool = entity as ToolDoc;
+    tool.img = imageUrl;
+    await ToolService.update(tool, deviceId);
+    return;
+  }
+
+  if (entityType === 'customer') {
+    const customer = entity as CustomerDoc;
+    customer.logo = imageUrl;
+    await CustomerService.update(customer);
+    return;
+  }
+  if (entityType === 'supplier') {
+    const supplier = entity as SupplierDoc;
+    supplier.logo = imageUrl;
+    await SupplierService.update(supplier);
+    return;
+  }
+
+  const vendor = entity as VendorDoc;
+  vendor.logo = imageUrl;
+  await VendorService.update(vendor);
+}
+
+async function deleteImageFileIfPresent(relPath: string) {
+  const filePath = path.join(imageDir, relPath);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 
 // Upload a temp image via file
@@ -131,7 +182,8 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
   const { entityType, entityId, setAsMain } = req.body;
 
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
-  if (!['tool', 'part'].includes(entityType)) return next(new HttpError(400, 'Invalid entityType'));
+  if (!['tool', 'part', 'customer', 'supplier', 'vendor'].includes(entityType))
+    return next(new HttpError(400, 'Invalid entityType'));
   if (!entityId) return next(new HttpError(400, 'entityId required'));
   if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
   if (!req.device) return next(new HttpError(401, 'Missing device context'));
@@ -181,11 +233,38 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
       }
     }
 
+    if (singleImageEntityTypes.includes(entityType as SingleImageEntityType)) {
+      const singleImageEntity = await getSingleImageEntity(
+        entityType as SingleImageEntityType,
+        entityId,
+      );
+      if (singleImageEntity) {
+        const priorImages = await ImageService.listByEntity(
+          entityType as SingleImageEntityType,
+          entityId,
+        );
+
+        for (const priorImage of priorImages) {
+          if (priorImage._id.toString() === image._id.toString()) continue;
+          await deleteImageFileIfPresent(priorImage.relPath);
+          await ImageService.remove(priorImage._id.toString());
+        }
+
+        await updateSingleImageEntity(
+          entityType as SingleImageEntityType,
+          singleImageEntity,
+          `/images/${image.relPath}`,
+          req.device._id.toString(),
+        );
+      }
+    }
+
     const response: MyImageData = {
       id: image._id.toString(),
       url: `/images/${image.relPath}`,
       createdAt: image.createdAt.toISOString(),
-      isMain: false,
+      isMain:
+        singleImageEntityTypes.includes(entityType as SingleImageEntityType) || Boolean(setAsMain),
     };
 
     res.status(200).json(response);
@@ -409,6 +488,55 @@ router.delete(
         entityId,
         nextMainImageId: nextMainImageId || '',
         nextMainImageUrl: part.img || '',
+      });
+    } catch (err) {
+      next(new HttpError(500, 'Failed to delete entity image', { cause: err }));
+    }
+  },
+);
+
+router.delete(
+  '/entities/:entityType/:entityId/image',
+  requireKnownDevice,
+  async (req, res, next) => {
+    const { entityType, entityId } = req.params;
+
+    if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
+    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+    if (!singleImageEntityTypes.includes(entityType as SingleImageEntityType)) {
+      return next(new HttpError(400, 'Single image delete is only for single-image entities'));
+    }
+    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+
+    try {
+      const singleImageEntity = await getSingleImageEntity(
+        entityType as SingleImageEntityType,
+        entityId,
+      );
+      if (!singleImageEntity) return next(new HttpError(404, 'Entity not found'));
+
+      const image = await ImageService.findLatestByEntity(
+        entityType as SingleImageEntityType,
+        entityId,
+      );
+      if (image) {
+        await deleteImageFileIfPresent(image.relPath);
+        await ImageService.remove(image._id.toString());
+      }
+
+      await updateSingleImageEntity(
+        entityType as SingleImageEntityType,
+        singleImageEntity,
+        '',
+        req.device._id.toString(),
+      );
+
+      res.status(200).json({
+        success: true,
+        id: image?._id.toString() || '',
+        entityType,
+        entityId,
+        url: '',
       });
     } catch (err) {
       next(new HttpError(500, 'Failed to delete entity image', { cause: err }));

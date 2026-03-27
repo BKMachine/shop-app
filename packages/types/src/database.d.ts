@@ -151,7 +151,7 @@ declare global {
     relPath: string;
     mimeType?: string;
     status: 'temp' | 'attached';
-    entityType: 'tool' | 'part' | null;
+    entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor' | null;
     entityId: string | null;
     expiresAt?: Date;
     createdAt: Date;

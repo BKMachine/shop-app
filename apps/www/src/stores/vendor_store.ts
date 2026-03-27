@@ -44,11 +44,18 @@ export const useVendorStore = defineStore('vendors', () => {
     });
   }
 
+  function updateVendorLogo(vendorId: string, logo: string) {
+    const index = _vendors.value.findIndex((vendor) => vendor._id === vendorId);
+    const vendor = _vendors.value[index];
+    if (vendor) vendor.logo = logo;
+  }
+
   return {
     _vendors,
     vendors,
     fetch,
     add,
     update,
+    updateVendorLogo,
   };
 });

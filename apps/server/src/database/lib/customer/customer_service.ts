@@ -4,6 +4,10 @@ async function list(): Promise<CustomerDoc[]> {
   return Customer.find({});
 }
 
+async function findById(id: string): Promise<CustomerDoc | null> {
+  return Customer.findById(id);
+}
+
 async function create(data: CustomerDoc) {
   const doc = new Customer(data);
   await doc.save();
@@ -16,6 +20,7 @@ async function update(doc: CustomerDoc) {
 
 export default {
   list,
+  findById,
   create,
   update,
 };

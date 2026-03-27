@@ -7,7 +7,10 @@
       <h1>{{ tool.description || 'New Tool' }}</h1>
     </div>
     <div class="d-flex align-center justify-space-between py-4">
-      <img alt="" class="tool-img" :src="tool.img" />
+      <div class="tool-img-wrapper">
+        <img v-if="tool.img" alt="" class="tool-img" :src="tool.img" />
+        <MissingImage v-else class="tool-img tool-img-fallback" />
+      </div>
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
           <div class="d-flex flex-column align-center">
@@ -165,11 +168,40 @@
             />
           </v-row>
           <v-row no-gutters>
-            <v-text-field
-              v-model="tool.img"
-              append-inner-icon="mdi-image-outline"
-              label="Tool Image URL"
-            />
+            <v-col cols="12">
+              <div class="d-flex align-center justify-space-between flex-wrap ga-3 py-2">
+                <div>
+                  <div class="text-subtitle-2">Tool Image</div>
+                  <div class="text-body-2 text-medium-emphasis">
+                    {{ tool.img ? 'Manage the current tool image.' : 'Add a single image for this tool.' }}
+                  </div>
+                </div>
+                <div class="d-flex align-center ga-2">
+                  <v-btn
+                    color="primary"
+                    :disabled="!tool._id"
+                    prepend-icon="mdi-image-edit-outline"
+                    variant="elevated"
+                    @click="imageManagerVisible = true"
+                  >
+                    {{ tool.img ? 'Edit Image' : 'Add Image' }}
+                  </v-btn>
+                  <v-btn
+                    v-if="tool.img"
+                    color="error"
+                    :loading="removingImage"
+                    prepend-icon="mdi-image-remove-outline"
+                    variant="outlined"
+                    @click="deleteImageConfirmVisible = true"
+                  >
+                    Remove Image
+                  </v-btn>
+                </div>
+              </div>
+              <div v-if="!tool._id" class="text-body-2 text-medium-emphasis pt-2">
+                Save this tool first, then you can attach an image.
+              </div>
+            </v-col>
           </v-row>
         </v-window-item>
 
@@ -371,6 +403,22 @@
         </v-window-item>
       </v-window>
     </v-form>
+    <ImageManagerDialog
+      v-model="imageManagerVisible"
+      :entity-id="tool._id"
+      entity-type="tool"
+      :has-image="Boolean(tool.img)"
+      :title="tool.description"
+      @image-selected="onToolImageSelected"
+    />
+    <ConfirmDialog
+      v-model="deleteImageConfirmVisible"
+      confirm-text="Remove"
+      :loading="removingImage"
+      message="This will remove the current image from this tool."
+      title="Remove Tool Image?"
+      @confirm="removeConfirmedToolImage"
+    />
   </v-container>
 </template>
 
@@ -378,7 +426,10 @@
 import isEqual from 'lodash/isEqual';
 import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CurrencyInput from '@/components/CurrencyInput.vue';
+import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
+import MissingImage from '@/components/MissingImage.vue';
 import ToolStockGraph from '@/components/ToolStockGraph.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
@@ -410,6 +461,9 @@ const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);
 const saveFlag = ref(false);
+const imageManagerVisible = ref(false);
+const deleteImageConfirmVisible = ref(false);
+const removingImage = ref(false);
 
 function setTabFromQuery() {
   const routeTab = router.currentRoute.value.query.tab;
@@ -517,6 +571,34 @@ async function saveTool() {
   }
   saveFlag.value = false;
   router.back();
+}
+
+function onToolImageSelected(payload: { imageId: string; url: string; isMain?: boolean }) {
+  tool.value.img = payload.url;
+  if (tool.value._id) {
+    toolStore.updateToolImage(tool.value._id, payload.url);
+  }
+}
+
+function removeConfirmedToolImage() {
+  removeToolImage();
+}
+
+async function removeToolImage() {
+  if (!tool.value._id) return;
+
+  removingImage.value = true;
+  try {
+    await axios.delete(`/images/entities/tool/${tool.value._id}/image`);
+    tool.value.img = '';
+    toolStore.updateToolImage(tool.value._id, '');
+    deleteImageConfirmVisible.value = false;
+    toastSuccess('Tool image removed');
+  } catch {
+    toastError('Unable to remove tool image');
+  } finally {
+    removingImage.value = false;
+  }
 }
 
 function openLink(link: string | undefined) {
@@ -643,6 +725,19 @@ const showMillingOpts = computed<boolean>(() => {
 .tool-img {
   max-width: 400px;
   max-height: 100px;
+  object-fit: contain;
+}
+.tool-img-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+}
+.tool-img-fallback {
+  width: 100px;
+  max-width: 100px;
+  min-height: 100px;
+  margin: 4px 0;
+  border-radius: 8px;
 }
 .stock {
   font-weight: bolder;

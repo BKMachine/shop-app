@@ -36,11 +36,18 @@ export const useSupplierStore = defineStore('suppliers', () => {
     });
   }
 
+  function updateSupplierLogo(supplierId: string, logo: string) {
+    const index = _suppliers.value.findIndex((supplier) => supplier._id === supplierId);
+    const supplier = _suppliers.value[index];
+    if (supplier) supplier.logo = logo;
+  }
+
   return {
     _suppliers,
     suppliers,
     fetch,
     add,
     update,
+    updateSupplierLogo,
   };
 });

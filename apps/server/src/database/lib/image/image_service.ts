@@ -34,6 +34,20 @@ async function listByIds(ids: string[]): Promise<ImageDoc[]> {
   return await Image.find({ _id: { $in: ids } });
 }
 
+async function listByEntity(
+  entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor',
+  entityId: string,
+): Promise<ImageDoc[]> {
+  return Image.find({ entityType, entityId, status: 'attached' }).sort({ createdAt: -1 });
+}
+
+async function findLatestByEntity(
+  entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor',
+  entityId: string,
+): Promise<ImageDoc | null> {
+  return Image.findOne({ entityType, entityId, status: 'attached' }).sort({ createdAt: -1 });
+}
+
 async function cleanupExpired(): Promise<{ deleted: number; errors: string[] }> {
   const result = { deleted: 0, errors: [] as string[] };
   try {
@@ -79,6 +93,8 @@ export default {
   listRecents,
   findById,
   listByIds,
+  listByEntity,
+  findLatestByEntity,
   cleanupExpired,
   remove,
 };

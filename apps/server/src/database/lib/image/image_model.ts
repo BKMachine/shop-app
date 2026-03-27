@@ -13,7 +13,7 @@ const schema = new Schema<ImageDoc>(
     },
     entityType: {
       type: String,
-      enum: ['tool', 'part', null],
+      enum: ['tool', 'part', 'customer', 'supplier', 'vendor', null],
       default: null,
       index: true,
     },

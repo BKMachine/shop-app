@@ -116,6 +116,12 @@ export const useToolStore = defineStore('tools', () => {
     });
   }
 
+  function updateToolImage(toolId: string, img: string) {
+    const index = rawTools.value.findIndex((tool) => tool._id === toolId);
+    const tool = rawTools.value[index];
+    if (tool) tool.img = img;
+  }
+
   async function pickTool(scanCode: string) {
     await axios.put('/tools/pick', { scanCode }).then(({ data }: { data: Tool }) => {
       const index = rawTools.value.findIndex((x) => x._id === data._id);
@@ -158,6 +164,7 @@ export const useToolStore = defineStore('tools', () => {
     fetch,
     add,
     update,
+    updateToolImage,
     pickTool,
     adjustStock,
     SOCKET_tool,

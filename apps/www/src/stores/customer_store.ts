@@ -36,11 +36,18 @@ export const useCustomerStore = defineStore('customers', () => {
     });
   }
 
+  function updateCustomerLogo(customerId: string, logo: string) {
+    const index = _customers.value.findIndex((customer) => customer._id === customerId);
+    const customer = _customers.value[index];
+    if (customer) customer.logo = logo;
+  }
+
   return {
     _customers,
     customers,
     fetch,
     add,
     update,
+    updateCustomerLogo,
   };
 });

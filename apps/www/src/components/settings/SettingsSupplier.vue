@@ -12,9 +12,41 @@
             label="Name"
             :rules="[rules.required!, rules.counter!, rules.unique!]"
           />
-          <div class="logo-container">
-            <v-text-field v-model="editingItem.logo" label="Logo URL" />
-            <div class="logo-preview ml-3 elevation-1"><img alt="" :src="editingItem.logo" /></div>
+          <div class="logo-section py-2">
+            <div class="logo-preview">
+              <img v-if="editingItem.logo" alt="" class="logo-preview__img" :src="editingItem.logo" />
+              <MissingImage v-else class="logo-preview__fallback" />
+            </div>
+            <div class="logo-section__content">
+              <div class="text-subtitle-2">Supplier Logo</div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ editingItem.logo ? 'Manage the current logo image.' : 'Add a single logo image.' }}
+              </div>
+              <div class="d-flex align-center ga-2 pt-3">
+                <v-btn
+                  color="primary"
+                  :disabled="!editingItem._id"
+                  prepend-icon="mdi-image-edit-outline"
+                  variant="elevated"
+                  @click="imageManagerVisible = true"
+                >
+                  {{ editingItem.logo ? 'Edit Image' : 'Add Image' }}
+                </v-btn>
+                <v-btn
+                  v-if="editingItem.logo"
+                  color="error"
+                  :loading="removingImage"
+                  prepend-icon="mdi-image-remove-outline"
+                  variant="outlined"
+                  @click="deleteImageConfirmVisible = true"
+                >
+                  Remove Image
+                </v-btn>
+              </div>
+              <div v-if="!editingItem._id" class="text-body-2 text-medium-emphasis pt-2">
+                Save this supplier first, then you can attach a logo.
+              </div>
+            </div>
           </div>
           <v-text-field
             v-model="editingItem.homepage"
@@ -33,10 +65,30 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+  <ImageManagerDialog
+    v-model="imageManagerVisible"
+    :entity-id="editingItem._id"
+    entity-type="supplier"
+    :has-image="Boolean(editingItem.logo)"
+    :title="editingItem.name"
+    @image-selected="onImageSelected"
+  />
+  <ConfirmDialog
+    v-model="deleteImageConfirmVisible"
+    confirm-text="Remove"
+    :loading="removingImage"
+    message="This will remove the current logo from this supplier."
+    title="Remove Supplier Logo?"
+    @confirm="removeLogo"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
+import MissingImage from '@/components/MissingImage.vue';
+import api from '@/plugins/axios';
 import SettingsTiles from '@/components/settings/SettingsTiles.vue';
 import { useSupplierStore } from '@/stores/supplier_store';
 
@@ -45,6 +97,9 @@ const dialog = ref(false);
 const editingIndex = ref(-1);
 const editingItem = ref<Supplier>({} as Supplier);
 const valid = ref(true);
+const imageManagerVisible = ref(false);
+const deleteImageConfirmVisible = ref(false);
+const removingImage = ref(false);
 
 const isEditing = computed(() => editingIndex.value > -1);
 
@@ -72,6 +127,8 @@ function edit(i: number) {
 
 async function close() {
   dialog.value = false;
+  imageManagerVisible.value = false;
+  deleteImageConfirmVisible.value = false;
 }
 
 const names = computed(() => {
@@ -97,6 +154,27 @@ async function save() {
 function open() {
   window.open(editingItem.value.homepage, '_blank');
 }
+
+function onImageSelected(payload: { imageId: string; url: string; isMain?: boolean }) {
+  editingItem.value.logo = payload.url;
+  if (editingItem.value._id) {
+    supplierStore.updateSupplierLogo(editingItem.value._id, payload.url);
+  }
+}
+
+async function removeLogo() {
+  if (!editingItem.value._id) return;
+
+  removingImage.value = true;
+  try {
+    await api.delete(`/images/entities/supplier/${editingItem.value._id}/image`);
+    editingItem.value.logo = '';
+    supplierStore.updateSupplierLogo(editingItem.value._id, '');
+    deleteImageConfirmVisible.value = false;
+  } finally {
+    removingImage.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -107,22 +185,30 @@ function open() {
 .dialog {
   max-width: 700px;
 }
-.logo-container {
-  display: flex;
-  align-items: center;
-}
 .logo-preview {
   height: 80px;
   width: 80px;
   border: 1px solid #ababab;
   border-radius: 10px;
-  position: relative;
-  bottom: 10px;
   padding: 5px;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
-.logo-preview img {
+.logo-preview__img {
   width: 100%;
+}
+.logo-preview__fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.logo-section__content {
+  flex: 1;
 }
 </style>

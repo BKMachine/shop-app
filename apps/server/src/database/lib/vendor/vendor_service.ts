@@ -4,6 +4,10 @@ async function list(): Promise<VendorDoc[]> {
   return Vendor.find({});
 }
 
+async function findById(id: string): Promise<VendorDoc | null> {
+  return Vendor.findById(id);
+}
+
 async function create(data: VendorDoc): Promise<VendorDoc> {
   const doc = new Vendor(data);
   await doc.save();
@@ -16,6 +20,7 @@ async function update(doc: VendorDoc): Promise<VendorDoc | null> {
 
 export default {
   list,
+  findById,
   create,
   update,
 };

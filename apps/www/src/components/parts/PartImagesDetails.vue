@@ -117,35 +117,25 @@
       @image-selected="onImageSelected"
     />
 
-    <v-dialog v-model="deleteConfirmVisible" max-width="500">
-      <v-card>
-        <v-card-title>Delete Image?</v-card-title>
-        <v-card-text>
-          This will permanently remove the image from this part.
-          <span v-if="deleteTarget?.isMain"
-            ><br />
-            The current main image will also be replaced.
-          </span>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="closeDeleteConfirm">Cancel</v-btn>
-          <v-btn
-            color="error"
-            :loading="Boolean(deleteTarget && deletingId === deleteTarget.id)"
-            variant="flat"
-            @click="deleteConfirmedImage"
-          >
-            Delete
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <ConfirmDialog
+      v-model="deleteConfirmVisible"
+      confirm-text="Delete"
+      :loading="Boolean(deleteTarget && deletingId === deleteTarget.id)"
+      title="Delete Image?"
+      @confirm="deleteConfirmedImage"
+    >
+      This will permanently remove the image from this part.
+      <span v-if="deleteTarget?.isMain">
+        <br />
+        The current main image will also be replaced.
+      </span>
+    </ConfirmDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
