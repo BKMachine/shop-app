@@ -2,172 +2,211 @@
   <v-dialog v-model="dialog" width="900">
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">
-        <span>Image Manager</span>
+        <span>Image Manager<span v-if="title"> - {{ title }}</span></span>
         <v-btn icon="mdi-close" size="small" variant="text" @click="dialog = false" />
       </v-card-title>
 
-      <v-tabs v-model="currentTab">
-        <v-tab value="upload">Upload</v-tab>
-        <v-tab value="gallery">Gallery</v-tab>
-      </v-tabs>
+      <template v-if="!initializingDialog">
+        <v-tabs v-model="currentTab">
+          <v-tab value="upload">Upload</v-tab>
+          <v-tab value="gallery">Temp Gallery</v-tab>
+        </v-tabs>
 
-      <v-window v-model="currentTab">
-        <!-- Upload Tab -->
-        <v-window-item value="upload">
-          <v-card-text class="upload-tab-root">
-            <div
-              :aria-disabled="!!urlInput"
-              class="upload-drop-area"
-              :class="{ 'upload-drop-area--disabled': !!urlInput }"
-              @click="!urlInput && triggerFileInput()"
-            >
-              <v-icon color="primary" size="64">mdi-image</v-icon>
-              <div class="upload-drop-text">
-                <span>Drop your image here, or <span class="upload-browse">browse</span></span>
-              </div>
-              <div class="upload-drop-types">Supports: PNG, JPG, JPEG, WEBP</div>
-              <input
-                ref="fileInputRef"
-                accept="image/*"
-                :disabled="uploadLoading || !!urlInput"
-                style="display: none"
-                type="file"
-                @change="onFileInputChange"
-              />
-            </div>
-            <div v-if="selectedFile" class="upload-file-info">
-              <v-icon size="20">mdi-file-image</v-icon>
-              <span class="upload-file-name">{{ selectedFile.name }}</span>
-              <v-progress-linear
-                v-if="uploadLoading"
-                class="upload-progress"
-                color="primary"
-                height="6"
-                :value="uploadProgress"
-              />
-              <v-btn :disabled="uploadLoading" icon size="x-small" @click="removeSelectedFile">
-                <v-icon>mdi-close</v-icon>
-              </v-btn>
-            </div>
-            <div v-if="filePreviewUrl" class="upload-url-preview">
-              <img alt="Preview" class="upload-url-img-preview" :src="filePreviewUrl" />
-            </div>
-            <div class="upload-or-divider"><span>or</span></div>
-            <div class="upload-url-row">
-              <v-text-field
-                v-model="urlInput"
-                class="upload-url-input"
-                clearable
-                :disabled="uploadLoading || !!selectedFile"
-                hide-details
-                label="Add image URL"
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
-            <div v-if="validImageUrl" class="upload-url-preview">
-              <img
-                alt="Invalid URL"
-                class="upload-url-img-preview"
-                :src="urlInput"
-                @error="urlPreviewLoaded = false"
-                @load="urlPreviewLoaded = true"
-              />
-            </div>
-
-            <div v-if="uploadError" class="text-error mt-2">{{ uploadError }}</div>
-            <div v-if="uploadSuccess" class="text-success mt-2">Image uploaded successfully!</div>
-            <div class="upload-actions-row">
-              <v-spacer />
-              <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
-              <v-btn
-                color="primary"
-                :disabled="(!selectedFile && !(validImageUrl && urlPreviewLoaded)) || uploadLoading"
-                :loading="uploadLoading"
-                variant="flat"
-                @click="importImage"
-                >Upload</v-btn
+        <v-window v-model="currentTab">
+          <!-- Upload Tab -->
+          <v-window-item value="upload">
+            <v-card-text class="upload-tab-root">
+              <div
+                :aria-disabled="!!urlInput"
+                class="upload-drop-area"
+                :class="{ 'upload-drop-area--disabled': !!urlInput }"
+                @click="!urlInput && triggerFileInput()"
               >
-            </div>
-          </v-card-text>
-        </v-window-item>
+                <v-icon color="primary" size="64">mdi-image</v-icon>
+                <div class="upload-drop-text">
+                  <span>Drop your image here, or <span class="upload-browse">browse</span></span>
+                </div>
+                <div class="upload-drop-types">Supports: PNG, JPG, JPEG, WEBP</div>
+                <input
+                  ref="fileInputRef"
+                  accept="image/*"
+                  :disabled="uploadLoading || !!urlInput"
+                  style="display: none"
+                  type="file"
+                  @change="onFileInputChange"
+                />
+              </div>
+              <div v-if="selectedFile" class="upload-file-info">
+                <v-icon size="20">mdi-file-image</v-icon>
+                <span class="upload-file-name">{{ selectedFile.name }}</span>
+                <v-progress-linear
+                  v-if="uploadLoading"
+                  class="upload-progress"
+                  color="primary"
+                  height="6"
+                  :value="uploadProgress"
+                />
+                <v-btn :disabled="uploadLoading" icon size="x-small" @click="removeSelectedFile">
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
+              </div>
+              <div v-if="filePreviewUrl" class="upload-url-preview">
+                <img alt="Preview" class="upload-url-img-preview" :src="filePreviewUrl" />
+              </div>
+              <div class="upload-or-divider"><span>or</span></div>
+              <div class="upload-url-row">
+                <v-text-field
+                  v-model="urlInput"
+                  class="upload-url-input"
+                  clearable
+                  :disabled="uploadLoading || !!selectedFile"
+                  hide-details
+                  label="Add image URL"
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+              <div v-if="validImageUrl" class="upload-url-preview">
+                <img
+                  alt="Invalid URL"
+                  class="upload-url-img-preview"
+                  :src="urlInput"
+                  @error="urlPreviewLoaded = false"
+                  @load="urlPreviewLoaded = true"
+                />
+              </div>
 
-        <!-- Gallery Tab -->
-        <v-window-item value="gallery">
-          <v-card-text>
-            <div v-if="loadingGallery" class="d-flex justify-center my-6">
-              <v-progress-circular indeterminate />
-            </div>
-
-            <div v-else-if="galleryError" class="text-error">{{ galleryError }}</div>
-
-            <div v-else-if="!allImages.length" class="text-medium-emphasis">
-              No images available. Upload one to get started.
-            </div>
-
-            <v-row v-else dense>
-              <v-col v-for="img in allImages" :key="img.id" cols="6" lg="2" md="3" sm="4">
-                <v-card
-                  :border="isMainImage(img.id)"
-                  class="image-card pa-1 position-relative"
-                  :color="isMainImage(img.id) ? 'primary' : ''"
-                  elevation="2"
-                  hover
+              <div v-if="uploadError" class="text-error mt-2">{{ uploadError }}</div>
+              <div v-if="uploadSuccess" class="text-success mt-2">Image uploaded successfully!</div>
+              <div class="upload-actions-row">
+                <v-spacer />
+                <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
+                <v-btn
+                  color="primary"
+                  :disabled="(!selectedFile && !(validImageUrl && urlPreviewLoaded)) || uploadLoading"
+                  :loading="uploadLoading"
+                  variant="flat"
+                  @click="importImage"
                 >
-                  <v-img aspect-ratio="1" cover :src="img.url" />
+                  Upload
+                </v-btn>
+              </div>
+            </v-card-text>
+          </v-window-item>
 
-                  <v-chip
-                    v-if="isMainImage(img.id)"
-                    class="position-absolute"
-                    color="primary"
-                    size="small"
-                    style="top: 5px; right: 5px"
-                  >
-                    Main
-                  </v-chip>
+          <!-- Gallery Tab -->
+          <v-window-item value="gallery">
+            <v-card-text>
+              <div v-if="loadingGallery" class="d-flex justify-center my-6">
+                <v-progress-circular indeterminate />
+              </div>
 
-                  <v-card-subtitle class="image-card__date text-caption mt-1 px-2">
-                    {{ formatImageDate(img.createdAt) }}
-                  </v-card-subtitle>
+              <div v-else-if="galleryError" class="text-error">{{ galleryError }}</div>
 
-                  <div
-                    class="image-card__actions d-flex align-center justify-space-between px-2 pb-2"
-                  >
-                    <v-btn
-                      v-if="!isMainImage(img.id)"
-                      class="image-card__primary-action"
-                      :loading="promotingId === img.id"
-                      size="x-small"
-                      title="Set as main image"
-                      variant="tonal"
-                      @click="promoteToMain(img)"
-                    >
-                      Use As Main
-                    </v-btn>
-                    <div v-else class="image-card__primary-action" />
-                    <v-btn
-                      v-if="img.status === 'temp'"
-                      class="image-card__delete"
-                      color="error"
-                      icon="mdi-delete"
-                      :loading="deletingId === img.id"
-                      size="xx-small"
-                      title="Delete temporary image"
-                      variant="outlined"
-                      @click="deleteImage(img.id)"
-                    />
+              <div v-else-if="!tempImages.length" class="text-medium-emphasis">
+                <v-alert type="info" variant="tonal">
+                  No recently uploaded images available. Upload one to get started.
+                </v-alert>
+              </div>
+
+              <v-row v-else dense>
+                <v-col cols="12">
+                  <div class="d-flex align-center justify-space-between mb-3">
+                    <div class="text-body-2 text-medium-emphasis">
+                      Selected temp images: {{ selectedTempImageIds.length }}
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        :disabled="!selectedTempImageIds.length"
+                        size="small"
+                        variant="text"
+                        @click="clearTempSelection"
+                      >
+                        Clear
+                      </v-btn>
+                      <v-btn
+                        color="primary"
+                        :disabled="!entityId || !selectedTempImageIds.length || assignLoading"
+                        :loading="assignLoading"
+                        size="small"
+                        variant="flat"
+                        @click="assignSelectedToEntity"
+                      >
+                        Assign Selected
+                      </v-btn>
+                    </div>
                   </div>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-window-item>
-      </v-window>
+                  <div v-if="assignSuccess" class="text-success text-body-2 mb-2">
+                    Assigned selected image(s).
+                  </div>
+                  <div v-if="!entityId" class="text-warning text-body-2 mb-2">
+                    Save first to assign selected images.
+                  </div>
+                </v-col>
+                <v-col v-for="img in tempImages" :key="img.id" cols="6" lg="2" md="3" sm="4">
+                  <v-card
+                    :border="isTempSelected(img.id)"
+                    class="image-card pa-1 position-relative"
+                    :color="isTempSelected(img.id) ? 'primary' : ''"
+                    elevation="2"
+                    hover
+                    @click="toggleTempSelection(img.id)"
+                  >
+                    <v-img aspect-ratio="1" cover :src="img.url" />
+
+                    <v-card-subtitle class="image-card__date text-caption mt-1 px-2">
+                      {{ formatImageDate(img.createdAt) }}
+                    </v-card-subtitle>
+
+                    <div class="image-card__actions px-2 pb-2 mt-2">
+                      <v-btn
+                        v-if="!isTempSelected(img.id)"
+                        class="image-card__delete"
+                        color="error"
+                        :loading="deletingId === img.id"
+                        prepend-icon="mdi-delete"
+                        size="x-small"
+                        title="Delete temporary image"
+                        variant="outlined"
+                        @click.stop="confirmDeleteImage(img.id)"
+                      >
+                        Delete
+                      </v-btn>
+                    </div>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-window-item>
+        </v-window>
+      </template>
+      <v-card-text v-else class="d-flex justify-center my-8">
+        <v-progress-circular indeterminate />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog v-model="deleteConfirmVisible" max-width="500">
+    <v-card>
+      <v-card-title>Delete Temp Image?</v-card-title>
+      <v-card-text>This will permanently remove the temporary image.</v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="closeDeleteConfirm">Cancel</v-btn>
+        <v-btn
+          color="error"
+          :loading="Boolean(deleteTargetId && deletingId === deleteTargetId)"
+          variant="flat"
+          @click="deleteConfirmedImage"
+        >
+          Delete
+        </v-btn>
+      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 
@@ -177,17 +216,19 @@ interface ImageData {
   filename?: string;
   createdAt: string;
   status?: 'temp' | 'attached';
-  isMain?: boolean;
 }
 
 const props = defineProps<{
   modelValue: boolean;
-  partId: string;
+  entityType?: 'part' | 'tool' | 'setup';
+  entityId?: string;
+  title?: string;
+  hasImage?: boolean;
 }>();
 
 const emit = defineEmits<{
   'update:modelValue': [boolean];
-  'image-selected': [payload: { imageId: string; url: string }];
+  'image-selected': [payload: { imageId: string; url: string; isMain?: boolean }];
 }>();
 
 const dialog = computed({
@@ -207,6 +248,8 @@ const uploadLoading = ref(false);
 const uploadError = ref('');
 const uploadSuccess = ref(false);
 const uploadProgress = ref(0);
+const filePreviewUrl = ref<string | null>(null);
+const urlPreviewLoaded = ref(false);
 
 function onFileInputChange(e: Event) {
   const files = (e.target as HTMLInputElement).files;
@@ -221,6 +264,17 @@ function removeSelectedFile() {
   if (fileInputRef.value) fileInputRef.value.value = '';
 }
 
+function resetUploadState() {
+  selectedFile.value = null;
+  urlInput.value = '';
+  filePreviewUrl.value = null;
+  urlPreviewLoaded.value = false;
+  uploadError.value = '';
+  uploadSuccess.value = false;
+  uploadProgress.value = 0;
+  if (fileInputRef.value) fileInputRef.value.value = '';
+}
+
 async function importImage() {
   if (selectedFile.value) {
     await uploadFile();
@@ -229,36 +283,67 @@ async function importImage() {
   }
 }
 
+async function attachUploadedImage(imageId: string) {
+  if (!props.entityId) {
+    return;
+  }
+
+  const shouldPromoteToMain = !props.hasImage;
+
+  const { data } = await api.post(`/images/uploads/${imageId}/attach`, {
+    entityType: props.entityType ?? 'part',
+    entityId: props.entityId,
+    setAsMain: shouldPromoteToMain,
+  });
+
+  emit('image-selected', { imageId: data.id, url: data.url, isMain: shouldPromoteToMain });
+  dialog.value = false;
+}
+
 // Gallery
 const loadingGallery = ref(false);
 const galleryError = ref('');
 const tempImages = ref<ImageData[]>([]);
-const partImages = ref<ImageData[]>([]);
-const mainImageId = ref('');
-const promotingId = ref('');
 const deletingId = ref('');
+const selectedTempImageIds = ref<string[]>([]);
+const assignLoading = ref(false);
+const assignSuccess = ref(false);
+const initializingDialog = ref(false);
+const deleteConfirmVisible = ref(false);
+const deleteTargetId = ref('');
 
-const allImages = computed(() => {
-  const combined = [...partImages.value, ...tempImages.value];
-  // Remove duplicates
-  const seen = new Set<string>();
-  const deduped = combined.filter((img) => {
-    if (seen.has(img.id)) return false;
-    seen.add(img.id);
-    return true;
-  });
-
-  return deduped.sort((left, right) => {
-    if (left.id === mainImageId.value) return -1;
-    if (right.id === mainImageId.value) return 1;
-
-    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-  });
-});
-
-const isMainImage = (imageId: string): boolean => {
-  return mainImageId.value === imageId;
+const isTempSelected = (imageId: string): boolean => {
+  return selectedTempImageIds.value.includes(imageId);
 };
+
+function toggleTempSelection(imageId: string) {
+  if (selectedTempImageIds.value.includes(imageId)) {
+    selectedTempImageIds.value = selectedTempImageIds.value.filter((id) => id !== imageId);
+    return;
+  }
+
+  selectedTempImageIds.value.push(imageId);
+}
+
+function clearTempSelection() {
+  selectedTempImageIds.value = [];
+}
+
+function confirmDeleteImage(imageId: string) {
+  deleteTargetId.value = imageId;
+  deleteConfirmVisible.value = true;
+}
+
+function closeDeleteConfirm() {
+  if (deletingId.value) return;
+  deleteConfirmVisible.value = false;
+  deleteTargetId.value = '';
+}
+
+async function deleteConfirmedImage() {
+  if (!deleteTargetId.value) return;
+  await deleteImage(deleteTargetId.value);
+}
 
 function formatImageDate(createdAt: string): string {
   return new Date(createdAt).toLocaleString([], {
@@ -270,60 +355,69 @@ function formatImageDate(createdAt: string): string {
   });
 }
 
-// Socket listeners
-socket.on('imageUploaded', () => {
-  loadGallery();
-});
-
-socket.on('imagePromoted', (data: { imageId: string; partId: string }) => {
-  if (data.partId === props.partId) {
+function handleImageUploaded() {
+  if (dialog.value) {
     loadGallery();
   }
-});
+}
 
-socket.on('imageDeleted', () => {
-  loadGallery();
-});
+function handleImageDeleted() {
+  if (dialog.value) {
+    loadGallery();
+  }
+}
 
-// Load gallery on mount and when partId changes
 onMounted(() => {
-  loadGallery();
+  socket.on('imageUploaded', handleImageUploaded);
+  socket.on('imageDeleted', handleImageDeleted);
+});
+
+onBeforeUnmount(() => {
+  socket.off('imageUploaded', handleImageUploaded);
+  socket.off('imageDeleted', handleImageDeleted);
+});
+
+watch(dialog, (isOpen) => {
+  if (isOpen) {
+    resetUploadState();
+    initializingDialog.value = true;
+    loadGallery(true).finally(() => {
+      initializingDialog.value = false;
+    });
+    return;
+  }
+
+  initializingDialog.value = false;
+  clearTempSelection();
+  assignSuccess.value = false;
 });
 
 watch(
-  () => props.partId,
+  () => props.entityId,
   () => {
-    loadGallery();
+    clearTempSelection();
+    assignSuccess.value = false;
+    if (dialog.value) {
+      loadGallery();
+    }
   },
 );
 
-async function loadGallery() {
+async function loadGallery(selectInitialTab: boolean = false) {
   loadingGallery.value = true;
   galleryError.value = '';
 
   try {
-    // Load recent temp images
     const recentRes = await api.get('/images/uploads/recent');
-    tempImages.value = recentRes.data.map((img: any) => ({
+    tempImages.value = recentRes.data.map((img: ImageData) => ({
       id: img.id,
       url: img.url,
       createdAt: img.createdAt,
       status: 'temp',
     }));
 
-    // Load part's attached images
-    if (props.partId) {
-      const partsRes = await api.get(`/images/parts/${props.partId}/images`);
-      partImages.value = partsRes.data;
-
-      if (partsRes.data && partsRes.data.length > 0) {
-        mainImageId.value = partsRes.data[0].id;
-      } else {
-        mainImageId.value = '';
-      }
-    } else {
-      partImages.value = [];
-      mainImageId.value = '';
+    if (selectInitialTab) {
+      currentTab.value = tempImages.value.length > 0 ? 'gallery' : 'upload';
     }
   } catch (err) {
     galleryError.value = 'Failed to load images';
@@ -335,6 +429,7 @@ async function loadGallery() {
 
 async function uploadFile() {
   if (!selectedFile.value) return;
+
   uploadLoading.value = true;
   uploadError.value = '';
   uploadSuccess.value = false;
@@ -343,7 +438,7 @@ async function uploadFile() {
     const file = selectedFile.value;
     const formData = new FormData();
     formData.append('image', file as Blob);
-    await api.post('/images/uploads/file', formData, {
+    const { data } = await api.post('/images/uploads/file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (progressEvent: any) => {
         if (progressEvent?.lengthComputable) {
@@ -351,13 +446,18 @@ async function uploadFile() {
         }
       },
     });
-    uploadSuccess.value = true;
-    selectedFile.value = null;
-    if (fileInputRef.value) fileInputRef.value.value = '';
-    setTimeout(() => {
+
+    if (props.entityId) {
+      await attachUploadedImage(data.id);
+    } else {
+      uploadSuccess.value = true;
       currentTab.value = 'gallery';
-      uploadSuccess.value = false;
-    }, 1500);
+      await loadGallery();
+    }
+
+    selectedFile.value = null;
+    filePreviewUrl.value = null;
+    if (fileInputRef.value) fileInputRef.value.value = '';
   } catch (err) {
     uploadError.value = 'Failed to upload file';
     console.error(err);
@@ -373,16 +473,19 @@ async function uploadUrl() {
   uploadLoading.value = true;
   uploadError.value = '';
   uploadSuccess.value = false;
-
   try {
-    await api.post('/images/uploads/url', { url: urlInput.value });
+    const { data } = await api.post('/images/uploads/url', { url: urlInput.value });
 
-    uploadSuccess.value = true;
-    urlInput.value = '';
-    setTimeout(() => {
+    if (props.entityId) {
+      await attachUploadedImage(data.id);
+    } else {
+      uploadSuccess.value = true;
       currentTab.value = 'gallery';
-      uploadSuccess.value = false;
-    }, 1500);
+      await loadGallery();
+    }
+
+    urlInput.value = '';
+    urlPreviewLoaded.value = false;
   } catch (err) {
     uploadError.value = 'Failed to download and upload image';
     console.error(err);
@@ -391,47 +494,74 @@ async function uploadUrl() {
   }
 }
 
-async function promoteToMain(image: ImageData) {
-  if (!props.partId) {
-    galleryError.value = 'Save the part before selecting a main image.';
+async function assignSelectedToEntity() {
+  if (!props.entityId) {
+    galleryError.value = 'Save first to assign selected images.';
     return;
   }
+  if (!selectedTempImageIds.value.length) return;
 
-  promotingId.value = image.id;
+  assignLoading.value = true;
+  assignSuccess.value = false;
+  galleryError.value = '';
+
   try {
-    let selectedUrl = image.url;
+    let successCount = 0;
+    let failCount = 0;
+    let firstAssignedImage: { imageId: string; url: string; isMain?: boolean } | null = null;
 
-    if (image.status === 'temp') {
-      const { data } = await api.post(`/images/uploads/${image.id}/attach`, {
-        entityType: 'part',
-        entityId: props.partId,
-        setAsMain: true,
-      });
-      selectedUrl = data.url;
-    } else {
-      const { data } = await api.post(`/images/${image.id}/promote-to-main`, {
-        partId: props.partId,
-      });
-      selectedUrl = data.url;
+    for (const imageId of selectedTempImageIds.value) {
+      try {
+        const { data } = await api.post(`/images/uploads/${imageId}/attach`, {
+          entityType: props.entityType ?? 'part',
+          entityId: props.entityId,
+          setAsMain: false,
+        });
+        if (!firstAssignedImage) {
+          firstAssignedImage = {
+            imageId: data.id,
+            url: data.url,
+            isMain: false,
+          };
+        }
+        successCount += 1;
+      } catch (error: any) {
+        failCount += 1;
+      }
     }
 
-    mainImageId.value = image.id;
-    emit('image-selected', { imageId: image.id, url: selectedUrl });
+    if (successCount > 0) {
+      assignSuccess.value = true;
+      if (firstAssignedImage) {
+        emit('image-selected', firstAssignedImage);
+      }
+      dialog.value = false;
+    }
+    if (failCount > 0) {
+      galleryError.value = `${failCount} image(s) failed to assign.`;
+    }
+
+    clearTempSelection();
     await loadGallery();
-    dialog.value = false;
   } catch (err) {
-    console.error('Failed to promote image:', err);
+    galleryError.value = 'Failed to assign selected images.';
+    console.error('Failed assigning selected temp images:', err);
   } finally {
-    promotingId.value = '';
+    assignLoading.value = false;
   }
 }
 
 async function deleteImage(imageId: string) {
   deletingId.value = imageId;
+
   try {
     await api.delete(`/images/uploads/${imageId}`);
     tempImages.value = tempImages.value.filter((img) => img.id !== imageId);
+    clearTempSelection();
+    deleteConfirmVisible.value = false;
+    deleteTargetId.value = '';
   } catch (err) {
+    galleryError.value = 'Failed to delete image.';
     console.error('Failed to delete image:', err);
   } finally {
     deletingId.value = '';
@@ -453,8 +583,6 @@ const validImageUrl = computed(() => {
   }
 });
 
-const filePreviewUrl = ref<string | null>(null);
-
 watch(selectedFile, (file) => {
   if (file) {
     const reader = new FileReader();
@@ -466,8 +594,6 @@ watch(selectedFile, (file) => {
     filePreviewUrl.value = null;
   }
 });
-
-const urlPreviewLoaded = ref(false);
 
 watch(urlInput, () => {
   urlPreviewLoaded.value = false;
@@ -488,7 +614,7 @@ watch(urlInput, () => {
 }
 .upload-drop-area {
   width: 100%;
-  max-width: 400px;
+  max-width: 500px;
   min-height: 160px;
   border: 2px dashed #bfc9da;
   border-radius: 10px;
@@ -572,7 +698,7 @@ watch(urlInput, () => {
   align-items: center;
   gap: 0.3rem;
   width: 100%;
-  max-width: 400px;
+  max-width: 500px;
 }
 .upload-url-input {
   flex: 1;
@@ -596,22 +722,15 @@ watch(urlInput, () => {
 
 .image-card__date {
   line-height: 1.25;
-  min-height: 2.75rem;
   white-space: normal;
 }
 
 .image-card__actions {
-  gap: 0.5rem;
-  margin-top: auto;
   min-height: 2rem;
 }
 
-.image-card__primary-action {
-  min-width: 0;
-}
-
 .image-card__delete {
-  flex: 0 0 auto;
+  width: 100%;
 }
 
 .position-relative {

@@ -22,8 +22,8 @@ async function update(image: ImageDoc): Promise<ImageDoc | null> {
   return updated;
 }
 
-async function listRecents(limit = 50): Promise<ImageDoc[]> {
-  return Image.find({ status: 'temp' }).sort({ createdAt: -1 }).limit(limit);
+async function listRecents(): Promise<ImageDoc[]> {
+  return Image.find({ status: 'temp' }).sort({ createdAt: -1 });
 }
 
 async function findById(id: string): Promise<ImageDoc | null> {
@@ -43,9 +43,7 @@ async function cleanupExpired(): Promise<{ deleted: number; errors: string[] }> 
       try {
         // Delete file from disk if it exists
         const filePath = path.join(imageDir, img.relPath);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
         // Delete document from database
         await remove(img._id.toString());

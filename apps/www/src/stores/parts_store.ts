@@ -64,6 +64,12 @@ export const usePartStore = defineStore('parts', () => {
     });
   }
 
+  function updatePartImage(partId: string, img: string) {
+    const index = rawParts.value.findIndex((part) => part._id === partId);
+    const part = rawParts.value[index];
+    if (part) part.img = img;
+  }
+
   return {
     rawParts,
     parts,
@@ -74,5 +80,6 @@ export const usePartStore = defineStore('parts', () => {
     setLastId,
     add,
     update,
+    updatePartImage,
   };
 });

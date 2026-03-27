@@ -3,10 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import axios from 'axios';
 import { Router } from 'express';
+import { isValidObjectId } from 'mongoose';
 import multer from 'multer';
 import ImageService from '../../../database/lib/image/image_service.js';
 import PartService from '../../../database/lib/part/part_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
+import HttpError from '../../middleware/httpError.js';
+import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -21,12 +24,20 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post('/uploads/file', upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+function isValidId(value: unknown): value is string {
+  return typeof value === 'string' && isValidObjectId(value);
+}
 
+async function getPartEntity(entityType: string, entityId: string) {
+  if (entityType !== 'part') return null;
+  return PartService.findById(entityId);
+}
+
+// Upload a temp image via file
+router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (req, res, next) => {
+  if (!req.file) return next(new HttpError(400, 'No file uploaded'));
+
+  try {
     const relPath = path.relative(imageDir, req.file.path).replace(/\\/g, '/');
 
     const image = await ImageService.add({
@@ -38,20 +49,24 @@ router.post('/uploads/file', upload.single('image'), async (req, res) => {
       entityId: null,
     });
 
-    res.json({
-      id: image._id,
+    const response: MyImageData = {
+      id: image._id.toString(),
       url: `/images/${image.relPath}`,
-      createdAt: image.createdAt,
-    });
+      createdAt: image.createdAt.toISOString(),
+      isMain: false,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Upload failed' });
+    next(new HttpError(500, 'Upload failed', { cause: err }));
   }
 });
 
-router.post('/uploads/url', async (req, res) => {
+// Upload a temp image via URL
+router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
   const { url } = req.body || {};
-  if (!url) return res.status(400).json({ error: 'url is required' });
+
+  if (!url) return next(new HttpError(400, 'url is required'));
 
   try {
     const resp = await axios.get(url, { responseType: 'arraybuffer' });
@@ -79,60 +94,55 @@ router.post('/uploads/url', async (req, res) => {
       entityId: null,
     });
 
-    res.json({
-      id: image._id,
+    const response: MyImageData = {
+      id: image._id.toString(),
       url: `/images/${image.relPath}`,
-      createdAt: image.createdAt,
-    });
+      createdAt: image.createdAt.toISOString(),
+      isMain: false,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to download image' });
+    next(new HttpError(500, 'Failed to download image', { cause: err }));
   }
 });
 
-router.get('/uploads/recent', async (_req, res) => {
+// Get recent temp image uploads
+router.get('/uploads/recent', async (_req, res, next) => {
   try {
-    const docs = await ImageService.listRecents();
+    const images = await ImageService.listRecents();
 
-    res.json(
-      docs.map((img) => {
-        const recents: RecentImage = {
-          id: img._id.toString(),
-          url: `/images/${img.relPath}`,
-          createdAt: img.createdAt.toISOString(),
-        };
-        return recents;
-      }),
-    );
+    const response: MyImageData[] = images.map((image) => ({
+      id: image._id.toString(),
+      url: `/images/${image.relPath}`,
+      createdAt: image.createdAt.toISOString(),
+      isMain: false,
+    }));
+
+    res.status(200).json(response);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to load recent images' });
+    next(new HttpError(500, 'Failed to load recent images', { cause: err }));
   }
 });
 
-router.post('/uploads/:id/attach', async (req, res) => {
+// Attach an image to an entity
+router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) => {
   const { id } = req.params;
   const { entityType, entityId, setAsMain } = req.body;
 
-  if (!['tool', 'part', 'setup'].includes(entityType)) {
-    return res.status(400).json({ error: 'Invalid entityType' });
-  }
-  if (!entityId) {
-    return res.status(400).json({ error: 'entityId required' });
-  }
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+  if (!['tool', 'part'].includes(entityType)) return next(new HttpError(400, 'Invalid entityType'));
+  if (!entityId) return next(new HttpError(400, 'entityId required'));
+  if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+  if (!req.device) return next(new HttpError(401, 'Missing device context'));
 
   try {
     const image = await ImageService.findById(id);
-    if (!image) return res.status(404).json({ error: 'Image not found' });
-
-    if (image.status !== 'temp') {
-      return res.status(400).json({ error: 'Image is already attached' });
-    }
+    if (!image) return next(new HttpError(404, 'Image not found'));
+    if (image.status !== 'temp') return next(new HttpError(400, 'Image is already attached'));
 
     const oldPath = path.join(imageDir, image.relPath);
-    if (!fs.existsSync(oldPath)) {
-      return res.status(404).json({ error: 'File missing on disk' });
-    }
+    if (!fs.existsSync(oldPath)) return next(new HttpError(404, 'File missing on disk'));
 
     const destDir = path.join(imageDir, `${entityType}s`, String(entityId));
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
@@ -156,7 +166,7 @@ router.post('/uploads/:id/attach', async (req, res) => {
         const imageStringId = id;
 
         // Remove if already exists (in case of re-attachment)
-        part.imageIds = part.imageIds.filter((imgId) => imgId !== imageStringId);
+        part.imageIds = part.imageIds.filter((imgId) => imgId.toString() !== imageStringId);
 
         if (setAsMain) {
           // Insert at beginning if setting as main
@@ -167,43 +177,47 @@ router.post('/uploads/:id/attach', async (req, res) => {
           part.imageIds.push(imageStringId);
         }
 
-        await PartService.update(part);
+        await PartService.update(part, req.device._id.toString());
       }
     }
 
-    res.json({
-      id: image._id,
+    const response: MyImageData = {
+      id: image._id.toString(),
       url: `/images/${image.relPath}`,
-      entityType: image.entityType,
-      entityId: image.entityId,
-    });
+      createdAt: image.createdAt.toISOString(),
+      isMain: false,
+    };
+
+    res.status(200).json(response);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to attach image' });
+    next(new HttpError(500, 'Failed to attach image', { cause: err }));
   }
 });
 
-// Promote an existing image to be the main image for a part
-router.post('/images/:id/promote-to-main', async (req, res) => {
+// Promote an existing image to be the main image for an entity
+router.post('/:id/promote-to-main', requireKnownDevice, async (req, res, next) => {
   const { id } = req.params;
-  const { partId } = req.body;
+  const { entityType, entityId } = req.body;
 
-  if (!partId) {
-    return res.status(400).json({ error: 'partId required' });
-  }
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+  if (!entityType) return next(new HttpError(400, 'entityType required'));
+  if (!entityId) return next(new HttpError(400, 'entityId required'));
+  if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+  if (entityType !== 'part') return next(new HttpError(400, 'Promote to main is only for parts'));
+  if (!req.device) return next(new HttpError(401, 'Missing device context'));
 
   try {
     const image = await ImageService.findById(id);
-    if (!image) return res.status(404).json({ error: 'Image not found' });
+    if (!image) return next(new HttpError(404, 'Image not found'));
 
-    const part = await PartService.findById(partId);
-    if (!part) return res.status(404).json({ error: 'Part not found' });
+    const part = await getPartEntity(entityType, entityId);
+    if (!part) return next(new HttpError(404, 'Part not found'));
 
     if (!part.imageIds) part.imageIds = [];
     const imageStringId = id;
 
     // Remove from array if it exists
-    part.imageIds = part.imageIds.filter((imgId) => imgId !== imageStringId);
+    part.imageIds = part.imageIds.filter((imgId) => imgId.toString() !== imageStringId);
 
     // Add to beginning (main position)
     part.imageIds.unshift(imageStringId);
@@ -211,119 +225,195 @@ router.post('/images/:id/promote-to-main', async (req, res) => {
     // Update img field to point to this image's path
     part.img = `/images/${image.relPath}`;
 
-    await PartService.update(part);
+    await PartService.update(part, req.device._id.toString());
 
-    res.json({
-      id: image._id,
+    const response: MyImageData = {
+      id: image._id.toString(),
       url: `/images/${image.relPath}`,
+      createdAt: image.createdAt.toISOString(),
       isMain: true,
-    });
+    };
+
+    res.status(200).json(response);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to promote image' });
+    next(new HttpError(500, 'Failed to promote image', { cause: err }));
   }
 });
 
-// Delete a temporary image
-router.delete('/uploads/:id', async (req, res) => {
-  const { id } = req.params;
+// Get all images for a specific entity
+router.get('/entities/:entityType/:entityId/images', async (req, res, next) => {
+  const { entityType, entityId } = req.params;
+
+  if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
+  if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+  if (entityType !== 'part') return next(new HttpError(400, 'Image listing is only for parts'));
 
   try {
-    const image = await ImageService.findById(id);
-    if (!image) return res.status(404).json({ error: 'Image not found' });
-
-    // Only allow deletion of temp images
-    if (image.status !== 'temp') {
-      return res.status(400).json({ error: 'Only temporary images can be deleted' });
-    }
-
-    const filePath = path.join(imageDir, image.relPath);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-
-    // Delete from database
-    await ImageService.remove(id);
-
-    res.json({ success: true, id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to delete image' });
-  }
-});
-
-// Get all images for a specific part
-router.get('/parts/:partId/images', async (req, res) => {
-  const { partId } = req.params;
-
-  try {
-    const part = await PartService.findById(partId);
-    if (!part) return res.status(404).json({ error: 'Part not found' });
+    const part = await getPartEntity(entityType, entityId);
+    if (!part) return next(new HttpError(404, 'Part not found'));
 
     if (!part.imageIds || part.imageIds.length === 0) {
-      return res.json([]);
+      res.status(200).json([]);
+      return;
     }
 
-    const images = await ImageService.listByIds(part.imageIds || []);
+    const orderedImageIds = part.imageIds.map((imageId) => imageId.toString());
+    const mainImageId = orderedImageIds[0] || '';
+    const images = await ImageService.listByIds(orderedImageIds);
 
     const imageMap = new Map(images.map((img) => [img._id.toString(), img]));
 
-    const result = (part.imageIds || [])
+    const response: MyImageData[] = orderedImageIds
       .map((imageId) => imageMap.get(imageId))
       .filter((img): img is NonNullable<typeof img> => Boolean(img))
       .sort((left, right) => {
-        if (left._id.toString() === (part.imageIds || [])[0]) return -1;
-        if (right._id.toString() === (part.imageIds || [])[0]) return 1;
+        if (left._id.toString() === mainImageId) return -1;
+        if (right._id.toString() === mainImageId) return 1;
 
-        return right.createdAt.getTime() - left.createdAt.getTime();
+        return left.createdAt.getTime() - right.createdAt.getTime();
       })
-      .map((img) => ({
-        id: img._id.toString(),
-        url: `/images/${img.relPath}`,
-        filename: img.filename,
-        createdAt: img.createdAt.toISOString(),
-        isMain: part.img?.includes(img.relPath),
-      }));
+      .map((img) => {
+        return {
+          id: img._id.toString(),
+          url: `/images/${img.relPath}`,
+          createdAt: img.createdAt.toISOString(),
+          isMain: img._id.toString() === mainImageId,
+        };
+      });
 
-    res.json(result);
+    res.status(200).json(response);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to load part images' });
+    next(new HttpError(500, 'Failed to load entity images', { cause: err }));
   }
 });
 
-// Add an image to a part's gallery without setting as main
-router.post('/parts/:partId/images/:imageId/add', async (req, res) => {
-  const { partId, imageId } = req.params;
+// Add an image to an entity gallery without setting as main
+router.post(
+  '/entities/:entityType/:entityId/images/:imageId/add',
+  requireKnownDevice,
+  async (req, res, next) => {
+    const { entityType, entityId, imageId } = req.params;
+
+    if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
+    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+    if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
+    if (entityType !== 'part') return next(new HttpError(400, 'Gallery add is only for parts'));
+    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+
+    try {
+      const image = await ImageService.findById(imageId);
+      if (!image) return next(new HttpError(404, 'Image not found'));
+
+      const part = await getPartEntity(entityType, entityId);
+      if (!part) return next(new HttpError(404, 'Part not found'));
+
+      if (!part.imageIds) part.imageIds = [];
+      const imageStringId = imageId;
+
+      // Check if already added
+      if (part.imageIds.some((imgId) => imgId.toString() === imageStringId))
+        return next(new HttpError(400, 'Image already added to part'));
+
+      // Append to gallery (don't set as main)
+      part.imageIds.push(imageStringId);
+      await PartService.update(part, req.device._id.toString());
+
+      const response: MyImageData = {
+        id: image._id.toString(),
+        url: `/images/${image.relPath}`,
+        createdAt: image.createdAt.toISOString(),
+        isMain: false,
+      };
+
+      res.status(200).json(response);
+    } catch (err) {
+      next(new HttpError(500, 'Failed to add image to entity', { cause: err }));
+    }
+  },
+);
+
+// Delete a temporary image
+router.delete('/uploads/:id', requireKnownDevice, async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
 
   try {
-    const image = await ImageService.findById(imageId);
-    if (!image) return res.status(404).json({ error: 'Image not found' });
+    const image = await ImageService.findById(id);
+    if (!image) return next(new HttpError(404, 'Image not found'));
+    if (image.status !== 'temp')
+      return next(new HttpError(400, 'Only temporary images can be deleted'));
 
-    const part = await PartService.findById(partId);
-    if (!part) return res.status(404).json({ error: 'Part not found' });
+    const filePath = path.join(imageDir, image.relPath);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-    if (!part.imageIds) part.imageIds = [];
-    const imageStringId = imageId;
+    await ImageService.remove(id);
 
-    // Check if already added
-    if (part.imageIds.includes(imageStringId)) {
-      return res.status(400).json({ error: 'Image already added to part' });
-    }
-
-    // Append to gallery (don't set as main)
-    part.imageIds.push(imageStringId);
-    await PartService.update(part);
-
-    res.json({
-      id: image._id,
-      url: `/images/${image.relPath}`,
-      added: true,
-    });
+    res.status(200).json({ success: true, id });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to add image to part' });
+    next(new HttpError(500, 'Failed to delete image', { cause: err }));
   }
 });
+
+// Delete an image from an entity gallery
+router.delete(
+  '/entities/:entityType/:entityId/images/:imageId',
+  requireKnownDevice,
+  async (req, res, next) => {
+    const { entityType, entityId, imageId } = req.params;
+
+    if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
+    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+    if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
+    if (entityType !== 'part') return next(new HttpError(400, 'Image delete is only for parts'));
+    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+
+    try {
+      const part = await getPartEntity(entityType, entityId);
+      if (!part) return next(new HttpError(404, 'Part not found'));
+
+      if (!part.imageIds) part.imageIds = [];
+
+      const image = await ImageService.findById(imageId);
+      if (!image) return next(new HttpError(404, 'Image not found'));
+
+      const imageIdSet = new Set(part.imageIds.map((imgId) => imgId.toString()));
+      if (!imageIdSet.has(imageId))
+        return next(new HttpError(404, 'Image is not attached to this part'));
+
+      const remainingImageIds = part.imageIds
+        .map((id) => id.toString())
+        .filter((id) => id !== imageId);
+
+      part.imageIds = remainingImageIds;
+
+      const nextMainImageId = remainingImageIds[0];
+      if (nextMainImageId) {
+        const nextMainImage = await ImageService.findById(nextMainImageId);
+        part.img = nextMainImage ? `/images/${nextMainImage.relPath}` : '';
+      } else {
+        part.img = '';
+      }
+
+      await PartService.update(part, req.device._id.toString());
+
+      const filePath = path.join(imageDir, image.relPath);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      await ImageService.remove(imageId);
+
+      res.status(200).json({
+        success: true,
+        id: imageId,
+        entityType,
+        entityId,
+        nextMainImageId: nextMainImageId || '',
+        nextMainImageUrl: part.img || '',
+      });
+    } catch (err) {
+      next(new HttpError(500, 'Failed to delete entity image', { cause: err }));
+    }
+  },
+);
 
 export default router;

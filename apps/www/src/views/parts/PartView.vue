@@ -18,16 +18,6 @@
           @mouseleave="hideExpandedImage"
         />
         <MissingImage v-else class="part-img part-img-fallback" />
-        <v-btn
-          class="part-img-edit"
-          :class="{ 'part-img-edit--always': !part.img }"
-          :disabled="!part._id"
-          icon="mdi-pencil"
-          size="x-small"
-          title="Edit part image"
-          variant="flat"
-          @click="imageManagerVisible = true"
-        />
       </div>
       <div class="d-flex">
         <div class="d-flex align-center flex-column mr-4">
@@ -208,14 +198,20 @@
         </v-window-item>
 
         <v-window-item value="docs"> DOCS </v-window-item>
-        <v-window-item value="images"> <PartImagesDetails :part="part" /> </v-window-item>
+        <v-window-item value="images">
+          <PartImagesDetails :part="part" @image-selected="onPartImageSelected" />
+        </v-window-item>
         <v-window-item value="notes"> NOTES </v-window-item>
       </v-window>
     </v-form>
 
     <ImageManagerDialog
+      v-if="part"
       v-model="imageManagerVisible"
-      :part-id="part._id || ''"
+      :entity-id="part._id"
+      entity-type="part"
+      :has-image="Boolean(part.img)"
+      :title="part.description"
       @image-selected="onPartImageSelected"
     />
   </v-container>
@@ -244,7 +240,7 @@ import { usePartStore } from '@/stores/parts_store';
 const partStore = usePartStore();
 
 const showAdd = computed(() => {
-  const tabs = ['docs', 'notes', 'images'];
+  const tabs = ['docs', 'notes'];
   return tabs.includes(tab.value);
 });
 
@@ -259,7 +255,7 @@ const part = ref<Part>({} as Part);
 const partOriginal = ref<Part>({} as Part);
 
 const tab = ref<'general' | 'material' | 'cost' | 'stock' | 'docs' | 'notes' | 'images'>(
-  import.meta.env.PROD ? 'general' : 'cost',
+  import.meta.env.PROD ? 'general' : 'images',
 );
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
@@ -448,8 +444,11 @@ function addNote() {
   alert('add note');
 }
 
-function onPartImageSelected(payload: { imageId: string; url: string }) {
+function onPartImageSelected(payload: { imageId: string; url: string; isMain?: boolean }) {
+  if (!payload.isMain) return;
+
   part.value.img = payload.url;
+  if (part.value._id) partStore.updatePartImage(part.value._id, payload.url);
 }
 
 const expandedImage = ref({
@@ -502,26 +501,6 @@ function hideExpandedImage() {
   position: relative;
   display: inline-flex;
   align-items: flex-start;
-}
-
-.part-img-edit {
-  position: absolute;
-  bottom: -10px;
-  right: -10px;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
-  transform: translateY(-2px);
-  background: rgba(161, 223, 252, 0.94);
-}
-
-.part-img-wrapper:hover .part-img-edit,
-.part-img-edit--always {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
 }
 
 .part-img.part-img-fallback {

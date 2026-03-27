@@ -97,6 +97,13 @@ declare global {
       category: MaterialCategory;
     };
   }
+
+  interface MyImageData {
+    id: string;
+    url: string;
+    createdAt: string;
+    isMain?: boolean;
+  }
 }
 
 export {};

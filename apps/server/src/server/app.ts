@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { imageDir } from '../directories.js';
 import * as logger from '../logger.js';
 import api from './api/index.js';
+import errorHandler from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,5 +42,7 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(wwwDir, 'index.html'));
   });
 }
+
+app.use(errorHandler);
 
 export default app;
