@@ -112,11 +112,15 @@
               <v-row v-else dense>
                 <v-col cols="12">
                   <div class="d-flex align-center justify-space-between mb-3">
-                    <div class="text-body-2 text-medium-emphasis">
+                    <div v-if="canSelectMultiple" class="text-body-2 text-medium-emphasis">
                       Selected temp images: {{ selectedTempImageIds.length }}
+                    </div>
+                    <div v-else class="text-body-2 text-medium-emphasis">
+                      Select one image to assign.
                     </div>
                     <div class="d-flex align-center gap-2">
                       <v-btn
+                        v-if="canSelectMultiple"
                         :disabled="!selectedTempImageIds.length"
                         size="small"
                         variant="text"
@@ -132,7 +136,7 @@
                         variant="flat"
                         @click="assignSelectedToEntity"
                       >
-                        Assign Selected
+                        {{ canSelectMultiple ? 'Assign Selected' : 'Assign Image' }}
                       </v-btn>
                     </div>
                   </div>
@@ -280,7 +284,7 @@ async function attachUploadedImage(imageId: string) {
     return;
   }
 
-  const shouldPromoteToMain = !props.hasImage;
+  const shouldPromoteToMain = props.entityType !== 'part' || !props.hasImage;
 
   const { data } = await api.post(`/images/uploads/${imageId}/attach`, {
     entityType: props.entityType ?? 'part',
@@ -288,7 +292,7 @@ async function attachUploadedImage(imageId: string) {
     setAsMain: shouldPromoteToMain,
   });
 
-  emit('image-selected', { imageId: data.id, url: data.url, isMain: shouldPromoteToMain });
+  emit('image-selected', { imageId: data.id, url: data.url, isMain: data.isMain });
   dialog.value = false;
 }
 
@@ -303,12 +307,18 @@ const assignSuccess = ref(false);
 const initializingDialog = ref(false);
 const deleteConfirmVisible = ref(false);
 const deleteTargetId = ref('');
+const canSelectMultiple = computed(() => props.entityType === 'part');
 
 const isTempSelected = (imageId: string): boolean => {
   return selectedTempImageIds.value.includes(imageId);
 };
 
 function toggleTempSelection(imageId: string) {
+  if (!canSelectMultiple.value) {
+    selectedTempImageIds.value = selectedTempImageIds.value[0] === imageId ? [] : [imageId];
+    return;
+  }
+
   if (selectedTempImageIds.value.includes(imageId)) {
     selectedTempImageIds.value = selectedTempImageIds.value.filter((id) => id !== imageId);
     return;
@@ -501,19 +511,20 @@ async function assignSelectedToEntity() {
     let successCount = 0;
     let failCount = 0;
     let firstAssignedImage: { imageId: string; url: string; isMain?: boolean } | null = null;
+    const shouldPromoteToMain = props.entityType !== 'part';
 
     for (const imageId of selectedTempImageIds.value) {
       try {
         const { data } = await api.post(`/images/uploads/${imageId}/attach`, {
           entityType: props.entityType ?? 'part',
           entityId: props.entityId,
-          setAsMain: false,
+          setAsMain: shouldPromoteToMain,
         });
         if (!firstAssignedImage) {
           firstAssignedImage = {
             imageId: data.id,
             url: data.url,
-            isMain: false,
+            isMain: data.isMain,
           };
         }
         successCount += 1;

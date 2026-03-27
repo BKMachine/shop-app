@@ -14,7 +14,12 @@
           />
           <div class="logo-section py-2">
             <div class="logo-preview">
-              <img v-if="editingItem.logo" alt="" class="logo-preview__img" :src="editingItem.logo" />
+              <img
+                v-if="editingItem.logo"
+                alt=""
+                class="logo-preview__img"
+                :src="editingItem.logo"
+              />
               <MissingImage v-else class="logo-preview__fallback" />
             </div>
             <div class="logo-section__content">
@@ -88,8 +93,8 @@ import { computed, ref } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
-import api from '@/plugins/axios';
 import SettingsTiles from '@/components/settings/SettingsTiles.vue';
+import api from '@/plugins/axios';
 import { useSupplierStore } from '@/stores/supplier_store';
 
 const supplierStore = useSupplierStore();
