@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Customers from '../../../database/lib/customer/customer_service.js';
+import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
@@ -15,10 +16,7 @@ router.get('/customers', async (_req, res, next) => {
 
 router.post('/customers', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: CustomerDoc | undefined } = req.body;
-  if (!data) {
-    res.sendStatus(400);
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No customer data provided.'));
   try {
     const doc = await Customers.create(data);
     res.status(200).json(doc);
@@ -29,10 +27,7 @@ router.post('/customers', requireKnownDevice, async (req, res, next) => {
 
 router.put('/customers', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: CustomerDoc | undefined } = req.body;
-  if (!data) {
-    res.sendStatus(400);
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No customer data provided.'));
   try {
     await Customers.update(data);
     res.sendStatus(204);

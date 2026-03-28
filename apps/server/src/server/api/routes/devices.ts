@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import DeviceService from '../../../database/lib/device/device_service.js';
+import HttpError from '../../middleware/httpError.js';
 import { getClientIp } from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
@@ -13,28 +14,13 @@ router.post('/devices/register', async (req, res, next) => {
       | 'android'
       | 'unknown';
 
-    if (!deviceId) {
-      return res.status(400).json({
-        error: 'missing_device_id',
-        message: 'deviceId is required.',
-      });
-    }
+    if (!deviceId) return next(new HttpError(400, 'deviceId is required.'));
 
-    if (!displayName) {
-      return res.status(400).json({
-        error: 'missing_display_name',
-        message: 'displayName is required.',
-      });
-    }
+    if (!displayName) return next(new HttpError(400, 'displayName is required.'));
 
     const existing = await DeviceService.findDeviceById(deviceId);
 
-    if (existing) {
-      return res.status(409).json({
-        error: 'device_already_registered',
-        message: 'This device is already registered.',
-      });
-    }
+    if (existing) return next(new HttpError(409, 'This device is already registered.'));
 
     const clientIp = getClientIp(req);
     const userAgent =

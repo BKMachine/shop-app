@@ -3,6 +3,7 @@ import multer from 'multer';
 import Materials from '../../../database/lib/material/material_service.js';
 import { buildHighlightedPdf } from '../../../services/pdfs/pdf_highlight_service.js';
 import pdfParserService from '../../../services/pdfs/pdf_parser_service.js';
+import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
@@ -19,14 +20,8 @@ router.get('/materials', async (_req, res, next) => {
 
 router.post('/materials', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: Material | undefined } = req.body;
-  if (!data) {
-    res.status(400).json({ error: 'No material data provided.' });
-    return;
-  }
-  if (!req.device) {
-    res.status(401).json({ error: 'Unauthorized: device not recognized.' });
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No material data provided.'));
+  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const doc = await Materials.add(data, req.device._id.toString());
@@ -38,21 +33,12 @@ router.post('/materials', requireKnownDevice, async (req, res, next) => {
 
 router.put('/materials', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: Material | undefined } = req.body;
-  if (!data) {
-    res.status(400).json({ error: 'No material data provided.' });
-    return;
-  }
-  if (!req.device) {
-    res.status(401).json({ error: 'Unauthorized: device not recognized.' });
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No material data provided.'));
+  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const response = await Materials.update(data, req.device._id.toString());
-    if (!response) {
-      res.status(404).json({ error: 'Material not found.' });
-      return;
-    }
+    if (!response) return next(new HttpError(404, 'Material not found.'));
     res.status(200).json(response);
   } catch (e) {
     next(e);
@@ -60,13 +46,9 @@ router.put('/materials', requireKnownDevice, async (req, res, next) => {
 });
 
 router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next) => {
-  if (!req.file) {
-    res.status(400).json({ error: 'No PDF file uploaded.' });
-    return;
-  }
+  if (!req.file) return next(new HttpError(400, 'No PDF file uploaded.'));
   if (req.file.mimetype !== 'application/pdf') {
-    res.status(400).json({ error: 'Uploaded file must be a PDF.' });
-    return;
+    return next(new HttpError(400, 'Uploaded file must be a PDF.'));
   }
 
   try {
@@ -85,13 +67,9 @@ router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next)
 router.post('/materials/parse-pdf/apply', requireKnownDevice, async (req, res, next) => {
   const { updates }: { updates: MaterialApplyUpdate[] | undefined } = req.body;
   if (!updates || !Array.isArray(updates)) {
-    res.status(400).json({ error: 'updates array is required.' });
-    return;
+    return next(new HttpError(400, 'updates array is required.'));
   }
-  if (!req.device) {
-    res.status(401).json({ error: 'Unauthorized: device not recognized.' });
-    return;
-  }
+  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   const deviceId = req.device._id.toString();
 

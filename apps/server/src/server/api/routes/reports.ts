@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Reports from '../../../database/lib/report/report_service.js';
+import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
@@ -15,10 +16,7 @@ router.get('/reports', async (_req, res, next) => {
 
 router.post('/reports', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: EmailReportDoc | undefined } = req.body;
-  if (!data) {
-    res.sendStatus(400);
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No report data provided.'));
   try {
     const doc = await Reports.create(data);
     res.status(200).json(doc);
@@ -29,10 +27,7 @@ router.post('/reports', requireKnownDevice, async (req, res, next) => {
 
 router.put('/reports', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: EmailReportDoc | undefined } = req.body;
-  if (!data) {
-    res.sendStatus(400);
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No report data provided.'));
   try {
     await Reports.update(data);
     res.sendStatus(204);

@@ -1,15 +1,13 @@
 import { Router } from 'express';
 import DymoService from '../../../services/dymo_service.js';
+import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
 router.post('/print/location', requireKnownDevice, async (req, res, next) => {
   const { loc, pos }: PrintLocationBody = req.body;
-  if (!loc || !pos) {
-    res.sendStatus(400);
-    return;
-  }
+  if (!loc || !pos) return next(new HttpError(400, 'loc and pos are required.'));
   try {
     await DymoService.printLocationLabel({ loc, pos });
     res.sendStatus(204);
@@ -20,10 +18,7 @@ router.post('/print/location', requireKnownDevice, async (req, res, next) => {
 
 router.post('/print/item', requireKnownDevice, async (req, res, next) => {
   const { item, description, brand }: PrintItemBody = req.body;
-  if (!item || !description) {
-    res.sendStatus(400);
-    return;
-  }
+  if (!item || !description) return next(new HttpError(400, 'item and description are required.'));
   try {
     await DymoService.printItemLabel({ item, description, brand });
     res.sendStatus(204);

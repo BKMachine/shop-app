@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Parts from '../../../database/lib/part/part_service.js';
+import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
@@ -17,10 +18,7 @@ router.get('/parts/:id', async (req, res, next) => {
   const { id } = req.params;
   try {
     const part = await Parts.findById(id);
-    if (!part) {
-      res.sendStatus(404);
-      return;
-    }
+    if (!part) return next(new HttpError(404, 'Part not found.'));
     res.status(200).json(part);
   } catch (e) {
     next(e);
@@ -29,14 +27,8 @@ router.get('/parts/:id', async (req, res, next) => {
 
 router.post('/parts', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: PartDoc | undefined } = req.body;
-  if (!data) {
-    res.sendStatus(400);
-    return;
-  }
-  if (!req.device) {
-    res.sendStatus(401);
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No part data provided.'));
+  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
   try {
     const doc = await Parts.add(data, req.device._id.toString());
     res.status(200).json(doc);
@@ -47,14 +39,8 @@ router.post('/parts', requireKnownDevice, async (req, res, next) => {
 
 router.put('/parts', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: PartDoc | undefined } = req.body;
-  if (!data) {
-    res.sendStatus(400);
-    return;
-  }
-  if (!req.device) {
-    res.sendStatus(401);
-    return;
-  }
+  if (!data) return next(new HttpError(400, 'No part data provided.'));
+  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
   try {
     const response = await Parts.update(data, req.device._id.toString());
     res.status(200).json(response);
