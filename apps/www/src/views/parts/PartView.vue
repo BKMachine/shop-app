@@ -24,17 +24,6 @@
           <div class="d-flex flex-column align-center">
             <div class="stock">{{ part.stock }}</div>
             <div>In Stock</div>
-            <v-chip
-              v-if="criticalNotesCount > 0"
-              class="mt-2"
-              color="error"
-              prepend-icon="mdi-alert-circle"
-              size="small"
-              variant="elevated"
-              @click="tab = 'notes'"
-            >
-              {{ criticalNotesCount }} Critical {{ criticalNotesCount === 1 ? 'Note' : 'Notes' }}
-            </v-chip>
             <div class="location">
               <span v-if="part.location"> {{ part.location }}</span>
               <span v-if="part.position"> | {{ part.position }}</span>
@@ -43,12 +32,24 @@
         </div>
         <div class="d-flex flex-column align-end justify-center">
           <v-chip
-            class="mb-2 rate-chip"
-            :class="[`rate-chip--${currentRateTone}`, `text-${currentRateTone}`]"
+            class="mb-2 clickable-chip"
+            :class="`text-${currentRateTone}`"
             density="comfortable"
             @click="tab = 'cost'"
           >
             {{ currentRateDisplay }}
+          </v-chip>
+          <v-chip
+            v-if="criticalNotesCount > 0"
+            class="clickable-chip"
+            color="error"
+            density="comfortable"
+            prepend-icon="mdi-alert-circle"
+            variant="flat"
+            @click="tab = 'notes'"
+          >
+            {{ criticalNotesCount }}
+            Critical {{ criticalNotesCount === 1 ? 'Note' : 'Notes' }}
           </v-chip>
         </div>
       </div>
@@ -208,9 +209,7 @@
           </v-row>
         </v-window-item>
 
-        <v-window-item value="docs">
-          <PartDocumentsDetails :part="part" />
-        </v-window-item>
+        <v-window-item value="docs"> <PartDocumentsDetails :part="part" /> </v-window-item>
         <v-window-item value="images">
           <PartImagesDetails :part="part" @image-selected="onPartImageSelected" />
         </v-window-item>
@@ -561,9 +560,7 @@ async function loadCriticalNotesCount() {
   height: 100%;
 }
 
-.rate-chip {
-  justify-content: center;
-  font-weight: 600;
+.clickable-chip {
   cursor: pointer;
 }
 .v-window-item {
