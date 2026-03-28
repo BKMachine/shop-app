@@ -28,7 +28,13 @@
             v-for="option in filterOptions"
             :key="option.value"
             class="notes-filter-chip"
-            :color="activeFilter === option.value ? option.color : undefined"
+            :color="
+              activeFilter === option.value
+                ? option.value === 'all'
+                  ? 'purple'
+                  : option.color
+                : undefined
+            "
             :variant="activeFilter === option.value ? 'elevated' : 'outlined'"
             @click="activeFilter = option.value"
           >
@@ -90,7 +96,14 @@
               </div>
             </div>
 
-            <div class="note-card__body">{{ note.text }}</div>
+            <div class="note-card__body">
+              <template v-for="(segment, index) in highlightNoteText(note.text)" :key="index">
+                <span v-if="segment.isDimension" class="note-card__dimension">
+                  {{ segment.text }}
+                </span>
+                <span v-else>{{ segment.text }}</span>
+              </template>
+            </div>
 
             <div class="note-card__footer text-caption">
               <span class="note-card__meta-pill">
@@ -160,7 +173,15 @@
         <v-card-actions class="note-editor__actions">
           <v-spacer />
           <v-btn variant="text" @click="closeEditor">Cancel</v-btn>
-          <v-btn color="primary" :loading="saving" variant="elevated" @click="saveNote">Save</v-btn>
+          <v-btn
+            color="primary"
+            :disabled="!editorText.trim()"
+            :loading="saving"
+            variant="elevated"
+            @click="saveNote"
+          >
+            Save
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -210,7 +231,7 @@ const priorityMeta = {
 } as const;
 
 const filterOptions = [
-  { value: 'all', label: 'All', color: 'primary', icon: 'mdi-format-list-bulleted' },
+  { value: 'all', label: 'All', color: 'secondary', icon: 'mdi-format-list-bulleted' },
   { value: 'critical', label: 'Critical', color: 'error', icon: 'mdi-alert-octagon' },
   { value: 'default', label: 'Default', color: 'primary', icon: 'mdi-flag-outline' },
 ] as const;
@@ -246,6 +267,40 @@ function formatNoteTimestamp(note: MyPartNoteData) {
 
 function wasEdited(note: MyPartNoteData) {
   return note.createdAt !== note.updatedAt;
+}
+
+function highlightNoteText(text: string) {
+  const dimensionPattern = /(?<![\d.])(\d+\.\d+)(?![\d.])/g;
+  const segments: { text: string; isDimension: boolean }[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(dimensionPattern)) {
+    const start = match.index ?? 0;
+    const value = match[0];
+
+    if (start > lastIndex) {
+      segments.push({
+        text: text.slice(lastIndex, start),
+        isDimension: false,
+      });
+    }
+
+    segments.push({
+      text: value,
+      isDimension: true,
+    });
+
+    lastIndex = start + value.length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({
+      text: text.slice(lastIndex),
+      isDimension: false,
+    });
+  }
+
+  return segments.length > 0 ? segments : [{ text, isDimension: false }];
 }
 
 function openCreateDialog() {
@@ -291,7 +346,10 @@ async function saveNote() {
       toastSuccess('Note added successfully');
     }
 
-    closeEditor();
+    editorOpen.value = false;
+    editingNote.value = null;
+    editorText.value = '';
+    editorPriority.value = 'default';
     await loadNotes();
     emit('notes-changed');
   } catch (err) {
@@ -438,6 +496,17 @@ watch(
   white-space: pre-wrap;
   line-height: 1.5;
   font-size: 0.98rem;
+}
+
+.note-card__dimension {
+  display: inline-block;
+  margin: 0 0.08rem;
+  padding: 0.05rem 0.38rem;
+  border-radius: 0.4rem;
+  background: rgba(250, 204, 21, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(202, 138, 4, 0.18);
+  color: #854d0e;
+  font-weight: 700;
 }
 
 .note-card__footer {
