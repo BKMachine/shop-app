@@ -115,6 +115,18 @@ declare global {
     size: number;
     createdAt: string;
   }
+
+  interface MyPartNoteData {
+    id: string;
+    text: string;
+    priority: 'critical' | 'default';
+    createdAt: string;
+    updatedAt: string;
+    createdByDeviceId: string;
+    createdByDisplayName: string;
+    updatedByDeviceId: string;
+    updatedByDisplayName: string;
+  }
 }
 
 export {};

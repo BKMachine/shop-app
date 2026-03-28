@@ -183,6 +183,25 @@ declare global {
     _id: Types.ObjectId;
   }
 
+  /* PART NOTE */
+
+  interface PartNote {
+    _id: string;
+    partId: Part | string;
+    text: string;
+    priority: 'critical' | 'default';
+    createdAt: Date;
+    updatedAt: Date;
+    createdByDeviceId: string;
+    createdByDisplayName: string;
+    updatedByDeviceId: string;
+    updatedByDisplayName: string;
+  }
+
+  interface PartNoteDoc extends Omit<PartNote, '_id'>, Document<Types.ObjectId> {
+    _id: Types.ObjectId;
+  }
+
   /* DEVICE */
 
   interface Device {

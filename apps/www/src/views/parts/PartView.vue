@@ -24,6 +24,17 @@
           <div class="d-flex flex-column align-center">
             <div class="stock">{{ part.stock }}</div>
             <div>In Stock</div>
+            <v-chip
+              v-if="criticalNotesCount > 0"
+              class="mt-2"
+              color="error"
+              prepend-icon="mdi-alert-circle"
+              size="small"
+              variant="elevated"
+              @click="tab = 'notes'"
+            >
+              {{ criticalNotesCount }} Critical {{ criticalNotesCount === 1 ? 'Note' : 'Notes' }}
+            </v-chip>
             <div class="location">
               <span v-if="part.location"> {{ part.location }}</span>
               <span v-if="part.position"> | {{ part.position }}</span>
@@ -203,7 +214,9 @@
         <v-window-item value="images">
           <PartImagesDetails :part="part" @image-selected="onPartImageSelected" />
         </v-window-item>
-        <v-window-item value="notes"> NOTES </v-window-item>
+        <v-window-item value="notes">
+          <PartNotesDetails :part="part" @notes-changed="loadCriticalNotesCount" />
+        </v-window-item>
       </v-window>
     </v-form>
 
@@ -230,6 +243,7 @@ import PartCostDetails from '@/components/parts/PartCostDetails.vue';
 import PartDocumentsDetails from '@/components/parts/PartDocumentsDetails.vue';
 import PartImagesDetails from '@/components/parts/PartImagesDetails.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
+import PartNotesDetails from '@/components/parts/PartNotesDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import axios from '@/plugins/axios';
@@ -243,8 +257,7 @@ import { usePartStore } from '@/stores/parts_store';
 const partStore = usePartStore();
 
 const showAdd = computed(() => {
-  const tabs = ['notes'];
-  return tabs.includes(tab.value);
+  return false;
 });
 
 const defaultPartValues = {
@@ -266,6 +279,7 @@ const loading = ref(false);
 const saveFlag = ref(false);
 const partMaterialCost = ref(0);
 const imageManagerVisible = ref(false);
+const criticalNotesCount = ref(0);
 
 const currentRate = computed(() => {
   const totalCycleMinutes = calculateTotalCycleMinutes(part.value.cycleTimes);
@@ -351,6 +365,7 @@ function fetchPart(showSpinner: boolean = true) {
       const mergedPart = { ...defaultPartValues, ...data };
       part.value = cloneDeep(mergedPart);
       partOriginal.value = cloneDeep(mergedPart);
+      void loadCriticalNotesCount();
     })
     .catch(() => {
       alert('Part not found.');
@@ -430,15 +445,10 @@ function printLocation() {
 }
 
 function addNew() {
-  if (tab.value === 'notes') {
-    addNote();
-  } else if (tab.value === 'images') {
+  if (tab.value === 'images') {
     // Images are managed via the PartImagesDetails component
     // No action needed here as the component has its own buttons
   }
-}
-function addNote() {
-  alert('add note');
 }
 
 function onPartImageSelected(payload: { imageId: string; url: string; isMain?: boolean }) {
@@ -468,6 +478,21 @@ function showExpandedImage(event: MouseEvent) {
 
 function hideExpandedImage() {
   expandedImage.value = { visible: false, src: '', top: 0, left: 0 };
+}
+
+async function loadCriticalNotesCount() {
+  if (!part.value._id) {
+    criticalNotesCount.value = 0;
+    return;
+  }
+
+  try {
+    const { data } = await axios.get<MyPartNoteData[]>(`/parts/${part.value._id}/notes`);
+    criticalNotesCount.value = data.filter((note) => note.priority === 'critical').length;
+  } catch (error) {
+    console.error('Failed to load critical notes count', error);
+    criticalNotesCount.value = 0;
+  }
 }
 </script>
 
