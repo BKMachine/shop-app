@@ -511,10 +511,11 @@ async function assignSelectedToEntity() {
     let successCount = 0;
     let failCount = 0;
     let firstAssignedImage: { imageId: string; url: string; isMain?: boolean } | null = null;
-    const shouldPromoteToMain = props.entityType !== 'part';
+    let hasMainImage = Boolean(props.hasImage);
 
     for (const imageId of selectedTempImageIds.value) {
       try {
+        const shouldPromoteToMain = props.entityType !== 'part' || !hasMainImage;
         const { data } = await api.post(`/images/uploads/${imageId}/attach`, {
           entityType: props.entityType ?? 'part',
           entityId: props.entityId,
@@ -526,6 +527,9 @@ async function assignSelectedToEntity() {
             url: data.url,
             isMain: data.isMain,
           };
+        }
+        if (data.isMain) {
+          hasMainImage = true;
         }
         successCount += 1;
       } catch (error: any) {

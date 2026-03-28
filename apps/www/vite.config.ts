@@ -47,8 +47,10 @@ export default defineConfig(({ mode }) => ({
         ws: true,
       },
       '^/images': {
-        target: 'http://127.0.0.1:3000',
+        // target: 'http://127.0.0.1:3000',
+        target: 'https://app.bkmachine.net',
         changeOrigin: true,
+        rewrite: (path) => path,
       },
     },
   },

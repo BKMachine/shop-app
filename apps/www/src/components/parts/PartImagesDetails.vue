@@ -84,7 +84,7 @@
       </v-card-text>
     </v-card>
 
-    <v-dialog v-model="galleryOpen" fullscreen>
+    <v-dialog v-model="galleryOpen" content-class="gallery-overlay" fullscreen>
       <v-card class="gallery-dialog">
         <v-toolbar color="black" density="comfortable" theme="dark">
           <v-toolbar-title> {{ galleryTitle }} </v-toolbar-title>
@@ -93,17 +93,47 @@
         </v-toolbar>
 
         <v-card-text class="gallery-content pa-0">
-          <v-carousel
-            v-model="galleryIndex"
-            class="gallery-carousel"
-            hide-delimiter-background
-            :hide-delimiters="images.length <= 1"
-            show-arrows="hover"
-          >
-            <v-carousel-item v-for="image in sortedImages" :key="`gallery-${image.id}`">
-              <div class="gallery-slide"><v-img contain height="100%" :src="image.url" /></div>
-            </v-carousel-item>
-          </v-carousel>
+          <div class="gallery-stage">
+            <button
+              v-if="images.length > 1"
+              aria-label="Previous image"
+              class="gallery-nav gallery-nav--prev"
+              type="button"
+              @click="showPreviousImage"
+            >
+              <v-icon icon="mdi-chevron-left" />
+            </button>
+
+            <div class="gallery-slide">
+              <img
+                v-if="sortedImages[galleryIndex]"
+                alt=""
+                class="gallery-image"
+                :src="sortedImages[galleryIndex]?.url"
+              />
+            </div>
+
+            <button
+              v-if="images.length > 1"
+              aria-label="Next image"
+              class="gallery-nav gallery-nav--next"
+              type="button"
+              @click="showNextImage"
+            >
+              <v-icon icon="mdi-chevron-right" />
+            </button>
+          </div>
+
+          <div v-if="images.length > 1" class="gallery-pagination">
+            <button
+              v-for="(_, index) in sortedImages"
+              :key="`gallery-dot-${index}`"
+              class="gallery-pagination__dot"
+              :class="{ 'gallery-pagination__dot--active': index === galleryIndex }"
+              type="button"
+              @click="galleryIndex = index"
+            />
+          </div>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -189,14 +219,36 @@ const handleImageAddedToGallery = (data: {
   }
 };
 
+function handleGalleryKeydown(event: KeyboardEvent) {
+  if (!galleryOpen.value) return;
+
+  if (event.key === 'Escape') {
+    galleryOpen.value = false;
+    return;
+  }
+
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    showPreviousImage();
+    return;
+  }
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    showNextImage();
+  }
+}
+
 onMounted(() => {
   loadImages();
+  window.addEventListener('keydown', handleGalleryKeydown);
   socket.on('imagePromoted', handleImagePromoted);
   socket.on('imageAttached', handleImageAttached);
   socket.on('imageAddedToGallery', handleImageAddedToGallery);
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGalleryKeydown);
   socket.off('imagePromoted', handleImagePromoted);
   socket.off('imageAttached', handleImageAttached);
   socket.off('imageAddedToGallery', handleImageAddedToGallery);
@@ -219,6 +271,18 @@ function openImageManager() {
 function openGallery(index: number) {
   galleryIndex.value = index;
   galleryOpen.value = true;
+}
+
+function showPreviousImage() {
+  if (!images.value.length) return;
+  galleryIndex.value =
+    galleryIndex.value === 0 ? sortedImages.value.length - 1 : galleryIndex.value - 1;
+}
+
+function showNextImage() {
+  if (!images.value.length) return;
+  galleryIndex.value =
+    galleryIndex.value === sortedImages.value.length - 1 ? 0 : galleryIndex.value + 1;
 }
 
 function formatImageDate(createdAt: string): string {
@@ -374,22 +438,94 @@ watch(galleryOpen, (isOpen) => {
 }
 
 .gallery-dialog {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 100dvh;
   background: #0e0e0e;
 }
 
 .gallery-content {
-  height: calc(100vh - 64px);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  flex: 1;
+  min-height: 0;
+  height: calc(100dvh - 64px);
 }
 
-.gallery-carousel,
-.gallery-slide {
-  height: 100%;
+.gallery-stage {
+  position: relative;
+  min-height: 0;
 }
 
 .gallery-slide {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
+  padding: 16px 24px;
   background: #0e0e0e;
+}
+
+.gallery-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.42);
+  color: white;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.gallery-nav--prev {
+  left: 16px;
+}
+
+.gallery-nav--next {
+  right: 16px;
+}
+
+.gallery-pagination {
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0 18px;
+  background: linear-gradient(to top, rgba(14, 14, 14, 0.96), rgba(14, 14, 14, 0));
+}
+
+.gallery-pagination__dot {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.gallery-pagination__dot--active {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(1.18);
 }
 </style>

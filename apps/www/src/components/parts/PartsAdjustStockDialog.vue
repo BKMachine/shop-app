@@ -170,6 +170,7 @@ async function save() {
   await partStore
     .update(clone)
     .then(() => {
+      props.part.stock = clone.stock;
       toastSuccess('Part updated successfully');
       emit('closeDialog');
     })
