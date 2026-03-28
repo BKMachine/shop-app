@@ -4,6 +4,7 @@ import SMTPService from '../../services/smtp_service.js';
 import AuditRoutes from './routes/audits.js';
 import CustomerRoutes from './routes/customers.js';
 import DeviceRoutes from './routes/devices.js';
+import DocumentRoutes from './routes/documents.js';
 import ImageRoutes from './routes/images.js';
 import MaterialRoutes from './routes/materials.js';
 import PartRoutes from './routes/parts.js';
@@ -39,6 +40,7 @@ router.use(MaterialRoutes);
 router.use(DeviceRoutes);
 router.use(ReportRoutes);
 
+router.use('/documents', DocumentRoutes);
 router.use('/images', ImageRoutes);
 
 router.get('/mail/reorders', async (_req, res, next) => {

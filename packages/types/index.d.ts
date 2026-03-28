@@ -104,6 +104,17 @@ declare global {
     createdAt: string;
     isMain?: boolean;
   }
+
+  interface MyDocumentData {
+    id: string;
+    filename: string;
+    originalName: string;
+    url: string;
+    mimeType?: string;
+    extension?: string;
+    size: number;
+    createdAt: string;
+  }
 }
 
 export {};

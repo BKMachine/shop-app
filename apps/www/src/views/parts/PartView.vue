@@ -197,7 +197,9 @@
           </v-row>
         </v-window-item>
 
-        <v-window-item value="docs"> DOCS </v-window-item>
+        <v-window-item value="docs">
+          <PartDocumentsDetails :part="part" />
+        </v-window-item>
         <v-window-item value="images">
           <PartImagesDetails :part="part" @image-selected="onPartImageSelected" />
         </v-window-item>
@@ -225,6 +227,7 @@ import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
+import PartDocumentsDetails from '@/components/parts/PartDocumentsDetails.vue';
 import PartImagesDetails from '@/components/parts/PartImagesDetails.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
@@ -240,7 +243,7 @@ import { usePartStore } from '@/stores/parts_store';
 const partStore = usePartStore();
 
 const showAdd = computed(() => {
-  const tabs = ['docs', 'notes'];
+  const tabs = ['notes'];
   return tabs.includes(tab.value);
 });
 
@@ -427,18 +430,12 @@ function printLocation() {
 }
 
 function addNew() {
-  if (tab.value === 'docs') {
-    addDoc();
-  } else if (tab.value === 'notes') {
+  if (tab.value === 'notes') {
     addNote();
   } else if (tab.value === 'images') {
     // Images are managed via the PartImagesDetails component
     // No action needed here as the component has its own buttons
   }
-}
-
-function addDoc() {
-  alert('add doc');
 }
 function addNote() {
   alert('add note');

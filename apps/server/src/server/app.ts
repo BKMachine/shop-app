@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import morgan from 'morgan';
-import { imageDir } from '../directories.js';
+import { documentDir, imageDir } from '../directories.js';
 import * as logger from '../logger.js';
 import api from './api/index.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -27,6 +27,7 @@ app.use((req, _res, next) => {
 
 app.use('/api', api);
 app.use('/images', express.static(imageDir));
+app.use('/documents', express.static(documentDir));
 
 const wwwDir = path.join(__dirname, '../../../www/dist');
 logger.default.info(`Serving static files from ${wwwDir}`);

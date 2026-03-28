@@ -21,6 +21,7 @@ const schema = new Schema<PartDoc>({
   additionalCosts: [{ name: String, cost: Number, url: String }],
   price: { type: Number, default: 0 },
   imageIds: [{ type: Types.ObjectId, ref: 'images' }],
+  documentIds: [{ type: Types.ObjectId, ref: 'documents' }],
 });
 
 export default model<PartDoc>('parts', schema);

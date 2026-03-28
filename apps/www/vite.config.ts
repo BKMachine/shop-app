@@ -52,6 +52,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path,
       },
+      '^/documents': {
+        target: 'https://app.bkmachine.net',
+        changeOrigin: true,
+        rewrite: (path) => path,
+      },
     },
   },
 }));

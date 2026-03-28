@@ -104,6 +104,7 @@ declare global {
     additionalCosts: AdditionalCost[];
     price: number;
     imageIds?: string[];
+    documentIds?: string[];
   }
 
   interface PartDoc extends Omit<Part, '_id'>, Document<Types.ObjectId> {
@@ -159,6 +160,26 @@ declare global {
   }
 
   interface ImageDoc extends Omit<Image, '_id'>, Document<Types.ObjectId> {
+    _id: Types.ObjectId;
+  }
+
+  /* STORED DOCUMENT */
+
+  interface StoredDocument {
+    _id: string;
+    filename: string;
+    originalName: string;
+    relPath: string;
+    mimeType?: string;
+    extension?: string;
+    size: number;
+    entityType: 'part' | null;
+    entityId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+
+  interface StoredDocumentDoc extends Omit<StoredDocument, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 
