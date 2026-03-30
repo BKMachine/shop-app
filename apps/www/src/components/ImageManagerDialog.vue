@@ -150,13 +150,21 @@
                 <v-col v-for="img in tempImages" :key="img.id" cols="6" lg="2" md="3" sm="4">
                   <v-card
                     :border="isTempSelected(img.id)"
-                    class="image-card pa-1 position-relative"
+                    class="image-card pa-2 position-relative"
                     :color="isTempSelected(img.id) ? 'primary' : ''"
                     elevation="2"
                     hover
+                    style="min-width: 180px; min-height: 180px;"
                     @click="toggleTempSelection(img.id)"
                   >
-                    <v-img aspect-ratio="1" cover :src="img.url" />
+                    <v-img
+                      aspect-ratio="1"
+                      cover
+                      height="160px"
+                      :src="img.url"
+                      style="margin:auto;"
+                      width="160px"
+                    />
 
                     <v-card-subtitle class="image-card__date text-caption mt-1 px-2">
                       {{ formatImageDate(img.createdAt) }}
@@ -730,7 +738,11 @@ function onUrlClear() {
 .image-card {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   height: 100%;
+  min-width: 180px;
+  min-height: 180px;
 }
 
 .image-card__date {
