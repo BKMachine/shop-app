@@ -33,7 +33,7 @@
         <div class="d-flex flex-column align-end justify-center">
           <v-chip
             class="mb-2 clickable-chip"
-            :class="`text-${currentRateTone}`"
+            :class="{'header-rate-swatch--empty': hasNoProductPrice, [`text-${currentRateTone}`]: !hasNoProductPrice}"
             density="comfortable"
             @click="tab = 'cost'"
           >
@@ -279,8 +279,12 @@ const saveFlag = ref(false);
 const partMaterialCost = ref(0);
 const imageManagerVisible = ref(false);
 const criticalNotesCount = ref(0);
+const hasNoProductPrice = computed(() => {
+  return part.value.price == null || part.value.price === 0;
+});
 
 const currentRate = computed(() => {
+  if (hasNoProductPrice.value) return 0;
   const totalCycleMinutes = calculateTotalCycleMinutes(part.value.cycleTimes);
   const rate = calculateRatePerHour(part.value.price, partMaterialCost.value, totalCycleMinutes);
   return Number.isFinite(rate) ? rate : 0;
@@ -565,5 +569,8 @@ async function loadCriticalNotesCount() {
 }
 .v-window-item {
   padding: 0 1rem 1rem 1rem;
+}
+.header-rate-swatch--empty {
+  background: white;
 }
 </style>

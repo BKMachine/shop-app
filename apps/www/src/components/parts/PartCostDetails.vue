@@ -201,9 +201,7 @@
         </div>
         <div class="summary-row mb-4">
           <span>Current Rate</span>
-          <b :class="`text-${currentMarginTone}`">
-            ${{ formatCost(currentAmountMinusMaterialPerHour) }}/hr
-          </b>
+          <b :class="`text-${currentRateTone}`"> ${{ formatCost(currentRate) }}/hr </b>
         </div>
 
         <v-divider class="mb-4" />
@@ -219,7 +217,7 @@
         <div class="target-slider-wrap mb-3">
           <div
             class="current-rate-indicator"
-            :class="`text-${currentMarginTone}`"
+            :class="`text-${currentRateTone}`"
             :style="{ left: `calc(10px + (100% - 20px) * ${currentRateSliderPercent / 100})` }"
           >
             <span class="current-rate-label">Current</span>
@@ -239,10 +237,10 @@
 
           <div class="slider-limits mb-6">
             <span>
-              {{ currentAmountMinusMaterialPerHour < hourlyTargetMin ? `$${formatCost(currentAmountMinusMaterialPerHour)}/hr` : `$${hourlyTargetMin}/hr` }}
+              {{ currentRate < hourlyTargetMin ? `$${formatCost(currentRate)}/hr` : `$${hourlyTargetMin}/hr` }}
             </span>
             <span>
-              {{ currentAmountMinusMaterialPerHour > hourlyTargetMax ? `$${formatCost(currentAmountMinusMaterialPerHour)}/hr` : `$${hourlyTargetMax}/hr` }}
+              {{ currentRate > hourlyTargetMax ? `$${formatCost(currentRate)}/hr` : `$${hourlyTargetMax}/hr` }}
             </span>
           </div>
         </div>
@@ -404,16 +402,18 @@ const hourlyTargetMax = RATE_TARGET_RANGE.max;
 const hourlyTargetStep = RATE_TARGET_RANGE.step;
 
 const totalCostBase = computed(() => (partMaterialCost || 0) + totalAdditionalCost.value);
+const hasNoProductPrice = computed(() => part.price == null || part.price === 0);
 
 const amountMinusTotalCosts = computed(() => (part.price ? part.price - totalCostBase.value : 0));
 
-const currentAmountMinusMaterialPerHour = computed(() => {
+const currentRate = computed(() => {
+  if (hasNoProductPrice.value) return 0;
   return calculateRatePerHour(part.price, totalCostBase.value, totalCycleTime.value);
 });
 
 const targetVisualTone = computed(() => getToneForRate(targetHourlyRate.value));
 
-const currentMarginTone = computed(() => getToneForRate(currentAmountMinusMaterialPerHour.value));
+const currentRateTone = computed(() => getToneForRate(currentRate.value));
 
 const requiredAmountMinusCostsAtTarget = computed(() => {
   if (!totalCycleTime.value) {
@@ -458,7 +458,7 @@ const currentRateSliderPercent = computed(() => {
     return 0;
   }
 
-  const normalized = ((currentAmountMinusMaterialPerHour.value - hourlyTargetMin) / range) * 100;
+  const normalized = ((currentRate.value - hourlyTargetMin) / range) * 100;
 
   return Math.max(0, Math.min(100, normalized));
 });

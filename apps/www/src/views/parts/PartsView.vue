@@ -45,7 +45,10 @@
         <template #['item.marginRate']="{ item }">
           <div class="rate-swatch-cell">
             <span
-              :class="['rate-swatch', `rate-swatch--${item.marginTone}`, `text-${item.marginTone}`]"
+              :class="[
+                'rate-swatch',
+                item.hasNoProductPrice ? 'rate-swatch--empty' : `rate-swatch--${item.marginTone}`,
+              ]"
               @click.stop="openPartCost(item)"
             />
           </div>
@@ -184,10 +187,14 @@ const tableItems = computed(() =>
         : part.material;
     const partMaterialCost = calculatePartMaterialCost(part, material);
     const totalCycleMinutes = calculateTotalCycleMinutes(part.cycleTimes);
-    const marginRate = calculateRatePerHour(part.price, partMaterialCost, totalCycleMinutes);
+    const hasNoProductPrice = part.price == null || part.price === 0;
+    const marginRate = hasNoProductPrice
+      ? 0
+      : calculateRatePerHour(part.price, partMaterialCost, totalCycleMinutes);
 
     return {
       ...part,
+      hasNoProductPrice,
       marginRate,
       marginTone: getToneForRate(marginRate),
     };
@@ -299,6 +306,11 @@ function hideExpandedImage() {
   border-radius: 6px;
   display: inline-block;
   cursor: pointer;
+}
+
+.rate-swatch--empty {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.18);
 }
 
 .part-img-fallback {
