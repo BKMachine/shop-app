@@ -10,7 +10,7 @@
     </v-card-title>
     <v-card-text>
       <v-row no-gutters>
-        <v-col cols="8">
+        <v-col cols="7">
           <v-text-field
             v-model="search"
             class="my-2 mr-2"
@@ -22,7 +22,7 @@
             variant="outlined"
           />
         </v-col>
-        <v-col cols="4">
+        <v-col cols="3">
           <CustomerSelect
             v-model="selectedCustomerId"
             class="my-2 ml-2"
@@ -30,6 +30,16 @@
             hide-details
             label="Customer"
             variant="outlined"
+          />
+        </v-col>
+        <v-col class="d-flex align-center justify-space-around" cols="2">
+          <v-checkbox
+            v-model="showSubComponents"
+            class="parts-sub-toggle"
+            color="primary"
+            density="compact"
+            hide-details
+            label="Show Subcomponents"
           />
         </v-col>
       </v-row>
@@ -111,9 +121,9 @@ import MissingImage from '@/components/MissingImage.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import { getToneForRate } from '@/plugins/rates_theme';
 import {
-  calculatePartMaterialCost,
+  calculateAssemblyCycleMinutes,
+  calculateAssemblyMaterialCost,
   calculateRatePerHour,
-  calculateTotalCycleMinutes,
 } from '@/plugins/utils';
 import router from '@/router';
 import { useMaterialsStore } from '@/stores/materials_store';
@@ -126,6 +136,7 @@ const page = ref(1);
 const itemsPerPage = ref(10);
 const search = ref('');
 const selectedCustomerId = ref<string | null>(null);
+const showSubComponents = ref(false);
 const missingImageIds = ref<Record<string, boolean>>({});
 
 const headers = [
@@ -162,13 +173,25 @@ const headers = [
   },
 ];
 
-const filteredItems = computed(() => {
-  if (!selectedCustomerId.value) {
-    return [...partStore.parts];
-  }
+const subComponentPartIds = computed(() => {
+  return new Set(
+    partStore.parts.flatMap((part) =>
+      (part.subComponentIds || []).map((subComponent) => String(subComponent.partId)),
+    ),
+  );
+});
 
+const filteredItems = computed(() => {
   return partStore.parts.filter((part) => {
+    if (!showSubComponents.value && subComponentPartIds.value.has(part._id)) {
+      return false;
+    }
+
     const customerId = typeof part.customer === 'string' ? part.customer : part.customer?._id;
+    if (!selectedCustomerId.value) {
+      return true;
+    }
+
     return customerId === selectedCustomerId.value;
   });
 });
@@ -179,14 +202,24 @@ onMounted(() => {
   }
 });
 
+const partById = computed(() => {
+  return new Map(partStore.parts.map((part) => [part._id, part]));
+});
+
+function resolvePart(partId: string) {
+  return partById.value.get(partId);
+}
+
+function resolveMaterial(material: Part['material']) {
+  if (!material) return null;
+  if (typeof material !== 'string') return material;
+  return materialsStore.materials.find((candidate) => candidate._id === material) || null;
+}
+
 const tableItems = computed(() =>
   filteredItems.value.map((part) => {
-    const material =
-      typeof part.material === 'string'
-        ? materialsStore.materials.find((x) => x._id === part.material)
-        : part.material;
-    const partMaterialCost = calculatePartMaterialCost(part, material);
-    const totalCycleMinutes = calculateTotalCycleMinutes(part.cycleTimes);
+    const partMaterialCost = calculateAssemblyMaterialCost(part, resolvePart, resolveMaterial);
+    const totalCycleMinutes = calculateAssemblyCycleMinutes(part, resolvePart);
     const hasNoProductPrice = part.price == null || part.price === 0;
     const marginRate = hasNoProductPrice
       ? 0
@@ -311,6 +344,10 @@ function hideExpandedImage() {
 .rate-swatch--empty {
   background: white;
   border: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.parts-sub-toggle {
+  margin-top: 0;
 }
 
 .part-img-fallback {

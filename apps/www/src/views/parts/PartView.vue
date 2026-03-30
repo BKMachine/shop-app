@@ -149,14 +149,50 @@
               label="Product Page URL"
             />
           </v-row>
+          <v-expansion-panels class="mt-4" variant="accordion">
+            <v-expansion-panel class="sub-components-panel">
+              <v-expansion-panel-title>
+                <div class="d-flex align-center ga-2">
+                  <span>Sub-Components</span>
+                  <v-chip v-if="resolvedSubComponents.length" size="small" variant="tonal">
+                    {{ resolvedSubComponents.length }}
+                  </v-chip>
+                </div>
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <v-autocomplete
+                  v-model="selectedSubComponentIds"
+                  chips
+                  closable-chips
+                  item-title="label"
+                  item-value="value"
+                  :items="subComponentOptions"
+                  label="Search Parts"
+                  multiple
+                  variant="outlined"
+                />
+                <div class="text-body-2 text-medium-emphasis mt-3">
+                  Pick existing parts to treat as sub-components for this assembly.
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
         </v-window-item>
 
         <v-window-item eager value="material">
-          <PartMaterialDetails :part="part" @update:partMaterialCost="partMaterialCost = $event" />
+          <PartMaterialDetails
+            :part="part"
+            :sub-components="resolvedSubComponentItems"
+            @update:partMaterialCost="partMaterialCost = $event"
+          />
         </v-window-item>
 
         <v-window-item eager value="cost">
-          <PartCostDetails :part="part" :partMaterialCost="partMaterialCost" />
+          <PartCostDetails
+            :part="part"
+            :partMaterialCost="partMaterialCost"
+            :sub-components="resolvedSubComponentItems"
+          />
         </v-window-item>
 
         <v-window-item value="stock">
@@ -248,7 +284,7 @@ import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vu
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { getToneForRate } from '@/plugins/rates_theme';
-import { calculateRatePerHour, calculateTotalCycleMinutes, isNumber } from '@/plugins/utils';
+import { calculateAssemblyCycleMinutes, calculateRatePerHour, isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { usePartStore } from '@/stores/parts_store';
@@ -282,11 +318,90 @@ const criticalNotesCount = ref(0);
 const hasNoProductPrice = computed(() => {
   return part.value.price == null || part.value.price === 0;
 });
+const subComponentEntries = computed<PartSubComponent[]>(() => part.value.subComponentIds || []);
+const selectedSubComponentIds = computed<string[]>({
+  get() {
+    return subComponentEntries.value.map((entry) => String(entry.partId));
+  },
+  set(ids) {
+    const existingQtyById = new Map(
+      subComponentEntries.value.map((entry) => [
+        String(entry.partId),
+        Math.max(1, Number(entry.qty) || 1),
+      ]),
+    );
+    part.value.subComponentIds = ids.map((partId) => ({
+      partId,
+      qty: existingQtyById.get(partId) || 1,
+    }));
+  },
+});
+const partById = computed(() => {
+  return new Map(partStore.parts.map((candidate) => [candidate._id, candidate]));
+});
+const resolvePart = (partId: string) => partById.value.get(partId);
+const partDependsOnCurrent = (candidateId: string, visited = new Set<string>()): boolean => {
+  if (!part.value._id || visited.has(candidateId)) return false;
+  const candidate = resolvePart(candidateId);
+  if (!candidate) return false;
+  const nextVisited = new Set(visited);
+  nextVisited.add(candidateId);
+
+  return (candidate.subComponentIds || []).some((subComponent) => {
+    const normalizedId = String(subComponent.partId);
+    if (normalizedId === part.value._id) return true;
+    return partDependsOnCurrent(normalizedId, nextVisited);
+  });
+};
+const disallowedSubComponentIds = computed(() => {
+  return new Set(
+    partStore.parts
+      .filter(
+        (candidate) => candidate._id === part.value._id || partDependsOnCurrent(candidate._id),
+      )
+      .map((candidate) => candidate._id),
+  );
+});
+const resolvedSubComponents = computed(() => {
+  const ids = new Set(selectedSubComponentIds.value);
+  return partStore.parts.filter(
+    (candidate) => ids.has(candidate._id) && candidate._id !== part.value._id,
+  );
+});
+const resolvedSubComponentItems = computed(() => {
+  return subComponentEntries.value
+    .map((entry) => {
+      const subPart = resolvePart(String(entry.partId));
+      if (!subPart || subPart._id === part.value._id) return null;
+      return {
+        key: String(entry.partId),
+        entry,
+        part: subPart,
+      };
+    })
+    .filter((item): item is { key: string; entry: PartSubComponent; part: Part } => Boolean(item));
+});
+const subComponentOptions = computed(() => {
+  return partStore.parts
+    .filter((candidate) => !disallowedSubComponentIds.value.has(candidate._id))
+    .slice()
+    .sort((a, b) => a.part.localeCompare(b.part))
+    .map((candidate) => ({
+      label: `${candidate.part} - ${candidate.description}`,
+      value: candidate._id,
+    }));
+});
+const effectiveTotalCycleMinutes = computed(() => {
+  return calculateAssemblyCycleMinutes(part.value, resolvePart);
+});
 
 const currentRate = computed(() => {
   if (hasNoProductPrice.value) return 0;
-  const totalCycleMinutes = calculateTotalCycleMinutes(part.value.cycleTimes);
-  const rate = calculateRatePerHour(part.value.price, partMaterialCost.value, totalCycleMinutes);
+  const rate = calculateRatePerHour(
+    part.value.price,
+    partMaterialCost.value,
+    effectiveTotalCycleMinutes.value,
+  );
   return Number.isFinite(rate) ? rate : 0;
 });
 
@@ -310,6 +425,10 @@ onMounted(() => {
   const routeParams = router.currentRoute.value.params;
 
   setTabFromQuery();
+
+  if (!partStore.rawParts.length && !partStore.loading) {
+    partStore.fetch();
+  }
 
   if (routeName === 'createPart') {
     part.value = { ...part.value, ...defaultPartValues };
@@ -366,6 +485,22 @@ function fetchPart(showSpinner: boolean = true) {
     .get<Part>(`/parts/${id}`)
     .then(({ data }) => {
       const mergedPart = { ...defaultPartValues, ...data };
+      mergedPart.subComponentIds = (mergedPart.subComponentIds || [])
+        .map((entry) => {
+          if (typeof entry === 'string') {
+            return { partId: entry, qty: 1 };
+          }
+
+          return {
+            partId: String(entry.partId),
+            qty: Math.max(1, Number(entry.qty) || 1),
+          };
+        })
+        .filter(
+          (entry, index, array) =>
+            array.findIndex((candidate) => candidate.partId === entry.partId) === index &&
+            entry.partId !== mergedPart._id,
+        );
       part.value = cloneDeep(mergedPart);
       partOriginal.value = cloneDeep(mergedPart);
       void loadCriticalNotesCount();
@@ -381,6 +516,19 @@ function fetchPart(showSpinner: boolean = true) {
 async function savePart() {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
+  part.value.subComponentIds = (part.value.subComponentIds || []).filter(
+    (subComponent, index, array) => {
+      const normalizedId = String(subComponent.partId);
+      return (
+        array.findIndex((candidate) => String(candidate.partId) === normalizedId) === index &&
+        !disallowedSubComponentIds.value.has(normalizedId)
+      );
+    },
+  );
+  part.value.subComponentIds = (part.value.subComponentIds || []).map((subComponent) => ({
+    partId: String(subComponent.partId),
+    qty: Math.max(1, Number(subComponent.qty) || 1),
+  }));
   if (routeName === 'createPart') {
     await partStore
       .add(part.value)
@@ -424,6 +572,12 @@ function toComparablePart(value: Part) {
     ...value,
     customer: getCustomerId(value.customer),
     material: getMaterialId(value.material),
+    subComponentIds: (value.subComponentIds || [])
+      .map((subComponent) => ({
+        partId: String(subComponent.partId),
+        qty: Math.max(1, Number(subComponent.qty) || 1),
+      }))
+      .sort((a, b) => a.partId.localeCompare(b.partId)),
   };
 }
 

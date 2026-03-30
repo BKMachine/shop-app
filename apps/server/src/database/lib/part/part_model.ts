@@ -20,6 +20,12 @@ const schema = new Schema<PartDoc>({
   cycleTimes: [{ operation: String, time: Number }],
   additionalCosts: [{ name: String, cost: Number, url: String }],
   price: { type: Number, default: 0 },
+  subComponentIds: [
+    {
+      partId: { type: Types.ObjectId, ref: 'parts', required: true },
+      qty: { type: Number, default: 1, min: 1 },
+    },
+  ],
   imageIds: [{ type: Types.ObjectId, ref: 'images' }],
   documentIds: [{ type: Types.ObjectId, ref: 'documents' }],
 });

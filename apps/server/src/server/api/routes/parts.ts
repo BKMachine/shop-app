@@ -4,6 +4,13 @@ import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
+const isAssemblyValidationError = (error: unknown): error is Error => {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message === 'A part cannot include itself as a sub-component.' ||
+    error.message === 'Sub-components cannot create recursive assembly relationships.'
+  );
+};
 
 router.get('/parts', async (_req, res, next) => {
   try {
@@ -33,6 +40,7 @@ router.post('/parts', requireKnownDevice, async (req, res, next) => {
     const doc = await Parts.add(data, req.device._id.toString());
     res.status(200).json(doc);
   } catch (e) {
+    if (isAssemblyValidationError(e)) return next(new HttpError(400, e.message));
     next(e);
   }
 });
@@ -45,6 +53,7 @@ router.put('/parts', requireKnownDevice, async (req, res, next) => {
     const response = await Parts.update(data, req.device._id.toString());
     res.status(200).json(response);
   } catch (e) {
+    if (isAssemblyValidationError(e)) return next(new HttpError(400, e.message));
     next(e);
   }
 });

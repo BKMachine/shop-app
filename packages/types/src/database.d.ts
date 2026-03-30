@@ -82,6 +82,11 @@ declare global {
     url?: string;
   }
 
+  interface PartSubComponent {
+    partId: string;
+    qty: number;
+  }
+
   interface Part {
     _id: string;
     customer: Customer | string;
@@ -103,6 +108,7 @@ declare global {
     cycleTimes: CycleTimes[];
     additionalCosts: AdditionalCost[];
     price: number;
+    subComponentIds?: PartSubComponent[];
     imageIds?: string[];
     documentIds?: string[];
   }

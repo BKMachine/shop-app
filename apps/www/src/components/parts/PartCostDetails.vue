@@ -19,46 +19,102 @@
       </v-row>
 
       <v-divider class="my-1" />
-      <div class="mb-2 font-weight-bold">Cycle Times</div>
-      <v-row v-for="entry in cycleEntries" :key="entry.rowId" class="mb-2 align-center" no-gutters>
-        <v-col cols="11">
-          <v-row class="mb-2" no-gutters>
-            <v-col cols="6">
-              <v-text-field
-                v-model="entry.cycle.operation"
-                class="mr-1"
-                dense
-                hide-details
-                label="Operation"
-              />
-            </v-col>
-            <v-col cols="6">
-              <v-text-field
-                class="ml-2"
-                dense
-                hide-details
-                label="Cycle Time (mm:ss)"
-                :model-value="getCycleInputValue(entry.rowId, entry.cycle.time)"
-                @blur="onCycleBlur(entry.rowId, entry.idx)"
-                @focus="onCycleFocus(entry.rowId, entry.cycle.time)"
-                @update:model-value="onCycleInput(entry.rowId, $event)"
-              />
-            </v-col>
-          </v-row>
-        </v-col>
-        <v-col cols="1">
-          <v-icon
-            class="ml-4"
-            color="red"
-            icon="mdi-delete-circle"
-            size="x-large"
-            @click="removeCycleTime(entry.rowId, entry.idx)"
-          />
-        </v-col>
-      </v-row>
-      <v-btn color="primary" variant="outlined" @click="addCycleTime">
-        <v-icon left> mdi-plus </v-icon>Add Cycle Time
-      </v-btn>
+      <div class="mb-2 font-weight-bold">
+        {{ hasSubComponents ? 'Sub-Component Cycle Summary' : 'Cycle Times' }}
+      </div>
+      <template v-if="hasSubComponents">
+        <v-card border class="mb-2" variant="tonal">
+          <v-card-text>
+            <div class="text-body-2 text-medium-emphasis mb-3">
+              Cycle time for this assembly is derived from its attached sub-components.
+            </div>
+            <v-table class="rounded bg-transparent" density="compact">
+              <colgroup>
+                <col class="assembly-name-col" />
+                <col class="assembly-meta-col" />
+                <col class="assembly-chip-col" />
+              </colgroup>
+              <tbody>
+                <tr v-for="component in subComponentCycleRows" :key="component._id">
+                  <td class="text-body-2 assembly-name-cell">
+                    <div class="sub-component-name-block">
+                      <span class="sub-component-name-row">
+                        <span class="sub-component-name">{{ component.part }}</span>
+                        <v-btn
+                          color="primary"
+                          density="comfortable"
+                          icon="mdi-open-in-new"
+                          size="x-small"
+                          variant="text"
+                          @click="openSubComponent(component.partId)"
+                        />
+                      </span>
+                      <span class="sub-component-description text-medium-emphasis">
+                        {{ component.description }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="text-body-2 text-medium-emphasis assembly-meta-cell">
+                    {{ component.operationCount }}
+                    operation(s) x {{ component.qty }}
+                  </td>
+                  <td class="text-right assembly-chip-cell">
+                    <v-chip class="my-2" color="primary" size="small" variant="tonal">
+                      {{ formatCycleLonghand(component.totalCycleTime) }}
+                    </v-chip>
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </v-card-text>
+        </v-card>
+      </template>
+      <template v-else>
+        <v-row
+          v-for="entry in cycleEntries"
+          :key="entry.rowId"
+          class="mb-2 align-center"
+          no-gutters
+        >
+          <v-col cols="11">
+            <v-row class="mb-2" no-gutters>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="entry.cycle.operation"
+                  class="mr-1"
+                  dense
+                  hide-details
+                  label="Operation"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  class="ml-2"
+                  dense
+                  hide-details
+                  label="Cycle Time (mm:ss)"
+                  :model-value="getCycleInputValue(entry.rowId, entry.cycle.time)"
+                  @blur="onCycleBlur(entry.rowId, entry.idx)"
+                  @focus="onCycleFocus(entry.rowId, entry.cycle.time)"
+                  @update:model-value="onCycleInput(entry.rowId, $event)"
+                />
+              </v-col>
+            </v-row>
+          </v-col>
+          <v-col cols="1">
+            <v-icon
+              class="ml-4"
+              color="red"
+              icon="mdi-delete-circle"
+              size="x-large"
+              @click="removeCycleTime(entry.rowId, entry.idx)"
+            />
+          </v-col>
+        </v-row>
+        <v-btn color="primary" variant="outlined" @click="addCycleTime">
+          <v-icon left> mdi-plus </v-icon>Add Cycle Time
+        </v-btn>
+      </template>
 
       <v-divider class="my-4" />
 
@@ -175,7 +231,7 @@
 
         <div class="summary-row mb-2">
           <span>Total Cycle Time</span>
-          <b>{{ formatCycleLonghand(totalCycleTime) }}</b>
+          <b>{{ formatCycleLonghand(effectiveTotalCycleTime) }}</b>
         </div>
         <div class="summary-row mb-2">
           <span>
@@ -280,6 +336,7 @@ import {
   RATE_TARGET_RANGE,
 } from '@/plugins/rates_theme';
 import {
+  calculateAssemblyCycleMinutes,
   calculateRatePerHour,
   formatCost,
   formatCycle,
@@ -287,11 +344,19 @@ import {
   onlyAllowNumeric,
   parseCycle,
 } from '@/plugins/utils';
+import router from '@/router';
+import { usePartStore } from '@/stores/parts_store';
 
-const { part, partMaterialCost } = defineProps<{
+const { part, partMaterialCost, subComponents } = defineProps<{
   part: Part;
   partMaterialCost: number;
+  subComponents?: Array<{
+    key: string;
+    entry: PartSubComponent;
+    part: Part;
+  }>;
 }>();
+const partStore = usePartStore();
 
 // Cycle Times
 
@@ -317,6 +382,36 @@ const totalCycleTime = computed(() =>
     return total + (entry.cycle.time || 0);
   }, 0),
 );
+const hasSubComponents = computed(() => (subComponents || []).length > 0);
+const subComponentById = computed(() => {
+  return new Map(partStore.parts.map((component) => [component._id, component]));
+});
+function resolvePart(partId: string) {
+  return subComponentById.value.get(partId);
+}
+const subComponentCycleRows = computed(() => {
+  return (subComponents || []).map((subComponent) => ({
+    _id: subComponent.key,
+    partId: subComponent.part._id,
+    qty: Math.max(1, Number(subComponent.entry.qty) || 1),
+    part: subComponent.part.part,
+    description: subComponent.part.description,
+    operationCount: (subComponent.part.cycleTimes || []).length,
+    totalCycleTime:
+      calculateAssemblyCycleMinutes(subComponent.part, resolvePart) *
+      Math.max(1, Number(subComponent.entry.qty) || 1),
+  }));
+});
+const effectiveTotalCycleTime = computed(() => {
+  if (!hasSubComponents.value) {
+    return totalCycleTime.value;
+  }
+
+  return subComponentCycleRows.value.reduce(
+    (total, component) => total + component.totalCycleTime,
+    0,
+  );
+});
 
 const createCycleRowId = () => `cycle-${nextCycleRowId++}`;
 
@@ -408,7 +503,7 @@ const amountMinusTotalCosts = computed(() => (part.price ? part.price - totalCos
 
 const currentRate = computed(() => {
   if (hasNoProductPrice.value) return 0;
-  return calculateRatePerHour(part.price, totalCostBase.value, totalCycleTime.value);
+  return calculateRatePerHour(part.price, totalCostBase.value, effectiveTotalCycleTime.value);
 });
 
 const targetVisualTone = computed(() => getToneForRate(targetHourlyRate.value));
@@ -416,11 +511,11 @@ const targetVisualTone = computed(() => getToneForRate(targetHourlyRate.value));
 const currentRateTone = computed(() => getToneForRate(currentRate.value));
 
 const requiredAmountMinusCostsAtTarget = computed(() => {
-  if (!totalCycleTime.value) {
+  if (!effectiveTotalCycleTime.value) {
     return 0;
   }
 
-  return (targetHourlyRate.value * totalCycleTime.value) / 60;
+  return (targetHourlyRate.value * effectiveTotalCycleTime.value) / 60;
 });
 
 const requiredProductPriceAtTarget = computed(
@@ -449,7 +544,7 @@ const requiredCycleTimeAtTarget = computed(() => {
 });
 
 const cycleTimeDeltaToTarget = computed(
-  () => totalCycleTime.value - requiredCycleTimeAtTarget.value,
+  () => effectiveTotalCycleTime.value - requiredCycleTimeAtTarget.value,
 );
 
 const currentRateSliderPercent = computed(() => {
@@ -470,6 +565,10 @@ const rateSliderStyle = computed(() => ({
 function onPriceUpdate(value: string) {
   priceInput.value = value;
   part.price = Number(value) || 0;
+}
+
+function openSubComponent(partId: string) {
+  router.push({ name: 'viewPart', params: { id: partId } });
 }
 
 const onPriceBlur = () => {
@@ -577,6 +676,52 @@ function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.assembly-name-col {
+  width: auto;
+}
+
+.assembly-meta-col {
+  width: 180px;
+}
+
+.assembly-chip-col {
+  width: 140px;
+}
+
+.assembly-name-cell {
+  padding-right: 1rem;
+}
+
+.assembly-meta-cell {
+  white-space: nowrap;
+  text-align: right;
+  padding-right: 1rem;
+}
+
+.assembly-chip-cell {
+  white-space: nowrap;
+}
+
+.sub-component-name-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.sub-component-name {
+  font-weight: 500;
+}
+
+.sub-component-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.sub-component-description {
+  font-size: 0.7rem;
 }
 
 .target-slider .v-slider-track {

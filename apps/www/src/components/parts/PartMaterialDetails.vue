@@ -1,5 +1,93 @@
 <template>
-  <v-row>
+  <v-row v-if="hasSubComponents">
+    <v-col cols="12">
+      <v-card variant="outlined">
+        <v-card-title class="text-subtitle-1">Sub-Component Material Summary</v-card-title>
+        <v-card-text>
+          <div class="text-body-2 text-medium-emphasis mb-4">
+            Material cost for this assembly is derived from its attached sub-components.
+          </div>
+          <v-table class="rounded bg-transparent" density="compact">
+            <tbody>
+              <tr v-for="component in subComponentMaterialRows" :key="component._id">
+                <td class="text-body-2 assembly-row-1">
+                  <div class="sub-component-line">
+                    <span class="sub-component-name-block">
+                      <span class="sub-component-name-row">
+                        <span class="sub-component-name">{{ component.part }}</span>
+                        <v-btn
+                          color="primary"
+                          density="comfortable"
+                          icon="mdi-open-in-new"
+                          size="x-small"
+                          variant="text"
+                          @click="openSubComponent(component.partId)"
+                        />
+                      </span>
+                      <span class="sub-component-description text-medium-emphasis">
+                        {{ component.description }}
+                      </span>
+                    </span>
+                    <span class="sub-component-meta">
+                      <span class="text-medium-emphasis">
+                        {{ component.materialDescription }}
+                      </span>
+                      <span class="sub-component-separator">-</span>
+                      <span class="text-medium-emphasis">
+                        @ {{ formatDimension(component.materialLength) }}"
+                      </span>
+                    </span>
+                  </div>
+                </td>
+                <td class="qty-cell">
+                  <div class="qty-wrap my-2">
+                    <v-text-field
+                      v-model.number="component.entry.qty"
+                      density="compact"
+                      hide-details
+                      min="1"
+                      type="number"
+                      variant="outlined"
+                      @keydown="onlyAllowNumeric($event)"
+                    />
+                  </div>
+                </td>
+                <td class="text-right">
+                  <div class="cost-cell">
+                    <v-chip
+                      :color="component.customerSuppliedMaterial ? 'info' : 'success'"
+                      density="compact"
+                      variant="tonal"
+                    >
+                      ${{ formatCost(component.materialSubtotal) }}
+                    </v-chip>
+                    <div class="text-caption text-medium-emphasis cost-subtotal">
+                      ${{ formatCost(component.materialCost) }}
+                      / part
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card-text>
+        <v-divider />
+        <v-card-text class="py-3">
+          <div class="d-flex align-center justify-space-between flex-wrap ga-3">
+            <div class="text-body-2 text-medium-emphasis">
+              {{ subComponentMaterialRows.length }}
+              sub-component{{ subComponentMaterialRows.length === 1 ? '' : 's' }}
+            </div>
+            <v-chip class="font-weight-bold yield-chip" color="success" variant="elevated">
+              ${{ formatCost(partMaterialCost) }}
+              / assembly
+            </v-chip>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-col>
+  </v-row>
+  <v-row v-else>
     <v-col cols="6">
       <v-card class="mb-4" variant="outlined">
         <v-card-text>
@@ -258,21 +346,68 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import {
+  calculateAssemblyMaterialCost,
   calculatePartMaterialCost,
   calculatePartsPerBar,
   formatCost,
   formatDimension,
   onlyAllowNumeric,
 } from '@/plugins/utils';
+import router from '@/router';
 import { useMaterialsStore } from '@/stores/materials_store';
+import { usePartStore } from '@/stores/parts_store';
 
 interface Props {
   part: Part;
+  subComponents?: Array<{
+    key: string;
+    entry: PartSubComponent;
+    part: Part;
+  }>;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<(e: 'update:partMaterialCost', value: number) => void>();
 const materialsStore = useMaterialsStore();
+const partStore = usePartStore();
+const hasSubComponents = computed(() => (props.subComponents || []).length > 0);
+const subComponentById = computed(() => {
+  return new Map(partStore.parts.map((component) => [component._id, component]));
+});
+
+function resolveMaterial(material: Part['material']) {
+  if (!material) return null;
+  if (typeof material !== 'string') return material;
+  return materialsStore.materials.find((candidate) => candidate._id === material) || null;
+}
+
+function resolvePart(partId: string) {
+  return subComponentById.value.get(partId);
+}
+
+const subComponentMaterialRows = computed(() => {
+  return (props.subComponents || []).map((subComponent) => {
+    const material = resolveMaterial(subComponent.part.material);
+    const materialCost = calculateAssemblyMaterialCost(
+      subComponent.part,
+      resolvePart,
+      resolveMaterial,
+    );
+
+    return {
+      _id: subComponent.key,
+      partId: subComponent.part._id,
+      entry: subComponent.entry,
+      part: subComponent.part.part,
+      description: subComponent.part.description,
+      customerSuppliedMaterial: Boolean(subComponent.part.customerSuppliedMaterial),
+      materialDescription: material?.description || 'No material set',
+      materialLength: Number(subComponent.part.materialLength) || 0,
+      materialCost,
+      materialSubtotal: materialCost * Math.max(1, Number(subComponent.entry.qty) || 1),
+    };
+  });
+});
 
 const selectedMaterialLength = computed(() => {
   if (!props.part.material) return 0;
@@ -396,6 +531,14 @@ const billableMaterialCost = computed(() => {
 });
 
 const partMaterialCost = computed(() => {
+  if (hasSubComponents.value) {
+    return subComponentMaterialRows.value.reduce(
+      (total, component) =>
+        total + component.materialCost * Math.max(1, Number(component.entry.qty) || 1),
+      0,
+    );
+  }
+
   if (!props.part.material || typeof props.part.material === 'string') return 0;
   return calculatePartMaterialCost(props.part, props.part.material);
 });
@@ -450,6 +593,10 @@ function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
     props.part.remnantLength = 0;
   }
 }
+
+function openSubComponent(partId: string) {
+  router.push({ name: 'viewPart', params: { id: partId } });
+}
 </script>
 
 <style scoped>
@@ -458,13 +605,77 @@ function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
   justify-content: center;
 }
 
-.row-1 {
-  width: 140px;
+.qty-cell {
+  width: 112px;
+  min-width: 112px;
+}
+
+.assembly-row-1 {
+  width: 100%;
+  padding-right: 1rem;
+}
+
+.sub-component-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  line-height: 1.35;
+}
+
+.sub-component-name {
+  font-weight: 500;
+}
+
+.sub-component-name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.sub-component-name-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.sub-component-description {
+  font-size: 0.9rem;
+}
+
+.sub-component-meta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+.sub-component-separator {
+  color: rgba(0, 0, 0, 0.38);
+}
+
+.qty-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.cost-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.cost-subtotal {
+  white-space: nowrap;
 }
 
 .swiss-defaults-btn {
   position: relative;
   left: 16px;
+}
+
+.row-1 {
+  width: 140px;
 }
 
 .customer-supplied-checkbox {

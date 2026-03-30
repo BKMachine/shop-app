@@ -178,6 +178,85 @@ export function calculateTotalCycleMinutes(cycleTimes: CycleTimes[] | null | und
   return (cycleTimes || []).reduce((total, cycle) => total + (Number(cycle.time) || 0), 0);
 }
 
+export function calculateAssemblyCycleMinutes(
+  part: Part,
+  resolvePart: (id: string) => Part | undefined,
+  visited = new Set<string>(),
+): number {
+  if (!part?._id) {
+    return calculateTotalCycleMinutes(part?.cycleTimes);
+  }
+
+  if (visited.has(part._id)) {
+    return 0;
+  }
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(part._id);
+
+  const subComponents = (part.subComponentIds || []).map((entry) => {
+    if (typeof entry === 'string') {
+      return { partId: entry, qty: 1 };
+    }
+
+    return {
+      partId: String(entry.partId),
+      qty: Math.max(1, Number(entry.qty) || 1),
+    };
+  });
+  if (!subComponents.length) {
+    return calculateTotalCycleMinutes(part.cycleTimes);
+  }
+
+  return subComponents.reduce((total, entry) => {
+    const subComponent = resolvePart(entry.partId);
+    if (!subComponent) return total;
+    return total + calculateAssemblyCycleMinutes(subComponent, resolvePart, nextVisited) * entry.qty;
+  }, 0);
+}
+
+export function calculateAssemblyMaterialCost(
+  part: Part,
+  resolvePart: (id: string) => Part | undefined,
+  resolveMaterial: (material: Part['material']) => Material | null | undefined,
+  visited = new Set<string>(),
+): number {
+  if (!part?._id) {
+    return calculatePartMaterialCost(part, resolveMaterial(part?.material));
+  }
+
+  if (visited.has(part._id)) {
+    return 0;
+  }
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(part._id);
+
+  const subComponents = (part.subComponentIds || []).map((entry) => {
+    if (typeof entry === 'string') {
+      return { partId: entry, qty: 1 };
+    }
+
+    return {
+      partId: String(entry.partId),
+      qty: Math.max(1, Number(entry.qty) || 1),
+    };
+  });
+  if (!subComponents.length) {
+    return calculatePartMaterialCost(part, resolveMaterial(part.material));
+  }
+
+  return subComponents.reduce((total, entry) => {
+    const subComponent = resolvePart(entry.partId);
+    if (!subComponent) return total;
+    return (
+      total +
+      calculateAssemblyMaterialCost(subComponent, resolvePart, resolveMaterial, nextVisited) *
+        entry.qty
+    );
+  }, 0);
+}
+
 export function calculateRatePerHour(
   price: number | null | undefined,
   partMaterialCost: number,
