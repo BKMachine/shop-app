@@ -178,6 +178,7 @@
                     <v-img
                       aspect-ratio="1"
                       class="image-card__preview"
+                      contain
                       :src="img.url"
                       width="100%"
                     />
@@ -876,10 +877,6 @@ function onUrlClear() {
 .image-card__preview {
   width: 100%;
   background: #f4f7fb;
-}
-
-.image-card__preview :deep(img) {
-  object-fit: contain;
 }
 
 .image-card__actions {
