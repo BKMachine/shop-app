@@ -44,6 +44,12 @@
                     <span class="cost-badge"
                       >${{ (activity.amount * activity.new.cost).toFixed(2) }}</span
                     >
+                    <span v-if="getDeviceIcon(activity.device)" class="device-indicator">
+                      <v-icon :icon="getDeviceIcon(activity.device)" size="14" />
+                      <v-tooltip activator="parent" location="top" open-delay="250">
+                        {{ getDeviceName(activity.device) }}
+                      </v-tooltip>
+                    </span>
                   </div>
                   <div class="timestamp">{{ new Date(activity.timestamp).toLocaleString() }}</div>
                 </v-col>
@@ -82,7 +88,7 @@
 
                 <!-- Part Info -->
                 <v-col class="info-col" cols="auto">
-                  <div class="tool-description">{{ activity.new.description }}</div>
+                  <div class="tool-description">{{ activity._id }}</div>
                   <div class="activity-meta">
                     <span
                       :class="`amount ${activity.type === 'increase' ? 'increase' : 'decrease'}`"
@@ -93,6 +99,12 @@
                     <!-- <span class="cost-badge"
                       >${{ (activity.amount * activity.new.cost).toFixed(2) }}</span
                     > -->
+                    <span v-if="getDeviceIcon(activity.device)" class="device-indicator">
+                      <v-icon :icon="getDeviceIcon(activity.device)" size="14" />
+                      <v-tooltip activator="parent" location="top" open-delay="250">
+                        {{ getDeviceName(activity.device) }}
+                      </v-tooltip>
+                    </span>
                   </div>
                   <div class="timestamp">{{ new Date(activity.timestamp).toLocaleString() }}</div>
                 </v-col>
@@ -130,6 +142,18 @@ const partAudits = ref<Audit[]>([]);
 const to = ref<DateTime>(DateTime.now());
 const from = computed<DateTime>(() => DateTime.now().minus({ days: 7 }));
 const toolCosts = ref<{ today: number; yesterday: number }>({ today: 0, yesterday: 0 });
+
+function getDeviceName(device: Audit['device'] | string | null | undefined) {
+  if (!device || typeof device === 'string') return 'Unknown device';
+  return device.displayName || 'Unknown device';
+}
+
+function getDeviceIcon(device: Audit['device'] | string | null | undefined) {
+  if (!device || typeof device === 'string') return undefined;
+  if (device.deviceType === 'pc') return 'mdi-monitor';
+  if (device.deviceType === 'android') return 'mdi-android';
+  return undefined;
+}
 
 function transformAuditsToActivities(audits: Audit[]) {
   return audits
@@ -448,6 +472,21 @@ function open(item: Tool | Part, type: 'tool' | 'part') {
   padding: 1px 4px;
   border-radius: 3px;
   white-space: nowrap;
+}
+
+.device-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7890ab;
+  width: 16px;
+  height: 16px;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.device-indicator:hover {
+  color: #4e6d8f;
 }
 
 .timestamp {

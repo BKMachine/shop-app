@@ -19,7 +19,7 @@ async function addToolAudit(
 }
 
 async function getToolAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
-  const projection = 'timestamp new.stock old.stock new.onOrder old.onOrder, new.cost old.cost';
+  const projection = 'timestamp device new.stock old.stock new.onOrder old.onOrder new.cost old.cost';
 
   const docsInRange = await Audit.find(
     {
@@ -28,21 +28,23 @@ async function getToolAudits(id: string, from: string, to: string): Promise<Audi
       timestamp: { $gte: from, $lte: to },
     },
     projection,
-  );
+  ).populate('device', 'displayName deviceType');
   if (!docsInRange.length) return [];
 
   const previousDoc = await Audit.findOne(
     { type: 'tool', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
     projection,
-  ).sort({
-    _id: -1,
-  });
+  )
+    .sort({
+      _id: -1,
+    })
+    .populate('device', 'displayName deviceType');
   //.lean();
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
 async function getAllToolAudits(from: string, to: string): Promise<AuditDoc[]> {
-  const projection = 'timestamp new old.stock new';
+  const projection = 'timestamp device new old.stock';
 
   return Audit.find(
     {
@@ -50,7 +52,7 @@ async function getAllToolAudits(from: string, to: string): Promise<AuditDoc[]> {
       timestamp: { $gte: from, $lte: to },
     },
     projection,
-  );
+  ).populate('device', 'displayName deviceType');
 }
 
 async function addPartAudit(
@@ -70,7 +72,7 @@ async function addPartAudit(
 }
 
 async function getPartAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
-  const projection = 'timestamp new.stock old.stock';
+  const projection = 'timestamp device new.stock old.stock';
   const docsInRange = await Audit.find(
     {
       type: 'part',
@@ -78,21 +80,23 @@ async function getPartAudits(id: string, from: string, to: string): Promise<Audi
       timestamp: { $gte: from, $lte: to },
     },
     projection,
-  );
+  ).populate('device', 'displayName deviceType');
   if (!docsInRange.length) return [];
 
   const previousDoc = await Audit.findOne(
     { type: 'part', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
     projection,
-  ).sort({
-    _id: -1,
-  });
+  )
+    .sort({
+      _id: -1,
+    })
+    .populate('device', 'displayName deviceType');
   //.lean();
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
 async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
-  const projection = 'timestamp new old.stock new';
+  const projection = 'timestamp device new old.stock';
 
   return Audit.find(
     {
@@ -100,7 +104,7 @@ async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
       timestamp: { $gte: from, $lte: to },
     },
     projection,
-  );
+  ).populate('device', 'displayName deviceType');
 }
 
 async function addMaterialAudit(
