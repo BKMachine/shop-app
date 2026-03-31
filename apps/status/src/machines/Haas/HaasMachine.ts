@@ -5,7 +5,7 @@ const initState: HaasState = {
   online: false,
   mode: null,
   execution: null,
-  lastCycle: 0,
+  lastCycle: [],
   lastOperatorTime: 0,
   lastStateTs: new Date().toISOString(),
   serial: '',

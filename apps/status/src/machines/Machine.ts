@@ -1,6 +1,7 @@
 import { baseUrl } from '../config.js';
 import type { MachineDoc } from '../database/lib/machine/machine_model.js';
 import { emit } from '../server/socket.io.js';
+import { appendCycleHistory } from './cycle_history.js';
 
 class Machine {
   readonly doc: MachineDoc;
@@ -36,8 +37,20 @@ class Machine {
   }
 
   setState(changes: Changes) {
-    const changeObj = Object.fromEntries(changes);
-    this.state = Object.assign({}, this.getState(), changeObj);
+    const changeObj = Object.fromEntries(changes) as Partial<Record<MachineStateKey, unknown>>;
+    const nextState = Object.assign({}, this.getState(), changeObj) as MachineState;
+
+    if ('lastCycle' in changeObj) {
+      const currentLastCycle = (this.getState() as MachineState & { lastCycle?: MachineLastCycle })
+        .lastCycle;
+      const incomingLastCycle = changeObj.lastCycle as MachineLastCycle | undefined;
+      const cycleHistory = appendCycleHistory(currentLastCycle, incomingLastCycle);
+
+      (nextState as MachineState & { lastCycle: MachineCycleHistory }).lastCycle = cycleHistory;
+      changeObj.lastCycle = cycleHistory;
+    }
+
+    this.state = nextState;
     // Remove cycle property before sending changes over websocket
     delete changeObj.cycle;
     if (Object.keys(changeObj).length === 0) return;

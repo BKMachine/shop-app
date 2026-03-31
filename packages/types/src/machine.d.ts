@@ -1,4 +1,7 @@
 declare global {
+  type MachineCycleHistory = number[];
+  type MachineLastCycle = number | MachineCycleHistory;
+
   interface FocasState {
     online: boolean;
     mainProgram: string;
@@ -13,7 +16,7 @@ declare global {
     alarms2: Alarm;
     cycle: number;
     macro_timer: number;
-    lastCycle: number;
+    lastCycle: MachineLastCycle;
     lastOperatorTime: number;
     lastStateTs: string;
   }
@@ -55,7 +58,7 @@ declare global {
     yellow: boolean;
     red: boolean;
     cycle: number;
-    lastCycle: number;
+    lastCycle: MachineLastCycle;
     lastOperatorTime: number;
     lastStateTs: string;
   }
@@ -74,7 +77,7 @@ declare global {
     execution: Execution;
     program: string;
     motion: 'UNAVAILABLE' | 'NORMAL' | 'WARNING' | 'FAULT';
-    lastCycle: number;
+    lastCycle: MachineLastCycle;
     lastOperatorTime: number;
     lastStateTs: string;
   }
@@ -87,7 +90,7 @@ declare global {
     online: boolean;
     mode: HaasMode;
     execution: HaasExecution;
-    lastCycle: number;
+    lastCycle: MachineLastCycle;
     lastOperatorTime: number;
     lastStateTs: string;
     serial: string;

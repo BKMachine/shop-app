@@ -1,5 +1,6 @@
 import axios from 'axios';
 import logger from '../../logger.js';
+import { getLatestCycle } from '../cycle_history.js';
 import { haasMachines as machines } from '../index.js';
 
 let interval: NodeJS.Timeout;
@@ -56,7 +57,7 @@ function run() {
               break;
             }
             case 'LASTCYCLE': {
-              const old = state.lastCycle;
+              const old = getLatestCycle(state.lastCycle);
               const curr = parseLastCycle(response[0] as string);
               if (old !== curr) {
                 changes.set('lastCycle', curr);

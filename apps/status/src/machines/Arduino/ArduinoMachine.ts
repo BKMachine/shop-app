@@ -7,7 +7,7 @@ const initState: ArduinoState = {
   yellow: false,
   red: false,
   cycle: 0,
-  lastCycle: 0,
+  lastCycle: [],
   lastOperatorTime: 0,
   lastStateTs: new Date().toISOString(),
 };
