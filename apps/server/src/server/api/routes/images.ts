@@ -12,8 +12,8 @@ import SupplierService from '../../../database/lib/supplier/supplier_service.js'
 import ToolService from '../../../database/lib/tool/tool_service.js';
 import VendorService from '../../../database/lib/vendor/vendor_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
-import { autoCropImage } from '../../../services/image_auto_crop_service.js';
 import { removeImageBackground } from '../../../services/background_removal_service.js';
+import { autoCropImage } from '../../../services/image_auto_crop_service.js';
 import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
