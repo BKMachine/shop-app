@@ -161,8 +161,8 @@
               <v-expansion-panel-title>
                 <div class="d-flex align-center ga-2">
                   <span>Sub-Components</span>
-                  <v-chip v-if="resolvedSubComponents.length" size="small" variant="tonal">
-                    {{ resolvedSubComponents.length }}
+                  <v-chip v-if="resolvedSubComponentItems.length" size="small" variant="tonal">
+                    {{ resolvedSubComponentItems.length }}
                   </v-chip>
                 </div>
               </v-expansion-panel-title>
@@ -176,27 +176,60 @@
                   label="Search Parts"
                   multiple
                   variant="outlined"
-                >
-                  <template #chip="{ item, props }">
-                    <v-chip
-                      v-bind="getSubComponentChipProps(props)"
-                      size="small"
-                      variant="tonal"
-                      @click.stop="navigateToPart(getSubComponentChipId(item))"
-                    >
-                      <span class="sub-component-chip-label">{{ item.title }}</span>
-                      <v-icon class="ml-1" icon="mdi-open-in-new" size="16" />
-                      <v-icon
-                        class="ml-1 sub-component-chip-close"
-                        icon="mdi-close-circle"
-                        size="16"
-                        @click.stop="removeSubComponent(getSubComponentChipId(item))"
-                      />
-                    </v-chip>
-                  </template>
-                </v-autocomplete>
+                />
                 <div class="text-body-2 text-medium-emphasis mt-3">
                   Pick existing parts to treat as sub-components for this assembly.
+                </div>
+                <v-list
+                  v-if="resolvedSubComponentItems.length"
+                  class="parent-components-list mt-3"
+                  lines="two"
+                >
+                  <v-list-item
+                    v-for="subItem in resolvedSubComponentItems"
+                    :key="subItem.part._id"
+                    :subtitle="subItem.part.description"
+                    :title="subItem.part.part"
+                    :to="{ name: 'viewPart', params: { id: subItem.part._id } }"
+                  >
+                    <template #prepend>
+                      <div class="d-flex align-center ga-3">
+                        <v-avatar color="secondary" size="36" variant="tonal">
+                          {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
+                        </v-avatar>
+                        <div class="parent-component-image-wrap mr-2">
+                          <img
+                            v-if="subItem.part.img"
+                            alt=""
+                            class="parent-component-image"
+                            :src="subItem.part.img"
+                          />
+                          <MissingImage
+                            v-else
+                            class="parent-component-image parent-component-image--fallback"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                    <template #append>
+                      <div class="d-flex align-center ga-2">
+                        <div class="text-body-2 text-medium-emphasis parent-component-qty">
+                          Qty {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
+                        </div>
+                        <v-btn
+                          color="error"
+                          icon="mdi-delete"
+                          size="small"
+                          variant="text"
+                          @click.prevent.stop="removeSubComponent(subItem.part._id)"
+                        />
+                        <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
+                      </div>
+                    </template>
+                  </v-list-item>
+                </v-list>
+                <div v-else class="text-body-2 text-medium-emphasis mt-3">
+                  No sub-components added yet.
                 </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -226,9 +259,23 @@
                     :to="{ name: 'viewPart', params: { id: parentItem.part._id } }"
                   >
                     <template #prepend>
-                      <v-avatar color="secondary" size="36" variant="tonal">
-                        {{ parentItem.qty }}
-                      </v-avatar>
+                      <div class="d-flex align-center ga-3">
+                        <v-avatar color="secondary" size="36" variant="tonal">
+                          {{ parentItem.qty }}
+                        </v-avatar>
+                        <div class="parent-component-image-wrap mr-2">
+                          <img
+                            v-if="parentItem.part.img"
+                            alt=""
+                            class="parent-component-image"
+                            :src="parentItem.part.img"
+                          />
+                          <MissingImage
+                            v-else
+                            class="parent-component-image parent-component-image--fallback"
+                          />
+                        </div>
+                      </div>
                     </template>
                     <template #append>
                       <div class="d-flex align-center ga-2">
@@ -376,7 +423,7 @@ const part = ref<Part>({} as Part);
 const partOriginal = ref<Part>({} as Part);
 
 const tab = ref<'general' | 'material' | 'cost' | 'stock' | 'docs' | 'notes' | 'images'>(
-  import.meta.env.PROD ? 'general' : 'images',
+  import.meta.env.PROD ? 'general' : 'general',
 );
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
@@ -435,12 +482,6 @@ const disallowedSubComponentIds = computed(() => {
         (candidate) => candidate._id === part.value._id || partDependsOnCurrent(candidate._id),
       )
       .map((candidate) => candidate._id),
-  );
-});
-const resolvedSubComponents = computed(() => {
-  const ids = new Set(selectedSubComponentIds.value);
-  return partStore.parts.filter(
-    (candidate) => ids.has(candidate._id) && candidate._id !== part.value._id,
   );
 });
 const resolvedSubComponentItems = computed(() => {
@@ -687,24 +728,6 @@ function gotoLocation() {
   router.push({ name: 'locations', query: { loc: part.value.location, pos: part.value.position } });
 }
 
-function navigateToPart(partId: string) {
-  if (!partId || partId === part.value._id) return;
-  router.push({ name: 'viewPart', params: { id: partId } });
-}
-
-function getSubComponentChipId(item: { value?: unknown; raw?: { value?: unknown } }) {
-  const rawValue = item.raw?.value;
-  const resolvedValue = rawValue ?? item.value;
-  return resolvedValue == null ? '' : String(resolvedValue);
-}
-
-function getSubComponentChipProps(
-  props: Record<string, unknown> & { 'onClick:close'?: unknown; closable?: unknown },
-) {
-  const { 'onClick:close': _onClickClose, closable: _closable, ...chipProps } = props;
-  return chipProps;
-}
-
 function removeSubComponent(partId: string) {
   if (!partId) return;
   const subComponent = resolvePart(partId);
@@ -870,14 +893,29 @@ async function loadCriticalNotesCount() {
   white-space: nowrap;
 }
 
-.sub-component-chip-label {
-  max-width: 260px;
+.parent-component-image-wrap {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f4f7fb;
+  border: 1px solid #d8dee8;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.sub-component-chip-close {
-  cursor: pointer;
+.parent-component-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.parent-component-image--fallback {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 4px;
+  font-size: 9px;
 }
 </style>
