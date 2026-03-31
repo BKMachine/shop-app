@@ -2,7 +2,15 @@
   <v-card>
     <v-card-title class="header my-4">
       <div>Parts</div>
-      <div>
+      <div class="header-actions">
+        <v-checkbox
+          v-model="showSubComponents"
+          class="parts-sub-toggle"
+          color="primary"
+          density="compact"
+          hide-details
+          label="Show Subcomponents"
+        />
         <v-btn color="secondary" link prepend-icon="mdi-plus" :to="{ name: 'createPart' }">
           Create New Part
         </v-btn>
@@ -10,7 +18,7 @@
     </v-card-title>
     <v-card-text>
       <v-row no-gutters>
-        <v-col cols="7">
+        <v-col cols="8">
           <v-text-field
             v-model="search"
             class="my-2 mr-2"
@@ -22,7 +30,7 @@
             variant="outlined"
           />
         </v-col>
-        <v-col cols="3">
+        <v-col cols="4">
           <CustomerSelect
             v-model="selectedCustomerId"
             class="my-2 ml-2"
@@ -30,16 +38,6 @@
             hide-details
             label="Customer"
             variant="outlined"
-          />
-        </v-col>
-        <v-col class="d-flex align-center justify-space-around" cols="2">
-          <v-checkbox
-            v-model="showSubComponents"
-            class="parts-sub-toggle"
-            color="primary"
-            density="compact"
-            hide-details
-            label="Show Subcomponents"
           />
         </v-col>
       </v-row>
@@ -304,6 +302,12 @@ function hideExpandedImage() {
   display: flex;
   width: 100%;
   justify-content: space-between;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .stock {
