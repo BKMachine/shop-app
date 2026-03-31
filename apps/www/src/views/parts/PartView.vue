@@ -3,6 +3,13 @@
     <v-progress-circular color="primary" indeterminate size="150" />
   </div>
   <v-container v-else class="container">
+    <ConfirmDialog
+      v-model="subComponentRemovalDialog.visible"
+      confirm-text="Remove"
+      :message="subComponentRemovalDialog.message"
+      title="Remove Sub-Component?"
+      @confirm="confirmRemoveSubComponent"
+    />
     <div class="title text-center">
       <h1>{{ part.part }}</h1>
       <h3>{{ part.description }}</h3>
@@ -163,16 +170,78 @@
                 <v-autocomplete
                   v-model="selectedSubComponentIds"
                   chips
-                  closable-chips
                   item-title="label"
                   item-value="value"
                   :items="subComponentOptions"
                   label="Search Parts"
                   multiple
                   variant="outlined"
-                />
+                >
+                  <template #chip="{ item, props }">
+                    <v-chip
+                      v-bind="getSubComponentChipProps(props)"
+                      size="small"
+                      variant="tonal"
+                      @click.stop="navigateToPart(getSubComponentChipId(item))"
+                    >
+                      <span class="sub-component-chip-label">{{ item.title }}</span>
+                      <v-icon class="ml-1" icon="mdi-open-in-new" size="16" />
+                      <v-icon
+                        class="ml-1 sub-component-chip-close"
+                        icon="mdi-close-circle"
+                        size="16"
+                        @click.stop="removeSubComponent(getSubComponentChipId(item))"
+                      />
+                    </v-chip>
+                  </template>
+                </v-autocomplete>
                 <div class="text-body-2 text-medium-emphasis mt-3">
                   Pick existing parts to treat as sub-components for this assembly.
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel class="sub-components-panel">
+              <v-expansion-panel-title>
+                <div class="d-flex align-center ga-2">
+                  <span>Parent Assemblies</span>
+                  <v-chip v-if="parentComponentItems.length" size="small" variant="tonal">
+                    {{ parentComponentItems.length }}
+                  </v-chip>
+                </div>
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <div v-if="!part._id" class="text-body-2 text-medium-emphasis">
+                  Save this part first to look up parent assemblies.
+                </div>
+                <v-list
+                  v-else-if="parentComponentItems.length"
+                  class="parent-components-list"
+                  lines="two"
+                >
+                  <v-list-item
+                    v-for="parentItem in parentComponentItems"
+                    :key="parentItem.part._id"
+                    :subtitle="parentItem.part.description"
+                    :title="parentItem.part.part"
+                    :to="{ name: 'viewPart', params: { id: parentItem.part._id } }"
+                  >
+                    <template #prepend>
+                      <v-avatar color="secondary" size="36" variant="tonal">
+                        {{ parentItem.qty }}
+                      </v-avatar>
+                    </template>
+                    <template #append>
+                      <div class="d-flex align-center ga-2">
+                        <div class="text-body-2 text-medium-emphasis parent-component-qty">
+                          Qty {{ parentItem.qty }}
+                        </div>
+                        <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
+                      </div>
+                    </template>
+                  </v-list-item>
+                </v-list>
+                <div v-else class="text-body-2 text-medium-emphasis">
+                  No parent components found for this part.
                 </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -271,6 +340,7 @@
 import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
@@ -315,6 +385,11 @@ const saveFlag = ref(false);
 const partMaterialCost = ref(0);
 const imageManagerVisible = ref(false);
 const criticalNotesCount = ref(0);
+const subComponentRemovalDialog = ref({
+  visible: false,
+  partId: '',
+  message: '',
+});
 const hasNoProductPrice = computed(() => {
   return part.value.price == null || part.value.price === 0;
 });
@@ -380,6 +455,24 @@ const resolvedSubComponentItems = computed(() => {
       };
     })
     .filter((item): item is { key: string; entry: PartSubComponent; part: Part } => Boolean(item));
+});
+const parentComponentItems = computed(() => {
+  if (!part.value._id) return [];
+
+  return partStore.parts
+    .map((candidate) => {
+      const parentEntry = (candidate.subComponentIds || []).find(
+        (entry) => String(entry.partId) === part.value._id,
+      );
+      if (!parentEntry || candidate._id === part.value._id) return null;
+
+      return {
+        part: candidate,
+        qty: Math.max(1, Number(parentEntry.qty) || 1),
+      };
+    })
+    .filter((item): item is { part: Part; qty: number } => Boolean(item))
+    .sort((a, b) => a.part.part.localeCompare(b.part.part));
 });
 const subComponentOptions = computed(() => {
   return partStore.parts
@@ -594,6 +687,47 @@ function gotoLocation() {
   router.push({ name: 'locations', query: { loc: part.value.location, pos: part.value.position } });
 }
 
+function navigateToPart(partId: string) {
+  if (!partId || partId === part.value._id) return;
+  router.push({ name: 'viewPart', params: { id: partId } });
+}
+
+function getSubComponentChipId(item: { value?: unknown; raw?: { value?: unknown } }) {
+  const rawValue = item.raw?.value;
+  const resolvedValue = rawValue ?? item.value;
+  return resolvedValue == null ? '' : String(resolvedValue);
+}
+
+function getSubComponentChipProps(
+  props: Record<string, unknown> & { 'onClick:close'?: unknown; closable?: unknown },
+) {
+  const { 'onClick:close': _onClickClose, closable: _closable, ...chipProps } = props;
+  return chipProps;
+}
+
+function removeSubComponent(partId: string) {
+  if (!partId) return;
+  const subComponent = resolvePart(partId);
+  subComponentRemovalDialog.value = {
+    visible: true,
+    partId,
+    message: subComponent
+      ? `Remove ${subComponent.part} - ${subComponent.description} from this part's sub-components?`
+      : 'Remove this sub-component from the part?',
+  };
+}
+
+function confirmRemoveSubComponent() {
+  const { partId } = subComponentRemovalDialog.value;
+  if (!partId) return;
+  selectedSubComponentIds.value = selectedSubComponentIds.value.filter((id) => id !== partId);
+  subComponentRemovalDialog.value = {
+    visible: false,
+    partId: '',
+    message: '',
+  };
+}
+
 function printLocation() {
   const loc = part.value.location;
   const pos = part.value.position;
@@ -726,5 +860,24 @@ async function loadCriticalNotesCount() {
 }
 .header-rate-swatch--empty {
   background: white;
+}
+
+.parent-components-list {
+  padding: 0;
+}
+
+.parent-component-qty {
+  white-space: nowrap;
+}
+
+.sub-component-chip-label {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub-component-chip-close {
+  cursor: pointer;
 }
 </style>
