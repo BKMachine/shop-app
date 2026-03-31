@@ -299,6 +299,7 @@ async function promoteToMain(image: MyImageData) {
 
   try {
     const data = await partStore.promotePartImage(props.part._id, image.id);
+    images.value = partStore.getPartImages(props.part._id);
     emit('image-selected', { imageId: image.id, url: data.url, isMain: true });
   } catch (err) {
     error.value = 'Failed to set main image.';
@@ -332,6 +333,7 @@ async function deleteImage(image: MyImageData) {
 
   try {
     const data = await partStore.deletePartImage(props.part._id, image.id);
+    images.value = partStore.getPartImages(props.part._id);
     emit('image-selected', {
       imageId: data.nextMainImageId || '',
       url: data.nextMainImageUrl || '',
