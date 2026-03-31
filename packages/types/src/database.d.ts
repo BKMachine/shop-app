@@ -8,11 +8,19 @@ declare global {
 
   interface Audit {
     _id: string;
-    type: 'tool' | 'material' | 'part';
+    type:
+      | 'tool'
+      | 'material'
+      | 'part'
+      | 'customer'
+      | 'supplier'
+      | 'vendor'
+      | 'report'
+      | 'part_note';
     timestamp: string;
     device: Device;
     old: any | null;
-    new: any;
+    new: any | null;
   }
 
   interface AuditDoc extends Omit<Audit, '_id'>, Document<Types.ObjectId> {
@@ -215,6 +223,7 @@ declare global {
     deviceId: string;
     displayName: string;
     deviceType: 'pc' | 'android' | 'unknown';
+    isAdmin: boolean;
     approved: boolean;
     blocked: boolean;
     firstSeenAt: Date;

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import DeviceService from '../../../database/lib/device/device_service.js';
 import HttpError from '../../middleware/httpError.js';
-import { getClientIp } from '../../middleware/requireKnownDevices.js';
+import requireKnownDevice, { getClientIp } from '../../middleware/requireKnownDevices.js';
 
 const router: Router = Router();
 
@@ -30,6 +30,7 @@ router.post('/devices/register', async (req, res, next) => {
       deviceId,
       displayName,
       deviceType,
+      isAdmin: false,
       approved: true,
       blocked: false,
       firstSeenAt: new Date(),
@@ -44,8 +45,32 @@ router.post('/devices/register', async (req, res, next) => {
         deviceId: device.deviceId,
         displayName: device.displayName,
         deviceType: device.deviceType,
+        isAdmin: device.isAdmin,
         approved: device.approved,
         blocked: device.blocked,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/devices/me', requireKnownDevice, async (req, res, next) => {
+  try {
+    if (!req.device) {
+      res.status(401).json({ error: 'Unauthorized: device not recognized.' });
+      return;
+    }
+
+    return res.status(200).json({
+      device: {
+        id: req.device._id,
+        deviceId: req.device.deviceId,
+        displayName: req.device.displayName,
+        deviceType: req.device.deviceType,
+        isAdmin: req.device.isAdmin,
+        approved: req.device.approved,
+        blocked: req.device.blocked,
       },
     });
   } catch (error) {

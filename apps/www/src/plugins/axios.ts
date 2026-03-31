@@ -10,7 +10,7 @@ api.defaults.headers.common['X-Device-ID'] = getOrCreateDeviceId();
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 403) {
+    if (error.response?.status === 403 && !error.config.url?.includes('/devices/me')) {
       openDisplayNameDialog();
     }
     return Promise.reject(error);

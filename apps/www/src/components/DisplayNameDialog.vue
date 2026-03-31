@@ -34,6 +34,7 @@
 import { AxiosError } from 'axios';
 import { ref } from 'vue';
 import api, { getOrCreateDeviceId } from '@/plugins/axios';
+import { setCurrentDevice } from '@/state/device';
 import { closeDisplayNameDialog, displayNameDialogState } from '@/state/displayNameDialog';
 
 const displayName = ref(localStorage.getItem('shop-device-display-name') ?? '');
@@ -51,13 +52,24 @@ async function onSave() {
 
   saving.value = true;
   try {
-    await api.post('/devices/register', {
+    const response = await api.post<{
+      device: {
+        id: string;
+        deviceId: string;
+        displayName: string;
+        deviceType: Device['deviceType'];
+        isAdmin: boolean;
+        approved: boolean;
+        blocked: boolean;
+      };
+    }>('/devices/register', {
       deviceId: getOrCreateDeviceId(),
       displayName: normalizedName,
       deviceType: 'pc',
     });
 
     localStorage.setItem('shop-device-display-name', normalizedName);
+    setCurrentDevice(response.data.device);
     closeDisplayNameDialog();
   } catch (error) {
     const responseMessage =

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import ActivityView from '@/views/ActivityView.vue';
+import AuditTrailView from '@/views/AuditTrailView.vue';
 import HomeView from '@/views/HomeView.vue';
 import LocationsView from '@/views/LocationsView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
@@ -79,6 +80,11 @@ const router = createRouter({
       path: '/activity',
       name: 'activity',
       component: ActivityView,
+    },
+    {
+      path: '/audit-trail',
+      name: 'auditTrail',
+      component: AuditTrailView,
     },
     {
       path: '/test',

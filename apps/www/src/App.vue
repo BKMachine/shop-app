@@ -47,6 +47,14 @@
           Report
         </v-list-item>
         <v-divider />
+        <v-list-item
+          v-if="showAuditTrail"
+          link
+          prepend-icon="mdi-database-eye-outline"
+          :to="{ name: 'auditTrail' }"
+        >
+          Audit Trail
+        </v-list-item>
         <v-list-item link prepend-icon="mdi-cog" to="/settings"> Settings </v-list-item>
       </template>
     </v-navigation-drawer>
@@ -66,6 +74,7 @@ import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import router from '@/router';
+import { deviceState, fetchCurrentDevice } from '@/state/device';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
@@ -120,11 +129,14 @@ onBeforeMount(() => {
   supplierStore.fetch();
   vendorStore.fetch();
   toolStore.fetch();
+  void fetchCurrentDevice();
 });
 
 const showTest = computed<boolean>(() => {
   return location.host.includes('localhost') || location.host.includes('127.0.0.1');
 });
+
+const showAuditTrail = computed<boolean>(() => Boolean(deviceState.current?.isAdmin));
 </script>
 
 <style scoped>

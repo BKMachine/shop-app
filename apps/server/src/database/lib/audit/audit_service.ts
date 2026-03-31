@@ -2,19 +2,29 @@ import { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import Audit from './audit_model.js';
 
+async function addAudit(
+  type: Audit['type'],
+  oldDoc: unknown | null,
+  newDoc: unknown | null,
+  device: string,
+): Promise<void> {
+  const doc = new Audit({
+    type,
+    timestamp: new Date(),
+    device: new Types.ObjectId(device),
+    old: oldDoc,
+    new: newDoc,
+  });
+  await doc.save();
+  emit('audit');
+}
+
 async function addToolAudit(
   oldTool: ToolDoc | null,
   newTool: ToolDoc,
   device: string,
 ): Promise<void> {
-  const doc = new Audit({
-    type: 'tool',
-    timestamp: new Date(),
-    device: new Types.ObjectId(device),
-    old: oldTool,
-    new: newTool,
-  });
-  await doc.save();
+  await addAudit('tool', oldTool, newTool, device);
   emit('tool_audit');
 }
 
@@ -60,14 +70,7 @@ async function addPartAudit(
   newPart: PartDoc,
   device: string,
 ): Promise<void> {
-  const doc = new Audit({
-    type: 'part',
-    timestamp: new Date(),
-    device: new Types.ObjectId(device),
-    old: oldPart,
-    new: newPart,
-  });
-  await doc.save();
+  await addAudit('part', oldPart, newPart, device);
   emit('part_audit');
 }
 
@@ -112,18 +115,76 @@ async function addMaterialAudit(
   newMaterial: MaterialDoc,
   device: string,
 ): Promise<void> {
-  const doc = new Audit({
-    type: 'material',
-    timestamp: Date.now(),
-    device: new Types.ObjectId(device),
-    old: oldMaterial,
-    new: newMaterial,
-  });
-  await doc.save();
-  emit('material_audit');
+  await addAudit('material', oldMaterial, newMaterial, device);
+}
+
+async function addCustomerAudit(
+  oldCustomer: CustomerDoc | null,
+  newCustomer: CustomerDoc | null,
+  device: string,
+): Promise<void> {
+  await addAudit('customer', oldCustomer, newCustomer, device);
+}
+
+async function addSupplierAudit(
+  oldSupplier: SupplierDoc | null,
+  newSupplier: SupplierDoc | null,
+  device: string,
+): Promise<void> {
+  await addAudit('supplier', oldSupplier, newSupplier, device);
+}
+
+async function addVendorAudit(
+  oldVendor: VendorDoc | null,
+  newVendor: VendorDoc | null,
+  device: string,
+): Promise<void> {
+  await addAudit('vendor', oldVendor, newVendor, device);
+}
+
+async function addReportAudit(
+  oldReport: EmailReportDoc | null,
+  newReport: EmailReportDoc | null,
+  device: string,
+): Promise<void> {
+  await addAudit('report', oldReport, newReport, device);
+}
+
+async function addPartNoteAudit(
+  oldNote: PartNoteDoc | null,
+  newNote: PartNoteDoc | null,
+  device: string,
+): Promise<void> {
+  await addAudit('part_note', oldNote, newNote, device);
+}
+
+async function getAllAudits(
+  from: string,
+  to: string,
+  types?: Audit['type'][],
+  limit = 20,
+  offset = 0,
+): Promise<AuditDoc[]> {
+  const query: {
+    timestamp: { $gte: string; $lte: string };
+    type?: { $in: Audit['type'][] };
+  } = {
+    timestamp: { $gte: from, $lte: to },
+  };
+
+  if (types?.length) {
+    query.type = { $in: types };
+  }
+
+  return Audit.find(query, 'type timestamp device old new')
+    .sort({ timestamp: -1 })
+    .skip(offset)
+    .limit(limit)
+    .populate('device', 'displayName deviceType');
 }
 
 export default {
+  addAudit,
   addToolAudit,
   getToolAudits,
   addPartAudit,
@@ -131,4 +192,10 @@ export default {
   getAllToolAudits,
   getAllPartAudits,
   addMaterialAudit,
+  addCustomerAudit,
+  addSupplierAudit,
+  addVendorAudit,
+  addReportAudit,
+  addPartNoteAudit,
+  getAllAudits,
 };

@@ -60,7 +60,7 @@ router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) =
       createdByDisplayName: req.device.displayName,
       updatedByDeviceId: req.device.deviceId,
       updatedByDisplayName: req.device.displayName,
-    });
+    }, req.device._id.toString());
 
     res.status(200).json(toNoteResponse(note));
   } catch (err) {
@@ -89,7 +89,7 @@ router.put('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, 
     note.updatedByDeviceId = req.device.deviceId;
     note.updatedByDisplayName = req.device.displayName;
 
-    const updated = await PartNoteService.update(note);
+    const updated = await PartNoteService.update(note, req.device._id.toString());
     if (!updated) return next(new HttpError(404, 'Note not found'));
 
     res.status(200).json(toNoteResponse(updated));
@@ -103,12 +103,13 @@ router.delete('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, re
 
   if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
   if (!isValidId(noteId)) return next(new HttpError(400, 'Invalid note id'));
+  if (!req.device) return next(new HttpError(401, 'Missing device context'));
 
   try {
     const note = await PartNoteService.findById(noteId);
     if (!note || note.partId.toString() !== partId) return next(new HttpError(404, 'Note not found'));
 
-    await PartNoteService.remove(noteId);
+    await PartNoteService.remove(noteId, req.device._id.toString());
     res.sendStatus(204);
   } catch (err) {
     next(new HttpError(500, 'Failed to delete note', { cause: err }));

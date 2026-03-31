@@ -1,7 +1,11 @@
 import { model, Schema } from 'mongoose';
 
 const schema = new Schema<AuditDoc>({
-  type: { type: String, enum: ['tool', 'material', 'part'], required: true },
+  type: {
+    type: String,
+    enum: ['tool', 'material', 'part', 'customer', 'supplier', 'vendor', 'report', 'part_note'],
+    required: true,
+  },
   timestamp: Date,
   device: { type: Schema.Types.ObjectId, ref: 'devices' },
   old: Object,
