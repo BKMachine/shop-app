@@ -43,7 +43,7 @@
             sm="4"
           >
             <v-card class="thumb-card" hover @click="openGallery(index)">
-              <v-img aspect-ratio="1" cover :src="image.url" />
+              <v-img aspect-ratio="1" class="thumb-card__preview" :src="image.url" />
               <v-chip
                 v-if="image.isMain"
                 class="thumb-card__main-chip"
@@ -401,6 +401,14 @@ watch(galleryOpen, (isOpen) => {
 
 .thumb-card:hover {
   transform: translateY(-2px);
+}
+
+.thumb-card__preview {
+  background: #f4f7fb;
+}
+
+.thumb-card__preview :deep(img) {
+  object-fit: contain;
 }
 
 .thumb-card__main-chip {

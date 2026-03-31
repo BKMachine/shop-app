@@ -14,6 +14,7 @@
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./jest.config.cjs"
   },
   "dependencies": {
+    "@imgly/background-removal-node": "^1.4.5",
     "@repo/utilities": "workspace:*",
     "axios": "^1.13.5",
     "cron": "^4.4.0",
@@ -27,6 +28,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.4.296",
+    "sharp": "^0.32.6",
     "socket.io": "^4.8.3",
     "uuid": "^13.0.0",
     "winston": "^3.19.0"

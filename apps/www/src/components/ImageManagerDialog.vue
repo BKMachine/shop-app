@@ -82,11 +82,21 @@
                 <v-spacer />
                 <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
                 <v-btn
+                  v-if="props.entityId"
+                  color="secondary"
+                  :disabled="(!selectedFile && !(validImageUrl && urlPreviewLoaded)) || uploadLoading"
+                  :loading="uploadLoading"
+                  variant="outlined"
+                  @click="importImage(false)"
+                >
+                  Upload To Temp
+                </v-btn>
+                <v-btn
                   color="primary"
                   :disabled="(!selectedFile && !(validImageUrl && urlPreviewLoaded)) || uploadLoading"
                   :loading="uploadLoading"
                   variant="flat"
-                  @click="importImage"
+                  @click="importImage(true)"
                 >
                   Upload
                 </v-btn>
@@ -147,23 +157,29 @@
                     Save first to assign selected images.
                   </div>
                 </v-col>
-                <v-col v-for="img in tempImages" :key="img.id" cols="6" lg="2" md="3" sm="4">
+                <v-col v-for="img in tempImages" :key="img.id" cols="12" lg="3" md="4" sm="6">
                   <v-card
                     :border="isTempSelected(img.id)"
-                    class="image-card pa-2 position-relative"
+                    class="image-card pa-3 position-relative"
                     :color="isTempSelected(img.id) ? 'primary' : ''"
                     elevation="2"
                     hover
-                    style="min-width: 180px; min-height: 180px;"
                     @click="toggleTempSelection(img.id)"
                   >
+                    <div
+                      v-if="backgroundRemovalId === img.id || autoCropId === img.id"
+                      class="image-card__busy-overlay"
+                    >
+                      <v-progress-circular color="primary" indeterminate />
+                      <div class="text-caption mt-2">
+                        {{ backgroundRemovalId === img.id ? 'Removing background...' : 'Auto cropping...' }}
+                      </div>
+                    </div>
                     <v-img
                       aspect-ratio="1"
-                      cover
-                      height="160px"
+                      class="image-card__preview"
                       :src="img.url"
-                      style="margin:auto;"
-                      width="160px"
+                      width="100%"
                     />
 
                     <v-card-subtitle class="image-card__date text-caption mt-1 px-2">
@@ -172,9 +188,41 @@
 
                     <div class="image-card__actions px-2 pb-2 mt-2">
                       <v-btn
+                        block
+                        color="secondary"
+                        :disabled="
+                          backgroundRemovalId === img.id || autoCropId === img.id || deletingId === img.id
+                        "
+                        :loading="backgroundRemovalId === img.id"
+                        prepend-icon="mdi-auto-fix"
+                        size="x-small"
+                        title="Attempt background removal"
+                        variant="outlined"
+                        @click.stop="attemptBackgroundRemoval(img.id)"
+                      >
+                        Remove BG
+                      </v-btn>
+                      <v-btn
+                        block
+                        color="secondary"
+                        :disabled="
+                          backgroundRemovalId === img.id || autoCropId === img.id || deletingId === img.id
+                        "
+                        :loading="autoCropId === img.id"
+                        prepend-icon="mdi-crop"
+                        size="x-small"
+                        title="Auto crop transparent padding"
+                        variant="outlined"
+                        @click.stop="attemptAutoCrop(img.id)"
+                      >
+                        Auto Crop
+                      </v-btn>
+                      <v-btn
                         v-if="!isTempSelected(img.id)"
+                        block
                         class="image-card__delete"
                         color="error"
+                        :disabled="backgroundRemovalId === img.id || autoCropId === img.id"
                         :loading="deletingId === img.id"
                         prepend-icon="mdi-delete"
                         size="x-small"
@@ -282,11 +330,11 @@ function resetUploadState() {
   if (fileInputRef.value) fileInputRef.value.value = '';
 }
 
-async function importImage() {
+async function importImage(attachAfterUpload: boolean) {
   if (selectedFile.value) {
-    await uploadFile();
+    await uploadFile(attachAfterUpload);
   } else if (urlInput.value) {
-    await uploadUrl();
+    await uploadUrl(attachAfterUpload);
   }
 }
 
@@ -316,6 +364,8 @@ const loadingGallery = ref(false);
 const galleryError = ref('');
 const tempImages = ref<ImageData[]>([]);
 const deletingId = ref('');
+const backgroundRemovalId = ref('');
+const autoCropId = ref('');
 const selectedTempImageIds = ref<string[]>([]);
 const assignLoading = ref(false);
 const assignSuccess = ref(false);
@@ -420,6 +470,14 @@ watch(
   },
 );
 
+watch(currentTab, (tab) => {
+  if (tab === 'upload') {
+    resetUploadState();
+    galleryError.value = '';
+    assignSuccess.value = false;
+  }
+});
+
 async function loadGallery(selectInitialTab: boolean = false) {
   loadingGallery.value = true;
   galleryError.value = '';
@@ -444,7 +502,7 @@ async function loadGallery(selectInitialTab: boolean = false) {
   }
 }
 
-async function uploadFile() {
+async function uploadFile(attachAfterUpload: boolean) {
   if (!selectedFile.value) return;
 
   uploadLoading.value = true;
@@ -464,7 +522,7 @@ async function uploadFile() {
       },
     });
 
-    if (props.entityId) {
+    if (attachAfterUpload && props.entityId) {
       await attachUploadedImage(data.id);
     } else {
       uploadSuccess.value = true;
@@ -484,7 +542,7 @@ async function uploadFile() {
   }
 }
 
-async function uploadUrl() {
+async function uploadUrl(attachAfterUpload: boolean) {
   if (!urlInput.value) return;
 
   uploadLoading.value = true;
@@ -493,7 +551,7 @@ async function uploadUrl() {
   try {
     const { data } = await api.post('/images/uploads/url', { url: urlInput.value });
 
-    if (props.entityId) {
+    if (attachAfterUpload && props.entityId) {
       await attachUploadedImage(data.id);
     } else {
       uploadSuccess.value = true;
@@ -575,6 +633,45 @@ async function assignSelectedToEntity() {
     console.error('Failed assigning selected temp images:', err);
   } finally {
     assignLoading.value = false;
+  }
+}
+
+async function attemptBackgroundRemoval(imageId: string) {
+  if (!imageId || backgroundRemovalId.value || autoCropId.value) return;
+
+  backgroundRemovalId.value = imageId;
+  galleryError.value = '';
+
+  try {
+    await api.post(`/images/uploads/${imageId}/remove-background`);
+    await loadGallery();
+  } catch (err: any) {
+    galleryError.value =
+      err?.response?.data?.error ||
+      err?.response?.data?.message ||
+      err?.message ||
+      'Failed to remove the image background.';
+    console.error('Failed background removal:', err);
+  } finally {
+    backgroundRemovalId.value = '';
+  }
+}
+
+async function attemptAutoCrop(imageId: string) {
+  if (!imageId || backgroundRemovalId.value || autoCropId.value) return;
+
+  autoCropId.value = imageId;
+  galleryError.value = '';
+
+  try {
+    await api.post(`/images/uploads/${imageId}/auto-crop`);
+    await loadGallery();
+  } catch (err: any) {
+    galleryError.value =
+      err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Failed to auto crop the image.';
+    console.error('Failed auto crop:', err);
+  } finally {
+    autoCropId.value = '';
   }
 }
 
@@ -753,8 +850,22 @@ function onUrlClear() {
   align-items: center;
   justify-content: flex-start;
   height: 100%;
-  min-width: 180px;
-  min-height: 180px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.image-card__busy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 253, 0.88);
+  border-radius: 12px;
+  text-align: center;
 }
 
 .image-card__date {
@@ -762,12 +873,21 @@ function onUrlClear() {
   white-space: normal;
 }
 
-.image-card__actions {
-  min-height: 2rem;
+.image-card__preview {
+  width: 100%;
+  background: #f4f7fb;
 }
 
-.image-card__delete {
+.image-card__preview :deep(img) {
+  object-fit: contain;
+}
+
+.image-card__actions {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
 }
 
 .position-relative {

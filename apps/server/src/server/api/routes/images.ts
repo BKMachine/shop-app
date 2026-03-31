@@ -12,6 +12,8 @@ import SupplierService from '../../../database/lib/supplier/supplier_service.js'
 import ToolService from '../../../database/lib/tool/tool_service.js';
 import VendorService from '../../../database/lib/vendor/vendor_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
+import { autoCropImage } from '../../../services/image_auto_crop_service.js';
+import { removeImageBackground } from '../../../services/background_removal_service.js';
 import HttpError from '../../middleware/httpError.js';
 import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 
@@ -30,6 +32,16 @@ const upload = multer({ storage });
 
 function isValidId(value: unknown): value is string {
   return typeof value === 'string' && isValidObjectId(value);
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error) return error;
+  if (typeof error === 'object' && error && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message) return message;
+  }
+  return 'Failed to remove background';
 }
 
 async function getPartEntity(entityType: string, entityId: string) {
@@ -173,6 +185,85 @@ router.get('/uploads/recent', async (_req, res, next) => {
     res.status(200).json(response);
   } catch (err) {
     next(new HttpError(500, 'Failed to load recent images', { cause: err }));
+  }
+});
+
+router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+
+  try {
+    const image = await ImageService.findById(id);
+    if (!image) return next(new HttpError(404, 'Image not found'));
+    if (image.status !== 'temp') {
+      return next(new HttpError(400, 'Only temporary images can be background-processed'));
+    }
+
+    const sourcePath = path.join(imageDir, image.relPath);
+    if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
+
+    const processed = await removeImageBackground(sourcePath);
+    const newImage = await ImageService.add({
+      filename: processed.filename,
+      relPath: processed.relPath,
+      mimeType: processed.mimeType,
+      status: 'temp',
+      entityType: null,
+      entityId: null,
+    });
+
+    const response: MyImageData = {
+      id: newImage._id.toString(),
+      url: `/images/${newImage.relPath}`,
+      createdAt: newImage.createdAt.toISOString(),
+      isMain: false,
+    };
+
+    res.status(200).json(response);
+  } catch (err) {
+    const message = getErrorMessage(err);
+    const statusCode = message.includes('not configured') ? 503 : 500;
+    next(new HttpError(statusCode, message, { cause: err, expose: true }));
+  }
+});
+
+router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+
+  try {
+    const image = await ImageService.findById(id);
+    if (!image) return next(new HttpError(404, 'Image not found'));
+    if (image.status !== 'temp') {
+      return next(new HttpError(400, 'Only temporary images can be auto-cropped'));
+    }
+
+    const sourcePath = path.join(imageDir, image.relPath);
+    if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
+
+    const processed = await autoCropImage(sourcePath);
+    const newImage = await ImageService.add({
+      filename: processed.filename,
+      relPath: processed.relPath,
+      mimeType: processed.mimeType,
+      status: 'temp',
+      entityType: null,
+      entityId: null,
+    });
+
+    const response: MyImageData = {
+      id: newImage._id.toString(),
+      url: `/images/${newImage.relPath}`,
+      createdAt: newImage.createdAt.toISOString(),
+      isMain: false,
+    };
+
+    res.status(200).json(response);
+  } catch (err) {
+    const message = getErrorMessage(err);
+    next(new HttpError(500, message, { cause: err, expose: true }));
   }
 });
 
