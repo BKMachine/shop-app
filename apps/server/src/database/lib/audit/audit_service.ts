@@ -2,6 +2,19 @@ import { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import Audit from './audit_model.js';
 
+function normalizeAuditPayload(doc: unknown): unknown | null {
+  if (!doc) return null;
+
+  if (typeof doc === 'object' && doc !== null && 'toObject' in doc) {
+    const maybeDoc = doc as { toObject?: () => unknown };
+    if (typeof maybeDoc.toObject === 'function') {
+      return maybeDoc.toObject();
+    }
+  }
+
+  return doc;
+}
+
 async function addAudit(
   type: Audit['type'],
   oldDoc: unknown | null,
@@ -12,8 +25,8 @@ async function addAudit(
     type,
     timestamp: new Date(),
     device: new Types.ObjectId(device),
-    old: oldDoc,
-    new: newDoc,
+    old: normalizeAuditPayload(oldDoc),
+    new: normalizeAuditPayload(newDoc),
   });
   await doc.save();
   emit('audit');
@@ -29,7 +42,8 @@ async function addToolAudit(
 }
 
 async function getToolAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
-  const projection = 'timestamp device new.stock old.stock new.onOrder old.onOrder new.cost old.cost';
+  const projection =
+    'timestamp device new.stock old.stock new.onOrder old.onOrder new.cost old.cost';
 
   const docsInRange = await Audit.find(
     {

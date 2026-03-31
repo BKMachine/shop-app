@@ -76,19 +76,19 @@ async function updateSingleImageEntity(
   if (entityType === 'customer') {
     const customer = entity as CustomerDoc;
     customer.logo = imageUrl;
-    await CustomerService.update(customer);
+    await CustomerService.update(customer, deviceId);
     return;
   }
   if (entityType === 'supplier') {
     const supplier = entity as SupplierDoc;
     supplier.logo = imageUrl;
-    await SupplierService.update(supplier);
+    await SupplierService.update(supplier, deviceId);
     return;
   }
 
   const vendor = entity as VendorDoc;
   vendor.logo = imageUrl;
-  await VendorService.update(vendor);
+  await VendorService.update(vendor, deviceId);
 }
 
 async function deleteImageFileIfPresent(relPath: string) {
