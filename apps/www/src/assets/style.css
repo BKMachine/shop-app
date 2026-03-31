@@ -24,7 +24,7 @@ body,
 }
 
 .v-data-table__tr:hover {
-  background-color: rgba(204, 204, 204, 0.42) !important;
+  background-color: rgba(204, 204, 204, 0.42);
 }
 
 .stock {
@@ -33,7 +33,7 @@ body,
 }
 
 .readonly-field {
-  color: #8d6a00 !important; /* darker gold text for distinction */
+  color: #8d6a00; /* darker gold text for distinction */
 }
 
 .v-field--disabled {

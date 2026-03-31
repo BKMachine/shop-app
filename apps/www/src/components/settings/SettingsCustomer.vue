@@ -10,7 +10,7 @@
           <v-text-field
             v-model="editingItem.name"
             label="Name"
-            :rules="[rules.required!, rules.counter!, rules.unique!]"
+            :rules="[rules.required, rules.counter, rules.unique]"
           />
           <div class="logo-section py-2">
             <div class="logo-preview">
@@ -140,13 +140,12 @@ const names = computed(() => {
   return customerStore.customers.map((x) => x.name.toLowerCase());
 });
 
-const rules: Rules = {
+const rules = {
   required: (value) => !!value || 'Required',
   counter: (value) => value.length <= 20 || 'Max 20 characters',
   unique: (value) =>
     isEditing.value || !names.value.includes(value.toLowerCase()) || 'Name already used',
-};
-
+} satisfies Rules;
 async function save() {
   if (editingIndex.value === -1) {
     await customerStore.add(editingItem.value);

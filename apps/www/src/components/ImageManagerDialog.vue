@@ -258,6 +258,7 @@
 </template>
 
 <script setup lang="ts">
+import type { AxiosError, AxiosProgressEvent } from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import api from '@/plugins/axios';
@@ -271,6 +272,11 @@ interface ImageData {
   createdAt: string;
   status?: 'temp' | 'attached';
 }
+
+type ApiErrorPayload = {
+  error?: string;
+  message?: string;
+};
 
 const props = defineProps<{
   modelValue: boolean;
@@ -516,9 +522,11 @@ async function uploadFile(attachAfterUpload: boolean) {
     formData.append('image', file as Blob);
     const { data } = await api.post('/images/uploads/file', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (progressEvent: any) => {
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
         if (progressEvent?.lengthComputable) {
-          uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          uploadProgress.value = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total ?? 1),
+          );
         }
       },
     });
@@ -611,7 +619,7 @@ async function assignSelectedToEntity() {
           hasMainImage = true;
         }
         successCount += 1;
-      } catch (error: any) {
+      } catch {
         failCount += 1;
       }
     }
@@ -646,12 +654,8 @@ async function attemptBackgroundRemoval(imageId: string) {
   try {
     await api.post(`/images/uploads/${imageId}/remove-background`);
     await loadGallery();
-  } catch (err: any) {
-    galleryError.value =
-      err?.response?.data?.error ||
-      err?.response?.data?.message ||
-      err?.message ||
-      'Failed to remove the image background.';
+  } catch (err: unknown) {
+    galleryError.value = getErrorMessage(err, 'Failed to remove the image background.');
     console.error('Failed background removal:', err);
   } finally {
     backgroundRemovalId.value = '';
@@ -667,13 +671,22 @@ async function attemptAutoCrop(imageId: string) {
   try {
     await api.post(`/images/uploads/${imageId}/auto-crop`);
     await loadGallery();
-  } catch (err: any) {
-    galleryError.value =
-      err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Failed to auto crop the image.';
+  } catch (err: unknown) {
+    galleryError.value = getErrorMessage(err, 'Failed to auto crop the image.');
     console.error('Failed auto crop:', err);
   } finally {
     autoCropId.value = '';
   }
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as AxiosError<ApiErrorPayload>;
+  return (
+    axiosError.response?.data?.error ||
+    axiosError.response?.data?.message ||
+    axiosError.message ||
+    fallback
+  );
 }
 
 async function deleteImage(imageId: string) {

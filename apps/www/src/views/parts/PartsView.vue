@@ -10,6 +10,7 @@
           density="compact"
           hide-details
           label="Show Subcomponents"
+          @update:model-value="syncFiltersToQuery"
         />
         <v-btn color="secondary" link prepend-icon="mdi-plus" :to="{ name: 'createPart' }">
           Create New Part
@@ -23,12 +24,20 @@
             v-model="search"
             class="my-2 mr-2"
             clearable
-            hide-details
             label="Search"
             prepend-inner-icon="mdi-magnify"
             single-line
             variant="outlined"
-          />
+            @update:model-value="syncFiltersToQuery"
+          >
+            <template #details>
+              <div class="search-details">
+                <button class="clear-filters-hint" type="button" @click="clearAllFilters">
+                  Clear all filters
+                </button>
+              </div>
+            </template>
+          </v-text-field>
         </v-col>
         <v-col cols="4">
           <CustomerSelect
@@ -38,6 +47,7 @@
             hide-details
             label="Customer"
             variant="outlined"
+            @update:model-value="syncFiltersToQuery"
           />
         </v-col>
       </v-row>
@@ -116,7 +126,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { type LocationQueryValue, type LocationQueryValueRaw, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
@@ -132,6 +143,7 @@ import { usePartStore } from '@/stores/parts_store';
 
 const partStore = usePartStore();
 const materialsStore = useMaterialsStore();
+const route = useRoute();
 
 const page = ref(1);
 const itemsPerPage = ref(10);
@@ -139,6 +151,9 @@ const search = ref('');
 const selectedCustomerId = ref<string | null>(null);
 const showSubComponents = ref(false);
 const missingImageIds = ref<Record<string, boolean>>({});
+const FILTER_QUERY_KEYS = ['search', 'customer', 'subcomponents'] as const;
+const isFilterQueryKey = (key: string): key is (typeof FILTER_QUERY_KEYS)[number] =>
+  FILTER_QUERY_KEYS.includes(key as (typeof FILTER_QUERY_KEYS)[number]);
 
 const headers = [
   {
@@ -198,10 +213,19 @@ const filteredItems = computed(() => {
 });
 
 onMounted(() => {
+  applyRouteFilters();
+
   if (!materialsStore.materials.length && !materialsStore.loading) {
     materialsStore.fetch();
   }
 });
+
+watch(
+  () => route.query,
+  () => {
+    applyRouteFilters();
+  },
+);
 
 const partById = computed(() => {
   return new Map(partStore.parts.map((part) => [part._id, part]));
@@ -295,6 +319,69 @@ function hideExpandedImage() {
     left: 0,
   };
 }
+
+function applyRouteFilters() {
+  search.value = firstQueryValue(route.query.search) ?? '';
+  selectedCustomerId.value = firstQueryValue(route.query.customer) ?? null;
+  showSubComponents.value = firstQueryValue(route.query.subcomponents) === 'true';
+}
+
+function syncFiltersToQuery() {
+  const nextQuery = buildFilterQuery();
+
+  if (areFilterQueriesEqual(route.query, nextQuery)) {
+    return;
+  }
+
+  router.replace({
+    query: nextQuery,
+  });
+}
+
+function clearAllFilters() {
+  search.value = '';
+  selectedCustomerId.value = null;
+  showSubComponents.value = false;
+  syncFiltersToQuery();
+}
+
+function buildFilterQuery() {
+  const baseQuery = Object.fromEntries(
+    Object.entries(route.query).filter(([key]) => !isFilterQueryKey(key)),
+  );
+
+  return {
+    ...baseQuery,
+    ...(search.value ? { search: search.value } : {}),
+    ...(selectedCustomerId.value ? { customer: selectedCustomerId.value } : {}),
+    ...(showSubComponents.value ? { subcomponents: 'true' } : {}),
+  };
+}
+
+function firstQueryValue(
+  value: LocationQueryValue | LocationQueryValue[] | undefined,
+): string | undefined {
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  return firstValue ?? undefined;
+}
+
+function areFilterQueriesEqual(
+  currentQuery: Record<string, LocationQueryValue | LocationQueryValue[] | undefined>,
+  nextQuery: Record<string, LocationQueryValueRaw | LocationQueryValueRaw[] | undefined>,
+) {
+  const currentEntries = Object.entries(currentQuery)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [key, Array.isArray(value) ? value.join(',') : String(value)]);
+  const nextEntries = Object.entries(nextQuery)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [key, Array.isArray(value) ? value.join(',') : String(value)]);
+
+  if (currentEntries.length !== nextEntries.length) return false;
+
+  return currentEntries.every(([key, value]) => {
+    return nextEntries.some(([nextKey, nextValue]) => nextKey === key && nextValue === value);
+  });
+}
 </script>
 
 <style scoped>
@@ -308,6 +395,23 @@ function hideExpandedImage() {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.search-details {
+  min-height: 18px;
+  padding-top: 2px;
+}
+
+.clear-filters-hint {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 300;
+  color: #1e88e5;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
 }
 
 .stock {
@@ -359,16 +463,15 @@ function hideExpandedImage() {
 }
 
 .rate-swatch--subcomponent {
-  background:
-    linear-gradient(
-      135deg,
-      rgba(148, 163, 184, 0.92) 0%,
-      rgba(148, 163, 184, 0.92) 46%,
-      rgba(255, 255, 255, 0.98) 46%,
-      rgba(255, 255, 255, 0.98) 54%,
-      currentColor 54%,
-      currentColor 100%
-    );
+  background: linear-gradient(
+    135deg,
+    rgba(148, 163, 184, 0.92) 0%,
+    rgba(148, 163, 184, 0.92) 46%,
+    rgba(255, 255, 255, 0.98) 46%,
+    rgba(255, 255, 255, 0.98) 54%,
+    currentColor 54%,
+    currentColor 100%
+  );
 }
 
 .rate-swatch--empty.rate-swatch--subcomponent {

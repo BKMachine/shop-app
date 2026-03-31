@@ -89,7 +89,7 @@
             <v-text-field
               v-model="tool.description"
               label="Description"
-              :rules="[rules.required!]"
+              :rules="[rules.required]"
             />
           </v-row>
           <v-row no-gutters>
@@ -98,7 +98,7 @@
                 v-model="tool.item"
                 class="mr-2"
                 label="Product Number"
-                :rules="[rules.uniqueItem!]"
+                :rules="[rules.uniqueItem]"
               >
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
@@ -111,7 +111,7 @@
                 v-model="tool.barcode"
                 class="ml-2"
                 label="Barcode"
-                :rules="[rules.barcode!, rules.uniqueBarcode!]"
+                :rules="[rules.barcode, rules.uniqueBarcode]"
               >
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
@@ -610,7 +610,7 @@ function openLink(link: string | undefined) {
 
 const toolIsAltered = computed<boolean>(() => !isEqual(tool.value, toolOriginal.value));
 
-const rules: Rules = {
+const rules = {
   required: (val) => !!val || 'Required',
   barcode: (val) => {
     if (!tool.value.item) return true;
@@ -624,8 +624,7 @@ const rules: Rules = {
     if (!tool.value.barcode) return true;
     return true;
   },
-};
-
+} satisfies Rules;
 /* GENERAL TAB LOGIC */
 
 const coatings = computed(() => {

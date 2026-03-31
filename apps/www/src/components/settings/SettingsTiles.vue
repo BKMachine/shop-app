@@ -18,8 +18,14 @@
 </template>
 
 <script setup lang="ts">
+type TileItem = {
+  _id: string;
+  name: string;
+  logo?: string | null;
+};
+
 defineProps<{
-  items: any[];
+  items: TileItem[];
 }>();
 defineEmits(['create', 'edit']);
 </script>

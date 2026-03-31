@@ -33,7 +33,6 @@
 
         <v-expansion-panel-text> <VendorSettings /> </v-expansion-panel-text>
       </v-expansion-panel>
-
     </v-expansion-panels>
   </v-container>
 </template>

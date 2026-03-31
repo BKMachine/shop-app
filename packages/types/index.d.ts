@@ -9,9 +9,8 @@
 /// <reference path="./src/materials.d.ts" />
 
 declare global {
-  interface Rules {
-    [key: string]: (value: string) => boolean | string;
-  }
+  type Rule = (value: string) => boolean | string;
+  type Rules<Key extends string = string> = Record<Key, Rule>;
 
   interface ToolDocBase {
     _id: string;

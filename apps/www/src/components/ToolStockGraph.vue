@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { Chart, type ChartData, type ChartOptions, registerables } from 'chart.js';
-import annotationPlugin from 'chartjs-plugin-annotation';
+import annotationPlugin, { type AnnotationOptions } from 'chartjs-plugin-annotation';
 import { DateTime } from 'luxon';
 import { computed, onMounted, ref } from 'vue';
 import { Line } from 'vue-chartjs';
@@ -138,9 +138,12 @@ const orderPoints = computed(() => {
         yValue: props.reorderThreshold,
         radius: 6,
         backgroundColor: 'rgba(151,255,99,0.5)',
-      };
+      } satisfies AnnotationOptions<'point'>;
     })
-    .reduce((a, v) => ({ ...a, [`point${i++}`]: v }), {});
+    .reduce<Record<string, AnnotationOptions<'point'>>>((annotations, value) => {
+      annotations[`point${i++}`] = value;
+      return annotations;
+    }, {});
 });
 
 const chartData = computed<ChartData<'line'>>(() => {

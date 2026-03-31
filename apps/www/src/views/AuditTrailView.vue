@@ -48,10 +48,10 @@
                         <v-btn
                           v-if="getAuditRoute(audit)"
                           class="audit-link-btn"
-                          :to="getAuditRoute(audit)"
                           icon
                           size="x-small"
                           title="Open item"
+                          :to="getAuditRoute(audit)"
                           variant="text"
                         >
                           <v-icon icon="mdi-open-in-new" size="16" />
@@ -163,8 +163,8 @@
 
 <script setup lang="ts">
 import { DateTime } from 'luxon';
-import type { RouteLocationRaw } from 'vue-router';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import type { RouteLocationRaw } from 'vue-router';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import useNowStore from '@/stores/now';
@@ -407,17 +407,17 @@ function getAuditImageUrl(audit: Audit) {
   const newValue = normalizeRecord(audit.new);
   const oldValue = normalizeRecord(audit.old);
   const candidates = [
-    newValue.img,
-    oldValue.img,
-    newValue.logo,
-    oldValue.logo,
-    newValue.image,
-    oldValue.image,
-    newValue.photo,
-    oldValue.photo,
+    getStringField(newValue, 'img'),
+    getStringField(oldValue, 'img'),
+    getStringField(newValue, 'logo'),
+    getStringField(oldValue, 'logo'),
+    getStringField(newValue, 'image'),
+    getStringField(oldValue, 'image'),
+    getStringField(newValue, 'photo'),
+    getStringField(oldValue, 'photo'),
   ];
 
-  return candidates.find((value) => typeof value === 'string' && value.trim().length > 0) ?? '';
+  return candidates.find((value) => value.length > 0) ?? '';
 }
 
 function getAuditRoute(audit: Audit): RouteLocationRaw | undefined {
@@ -431,12 +431,17 @@ function getAuditRoute(audit: Audit): RouteLocationRaw | undefined {
   return undefined;
 }
 
-function normalizeRecord(value: unknown): Record<string, any> {
+function normalizeRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
   }
 
-  return value as Record<string, any>;
+  return value as Record<string, unknown>;
+}
+
+function getStringField(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  return typeof value === 'string' ? value : '';
 }
 
 function dedupeAuditChanges(changes: AuditChange[]) {
@@ -562,7 +567,7 @@ function getJsonLines(audit: Audit, side: 'before' | 'after'): AuditJsonLine[] {
   let activeKey: string | null = null;
 
   return lines.map((text) => {
-    const topLevelKeyMatch = text.match(/^  "([^"]+)":/);
+    const topLevelKeyMatch = text.match(/^ {2}"([^"]+)":/);
     if (topLevelKeyMatch) {
       activeKey = topLevelKeyMatch[1] ?? null;
     }
@@ -644,7 +649,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 }
 
 .audit-card::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0 0 auto 0;
   height: 84px;
@@ -662,7 +667,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px !important;
+  padding: 12px 14px;
 }
 
 .audit-card__header {
@@ -892,7 +897,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   display: flex;
   flex-direction: column;
   font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
 }
 

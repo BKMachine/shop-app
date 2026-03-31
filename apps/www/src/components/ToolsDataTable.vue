@@ -18,21 +18,37 @@
                   v-model="searchText"
                   class="milling-search"
                   clearable
-                  hide-details
                   label="Search"
                   prepend-inner-icon="mdi-magnify"
                   single-line
                   variant="outlined"
-                />
+                >
+                  <template #details>
+                    <div class="search-details">
+                      <button
+                        class="clear-filters-hint"
+                        type="button"
+                        @click="emits('clearAllFilters')"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  </template>
+                </v-text-field>
               </v-col>
               <v-col cols="6">
                 <v-row>
                   <v-col cols="4">
-                    <v-select v-model="toolType" clearable :items="types" label="Tool Type" />
+                    <v-select
+                      v-model="selectedToolType"
+                      clearable
+                      :items="types"
+                      label="Tool Type"
+                    />
                   </v-col>
                   <v-col cols="4">
                     <v-text-field
-                      v-model="cuttingDia"
+                      v-model="cuttingDiaFilter"
                       clearable
                       label="Cutting Dia"
                       @keydown="isNumber($event)"
@@ -40,7 +56,7 @@
                   </v-col>
                   <v-col cols="4">
                     <v-text-field
-                      v-model="minFluteLength"
+                      v-model="minFluteLengthFilter"
                       clearable
                       label="Min Flute Length"
                       @keydown="isNumber($event)"
@@ -55,12 +71,23 @@
             <v-text-field
               v-model="searchText"
               clearable
-              hide-details
               label="Search"
               prepend-inner-icon="mdi-magnify"
               single-line
               variant="outlined"
-            />
+            >
+              <template #details>
+                <div class="search-details">
+                  <button
+                    class="clear-filters-hint"
+                    type="button"
+                    @click="emits('clearAllFilters')"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              </template>
+            </v-text-field>
           </div>
         </template>
 
@@ -101,17 +128,26 @@ const props = defineProps<{
   items: Tool[];
   category: ToolCategory;
   search: string;
+  toolType: string;
+  cuttingDia: string;
+  minFluteLength: string;
 }>();
 
-const emits = defineEmits(['updateSearch']);
+const emits = defineEmits([
+  'updateSearch',
+  'updateToolType',
+  'updateCuttingDia',
+  'updateMinFluteLength',
+  'clearAllFilters',
+]);
 
 const toolStore = useToolStore();
 const searchText = ref<string>(props.search);
 const page = ref(1);
 const itemsPerPage = ref(10);
-const cuttingDia = ref<string>();
-const minFluteLength = ref<string>();
-const toolType = ref<string>();
+const cuttingDiaFilter = ref<string>(props.cuttingDia);
+const minFluteLengthFilter = ref<string>(props.minFluteLength);
+const selectedToolType = ref<string>(props.toolType);
 const resultsTitle = computed(() => {
   let title = props.title;
   if (props.items.length !== filteredItems.value.length)
@@ -127,37 +163,77 @@ watch(searchText, () => {
   emits('updateSearch', searchText.value);
 });
 
+watch(selectedToolType, () => {
+  emits('updateToolType', selectedToolType.value);
+});
+
+watch(cuttingDiaFilter, () => {
+  emits('updateCuttingDia', cuttingDiaFilter.value);
+});
+
+watch(minFluteLengthFilter, () => {
+  emits('updateMinFluteLength', minFluteLengthFilter.value);
+});
+
+watch(
+  () => props.search,
+  (value) => {
+    if (searchText.value !== value) searchText.value = value;
+  },
+);
+
+watch(
+  () => props.toolType,
+  (value) => {
+    if (selectedToolType.value !== value) selectedToolType.value = value;
+  },
+);
+
+watch(
+  () => props.cuttingDia,
+  (value) => {
+    if (cuttingDiaFilter.value !== value) cuttingDiaFilter.value = value;
+  },
+);
+
+watch(
+  () => props.minFluteLength,
+  (value) => {
+    if (minFluteLengthFilter.value !== value) minFluteLengthFilter.value = value;
+  },
+);
+
 const filteredItems = computed<Tool[]>(() => {
   if (props.category === 'milling') {
     let cuttingDiaNum: number;
     let minFluteLengthNum: number;
     try {
-      if (cuttingDia.value) cuttingDiaNum = parseFloat(cuttingDia.value);
-      if (minFluteLength.value) minFluteLengthNum = parseFloat(minFluteLength.value);
+      if (cuttingDiaFilter.value) cuttingDiaNum = parseFloat(cuttingDiaFilter.value);
+      if (minFluteLengthFilter.value) minFluteLengthNum = parseFloat(minFluteLengthFilter.value);
     } catch (e) {
       return props.items;
     }
     return [...props.items]
       .filter((x) => {
-        if (toolType.value) {
-          if (toolType.value === x.toolType) return true;
+        if (selectedToolType.value) {
+          if (selectedToolType.value === x.toolType) return true;
         }
-        return !toolType.value;
+        return !selectedToolType.value;
       })
       .filter((x) => {
-        if (Number.isNaN(cuttingDiaNum)) return cuttingDia.value;
+        if (Number.isNaN(cuttingDiaNum)) return cuttingDiaFilter.value;
         if (cuttingDiaNum && x.cuttingDia) {
           if (cuttingDiaNum > 0 && x.cuttingDia.toString().startsWith(cuttingDiaNum.toString()))
             return true;
         }
-        return !cuttingDia.value;
+        return !cuttingDiaFilter.value;
       })
       .filter((x) => {
-        if (Number.isNaN(minFluteLengthNum)) return minFluteLength.value;
-        if (minFluteLength.value && x.fluteLength) {
+        if (Number.isNaN(minFluteLengthNum)) return minFluteLengthFilter.value;
+        if (minFluteLengthFilter.value && x.fluteLength) {
           if (minFluteLengthNum > 0 && minFluteLengthNum <= x.fluteLength) return true;
         }
-        return !minFluteLength.value;
+        return !minFluteLengthFilter.value;
       });
   }
   return props.items;
@@ -168,8 +244,10 @@ function openTool(event: unknown, { item }: { item: Tool }) {
 }
 
 watch(page, () => {
-  if (page.value === 1) router.push({ name: 'tools' });
-  else router.push({ name: 'tools', query: { page: page.value } });
+  const query = { ...router.currentRoute.value.query };
+  if (page.value === 1) delete query.page;
+  else query.page = String(page.value);
+  router.replace({ query });
 });
 
 watch(itemsPerPage, () => {
@@ -186,7 +264,7 @@ onMounted(() => {
 
   const tabChanged = toolStore.tabChange;
   if (tabChanged) {
-    router.push({ name: 'tools' });
+    page.value = 1;
     toolStore.setTabChange(false);
   } else {
     const query = router.currentRoute.value.query;
@@ -223,11 +301,28 @@ function location(tool: Tool): string {
   width: 100%;
   justify-content: space-between;
 }
+
+.search-details {
+  min-height: 18px;
+  padding-top: 2px;
+}
+
+.clear-filters-hint {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 300;
+  color: #1e88e5;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
 </style>
 
 <style scoped>
 .highlighted {
-  background: #efefef !important;
+  background: #efefef;
 }
 .tool-img {
   max-height: 50px;

@@ -211,7 +211,9 @@ export function calculateAssemblyCycleMinutes(
   return subComponents.reduce((total, entry) => {
     const subComponent = resolvePart(entry.partId);
     if (!subComponent) return total;
-    return total + calculateAssemblyCycleMinutes(subComponent, resolvePart, nextVisited) * entry.qty;
+    return (
+      total + calculateAssemblyCycleMinutes(subComponent, resolvePart, nextVisited) * entry.qty
+    );
   }, 0);
 }
 

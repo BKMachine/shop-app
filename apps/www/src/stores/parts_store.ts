@@ -115,10 +115,7 @@ export const usePartStore = defineStore('parts', () => {
       partId,
       data.map((image) => image.id),
     );
-    updatePartImage(
-      partId,
-      data.find((image) => image.isMain)?.url || '',
-    );
+    updatePartImage(partId, data.find((image) => image.isMain)?.url || '');
     return data;
   }
 
@@ -150,7 +147,9 @@ export const usePartStore = defineStore('parts', () => {
   }
 
   async function loadPartDocuments(partId: string) {
-    const { data } = await axios.get<MyDocumentData[]>(`/documents/entities/part/${partId}/documents`);
+    const { data } = await axios.get<MyDocumentData[]>(
+      `/documents/entities/part/${partId}/documents`,
+    );
     documentsByPartId.value = {
       ...documentsByPartId.value,
       [partId]: data,

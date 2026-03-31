@@ -6,11 +6,7 @@
   >
     <v-card>
       <v-card-title>{{ title }}</v-card-title>
-      <v-card-text>
-        <slot>
-          {{ message }}
-        </slot>
-      </v-card-text>
+      <v-card-text> <slot> {{ message }} </slot> </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn :disabled="loading" variant="text" @click="emit('update:modelValue', false)">
