@@ -7,12 +7,7 @@
       </div>
 
       <div class="d-flex align-center ga-2">
-        <input
-          ref="fileInput"
-          class="d-none"
-          type="file"
-          @change="onFileSelected"
-        />
+        <input ref="fileInput" class="d-none" type="file" @change="onFileSelected" />
         <v-btn
           color="primary"
           :disabled="!part._id || uploading"
@@ -73,8 +68,8 @@
                 Open
               </v-btn>
               <v-btn
-                :href="document.url"
                 download
+                :href="document.url"
                 prepend-icon="mdi-download"
                 size="small"
                 variant="text"
@@ -98,12 +93,14 @@
     <v-dialog v-model="viewerOpen" fullscreen>
       <v-card class="document-viewer">
         <v-toolbar color="black" density="comfortable" theme="dark">
-          <v-toolbar-title>{{ viewerDocument?.originalName || 'Document Preview' }}</v-toolbar-title>
+          <v-toolbar-title
+            >{{ viewerDocument?.originalName || 'Document Preview' }}</v-toolbar-title
+          >
           <v-spacer />
           <v-btn
             v-if="viewerDocument"
-            :href="viewerDocument.url"
             download
+            :href="viewerDocument.url"
             icon="mdi-download"
             variant="text"
           />
@@ -122,7 +119,10 @@
             title="PDF preview"
           />
 
-          <pre v-else-if="viewerMode === 'text'" class="document-viewer__text">{{ viewerText }}</pre>
+          <pre
+            v-else-if="viewerMode === 'text'"
+            class="document-viewer__text"
+          >{{ viewerText }}</pre>
 
           <div v-else class="document-viewer__fallback">
             <v-btn
@@ -154,12 +154,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
-import api from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+import { usePartStore } from '@/stores/parts_store';
 
 const props = defineProps<{
   part: Part;
 }>();
+
+const partStore = usePartStore();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const loading = ref(false);
@@ -190,21 +192,13 @@ async function onFileSelected(event: Event) {
   const file = input.files?.[0];
   if (!file || !props.part._id) return;
 
-  const formData = new FormData();
-  formData.append('document', file);
-
   uploading.value = true;
   error.value = '';
 
   try {
-    await api.post<MyDocumentData>(`/documents/entities/part/${props.part._id}/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
+    await partStore.uploadPartDocument(props.part._id, file);
     toastSuccess('Document uploaded successfully');
-    await loadDocuments();
+    documents.value = partStore.getPartDocuments(props.part._id);
   } catch (err) {
     error.value = 'Failed to upload document.';
     console.error(err);
@@ -300,11 +294,11 @@ async function deleteConfirmedDocument() {
   error.value = '';
 
   try {
-    await api.delete(`/documents/entities/part/${props.part._id}/documents/${deleteTarget.value.id}`);
+    await partStore.deletePartDocument(props.part._id, deleteTarget.value.id);
     toastSuccess('Document deleted successfully');
     deleteConfirmVisible.value = false;
     deleteTarget.value = null;
-    await loadDocuments();
+    documents.value = partStore.getPartDocuments(props.part._id);
   } catch (err) {
     error.value = 'Failed to delete document.';
     console.error(err);
@@ -324,8 +318,7 @@ async function loadDocuments() {
   error.value = '';
 
   try {
-    const res = await api.get<MyDocumentData[]>(`/documents/entities/part/${props.part._id}/documents`);
-    documents.value = res.data;
+    documents.value = await partStore.loadPartDocuments(props.part._id);
   } catch (err) {
     error.value = 'Failed to load documents.';
     console.error(err);

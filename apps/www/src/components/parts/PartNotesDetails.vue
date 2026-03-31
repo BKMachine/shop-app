@@ -201,8 +201,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
-import api from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+import { usePartStore } from '@/stores/parts_store';
 
 const props = defineProps<{
   part: Part;
@@ -211,6 +211,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'notes-changed': [];
 }>();
+
+const partStore = usePartStore();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -333,13 +335,13 @@ async function saveNote() {
 
   try {
     if (editingNote.value) {
-      await api.put<MyPartNoteData>(`/parts/${props.part._id}/notes/${editingNote.value.id}`, {
+      await partStore.updatePartNote(props.part._id, editingNote.value.id, {
         text: editorText.value,
         priority: editorPriority.value,
       });
       toastSuccess('Note updated successfully');
     } else {
-      await api.post<MyPartNoteData>(`/parts/${props.part._id}/notes`, {
+      await partStore.createPartNote(props.part._id, {
         text: editorText.value,
         priority: editorPriority.value,
       });
@@ -350,7 +352,7 @@ async function saveNote() {
     editingNote.value = null;
     editorText.value = '';
     editorPriority.value = 'default';
-    await loadNotes();
+    notes.value = partStore.getPartNotes(props.part._id);
     emit('notes-changed');
   } catch (err) {
     error.value = 'Failed to save note.';
@@ -373,11 +375,11 @@ async function deleteConfirmedNote() {
   error.value = '';
 
   try {
-    await api.delete(`/parts/${props.part._id}/notes/${deleteTarget.value.id}`);
+    await partStore.deletePartNote(props.part._id, deleteTarget.value.id);
     toastSuccess('Note deleted successfully');
     deleteConfirmVisible.value = false;
     deleteTarget.value = null;
-    await loadNotes();
+    notes.value = partStore.getPartNotes(props.part._id);
     emit('notes-changed');
   } catch (err) {
     error.value = 'Failed to delete note.';
@@ -398,8 +400,7 @@ async function loadNotes() {
   error.value = '';
 
   try {
-    const res = await api.get<MyPartNoteData[]>(`/parts/${props.part._id}/notes`);
-    notes.value = res.data;
+    notes.value = await partStore.loadPartNotes(props.part._id);
   } catch (err) {
     error.value = 'Failed to load notes.';
     console.error(err);

@@ -50,7 +50,9 @@ router.put('/parts', requireKnownDevice, async (req, res, next) => {
   if (!data) return next(new HttpError(400, 'No part data provided.'));
   if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
   try {
-    const response = await Parts.update(data, req.device._id.toString());
+    const response = await Parts.update(data, req.device._id.toString(), {
+      preserveManagedMediaFields: true,
+    });
     res.status(200).json(response);
   } catch (e) {
     if (isAssemblyValidationError(e)) return next(new HttpError(400, e.message));

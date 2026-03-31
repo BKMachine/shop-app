@@ -167,8 +167,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
-import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
+import { usePartStore } from '@/stores/parts_store';
 
 const props = defineProps<{
   part: Part;
@@ -177,6 +177,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'image-selected': [payload: { imageId: string; url: string; isMain?: boolean }];
 }>();
+
+const partStore = usePartStore();
 
 const imageManagerVisible = ref(false);
 const loading = ref(false);
@@ -295,15 +297,9 @@ async function promoteToMain(image: MyImageData) {
   promotingId.value = image.id;
   error.value = '';
 
-  console.log(promotingId.value, props.part._id);
   try {
-    const { data } = await api.post<MyImageData>(`/images/${image.id}/promote-to-main`, {
-      entityType: 'part',
-      entityId: props.part._id,
-    });
-
+    const data = await partStore.promotePartImage(props.part._id, image.id);
     emit('image-selected', { imageId: image.id, url: data.url, isMain: true });
-    await loadImages();
   } catch (err) {
     error.value = 'Failed to set main image.';
     console.error(err);
@@ -335,10 +331,7 @@ async function deleteImage(image: MyImageData) {
   error.value = '';
 
   try {
-    const { data } = await api.delete<{ nextMainImageId?: string; nextMainImageUrl?: string }>(
-      `/images/entities/part/${props.part._id}/images/${image.id}`,
-    );
-
+    const data = await partStore.deletePartImage(props.part._id, image.id);
     emit('image-selected', {
       imageId: data.nextMainImageId || '',
       url: data.nextMainImageUrl || '',
@@ -349,7 +342,6 @@ async function deleteImage(image: MyImageData) {
       galleryIndex.value = Math.max(0, images.value.length - 2);
     }
 
-    await loadImages();
     deleteConfirmVisible.value = false;
     deleteTarget.value = null;
   } catch (err) {
@@ -370,8 +362,7 @@ async function loadImages() {
   error.value = '';
 
   try {
-    const res = await api.get<MyImageData[]>(`/images/entities/part/${props.part._id}/images`);
-    images.value = res.data;
+    images.value = await partStore.loadPartImages(props.part._id);
   } catch (err) {
     error.value = 'Failed to load images.';
     console.error(err);

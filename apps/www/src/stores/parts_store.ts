@@ -34,6 +34,29 @@ export const usePartStore = defineStore('parts', () => {
   });
 
   const loading = ref(false);
+  const imagesByPartId = ref<Record<string, MyImageData[]>>({});
+  const documentsByPartId = ref<Record<string, MyDocumentData[]>>({});
+  const notesByPartId = ref<Record<string, MyPartNoteData[]>>({});
+
+  function updateRawPart(partId: string, updater: (part: Part) => void) {
+    const index = rawParts.value.findIndex((part) => part._id === partId);
+    const part = rawParts.value[index];
+    if (!part) return;
+    updater(part);
+  }
+
+  function getPartImages(partId: string) {
+    return imagesByPartId.value[partId] || [];
+  }
+
+  function getPartDocuments(partId: string) {
+    return documentsByPartId.value[partId] || [];
+  }
+
+  function getPartNotes(partId: string) {
+    return notesByPartId.value[partId] || [];
+  }
+
   function fetch() {
     loading.value = true;
     axios
@@ -65,9 +88,134 @@ export const usePartStore = defineStore('parts', () => {
   }
 
   function updatePartImage(partId: string, img: string) {
-    const index = rawParts.value.findIndex((part) => part._id === partId);
-    const part = rawParts.value[index];
-    if (part) part.img = img;
+    updateRawPart(partId, (part) => {
+      part.img = img;
+    });
+  }
+
+  function updatePartImageIds(partId: string, imageIds: string[]) {
+    updateRawPart(partId, (part) => {
+      part.imageIds = imageIds;
+    });
+  }
+
+  function updatePartDocumentIds(partId: string, documentIds: string[]) {
+    updateRawPart(partId, (part) => {
+      part.documentIds = documentIds;
+    });
+  }
+
+  async function loadPartImages(partId: string) {
+    const { data } = await axios.get<MyImageData[]>(`/images/entities/part/${partId}/images`);
+    imagesByPartId.value = {
+      ...imagesByPartId.value,
+      [partId]: data,
+    };
+    updatePartImageIds(
+      partId,
+      data.map((image) => image.id),
+    );
+    updatePartImage(
+      partId,
+      data.find((image) => image.isMain)?.url || '',
+    );
+    return data;
+  }
+
+  async function attachTempImageToPart(partId: string, imageId: string, setAsMain: boolean) {
+    const { data } = await axios.post<MyImageData>(`/images/uploads/${imageId}/attach`, {
+      entityType: 'part',
+      entityId: partId,
+      setAsMain,
+    });
+    await loadPartImages(partId);
+    return data;
+  }
+
+  async function promotePartImage(partId: string, imageId: string) {
+    const { data } = await axios.post<MyImageData>(`/images/${imageId}/promote-to-main`, {
+      entityType: 'part',
+      entityId: partId,
+    });
+    await loadPartImages(partId);
+    return data;
+  }
+
+  async function deletePartImage(partId: string, imageId: string) {
+    const { data } = await axios.delete<{ nextMainImageId?: string; nextMainImageUrl?: string }>(
+      `/images/entities/part/${partId}/images/${imageId}`,
+    );
+    await loadPartImages(partId);
+    return data;
+  }
+
+  async function loadPartDocuments(partId: string) {
+    const { data } = await axios.get<MyDocumentData[]>(`/documents/entities/part/${partId}/documents`);
+    documentsByPartId.value = {
+      ...documentsByPartId.value,
+      [partId]: data,
+    };
+    updatePartDocumentIds(
+      partId,
+      data.map((document) => document.id),
+    );
+    return data;
+  }
+
+  async function uploadPartDocument(partId: string, file: File) {
+    const formData = new FormData();
+    formData.append('document', file);
+
+    const { data } = await axios.post<MyDocumentData>(
+      `/documents/entities/part/${partId}/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+    );
+
+    await loadPartDocuments(partId);
+    return data;
+  }
+
+  async function deletePartDocument(partId: string, documentId: string) {
+    await axios.delete(`/documents/entities/part/${partId}/documents/${documentId}`);
+    await loadPartDocuments(partId);
+  }
+
+  async function loadPartNotes(partId: string) {
+    const { data } = await axios.get<MyPartNoteData[]>(`/parts/${partId}/notes`);
+    notesByPartId.value = {
+      ...notesByPartId.value,
+      [partId]: data,
+    };
+    return data;
+  }
+
+  async function createPartNote(
+    partId: string,
+    payload: { text: string; priority: 'critical' | 'default' },
+  ) {
+    const { data } = await axios.post<MyPartNoteData>(`/parts/${partId}/notes`, payload);
+    await loadPartNotes(partId);
+    return data;
+  }
+
+  async function updatePartNote(
+    partId: string,
+    noteId: string,
+    payload: { text: string; priority: 'critical' | 'default' },
+  ) {
+    const { data } = await axios.put<MyPartNoteData>(`/parts/${partId}/notes/${noteId}`, payload);
+    await loadPartNotes(partId);
+    return data;
+  }
+
+  async function deletePartNote(partId: string, noteId: string) {
+    await axios.delete(`/parts/${partId}/notes/${noteId}`);
+    await loadPartNotes(partId);
   }
 
   return {
@@ -75,11 +223,30 @@ export const usePartStore = defineStore('parts', () => {
     parts,
     locations,
     loading,
+    imagesByPartId,
+    documentsByPartId,
+    notesByPartId,
     lastId,
     fetch,
     setLastId,
     add,
     update,
+    getPartImages,
+    getPartDocuments,
+    getPartNotes,
+    loadPartImages,
+    attachTempImageToPart,
+    promotePartImage,
+    deletePartImage,
+    loadPartDocuments,
+    uploadPartDocument,
+    deletePartDocument,
+    loadPartNotes,
+    createPartNote,
+    updatePartNote,
+    deletePartNote,
     updatePartImage,
+    updatePartImageIds,
+    updatePartDocumentIds,
   };
 });

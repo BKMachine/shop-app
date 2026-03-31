@@ -53,23 +53,23 @@ body,
 }
 
 .rate-swatch--rateLow {
-  background: rgb(var(--v-theme-rateLow));
+  color: rgb(var(--v-theme-rateLow));
 }
 
 .rate-swatch--rateWarn {
-  background: rgb(var(--v-theme-rateWarn));
+  color: rgb(var(--v-theme-rateWarn));
 }
 
 .rate-swatch--rateOk {
-  background: rgb(var(--v-theme-rateOk));
+  color: rgb(var(--v-theme-rateOk));
 }
 
 .rate-swatch--rateGood {
-  background: rgb(var(--v-theme-rateGood));
+  color: rgb(var(--v-theme-rateGood));
 }
 
 .rate-swatch--rateTurbo {
-  background: rgb(var(--v-theme-rateTurbo));
+  color: rgb(var(--v-theme-rateTurbo));
 }
 
 .rate-threshold-slider .v-slider-track__background {

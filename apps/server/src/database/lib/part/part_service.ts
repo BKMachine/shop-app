@@ -92,18 +92,34 @@ async function add(data: PartDoc, device = SERVER_DEVICE_ID): Promise<PartDoc> {
   return part;
 }
 
-async function update(newPart: PartDoc, device = SERVER_DEVICE_ID): Promise<PartDoc | null> {
+interface UpdatePartOptions {
+  preserveManagedMediaFields?: boolean;
+}
+
+async function update(
+  newPart: PartDoc,
+  device = SERVER_DEVICE_ID,
+  options: UpdatePartOptions = {},
+): Promise<PartDoc | null> {
   const id = newPart._id;
   const oldPart: PartDoc | null = await Part.findById(id);
   if (!oldPart) throw new Error(`Missing part document id: ${id}`);
   const normalizedSubComponentIds = normalizeSubComponentIds(newPart.subComponentIds);
   await validateSubComponentIds(id.toString(), normalizedSubComponentIds);
+  const updatePayload = {
+    ...newPart,
+    subComponentIds: normalizedSubComponentIds,
+  };
+
+  if (options.preserveManagedMediaFields) {
+    updatePayload.img = oldPart.img;
+    updatePayload.imageIds = oldPart.imageIds;
+    updatePayload.documentIds = oldPart.documentIds;
+  }
+
   const updatedPart = await Part.findByIdAndUpdate(
     id,
-    {
-      ...newPart,
-      subComponentIds: normalizedSubComponentIds,
-    },
+    updatePayload,
     { returnDocument: 'after' },
   );
   if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);

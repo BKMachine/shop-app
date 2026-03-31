@@ -57,7 +57,10 @@
             <span
               :class="[
                 'rate-swatch',
-                item.hasNoProductPrice ? 'rate-swatch--empty' : `rate-swatch--${item.marginTone}`,
+                item.isSubComponent ? 'rate-swatch--subcomponent' : '',
+                item.hasSubComponents ? 'rate-swatch--assembly' : '',
+                item.hasNoProductPrice ? 'rate-swatch--empty' : '',
+                `rate-swatch--${item.marginTone}`,
               ]"
               @click.stop="openPartCost(item)"
             />
@@ -227,6 +230,8 @@ const tableItems = computed(() =>
 
     return {
       ...part,
+      hasSubComponents: Boolean(part.subComponentIds?.length),
+      isSubComponent: subComponentPartIds.value.has(part._id),
       hasNoProductPrice,
       marginRate,
       marginTone: getToneForRate(marginRate),
@@ -339,11 +344,48 @@ function hideExpandedImage() {
   border-radius: 6px;
   display: inline-block;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: currentColor;
+  box-shadow: inset 0 0 0 1px rgba(107, 114, 128, 0.6);
 }
 
 .rate-swatch--empty {
   background: white;
-  border: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.rate-swatch--subcomponent {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(148, 163, 184, 0.92) 0%,
+      rgba(148, 163, 184, 0.92) 46%,
+      rgba(255, 255, 255, 0.98) 46%,
+      rgba(255, 255, 255, 0.98) 54%,
+      currentColor 54%,
+      currentColor 100%
+    );
+}
+
+.rate-swatch--empty.rate-swatch--subcomponent {
+  color: white;
+}
+
+.rate-swatch--assembly::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(0, 0, 0, 0.18) 0px,
+      rgba(0, 0, 0, 0.18) 3px,
+      rgba(255, 255, 255, 0.06) 3px,
+      rgba(255, 255, 255, 0.06) 6px
+    ),
+    linear-gradient(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12));
+  pointer-events: none;
 }
 
 .parts-sub-toggle {

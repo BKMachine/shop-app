@@ -213,6 +213,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
+import { usePartStore } from '@/stores/parts_store';
 
 interface ImageData {
   id: string;
@@ -234,6 +235,8 @@ const emit = defineEmits<{
   'update:modelValue': [boolean];
   'image-selected': [payload: { imageId: string; url: string; isMain?: boolean }];
 }>();
+
+const partStore = usePartStore();
 
 const dialog = computed({
   get: () => props.modelValue,
@@ -293,12 +296,16 @@ async function attachUploadedImage(imageId: string) {
   }
 
   const shouldPromoteToMain = props.entityType !== 'part' || !props.hasImage;
-
-  const { data } = await api.post(`/images/uploads/${imageId}/attach`, {
-    entityType: props.entityType ?? 'part',
-    entityId: props.entityId,
-    setAsMain: shouldPromoteToMain,
-  });
+  const data =
+    props.entityType === 'part'
+      ? await partStore.attachTempImageToPart(props.entityId, imageId, shouldPromoteToMain)
+      : (
+          await api.post(`/images/uploads/${imageId}/attach`, {
+            entityType: props.entityType ?? 'part',
+            entityId: props.entityId,
+            setAsMain: shouldPromoteToMain,
+          })
+        ).data;
 
   emit('image-selected', { imageId: data.id, url: data.url, isMain: data.isMain });
   dialog.value = false;
@@ -524,11 +531,16 @@ async function assignSelectedToEntity() {
     for (const imageId of selectedTempImageIds.value) {
       try {
         const shouldPromoteToMain = props.entityType !== 'part' || !hasMainImage;
-        const { data } = await api.post(`/images/uploads/${imageId}/attach`, {
-          entityType: props.entityType ?? 'part',
-          entityId: props.entityId,
-          setAsMain: shouldPromoteToMain,
-        });
+        const data =
+          props.entityType === 'part'
+            ? await partStore.attachTempImageToPart(props.entityId, imageId, shouldPromoteToMain)
+            : (
+                await api.post(`/images/uploads/${imageId}/attach`, {
+                  entityType: props.entityType ?? 'part',
+                  entityId: props.entityId,
+                  setAsMain: shouldPromoteToMain,
+                })
+              ).data;
         if (!firstAssignedImage) {
           firstAssignedImage = {
             imageId: data.id,
