@@ -78,23 +78,18 @@ router.post('/audits/parts/stock', async (req, res, next) => {
 
 router.post('/audits', async (req, res, next) => {
   const {
-    from,
-    to,
     types,
     limit,
     offset,
   }: {
-    from: string | undefined;
-    to: string | undefined;
     types?: Audit['type'][];
     limit?: number;
     offset?: number;
   } = req.body;
-  if (!from || !to) return next(new HttpError(400, 'from and to are required.'));
   try {
     const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
     const safeOffset = Math.max(Number(offset) || 0, 0);
-    const audits = await Audit.getAllAudits(from, to, types, safeLimit, safeOffset);
+    const audits = await Audit.getAllAudits(types, safeLimit, safeOffset);
     res.status(200).json({
       items: audits,
       hasMore: audits.length === safeLimit,

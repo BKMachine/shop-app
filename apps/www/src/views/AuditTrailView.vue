@@ -200,9 +200,6 @@ const loadingMore = ref(false);
 const hasMore = ref(true);
 const nowStore = useNowStore();
 
-const from = computed(() => DateTime.now().minus({ days: 7 }).toISO());
-const to = computed(() => DateTime.now().toISO());
-
 onMounted(() => {
   refreshAudits();
   socket.on('audit', refreshAudits);
@@ -216,8 +213,6 @@ async function refreshAudits() {
   loading.value = true;
   try {
     const response = await api.post<AuditFeedResponse>('/audits', {
-      from: from.value,
-      to: to.value,
       limit: PAGE_SIZE,
       offset: 0,
     });
@@ -242,8 +237,6 @@ async function loadMore({ done }: { done: (status: InfiniteScrollDoneStatus) => 
   loadingMore.value = true;
   try {
     const response = await api.post<AuditFeedResponse>('/audits', {
-      from: from.value,
-      to: to.value,
       limit: PAGE_SIZE,
       offset: audits.value.length,
     });

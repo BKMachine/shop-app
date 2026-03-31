@@ -172,19 +172,10 @@ async function addPartNoteAudit(
   await addAudit('part_note', oldNote, newNote, device);
 }
 
-async function getAllAudits(
-  from: string,
-  to: string,
-  types?: Audit['type'][],
-  limit = 20,
-  offset = 0,
-): Promise<AuditDoc[]> {
+async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Promise<AuditDoc[]> {
   const query: {
-    timestamp: { $gte: string; $lte: string };
     type?: { $in: Audit['type'][] };
-  } = {
-    timestamp: { $gte: from, $lte: to },
-  };
+  } = {};
 
   if (types?.length) {
     query.type = { $in: types };
