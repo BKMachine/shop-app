@@ -13,8 +13,8 @@ type ItemLabelData = PrintItemBody & { barcode?: string };
 
 function resolveAssetPath(...segments: string[]) {
   const candidates = [
-    path.join(__dirname, '../../src/assets', ...segments),
     path.join(__dirname, '../../assets', ...segments),
+    path.join(__dirname, '../assets', ...segments),
   ];
 
   for (const candidate of candidates) {
