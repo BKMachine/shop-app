@@ -42,8 +42,8 @@ export default async function requireKnownDevice(req: Request, res: Response, ne
     }
 
     req.device = device;
+    req.deviceId = rawDeviceId;
     req.deviceContext = {
-      deviceId: rawDeviceId,
       clientIp,
       userAgent,
     };

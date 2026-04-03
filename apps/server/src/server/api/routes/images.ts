@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import axios from 'axios';
 import { Router } from 'express';
-import { isValidObjectId } from 'mongoose';
 import multer from 'multer';
+import { isValidId } from '../../../database/index.js';
 import CustomerService from '../../../database/lib/customer/customer_service.js';
 import ImageService from '../../../database/lib/image/image_service.js';
 import PartService from '../../../database/lib/part/part_service.js';
@@ -29,10 +29,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
-function isValidId(value: unknown): value is string {
-  return typeof value === 'string' && isValidObjectId(value);
-}
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -79,6 +75,7 @@ async function updateSingleImageEntity(
     await CustomerService.update(customer, deviceId);
     return;
   }
+
   if (entityType === 'supplier') {
     const supplier = entity as SupplierDoc;
     supplier.logo = imageUrl;
@@ -86,9 +83,11 @@ async function updateSingleImageEntity(
     return;
   }
 
-  const vendor = entity as VendorDoc;
-  vendor.logo = imageUrl;
-  await VendorService.update(vendor, deviceId);
+  if (entityType === 'vendor') {
+    const vendor = entity as VendorDoc;
+    vendor.logo = imageUrl;
+    await VendorService.update(vendor, deviceId);
+  }
 }
 
 async function deleteImageFileIfPresent(relPath: string) {
@@ -99,18 +98,22 @@ async function deleteImageFileIfPresent(relPath: string) {
 // Upload a temp image via file
 router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (req, res, next) => {
   if (!req.file) return next(new HttpError(400, 'No file uploaded'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const relPath = path.relative(imageDir, req.file.path).replace(/\\/g, '/');
 
-    const image = await ImageService.add({
-      filename: req.file.filename,
-      relPath,
-      mimeType: req.file.mimetype,
-      status: 'temp',
-      entityType: null,
-      entityId: null,
-    });
+    const image = await ImageService.add(
+      {
+        filename: req.file.filename,
+        relPath,
+        mimeType: req.file.mimetype,
+        status: 'temp',
+        entityType: null,
+        entityId: null,
+      },
+      req.deviceId,
+    );
 
     const response: MyImageData = {
       id: image._id.toString(),
@@ -128,8 +131,8 @@ router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (
 // Upload a temp image via URL
 router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
   const { url } = req.body || {};
-
   if (!url) return next(new HttpError(400, 'url is required'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const resp = await axios.get(url, { responseType: 'arraybuffer' });
@@ -148,14 +151,17 @@ router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
 
     const relPath = path.relative(imageDir, filePath).replace(/\\/g, '/');
 
-    const image = await ImageService.add({
-      filename,
-      relPath,
-      mimeType: contentType,
-      status: 'temp',
-      entityType: null,
-      entityId: null,
-    });
+    const image = await ImageService.add(
+      {
+        filename,
+        relPath,
+        mimeType: contentType,
+        status: 'temp',
+        entityType: null,
+        entityId: null,
+      },
+      req.deviceId,
+    );
 
     const response: MyImageData = {
       id: image._id.toString(),
@@ -190,28 +196,30 @@ router.get('/uploads/recent', async (_req, res, next) => {
 
 router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, res, next) => {
   const { id } = req.params;
-
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const image = await ImageService.findById(id);
     if (!image) return next(new HttpError(404, 'Image not found'));
-    if (image.status !== 'temp') {
+    if (image.status !== 'temp')
       return next(new HttpError(400, 'Only temporary images can be background-processed'));
-    }
 
     const sourcePath = path.join(imageDir, image.relPath);
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await removeImageBackground(sourcePath);
-    const newImage = await ImageService.add({
-      filename: processed.filename,
-      relPath: processed.relPath,
-      mimeType: processed.mimeType,
-      status: 'temp',
-      entityType: null,
-      entityId: null,
-    });
+    const newImage = await ImageService.add(
+      {
+        filename: processed.filename,
+        relPath: processed.relPath,
+        mimeType: processed.mimeType,
+        status: 'temp',
+        entityType: null,
+        entityId: null,
+      },
+      req.deviceId,
+    );
 
     const response: MyImageData = {
       id: newImage._id.toString(),
@@ -230,28 +238,30 @@ router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, re
 
 router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next) => {
   const { id } = req.params;
-
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const image = await ImageService.findById(id);
     if (!image) return next(new HttpError(404, 'Image not found'));
-    if (image.status !== 'temp') {
+    if (image.status !== 'temp')
       return next(new HttpError(400, 'Only temporary images can be auto-cropped'));
-    }
 
     const sourcePath = path.join(imageDir, image.relPath);
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await autoCropImage(sourcePath);
-    const newImage = await ImageService.add({
-      filename: processed.filename,
-      relPath: processed.relPath,
-      mimeType: processed.mimeType,
-      status: 'temp',
-      entityType: null,
-      entityId: null,
-    });
+    const newImage = await ImageService.add(
+      {
+        filename: processed.filename,
+        relPath: processed.relPath,
+        mimeType: processed.mimeType,
+        status: 'temp',
+        entityType: null,
+        entityId: null,
+      },
+      req.deviceId,
+    );
 
     const response: MyImageData = {
       id: newImage._id.toString(),
@@ -271,13 +281,12 @@ router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next)
 router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) => {
   const { id } = req.params;
   const { entityType, entityId, setAsMain } = req.body;
-
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
   if (!['tool', 'part', 'customer', 'supplier', 'vendor'].includes(entityType))
     return next(new HttpError(400, 'Invalid entityType'));
   if (!entityId) return next(new HttpError(400, 'entityId required'));
   if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
-  if (!req.device) return next(new HttpError(401, 'Missing device context'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const image = await ImageService.findById(id);
@@ -299,7 +308,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
     image.status = 'attached';
     image.entityType = entityType;
     image.entityId = String(entityId);
-    await ImageService.update(image);
+    await ImageService.update(image, req.deviceId);
 
     // Update part's imageIds array if entity is a part
     if (entityType === 'part') {
@@ -320,7 +329,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
           part.imageIds.push(imageStringId);
         }
 
-        await PartService.update(part, req.device._id.toString());
+        await PartService.update(part, req.deviceId);
       }
     }
 
@@ -329,6 +338,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
         entityType as SingleImageEntityType,
         entityId,
       );
+
       if (singleImageEntity) {
         const priorImages = await ImageService.listByEntity(
           entityType as SingleImageEntityType,
@@ -338,14 +348,14 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
         for (const priorImage of priorImages) {
           if (priorImage._id.toString() === image._id.toString()) continue;
           await deleteImageFileIfPresent(priorImage.relPath);
-          await ImageService.remove(priorImage._id.toString());
+          await ImageService.remove(priorImage._id.toString(), req.deviceId);
         }
 
         await updateSingleImageEntity(
           entityType as SingleImageEntityType,
           singleImageEntity,
           `/images/${image.relPath}`,
-          req.device._id.toString(),
+          req.deviceId,
         );
       }
     }
@@ -368,13 +378,12 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 router.post('/:id/promote-to-main', requireKnownDevice, async (req, res, next) => {
   const { id } = req.params;
   const { entityType, entityId } = req.body;
-
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
   if (!entityType) return next(new HttpError(400, 'entityType required'));
   if (!entityId) return next(new HttpError(400, 'entityId required'));
   if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
   if (entityType !== 'part') return next(new HttpError(400, 'Promote to main is only for parts'));
-  if (!req.device) return next(new HttpError(401, 'Missing device context'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const image = await ImageService.findById(id);
@@ -395,7 +404,7 @@ router.post('/:id/promote-to-main', requireKnownDevice, async (req, res, next) =
     // Update img field to point to this image's path
     part.img = `/images/${image.relPath}`;
 
-    await PartService.update(part, req.device._id.toString());
+    await PartService.update(part, req.deviceId);
 
     const response: MyImageData = {
       id: image._id.toString(),
@@ -413,7 +422,6 @@ router.post('/:id/promote-to-main', requireKnownDevice, async (req, res, next) =
 // Get all images for a specific entity
 router.get('/entities/:entityType/:entityId/images', async (req, res, next) => {
   const { entityType, entityId } = req.params;
-
   if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
   if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
   if (entityType !== 'part') return next(new HttpError(400, 'Image listing is only for parts'));
@@ -463,12 +471,11 @@ router.post(
   requireKnownDevice,
   async (req, res, next) => {
     const { entityType, entityId, imageId } = req.params;
-
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
     if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
     if (entityType !== 'part') return next(new HttpError(400, 'Gallery add is only for parts'));
-    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+    if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
     try {
       const image = await ImageService.findById(imageId);
@@ -486,7 +493,7 @@ router.post(
 
       // Append to gallery (don't set as main)
       part.imageIds.push(imageStringId);
-      await PartService.update(part, req.device._id.toString());
+      await PartService.update(part, req.deviceId);
 
       const response: MyImageData = {
         id: image._id.toString(),
@@ -505,8 +512,8 @@ router.post(
 // Delete a temporary image
 router.delete('/uploads/:id', requireKnownDevice, async (req, res, next) => {
   const { id } = req.params;
-
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const image = await ImageService.findById(id);
@@ -517,7 +524,7 @@ router.delete('/uploads/:id', requireKnownDevice, async (req, res, next) => {
     const filePath = path.join(imageDir, image.relPath);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-    await ImageService.remove(id);
+    await ImageService.remove(id, req.deviceId);
 
     res.status(200).json({ success: true, id });
   } catch (err) {
@@ -531,12 +538,11 @@ router.delete(
   requireKnownDevice,
   async (req, res, next) => {
     const { entityType, entityId, imageId } = req.params;
-
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
     if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
     if (entityType !== 'part') return next(new HttpError(400, 'Image delete is only for parts'));
-    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+    if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
     try {
       const part = await getPartEntity(entityType, entityId);
@@ -565,12 +571,12 @@ router.delete(
         part.img = '';
       }
 
-      await PartService.update(part, req.device._id.toString());
+      await PartService.update(part, req.deviceId);
 
       const filePath = path.join(imageDir, image.relPath);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-      await ImageService.remove(imageId);
+      await ImageService.remove(imageId, req.deviceId);
 
       res.status(200).json({
         success: true,
@@ -591,13 +597,12 @@ router.delete(
   requireKnownDevice,
   async (req, res, next) => {
     const { entityType, entityId } = req.params;
-
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
     if (!singleImageEntityTypes.includes(entityType as SingleImageEntityType)) {
       return next(new HttpError(400, 'Single image delete is only for single-image entities'));
     }
-    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+    if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
     try {
       const singleImageEntity = await getSingleImageEntity(
@@ -612,14 +617,14 @@ router.delete(
       );
       if (image) {
         await deleteImageFileIfPresent(image.relPath);
-        await ImageService.remove(image._id.toString());
+        await ImageService.remove(image._id.toString(), req.deviceId);
       }
 
       await updateSingleImageEntity(
         entityType as SingleImageEntityType,
         singleImageEntity,
         '',
-        req.device._id.toString(),
+        req.deviceId,
       );
 
       res.status(200).json({

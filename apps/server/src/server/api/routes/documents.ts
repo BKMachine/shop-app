@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
-import { isValidObjectId } from 'mongoose';
 import multer from 'multer';
+import { isValidId } from '../../../database/index.js';
 import DocumentService from '../../../database/lib/document/document_service.js';
 import PartService from '../../../database/lib/part/part_service.js';
 import { documentDir } from '../../../directories.js';
@@ -13,30 +13,13 @@ import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-function isValidId(value: unknown): value is string {
-  return typeof value === 'string' && isValidObjectId(value);
-}
-
-function toDocumentResponse(document: StoredDocumentDoc): MyDocumentData {
-  return {
-    id: document._id.toString(),
-    filename: document.filename,
-    originalName: document.originalName,
-    url: `/documents/${document.relPath}`,
-    mimeType: document.mimeType,
-    extension: document.extension,
-    size: document.size,
-    createdAt: document.createdAt.toISOString(),
-  };
-}
-
 router.get('/entities/part/:entityId/documents', async (req, res, next) => {
   const { entityId } = req.params;
   if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
 
   try {
     const documents = await DocumentService.listByEntity('part', entityId);
-    res.status(200).json(documents.map(toDocumentResponse));
+    res.status(200).json(documents);
   } catch (err) {
     next(new HttpError(500, 'Failed to load documents', { cause: err }));
   }
@@ -50,7 +33,7 @@ router.post(
     const { entityId } = req.params;
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
     if (!req.file) return next(new HttpError(400, 'No document uploaded'));
-    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+    if (!req.deviceId) return next(new HttpError(401, 'Missing device context'));
 
     try {
       const part = await PartService.findById(entityId);
@@ -82,9 +65,9 @@ router.post(
       const documentId = document._id.toString();
       part.documentIds = part.documentIds.filter((id) => id.toString() !== documentId);
       part.documentIds.unshift(documentId);
-      await PartService.update(part, req.device._id.toString());
+      await PartService.update(part, req.deviceId);
 
-      res.status(200).json(toDocumentResponse(document));
+      res.status(200).json(document);
     } catch (err) {
       next(new HttpError(500, 'Failed to upload document', { cause: err }));
     }
@@ -98,7 +81,7 @@ router.delete(
     const { entityId, documentId } = req.params;
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
     if (!isValidId(documentId)) return next(new HttpError(400, 'Invalid document id'));
-    if (!req.device) return next(new HttpError(401, 'Missing device context'));
+    if (!req.deviceId) return next(new HttpError(401, 'Missing device context'));
 
     try {
       const document = await DocumentService.findById(documentId);
@@ -120,7 +103,7 @@ router.delete(
 
       if (part.documentIds) {
         part.documentIds = part.documentIds.filter((id) => id.toString() !== documentId);
-        await PartService.update(part, req.device._id.toString());
+        await PartService.update(part, req.deviceId);
       }
 
       res.sendStatus(204);

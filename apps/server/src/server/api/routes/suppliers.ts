@@ -17,9 +17,10 @@ router.get('/suppliers', async (_req, res, next) => {
 router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: SupplierDoc | undefined } = req.body;
   if (!data) return next(new HttpError(400, 'No supplier data provided.'));
-  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+
   try {
-    const doc = await Suppliers.create(data, req.device._id.toString());
+    const doc = await Suppliers.create(data, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -29,9 +30,10 @@ router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
 router.put('/suppliers', requireKnownDevice, async (req, res, next) => {
   const { data }: { data: SupplierDoc | undefined } = req.body;
   if (!data) return next(new HttpError(400, 'No supplier data provided.'));
-  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+
   try {
-    await Suppliers.update(data, req.device._id.toString());
+    await Suppliers.update(data, req.deviceId);
     res.sendStatus(204);
   } catch (e) {
     next(e);

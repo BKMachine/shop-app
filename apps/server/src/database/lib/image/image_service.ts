@@ -1,18 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import { imageDir } from '../../../directories.js';
 import logger from '../../../logger.js';
 import { emit } from '../../../server/sockets.js';
 import Image from './image_model.js';
 
-async function add(data: unknown): Promise<ImageDoc> {
+async function add(data: unknown, _deviceId: string): Promise<ImageDoc> {
   const doc = new Image(data);
   await doc.save();
   emit('imageUploaded');
   return doc;
 }
 
-async function update(image: ImageDoc): Promise<ImageDoc | null> {
+async function update(image: ImageDoc, _deviceId: string): Promise<ImageDoc | null> {
   const updated = await Image.findByIdAndUpdate(
     image._id,
     { ...image, updatedAt: new Date() },
@@ -60,7 +61,7 @@ async function cleanupExpired(): Promise<{ deleted: number; errors: string[] }> 
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
         // Delete document from database
-        await remove(img._id.toString());
+        await remove(img._id.toString(), SERVER_DEVICE_ID);
         result.deleted++;
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
@@ -81,7 +82,7 @@ async function cleanupExpired(): Promise<{ deleted: number; errors: string[] }> 
   return result;
 }
 
-async function remove(id: string): Promise<boolean> {
+async function remove(id: string, _deviceId: string): Promise<boolean> {
   const result = await Image.findByIdAndDelete(id);
   emit('imageDeleted');
   return result !== null;

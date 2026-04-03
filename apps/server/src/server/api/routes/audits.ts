@@ -5,13 +5,7 @@ import HttpError from '../../middleware/httpError.js';
 const router: Router = Router();
 
 router.post('/audits/tools', async (req, res, next) => {
-  const {
-    from,
-    to,
-  }: {
-    from: string | undefined;
-    to: string | undefined;
-  } = req.body;
+  const { from, to }: { from?: string; to?: string } = req.body;
   if (!from || !to) return next(new HttpError(400, 'from and to are required.'));
   try {
     const audits = await Audit.getAllToolAudits(from, to);
@@ -22,16 +16,9 @@ router.post('/audits/tools', async (req, res, next) => {
 });
 
 router.post('/audits/tools/stock', async (req, res, next) => {
-  const {
-    id,
-    from,
-    to,
-  }: {
-    id: string | undefined;
-    from: string | undefined;
-    to: string | undefined;
-  } = req.body;
+  const { id, from, to }: { id?: string; from?: string; to?: string } = req.body;
   if (!id || !from || !to) return next(new HttpError(400, 'id, from, and to are required.'));
+
   try {
     const audits = await Audit.getToolAudits(id, from, to);
     res.status(200).json(audits);
@@ -41,14 +28,9 @@ router.post('/audits/tools/stock', async (req, res, next) => {
 });
 
 router.post('/audits/parts', async (req, res, next) => {
-  const {
-    from,
-    to,
-  }: {
-    from: string | undefined;
-    to: string | undefined;
-  } = req.body;
+  const { from, to }: { from?: string; to?: string } = req.body;
   if (!from || !to) return next(new HttpError(400, 'from and to are required.'));
+
   try {
     const audits = await Audit.getAllPartAudits(from, to);
     res.status(200).json(audits);
@@ -58,16 +40,9 @@ router.post('/audits/parts', async (req, res, next) => {
 });
 
 router.post('/audits/parts/stock', async (req, res, next) => {
-  const {
-    id,
-    from,
-    to,
-  }: {
-    id: string | undefined;
-    from: string | undefined;
-    to: string | undefined;
-  } = req.body;
+  const { id, from, to }: { id?: string; from?: string; to?: string } = req.body;
   if (!id || !from || !to) return next(new HttpError(400, 'id, from, and to are required.'));
+
   try {
     const audits = await Audit.getPartAudits(id, from, to);
     res.status(200).json(audits);
@@ -77,15 +52,9 @@ router.post('/audits/parts/stock', async (req, res, next) => {
 });
 
 router.post('/audits', async (req, res, next) => {
-  const {
-    types,
-    limit,
-    offset,
-  }: {
-    types?: Audit['type'][];
-    limit?: number;
-    offset?: number;
-  } = req.body;
+  const { types, limit, offset }: { types?: Audit['type'][]; limit?: number; offset?: number } =
+    req.body;
+
   try {
     const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
     const safeOffset = Math.max(Number(offset) || 0, 0);

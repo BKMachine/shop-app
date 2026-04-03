@@ -17,9 +17,10 @@ router.get('/reports', async (_req, res, next) => {
 router.post('/reports', requireKnownDevice, async (req, res, next) => {
   const data: EmailReportDoc | undefined = req.body?.data ?? req.body;
   if (!data) return next(new HttpError(400, 'No report data provided.'));
-  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+
   try {
-    const doc = await Reports.create(data, req.device._id.toString());
+    const doc = await Reports.create(data, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -29,9 +30,10 @@ router.post('/reports', requireKnownDevice, async (req, res, next) => {
 router.put('/reports', requireKnownDevice, async (req, res, next) => {
   const data: EmailReportDoc | undefined = req.body?.data ?? req.body;
   if (!data) return next(new HttpError(400, 'No report data provided.'));
-  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+
   try {
-    await Reports.update(data, req.device._id.toString());
+    await Reports.update(data, req.deviceId);
     res.sendStatus(204);
   } catch (e) {
     next(e);

@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 import logger from '../logger.js';
 
 const options: mongoose.ConnectOptions = {};
@@ -14,4 +14,8 @@ export async function connect(): Promise<void> {
 export async function disconnect(): Promise<void> {
   await mongoose.disconnect();
   logger.info('Database connection closed');
+}
+
+export function isValidId(value: unknown): value is string {
+  return typeof value === 'string' && isValidObjectId(value);
 }

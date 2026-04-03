@@ -10,6 +10,8 @@ const router: Router = Router();
 router.post('/print/location', requireKnownDevice, async (req, res, next) => {
   const { loc, pos }: PrintLocationBody = req.body;
   if (!loc || !pos) return next(new HttpError(400, 'loc and pos are required.'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+
   try {
     const pdf = await LabelPdfService.buildLocationLabel({ loc, pos });
     await CupsService.printLocationLabel(pdf, { loc, pos }).catch((error) => {
@@ -28,6 +30,8 @@ router.post('/print/location', requireKnownDevice, async (req, res, next) => {
 router.post('/print/item', requireKnownDevice, async (req, res, next) => {
   const { item, description, brand, barcode } = req.body as PrintItemBody & { barcode?: string };
   if (!item || !description) return next(new HttpError(400, 'item and description are required.'));
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+
   try {
     const pdf = await LabelPdfService.buildItemLabel({ item, description, brand, barcode });
     await CupsService.printItemLabel(pdf, { item, description, brand }).catch((error) => {
