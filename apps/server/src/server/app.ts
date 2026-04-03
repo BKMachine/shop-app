@@ -9,6 +9,7 @@ import errorHandler from './middleware/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const serverRootDir = path.resolve(__dirname, '../..');
 
 const app: express.Application = express();
 
@@ -29,15 +30,19 @@ app.use('/api', api);
 app.use('/images', express.static(imageDir));
 app.use('/documents', express.static(documentDir));
 
-const wwwDir = path.join(__dirname, '../../../www/dist');
-logger.default.info(`Serving static files from ${wwwDir}`);
+const downloadsDir = path.join(serverRootDir, 'public', 'downloads');
+app.use('/downloads', express.static(downloadsDir));
+logger.default.info(`Serving download files from ${downloadsDir}`);
 
 if (process.env.NODE_ENV === 'production') {
+  const wwwDir = path.join(serverRootDir, '../', 'www', 'dist');
+
   app.get('/', (_req, res, _next) => {
     res.sendFile(path.join(wwwDir, 'index.html'));
   });
 
   app.use(express.static(wwwDir));
+  logger.default.info(`Serving static files from ${wwwDir}`);
 
   app.all('*path', (_req, res, _next) => {
     res.sendFile(path.join(wwwDir, 'index.html'));

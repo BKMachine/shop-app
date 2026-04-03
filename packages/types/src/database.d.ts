@@ -105,6 +105,7 @@ declare global {
     position?: string;
     img?: string;
     productLink?: string;
+    partFilesPath?: string;
     revision?: string;
     material?: Material | string;
     customerSuppliedMaterial?: boolean;

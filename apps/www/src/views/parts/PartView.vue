@@ -83,6 +83,17 @@
       <v-spacer />
       <div class="d-flex align-center">
         <v-btn
+          v-if="canOpenPartFiles"
+          class="mr-2"
+          color="secondary"
+          density="comfortable"
+          prepend-icon="mdi-folder-open-outline"
+          variant="elevated"
+          @click="openPartFiles"
+        >
+          Files
+        </v-btn>
+        <v-btn
           v-if="part.productLink"
           class="mr-2"
           color="yellow"
@@ -91,7 +102,7 @@
           variant="elevated"
           @click="openLink(part.productLink)"
         >
-          Product Page
+          Web
         </v-btn>
         <v-btn
           v-if="showAdd"
@@ -153,9 +164,10 @@
             <v-text-field
               v-model="part.productLink"
               append-inner-icon="mdi-open-in-new"
-              label="Product Page URL"
+              label="Web URL"
             />
           </v-row>
+          <v-row no-gutters> <PartFilesFolderCard class="mt-2" :part="part" /> </v-row>
           <v-expansion-panels class="mt-4" variant="accordion">
             <v-expansion-panel class="sub-components-panel">
               <v-expansion-panel-title>
@@ -393,6 +405,7 @@ import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
 import PartDocumentsDetails from '@/components/parts/PartDocumentsDetails.vue';
+import PartFilesFolderCard from '@/components/parts/PartFilesFolderCard.vue';
 import PartImagesDetails from '@/components/parts/PartImagesDetails.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartNotesDetails from '@/components/parts/PartNotesDetails.vue';
@@ -404,9 +417,12 @@ import { getToneForRate } from '@/plugins/rates_theme';
 import { calculateAssemblyCycleMinutes, calculateRatePerHour, isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
+import { useFolderHelperState } from '@/state/folderHelper';
 import { usePartStore } from '@/stores/parts_store';
 
 const partStore = usePartStore();
+const { helperStatus, loadFolderHelperManifest, normalizeFolderPath, openFolderWithHelper } =
+  useFolderHelperState();
 
 const showAdd = computed(() => {
   return false;
@@ -545,6 +561,11 @@ const currentRateDisplay = computed(() => {
   return `$${currentRate.value.toFixed(2)}/hr`;
 });
 
+const normalizedPartFilesPath = computed(() => normalizeFolderPath(part.value.partFilesPath));
+const canOpenPartFiles = computed(() => {
+  return helperStatus.value === 'likely-installed' && Boolean(normalizedPartFilesPath.value);
+});
+
 function setTabFromQuery() {
   const routeTab = router.currentRoute.value.query.tab;
   const validTabs = ['general', 'material', 'cost', 'stock', 'docs', 'notes', 'images'] as const;
@@ -559,6 +580,7 @@ onMounted(() => {
   const routeParams = router.currentRoute.value.params;
 
   setTabFromQuery();
+  void loadFolderHelperManifest();
 
   if (!partStore.rawParts.length && !partStore.loading) {
     partStore.fetch();
@@ -689,6 +711,15 @@ async function savePart() {
 function openLink(link: string | undefined) {
   if (!link) return;
   window.open(link, '_blank');
+}
+
+async function openPartFiles() {
+  if (!normalizedPartFilesPath.value) return;
+
+  const didLaunch = await openFolderWithHelper(normalizedPartFilesPath.value);
+  if (!didLaunch) {
+    toastError('Folder Helper was not detected. Install it on this PC first.');
+  }
 }
 
 function getCustomerId(customer: Part['customer'] | undefined): string | undefined {

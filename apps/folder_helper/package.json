@@ -1,0 +1,35 @@
+{
+  "name": "folder_helper",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "Windows helper for opening UNC part folders from a custom Shop App protocol link",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false ./src/index.ts --help",
+    "build": "rimraf ./dist && tsc",
+    "build:pkg": "pnpm run build && pkg ./dist/index.js --targets node18-win-x64 --output ./release/folder_helper.exe",
+    "build:installer": "pnpm run build:pkg && node ./scripts/build_installer.cjs",
+    "stage:server": "node ./scripts/stage_release.cjs",
+    "release:server": "pnpm run build:installer && pnpm run stage:server",
+    "protocol:install": "node ./install_protocol.js",
+    "protocol:uninstall": "node ./uninstall_protocol.js",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "check": "biome check",
+    "ci": "biome ci",
+    "check-types": "tsc --noEmit"
+  },
+  "bin": {
+    "folder_helper": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^25.4.0",
+    "pkg": "^5.8.1",
+    "rimraf": "^6.1.3",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3"
+  }
+}

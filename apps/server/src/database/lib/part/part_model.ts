@@ -9,6 +9,7 @@ const schema = new Schema<PartDoc>({
   position: String,
   img: String,
   productLink: String,
+  partFilesPath: String,
   revision: String,
   material: { type: Types.ObjectId, ref: 'materials', default: null },
   customerSuppliedMaterial: { type: Boolean, default: false },

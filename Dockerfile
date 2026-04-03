@@ -30,6 +30,15 @@ COPY --from=www-prune /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=www-prune /app/out/full/ .
 
+FROM base AS folder-helper-prune
+COPY apps/folder_helper/package.json apps/folder_helper/package.json
+RUN turbo prune folder_helper --docker
+
+FROM base AS folder-helper-installer
+COPY --from=folder-helper-prune /app/out/json/ .
+RUN pnpm install --no-frozen-lockfile
+COPY --from=folder-helper-prune /app/out/full/ .
+
 FROM server-installer AS server-builder
 COPY apps/server apps/server
 RUN pnpm run format --filter=server
@@ -47,10 +56,18 @@ RUN pnpm run format --filter=www
 RUN pnpm run ci --filter=www 
 RUN pnpm run build --filter=www
 
+FROM folder-helper-installer AS folder-helper-builder
+RUN apt-get update && apt-get install -y --no-install-recommends nsis && rm -rf /var/lib/apt/lists/*
+COPY apps/folder_helper apps/folder_helper
+RUN pnpm --filter folder_helper run build:installer
+RUN pnpm --filter folder_helper run stage:server
+
 FROM node:22-slim AS runner
 WORKDIR /app
 COPY --from=server-deploy /app/deploy/server/node_modules /app/apps/server/node_modules 
 COPY --from=server-builder /app/apps/server/dist /app/apps/server/dist
+COPY --from=server-builder /app/apps/server/public /app/apps/server/public
+COPY --from=folder-helper-builder /app/apps/server/public/downloads /app/apps/server/public/downloads
 COPY --from=www-builder /app/apps/www/dist /app/apps/www/dist
 ENV NODE_ENV=production
 EXPOSE 3000
