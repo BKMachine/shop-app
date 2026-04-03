@@ -3,12 +3,9 @@
     <v-text-field
       v-model="props.part.partFilesPath"
       :color="showInstallHint ? 'error' : undefined"
-      hide-details="auto"
       :hint="helperHint"
       label="Files Path"
-      persistent-hint
       placeholder="M:\Customer\Part"
-      variant="outlined"
     >
       <template #append-inner>
         <v-chip :color="helperStatusColor" size="small" variant="tonal">

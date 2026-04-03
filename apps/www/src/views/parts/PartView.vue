@@ -85,7 +85,7 @@
         <v-btn
           v-if="canOpenPartFiles"
           class="mr-2"
-          color="secondary"
+          color="purple-lighten-2"
           density="comfortable"
           prepend-icon="mdi-folder-open-outline"
           variant="elevated"
@@ -167,144 +167,146 @@
               label="Web URL"
             />
           </v-row>
-          <v-row no-gutters> <PartFilesFolderCard class="mt-2" :part="part" /> </v-row>
-          <v-expansion-panels class="mt-4" variant="accordion">
-            <v-expansion-panel class="sub-components-panel">
-              <v-expansion-panel-title>
-                <div class="d-flex align-center ga-2">
-                  <span>Sub-Components</span>
-                  <v-chip v-if="resolvedSubComponentItems.length" size="small" variant="tonal">
-                    {{ resolvedSubComponentItems.length }}
-                  </v-chip>
-                </div>
-              </v-expansion-panel-title>
-              <v-expansion-panel-text>
-                <v-autocomplete
-                  v-model="selectedSubComponentIds"
-                  chips
-                  item-title="label"
-                  item-value="value"
-                  :items="subComponentOptions"
-                  label="Search Parts"
-                  multiple
-                  variant="outlined"
-                />
-                <div class="text-body-2 text-medium-emphasis mt-3">
-                  Pick existing parts to treat as sub-components for this assembly.
-                </div>
-                <v-list
-                  v-if="resolvedSubComponentItems.length"
-                  class="parent-components-list mt-3"
-                  lines="two"
-                >
-                  <v-list-item
-                    v-for="subItem in resolvedSubComponentItems"
-                    :key="subItem.part._id"
-                    :subtitle="subItem.part.description"
-                    :title="subItem.part.part"
-                    :to="{ name: 'viewPart', params: { id: subItem.part._id } }"
+          <v-row no-gutters> <PartFilesFolderCard :part="part" /> </v-row>
+          <v-row no-gutters>
+            <v-expansion-panels variant="accordion">
+              <v-expansion-panel class="sub-components-panel">
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center ga-2">
+                    <span>Sub-Components</span>
+                    <v-chip v-if="resolvedSubComponentItems.length" size="small" variant="tonal">
+                      {{ resolvedSubComponentItems.length }}
+                    </v-chip>
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-autocomplete
+                    v-model="selectedSubComponentIds"
+                    chips
+                    item-title="label"
+                    item-value="value"
+                    :items="subComponentOptions"
+                    label="Search Parts"
+                    multiple
+                    variant="outlined"
+                  />
+                  <div class="text-body-2 text-medium-emphasis mt-3">
+                    Pick existing parts to treat as sub-components for this assembly.
+                  </div>
+                  <v-list
+                    v-if="resolvedSubComponentItems.length"
+                    class="parent-components-list mt-3"
+                    lines="two"
                   >
-                    <template #prepend>
-                      <div class="d-flex align-center ga-3">
-                        <v-avatar color="secondary" size="36" variant="tonal">
-                          {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
-                        </v-avatar>
-                        <div class="parent-component-image-wrap mr-2">
-                          <img
-                            v-if="subItem.part.img"
-                            alt=""
-                            class="parent-component-image"
-                            :src="subItem.part.img"
-                          />
-                          <MissingImage
-                            v-else
-                            class="parent-component-image parent-component-image--fallback"
-                          />
+                    <v-list-item
+                      v-for="subItem in resolvedSubComponentItems"
+                      :key="subItem.part._id"
+                      :subtitle="subItem.part.description"
+                      :title="subItem.part.part"
+                      :to="{ name: 'viewPart', params: { id: subItem.part._id } }"
+                    >
+                      <template #prepend>
+                        <div class="d-flex align-center ga-3">
+                          <v-avatar color="secondary" size="36" variant="tonal">
+                            {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
+                          </v-avatar>
+                          <div class="parent-component-image-wrap mr-2">
+                            <img
+                              v-if="subItem.part.img"
+                              alt=""
+                              class="parent-component-image"
+                              :src="subItem.part.img"
+                            />
+                            <MissingImage
+                              v-else
+                              class="parent-component-image parent-component-image--fallback"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </template>
-                    <template #append>
-                      <div class="d-flex align-center ga-2">
-                        <div class="text-body-2 text-medium-emphasis parent-component-qty">
-                          Qty {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
+                      </template>
+                      <template #append>
+                        <div class="d-flex align-center ga-2">
+                          <div class="text-body-2 text-medium-emphasis parent-component-qty">
+                            Qty {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
+                          </div>
+                          <v-btn
+                            color="error"
+                            icon="mdi-delete"
+                            size="small"
+                            variant="text"
+                            @click.prevent.stop="removeSubComponent(subItem.part._id)"
+                          />
+                          <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
                         </div>
-                        <v-btn
-                          color="error"
-                          icon="mdi-delete"
-                          size="small"
-                          variant="text"
-                          @click.prevent.stop="removeSubComponent(subItem.part._id)"
-                        />
-                        <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
-                      </div>
-                    </template>
-                  </v-list-item>
-                </v-list>
-                <div v-else class="text-body-2 text-medium-emphasis mt-3">
-                  No sub-components added yet.
-                </div>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-            <v-expansion-panel class="sub-components-panel">
-              <v-expansion-panel-title>
-                <div class="d-flex align-center ga-2">
-                  <span>Parent Assemblies</span>
-                  <v-chip v-if="parentComponentItems.length" size="small" variant="tonal">
-                    {{ parentComponentItems.length }}
-                  </v-chip>
-                </div>
-              </v-expansion-panel-title>
-              <v-expansion-panel-text>
-                <div v-if="!part._id" class="text-body-2 text-medium-emphasis">
-                  Save this part first to look up parent assemblies.
-                </div>
-                <v-list
-                  v-else-if="parentComponentItems.length"
-                  class="parent-components-list"
-                  lines="two"
-                >
-                  <v-list-item
-                    v-for="parentItem in parentComponentItems"
-                    :key="parentItem.part._id"
-                    :subtitle="parentItem.part.description"
-                    :title="parentItem.part.part"
-                    :to="{ name: 'viewPart', params: { id: parentItem.part._id } }"
+                      </template>
+                    </v-list-item>
+                  </v-list>
+                  <div v-else class="text-body-2 text-medium-emphasis mt-3">
+                    No sub-components added yet.
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+              <v-expansion-panel class="sub-components-panel">
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center ga-2">
+                    <span>Parent Assemblies</span>
+                    <v-chip v-if="parentComponentItems.length" size="small" variant="tonal">
+                      {{ parentComponentItems.length }}
+                    </v-chip>
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div v-if="!part._id" class="text-body-2 text-medium-emphasis">
+                    Save this part first to look up parent assemblies.
+                  </div>
+                  <v-list
+                    v-else-if="parentComponentItems.length"
+                    class="parent-components-list"
+                    lines="two"
                   >
-                    <template #prepend>
-                      <div class="d-flex align-center ga-3">
-                        <v-avatar color="secondary" size="36" variant="tonal">
-                          {{ parentItem.qty }}
-                        </v-avatar>
-                        <div class="parent-component-image-wrap mr-2">
-                          <img
-                            v-if="parentItem.part.img"
-                            alt=""
-                            class="parent-component-image"
-                            :src="parentItem.part.img"
-                          />
-                          <MissingImage
-                            v-else
-                            class="parent-component-image parent-component-image--fallback"
-                          />
+                    <v-list-item
+                      v-for="parentItem in parentComponentItems"
+                      :key="parentItem.part._id"
+                      :subtitle="parentItem.part.description"
+                      :title="parentItem.part.part"
+                      :to="{ name: 'viewPart', params: { id: parentItem.part._id } }"
+                    >
+                      <template #prepend>
+                        <div class="d-flex align-center ga-3">
+                          <v-avatar color="secondary" size="36" variant="tonal">
+                            {{ parentItem.qty }}
+                          </v-avatar>
+                          <div class="parent-component-image-wrap mr-2">
+                            <img
+                              v-if="parentItem.part.img"
+                              alt=""
+                              class="parent-component-image"
+                              :src="parentItem.part.img"
+                            />
+                            <MissingImage
+                              v-else
+                              class="parent-component-image parent-component-image--fallback"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </template>
-                    <template #append>
-                      <div class="d-flex align-center ga-2">
-                        <div class="text-body-2 text-medium-emphasis parent-component-qty">
-                          Qty {{ parentItem.qty }}
+                      </template>
+                      <template #append>
+                        <div class="d-flex align-center ga-2">
+                          <div class="text-body-2 text-medium-emphasis parent-component-qty">
+                            Qty {{ parentItem.qty }}
+                          </div>
+                          <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
                         </div>
-                        <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
-                      </div>
-                    </template>
-                  </v-list-item>
-                </v-list>
-                <div v-else class="text-body-2 text-medium-emphasis">
-                  No parent components found for this part.
-                </div>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
+                      </template>
+                    </v-list-item>
+                  </v-list>
+                  <div v-else class="text-body-2 text-medium-emphasis">
+                    No parent components found for this part.
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </v-row>
         </v-window-item>
 
         <v-window-item eager value="material">
