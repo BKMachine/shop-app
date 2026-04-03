@@ -26,11 +26,11 @@
         <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
       </v-list>
       <template #append>
-        <v-list-item v-if="showTest" link prepend-icon="mdi-test-tube" :to="{name: 'test'}">
+        <v-list-item v-if="showDev" link prepend-icon="mdi-test-tube" :to="{name: 'test'}">
           WIP
         </v-list-item>
         <v-list-item
-          v-if="showTest"
+          v-if="showDev"
           prepend-icon="mdi-barcode-scan"
           @click="scannerStore.scan('120850')"
         >
@@ -102,7 +102,12 @@ const mappedCodes: { [key: string]: string } = {
 
 // Hardware barcode scanner
 onScan.attachTo(document, {
-  minLength: 5,
+  minLength: 6,
+  avgTimeByChar: 25,
+  timeBeforeScanTest: 80,
+  suffixKeyCodes: [13],
+  // ts-ignore-next-line
+  ignoreIfFocusOn: ['input', 'textarea', 'select'],
   keyCodeMapper: (e: KeyboardEvent) => {
     return mappedCodes[e.key] || onScan.decodeKeyEvent(e);
   },
@@ -132,7 +137,7 @@ onBeforeMount(() => {
   void fetchCurrentDevice();
 });
 
-const showTest = computed<boolean>(() => {
+const showDev = computed<boolean>(() => {
   return location.host.includes('localhost') || location.host.includes('127.0.0.1');
 });
 

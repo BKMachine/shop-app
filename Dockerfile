@@ -64,6 +64,7 @@ RUN pnpm --filter folder_helper run stage:server
 
 FROM node:22-slim AS runner
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends cups-client && rm -rf /var/lib/apt/lists/*
 COPY --from=server-deploy /app/deploy/server/node_modules /app/apps/server/node_modules 
 COPY --from=server-builder /app/apps/server/dist /app/apps/server/dist
 COPY --from=server-builder /app/apps/server/public /app/apps/server/public

@@ -10,7 +10,6 @@ const app = createApp(App);
 registerPlugins(app);
 app.mount('#app');
 
-// Socket connection to backend for app updates
 const toolStore = useToolStore();
 
 // Tool updated or added
