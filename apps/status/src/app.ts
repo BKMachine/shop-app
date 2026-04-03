@@ -8,7 +8,7 @@ import * as mtconnect from './machines/MTConnect/mtconnect_polling.js';
 import * as server from './server/index.js';
 import * as influx from './timeseries/influx.js';
 
-const SERIAL_ENABLED = process.env.SERIAL_ENABLED === 'true';
+const HAAS_SERIAL_ENABLED = process.env.HAAS_SERIAL_ENABLED === 'true';
 
 export async function start(): Promise<void> {
   await database.connect();
@@ -21,13 +21,13 @@ export async function start(): Promise<void> {
   await mqtt.connect();
   arduino.start();
   mtconnect.start();
-  if (SERIAL_ENABLED) serial.start();
+  if (HAAS_SERIAL_ENABLED) serial.start();
   server.start();
 }
 
 export async function stop(): Promise<void> {
   await server.stop();
-  if (SERIAL_ENABLED) serial.stop();
+  if (HAAS_SERIAL_ENABLED) serial.stop();
   mtconnect.stop();
   arduino.stop();
   mqtt.disconnect();
