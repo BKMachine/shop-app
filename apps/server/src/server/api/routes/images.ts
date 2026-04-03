@@ -532,6 +532,32 @@ router.delete('/uploads/:id', requireKnownDevice, async (req, res, next) => {
   }
 });
 
+// Delete all temporary images
+router.delete('/uploads', requireKnownDevice, async (req, res, next) => {
+  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+
+  try {
+    const tempImages = await ImageService.listRecents();
+    const imageIds: string[] = [];
+
+    for (const image of tempImages) {
+      const filePath = path.join(imageDir, image.relPath);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      imageIds.push(image._id.toString());
+    }
+
+    const deletedCount = await ImageService.removeMany(imageIds, req.deviceId);
+
+    res.status(200).json({
+      success: true,
+      count: deletedCount,
+      ids: imageIds,
+    });
+  } catch (err) {
+    next(new HttpError(500, 'Failed to delete temp images', { cause: err }));
+  }
+});
+
 // Delete an image from an entity gallery
 router.delete(
   '/entities/:entityType/:entityId/images/:imageId',

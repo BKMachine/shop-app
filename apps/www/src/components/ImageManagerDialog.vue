@@ -131,7 +131,7 @@
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         v-if="canSelectMultiple"
-                        :disabled="!selectedTempImageIds.length"
+                        :disabled="!selectedTempImageIds.length || deleteAllLoading"
                         size="small"
                         variant="text"
                         @click="clearTempSelection"
@@ -139,8 +139,18 @@
                         Clear
                       </v-btn>
                       <v-btn
+                        color="error"
+                        :disabled="!tempImages.length || assignLoading || isGalleryBusy"
+                        :loading="deleteAllLoading"
+                        size="small"
+                        variant="text"
+                        @click="deleteAllConfirmVisible = true"
+                      >
+                        Remove All
+                      </v-btn>
+                      <v-btn
                         color="primary"
-                        :disabled="!entityId || !selectedTempImageIds.length || assignLoading"
+                        :disabled="!entityId || !selectedTempImageIds.length || assignLoading || deleteAllLoading"
                         :loading="assignLoading"
                         size="small"
                         variant="flat"
@@ -192,7 +202,10 @@
                         block
                         color="secondary"
                         :disabled="
-                          backgroundRemovalId === img.id || autoCropId === img.id || deletingId === img.id
+                          deleteAllLoading ||
+                          backgroundRemovalId === img.id ||
+                          autoCropId === img.id ||
+                          deletingId === img.id
                         "
                         :loading="backgroundRemovalId === img.id"
                         prepend-icon="mdi-auto-fix"
@@ -207,7 +220,10 @@
                         block
                         color="secondary"
                         :disabled="
-                          backgroundRemovalId === img.id || autoCropId === img.id || deletingId === img.id
+                          deleteAllLoading ||
+                          backgroundRemovalId === img.id ||
+                          autoCropId === img.id ||
+                          deletingId === img.id
                         "
                         :loading="autoCropId === img.id"
                         prepend-icon="mdi-crop"
@@ -223,7 +239,7 @@
                         block
                         class="image-card__delete"
                         color="error"
-                        :disabled="backgroundRemovalId === img.id || autoCropId === img.id"
+                        :disabled="deleteAllLoading || backgroundRemovalId === img.id || autoCropId === img.id"
                         :loading="deletingId === img.id"
                         prepend-icon="mdi-delete"
                         size="x-small"
@@ -254,6 +270,15 @@
     message="This will permanently remove the temporary image."
     title="Delete Temp Image?"
     @confirm="deleteConfirmedImage"
+  />
+
+  <ConfirmDialog
+    v-model="deleteAllConfirmVisible"
+    confirm-text="Remove All"
+    :loading="deleteAllLoading"
+    message="This will permanently remove every temporary image in the gallery."
+    title="Remove All Temp Images?"
+    @confirm="deleteAllTempImages"
   />
 </template>
 
@@ -379,7 +404,17 @@ const assignSuccess = ref(false);
 const initializingDialog = ref(false);
 const deleteConfirmVisible = ref(false);
 const deleteTargetId = ref('');
+const deleteAllConfirmVisible = ref(false);
+const deleteAllLoading = ref(false);
 const canSelectMultiple = computed(() => props.entityType === 'part');
+const isGalleryBusy = computed(() => {
+  return Boolean(
+    deleteAllLoading.value ||
+      deletingId.value ||
+      backgroundRemovalId.value ||
+      autoCropId.value,
+  );
+});
 
 const isTempSelected = (imageId: string): boolean => {
   return selectedTempImageIds.value.includes(imageId);
@@ -464,6 +499,9 @@ watch(dialog, (isOpen) => {
   initializingDialog.value = false;
   clearTempSelection();
   assignSuccess.value = false;
+  deleteConfirmVisible.value = false;
+  deleteTargetId.value = '';
+  deleteAllConfirmVisible.value = false;
 });
 
 watch(
@@ -703,6 +741,25 @@ async function deleteImage(imageId: string) {
     console.error('Failed to delete image:', err);
   } finally {
     deletingId.value = '';
+  }
+}
+
+async function deleteAllTempImages() {
+  if (!tempImages.value.length || deleteAllLoading.value) return;
+
+  deleteAllLoading.value = true;
+  galleryError.value = '';
+
+  try {
+    await api.delete('/images/uploads');
+    tempImages.value = [];
+    clearTempSelection();
+    deleteAllConfirmVisible.value = false;
+  } catch (err) {
+    galleryError.value = 'Failed to delete temp images.';
+    console.error('Failed to delete temp images:', err);
+  } finally {
+    deleteAllLoading.value = false;
   }
 }
 
