@@ -32,7 +32,10 @@ function normalizeSubComponentIds(subComponentIds: unknown): PartSubComponent[] 
   );
 }
 
-async function validateSubComponentIds(partId: string | undefined, subComponentIds: PartSubComponent[]) {
+async function validateSubComponentIds(
+  partId: string | undefined,
+  subComponentIds: PartSubComponent[],
+) {
   if (!partId) {
     return subComponentIds;
   }
@@ -49,7 +52,11 @@ async function validateSubComponentIds(partId: string | undefined, subComponentI
     ]),
   );
 
-  const dependsOn = (candidateId: string, targetId: string, visited = new Set<string>()): boolean => {
+  const dependsOn = (
+    candidateId: string,
+    targetId: string,
+    visited = new Set<string>(),
+  ): boolean => {
     if (visited.has(candidateId)) {
       return false;
     }
@@ -117,11 +124,7 @@ async function update(
     updatePayload.documentIds = oldPart.documentIds;
   }
 
-  const updatedPart = await Part.findByIdAndUpdate(
-    id,
-    updatePayload,
-    { returnDocument: 'after' },
-  );
+  const updatedPart = await Part.findByIdAndUpdate(id, updatePayload, { returnDocument: 'after' });
   if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);
   emit('part', updatedPart);
   await Audit.addPartAudit(oldPart, updatedPart, device);

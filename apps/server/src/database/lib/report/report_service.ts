@@ -13,7 +13,10 @@ async function create(data: EmailReportDoc, device = SERVER_DEVICE_ID): Promise<
   return doc;
 }
 
-async function update(doc: EmailReportDoc, device = SERVER_DEVICE_ID): Promise<EmailReportDoc | null> {
+async function update(
+  doc: EmailReportDoc,
+  device = SERVER_DEVICE_ID,
+): Promise<EmailReportDoc | null> {
   const oldDoc = await Report.findById(doc._id);
   if (!oldDoc) throw new Error(`Missing report document id: ${doc._id}`);
   const updated = await Report.findByIdAndUpdate(doc._id, doc, { returnDocument: 'after' });

@@ -92,11 +92,7 @@ export async function autoCropImage(sourcePath: string): Promise<{
   const filename = `${randomUUID()}.png`;
   const outputPath = path.join(tempDir, filename);
 
-  await sharp(sourcePath, { failOn: 'none' })
-    .ensureAlpha()
-    .extract(crop)
-    .png()
-    .toFile(outputPath);
+  await sharp(sourcePath, { failOn: 'none' }).ensureAlpha().extract(crop).png().toFile(outputPath);
 
   return {
     filename,

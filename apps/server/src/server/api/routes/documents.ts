@@ -91,35 +91,43 @@ router.post(
   },
 );
 
-router.delete('/entities/part/:entityId/documents/:documentId', requireKnownDevice, async (req, res, next) => {
-  const { entityId, documentId } = req.params;
-  if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
-  if (!isValidId(documentId)) return next(new HttpError(400, 'Invalid document id'));
-  if (!req.device) return next(new HttpError(401, 'Missing device context'));
+router.delete(
+  '/entities/part/:entityId/documents/:documentId',
+  requireKnownDevice,
+  async (req, res, next) => {
+    const { entityId, documentId } = req.params;
+    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
+    if (!isValidId(documentId)) return next(new HttpError(400, 'Invalid document id'));
+    if (!req.device) return next(new HttpError(401, 'Missing device context'));
 
-  try {
-    const document = await DocumentService.findById(documentId);
-    if (!document || document.entityType !== 'part' || document.entityId?.toString() !== entityId) {
-      return next(new HttpError(404, 'Document not found'));
+    try {
+      const document = await DocumentService.findById(documentId);
+      if (
+        !document ||
+        document.entityType !== 'part' ||
+        document.entityId?.toString() !== entityId
+      ) {
+        return next(new HttpError(404, 'Document not found'));
+      }
+
+      const part = await PartService.findById(entityId);
+      if (!part) return next(new HttpError(404, 'Part not found'));
+
+      const filePath = path.join(documentDir, document.relPath);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      await DocumentService.remove(documentId);
+
+      if (part.documentIds) {
+        part.documentIds = part.documentIds.filter((id) => id.toString() !== documentId);
+        await PartService.update(part, req.device._id.toString());
+      }
+
+      res.sendStatus(204);
+    } catch (err) {
+      next(new HttpError(500, 'Failed to delete document', { cause: err }));
     }
-
-    const part = await PartService.findById(entityId);
-    if (!part) return next(new HttpError(404, 'Part not found'));
-
-    const filePath = path.join(documentDir, document.relPath);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-    await DocumentService.remove(documentId);
-
-    if (part.documentIds) {
-      part.documentIds = part.documentIds.filter((id) => id.toString() !== documentId);
-      await PartService.update(part, req.device._id.toString());
-    }
-
-    res.sendStatus(204);
-  } catch (err) {
-    next(new HttpError(500, 'Failed to delete document', { cause: err }));
-  }
-});
+  },
+);
 
 export default router;
