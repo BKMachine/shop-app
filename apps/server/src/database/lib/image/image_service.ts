@@ -88,6 +88,17 @@ async function remove(id: string, _deviceId: string): Promise<boolean> {
   return result !== null;
 }
 
+async function removeMany(ids: string[], _deviceId: string): Promise<number> {
+  if (!ids.length) return 0;
+
+  const result = await Image.deleteMany({ _id: { $in: ids } });
+  if (result.deletedCount) {
+    emit('imageDeleted');
+  }
+
+  return result.deletedCount ?? 0;
+}
+
 export default {
   add,
   update,
@@ -98,4 +109,5 @@ export default {
   findLatestByEntity,
   cleanupExpired,
   remove,
+  removeMany,
 };

@@ -409,10 +409,7 @@ const deleteAllLoading = ref(false);
 const canSelectMultiple = computed(() => props.entityType === 'part');
 const isGalleryBusy = computed(() => {
   return Boolean(
-    deleteAllLoading.value ||
-      deletingId.value ||
-      backgroundRemovalId.value ||
-      autoCropId.value,
+    deleteAllLoading.value || deletingId.value || backgroundRemovalId.value || autoCropId.value,
   );
 });
 

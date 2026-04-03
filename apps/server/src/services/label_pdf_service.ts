@@ -236,10 +236,7 @@ async function buildLocationLabelTopPreviewPng(data: PrintLocationBody) {
     .toBuffer();
 }
 
-async function buildLocationLabelImage(
-  data: PrintLocationBody,
-  size = LOCATION_LABEL_RASTER_SIZE,
-) {
+async function buildLocationLabelImage(data: PrintLocationBody, size = LOCATION_LABEL_RASTER_SIZE) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const sans = await pdf.embedFont(fs.readFileSync(segoeUiRegularPath));
