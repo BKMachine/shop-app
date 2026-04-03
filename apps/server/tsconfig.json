@@ -2,9 +2,9 @@
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "types": ["@types/shop-app", "jest"]
+    "rootDir": "./src",
+    "types": ["@types/shop-app", "jest", "node"]
   },
   "include": ["src"],
-  "ignore": ["node_modules", "dist"],
-  "exclude": ["**/__tests__"]
+  "ignore": ["node_modules", "dist"]
 }
