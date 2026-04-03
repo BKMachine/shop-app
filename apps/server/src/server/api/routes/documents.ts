@@ -13,13 +13,23 @@ import requireKnownDevice from '../../middleware/requireKnownDevices.js';
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+function mutateDocumentResponse(document: StoredDocumentDoc): MyDocumentData {
+  const { _id, relPath, ...rest } = document.toObject();
+
+  return {
+    ...rest,
+    id: _id.toString(),
+    url: `/documents/${document.relPath}`,
+  };
+}
+
 router.get('/entities/part/:entityId/documents', async (req, res, next) => {
   const { entityId } = req.params;
   if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
 
   try {
     const documents = await DocumentService.listByEntity('part', entityId);
-    res.status(200).json(documents);
+    res.status(200).json(documents.map(mutateDocumentResponse));
   } catch (err) {
     next(new HttpError(500, 'Failed to load documents', { cause: err }));
   }
@@ -67,7 +77,7 @@ router.post(
       part.documentIds.unshift(documentId);
       await PartService.update(part, req.deviceId);
 
-      res.status(200).json(document);
+      res.status(200).json(mutateDocumentResponse(document));
     } catch (err) {
       next(new HttpError(500, 'Failed to upload document', { cause: err }));
     }
