@@ -19,7 +19,7 @@ export async function start(): Promise<void> {
   await mqtt.connect();
   arduino.start();
   mtconnect.start();
-  // serial.start();
+  serial.start();
   server.start();
 }
 
