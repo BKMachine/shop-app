@@ -68,11 +68,11 @@
 </template>
 
 <script setup lang="ts">
-import onScan from 'onscan.js';
 import { computed, onBeforeMount, ref } from 'vue';
 import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
+import onScan from '@/lib/onscan';
 import router from '@/router';
 import { deviceState, fetchCurrentDevice } from '@/state/device';
 import { useCustomerStore } from '@/stores/customer_store';
@@ -102,11 +102,8 @@ const mappedCodes: { [key: string]: string } = {
 
 // Hardware barcode scanner
 onScan.attachTo(document, {
-  minLength: 6,
-  avgTimeByChar: 25,
-  timeBeforeScanTest: 80,
+  minLength: 5,
   suffixKeyCodes: [13],
-  // ts-ignore-next-line
   ignoreIfFocusOn: ['input', 'textarea', 'select'],
   keyCodeMapper: (e: KeyboardEvent) => {
     return mappedCodes[e.key] || onScan.decodeKeyEvent(e);
