@@ -42,7 +42,7 @@ export default async function requireKnownDevice(req: Request, res: Response, ne
     }
 
     req.device = device;
-    req.deviceId = rawDeviceId;
+    req.deviceId = device._id.toString();
     req.deviceContext = {
       clientIp,
       userAgent,
