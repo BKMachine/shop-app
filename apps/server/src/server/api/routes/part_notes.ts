@@ -52,15 +52,18 @@ router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) =
     const part = await PartService.findById(partId);
     if (!part) return next(new HttpError(404, 'Part not found'));
 
-    const note = await PartNoteService.add({
-      partId,
-      text: text.trim(),
-      priority,
-      createdByDeviceId: req.device.deviceId,
-      createdByDisplayName: req.device.displayName,
-      updatedByDeviceId: req.device.deviceId,
-      updatedByDisplayName: req.device.displayName,
-    }, req.device._id.toString());
+    const note = await PartNoteService.add(
+      {
+        partId,
+        text: text.trim(),
+        priority,
+        createdByDeviceId: req.device.deviceId,
+        createdByDisplayName: req.device.displayName,
+        updatedByDeviceId: req.device.deviceId,
+        updatedByDisplayName: req.device.displayName,
+      },
+      req.device._id.toString(),
+    );
 
     res.status(200).json(toNoteResponse(note));
   } catch (err) {
@@ -82,7 +85,8 @@ router.put('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, 
 
   try {
     const note = await PartNoteService.findById(noteId);
-    if (!note || note.partId.toString() !== partId) return next(new HttpError(404, 'Note not found'));
+    if (!note || note.partId.toString() !== partId)
+      return next(new HttpError(404, 'Note not found'));
 
     note.text = text.trim();
     note.priority = priority;
@@ -107,7 +111,8 @@ router.delete('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, re
 
   try {
     const note = await PartNoteService.findById(noteId);
-    if (!note || note.partId.toString() !== partId) return next(new HttpError(404, 'Note not found'));
+    if (!note || note.partId.toString() !== partId)
+      return next(new HttpError(404, 'Note not found'));
 
     await PartNoteService.remove(noteId, req.device._id.toString());
     res.sendStatus(204);
