@@ -46,7 +46,7 @@ router.get('/devices/me', requireKnownDevice, async (req, res, next) => {
   if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
-    return res.status(200).json(req.device);
+    return res.status(200).json({ device: req.device });
   } catch (error) {
     next(error);
   }

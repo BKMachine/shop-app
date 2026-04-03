@@ -1,18 +1,8 @@
 import { reactive } from 'vue';
 import api from '@/plugins/axios';
 
-type DeviceSummary = {
-  id: string;
-  deviceId: string;
-  displayName: string;
-  deviceType: Device['deviceType'];
-  isAdmin: boolean;
-  approved: boolean;
-  blocked: boolean;
-};
-
 type DeviceState = {
-  current: DeviceSummary | null;
+  current: Device | null;
   loaded: boolean;
 };
 
@@ -23,8 +13,9 @@ export const deviceState = reactive<DeviceState>({
 
 export async function fetchCurrentDevice() {
   try {
-    const response = await api.get<{ device: DeviceSummary }>('/devices/me');
+    const response = await api.get<{ device: Device }>('/devices/me');
     deviceState.current = response.data.device;
+    console.log('Current device:', deviceState.current);
   } catch {
     deviceState.current = null;
   } finally {
@@ -32,7 +23,7 @@ export async function fetchCurrentDevice() {
   }
 }
 
-export function setCurrentDevice(device: DeviceSummary) {
+export function setCurrentDevice(device: Device) {
   deviceState.current = device;
   deviceState.loaded = true;
 }
