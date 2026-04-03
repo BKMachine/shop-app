@@ -1,6 +1,8 @@
+/// <reference types="jest" />
+
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import parseMaterialPdf, { cleanLines, extractPdfText } from '../material_pdf_parser.js';
+import { cleanLines, extractPdfText } from '../material_pdf_parser.js';
 import { extractPdfDate } from '../parser_utils.js';
 import {
   AffiliatedMetalsParser,
@@ -8,6 +10,40 @@ import {
 } from '../suppliers/affiliated_metals_parser.js';
 import { GrandisParser } from '../suppliers/grandis_parser.js';
 import { extractRyersonEnteredDate, RyersonParser } from '../suppliers/ryerson_parser.js';
+
+const grandisTextFixturePath = path.resolve(
+  process.cwd(),
+  'stubs/Grandis/grandis_extracted.pdf.txt',
+);
+const ryersonTextFixturePath = path.resolve(
+  process.cwd(),
+  'stubs/Ryerson/ryerson_extracted.pdf.txt',
+);
+
+async function readTextFixture(filePath: string): Promise<string> {
+  return fs.readFile(filePath, 'utf8');
+}
+
+async function parseMaterialPdfFromText(text: string) {
+  jest.resetModules();
+  jest.doMock('pdf-parse', () => ({
+    PDFParse: class {
+      async getText(): Promise<{ text: string }> {
+        return { text };
+      }
+
+      async destroy(): Promise<void> {}
+    },
+  }));
+
+  try {
+    const module = await import('../material_pdf_parser.js');
+    return module.default(Buffer.from('fixture'));
+  } finally {
+    jest.dontMock('pdf-parse');
+    jest.resetModules();
+  }
+}
 
 test('AffiliatedMetalsParser should parse PDF with single flat bar', async () => {
   const file = path.resolve(process.cwd(), 'stubs/Affiliated_Metals/single_flat_bar_lb.pdf');
@@ -201,12 +237,7 @@ test('AffiliatedMetalsParser should override pipe dimensions from ACTUAL DIMENTI
 });
 
 test('RyersonParser should parse ryerson order with decimal pricing units', async () => {
-  const file = path.resolve(
-    process.cwd(),
-    'stubs/Ryerson/Order#18587819-PO#Jeff 3122026-BK MACHINE INC.pdf',
-  );
-  const data = await fs.readFile(file);
-  const text = await extractPdfText(data);
+  const text = await readTextFixture(ryersonTextFixturePath);
   const results = await RyersonParser(cleanLines(text));
 
   expect(results).toHaveLength(3);
@@ -352,12 +383,7 @@ Pieces: 7 P/N Delivery Date 02/12/2026
 });
 
 test('GrandisParser should parse 6AL-4V invoice rows and key Round from Dia', async () => {
-  const file = path.resolve(
-    process.cwd(),
-    'stubs/Grandis/Inv_8764167918_from_Grandis_Titanium_LLC_26648.pdf',
-  );
-  const data = await fs.readFile(file);
-  const text = await extractPdfText(data);
+  const text = await readTextFixture(grandisTextFixturePath);
   const results = await GrandisParser(cleanLines(text));
 
   expect(results).toHaveLength(2);
@@ -388,12 +414,8 @@ test('GrandisParser should parse 6AL-4V invoice rows and key Round from Dia', as
 });
 
 test('parseMaterialPdf should route Grandis invoices', async () => {
-  const file = path.resolve(
-    process.cwd(),
-    'stubs/Grandis/Inv_8764167918_from_Grandis_Titanium_LLC_26648.pdf',
-  );
-  const data = await fs.readFile(file);
-  const results = await parseMaterialPdf(data);
+  const text = await readTextFixture(grandisTextFixturePath);
+  const results = await parseMaterialPdfFromText(text);
 
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]?.material.materialType).toBe('6Al-4V');
@@ -443,12 +465,8 @@ EFFECTIVE 3/1/2024, ALL CREDIT CARD TRANSACTIONS
 });
 
 test('parseMaterialPdf should include createdAt from Ryerson Entered date', async () => {
-  const file = path.resolve(
-    process.cwd(),
-    'stubs/Ryerson/Order#18587819-PO#Jeff 3122026-BK MACHINE INC.pdf',
-  );
-  const data = await fs.readFile(file);
-  const results = await parseMaterialPdf(data);
+  const text = await readTextFixture(ryersonTextFixturePath);
+  const results = await parseMaterialPdfFromText(text);
 
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]?.createdAt).toBeInstanceOf(Date);

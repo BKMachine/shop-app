@@ -1,0 +1,45 @@
+Invoice
+Date
+4/7/2025
+Number
+REDACTED-INVOICE
+Bill To
+REDACTED CUSTOMER
+REDACTED ADDRESS
+REDACTED ADDRESS
+Ship To
+REDACTED CUSTOMER
+REDACTED ADDRESS
+REDACTED ADDRESS
+Grandis Titanium LLC
+SUPPLIER ADDRESS REDACTED
+SUPPLIER PHONE REDACTED
+SUPPLIER FAX REDACTED
+Contract
+REDACTED 04/07/25
+Terms
+Net 30
+Due Date
+5/7/2025
+Ship
+4/7/2025
+Via
+Truck
+Delivery
+REDACTED
+Total
+Please see Grandis Titanium Sales Terms & Conditions at www.grandis.com/terms-and-conditions.html
+Item Description Quantity, KG Price Each Amount, USD
+Ti 6-4 Bars GT#REDACTED-1 Titanium 6Al-4V Bars
+Dia 1.0" x R/L - 10 pcs
+Net 176 lbs x $21.75/lb
+79.8 47.96992 3,828.00
+Ti 6-4 Bars GT#REDACTED-2 Titanium 6Al-4V Bars
+Dia 0.875" x R/L - 10 pcs
+Net 127 lbs x $22.25/lb
+57.6 49.05816 2,825.75
+Freight Freight 295.08 295.08
+$6,948.83
+
+-- 1 of 1 --
+

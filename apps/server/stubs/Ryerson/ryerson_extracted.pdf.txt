@@ -1,0 +1,15 @@
+Joseph T. Ryerson & Son, Inc.
+Printed: 03/12/2026
+Entered:03/12/2026
+10 4 PC Stnls Bar RD CF 304 Ann 131.760 131.7600 $3.2000 LB
+1in X 144in RL
+REDACTED-LINE-ID Extended Amount $421.63
+Pieces: 4 P/N Delivery Date 03/17/2026
+20 4 PC Stnls Bar RD CF 304 Ann 206.260 206.2600 $3.2000 LB
+1.25in X 144in RL
+REDACTED-LINE-ID Extended Amount $660.03
+Pieces: 4 P/N Delivery Date 03/19/2026
+30 11 FT CARB Tube RD CREW 1020 241.900 264.0000 $3.8500 FT
+1.375in OD X 13GA W X 264in RL
+REDACTED-LINE-ID Extended Amount $1,016.40
+Pieces: 11 P/N Delivery Date 03/26/2026
