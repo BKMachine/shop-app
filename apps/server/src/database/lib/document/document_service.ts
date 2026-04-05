@@ -1,6 +1,6 @@
 import StoredDocument from './document_model.js';
 
-async function add(data: unknown, _deviceId: string): Promise<StoredDocumentDoc> {
+async function create(data: unknown, _deviceId: string): Promise<StoredDocumentDoc> {
   const doc = new StoredDocument(data);
   await doc.save();
   return doc;
@@ -20,7 +20,7 @@ async function remove(id: string, _deviceId: string): Promise<boolean> {
 }
 
 export default {
-  add,
+  create,
   findById,
   listByEntity,
   remove,

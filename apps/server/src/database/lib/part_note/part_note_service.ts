@@ -1,7 +1,7 @@
 import Audit from '../audit/audit_service.js';
 import PartNote from './part_note_model.js';
 
-async function add(data: unknown, deviceId: string): Promise<PartNoteDoc> {
+async function create(data: unknown, deviceId: string): Promise<PartNoteDoc> {
   const doc = new PartNote(data);
   await doc.save();
   await Audit.addPartNoteAudit(null, doc, deviceId);
@@ -39,7 +39,7 @@ async function remove(id: string, deviceId: string): Promise<boolean> {
 }
 
 export default {
-  add,
+  create,
   findById,
   listByPart,
   update,

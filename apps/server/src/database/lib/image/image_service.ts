@@ -5,7 +5,7 @@ import logger from '../../../logger.js';
 import { emit } from '../../../server/sockets.js';
 import Image from './image_model.js';
 
-async function add(data: unknown, _deviceId: string): Promise<ImageDoc> {
+async function create(data: unknown, _deviceId: string): Promise<ImageDoc> {
   const doc = new Image(data);
   await doc.save();
   emit('imageUploaded');
@@ -99,7 +99,7 @@ async function removeMany(ids: string[], _deviceId: string): Promise<number> {
 }
 
 export default {
-  add,
+  create,
   update,
   listRecents,
   findById,

@@ -27,7 +27,7 @@ async function getAutoReorders(): Promise<ToolDoc[]> {
     .populate('supplier');
 }
 
-async function add(data: ToolDoc, deviceId: string): Promise<ToolDoc> {
+async function create(data: ToolDoc, deviceId: string): Promise<ToolDoc> {
   const tool = new Tool(data);
   await tool.save();
   emit('tool', tool);
@@ -106,7 +106,7 @@ export default {
   list,
   findById,
   findByScanCode,
-  add,
+  create,
   update,
   getAutoReorders,
   pick,

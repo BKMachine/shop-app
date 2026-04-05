@@ -7,7 +7,7 @@ async function list(): Promise<MaterialDoc[]> {
   return await Material.find();
 }
 
-async function add(data: Material, deviceId: string): Promise<MaterialDoc> {
+async function create(data: Material, deviceId: string): Promise<MaterialDoc> {
   const material = new Material(normalizeDimensions(data));
   await material.save();
   await Audit.addMaterialAudit(null, material, deviceId);
@@ -70,7 +70,7 @@ async function updateCostPerFoot(
 
 export default {
   list,
-  add,
+  create,
   update,
   find,
   findByParsedMaterial,

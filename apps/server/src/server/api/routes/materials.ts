@@ -24,7 +24,7 @@ router.post('/materials', requireKnownDevice, async (req, res, next) => {
   if (!data) return next(new HttpError(400, 'No material data provided.'));
 
   try {
-    const doc = await Materials.add(data, req.deviceId);
+    const doc = await Materials.create(data, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
     next(e);

@@ -103,7 +103,7 @@ router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (
   try {
     const relPath = path.relative(imageDir, req.file.path).replace(/\\/g, '/');
 
-    const image = await ImageService.add(
+    const image = await ImageService.create(
       {
         filename: req.file.filename,
         relPath,
@@ -151,7 +151,7 @@ router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
 
     const relPath = path.relative(imageDir, filePath).replace(/\\/g, '/');
 
-    const image = await ImageService.add(
+    const image = await ImageService.create(
       {
         filename,
         relPath,
@@ -209,7 +209,7 @@ router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, re
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await removeImageBackground(sourcePath);
-    const newImage = await ImageService.add(
+    const newImage = await ImageService.create(
       {
         filename: processed.filename,
         relPath: processed.relPath,
@@ -251,7 +251,7 @@ router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next)
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await autoCropImage(sourcePath);
-    const newImage = await ImageService.add(
+    const newImage = await ImageService.create(
       {
         filename: processed.filename,
         relPath: processed.relPath,

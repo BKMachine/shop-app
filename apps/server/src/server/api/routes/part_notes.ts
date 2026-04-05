@@ -32,7 +32,7 @@ router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) =
     const part = await PartService.findById(partId);
     if (!part) return next(new HttpError(404, 'Part not found'));
 
-    const note = await PartNoteService.add(
+    const note = await PartNoteService.create(
       {
         partId,
         text: text.trim(),

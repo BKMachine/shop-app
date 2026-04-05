@@ -41,7 +41,7 @@ router.post('/parts', requireKnownDevice, async (req, res, next) => {
   if (!data) return next(new HttpError(400, 'No part data provided.'));
 
   try {
-    const doc = await Parts.add(data, req.deviceId);
+    const doc = await Parts.create(data, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
     if (isAssemblyValidationError(e)) return next(new HttpError(400, e.message));

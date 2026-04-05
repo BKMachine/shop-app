@@ -83,7 +83,7 @@ async function findById(id: string): Promise<PartDoc | null> {
   return Part.findById(id).populate('customer').populate('material');
 }
 
-async function add(data: PartDoc, deviceId: string): Promise<PartDoc> {
+async function create(data: PartDoc, deviceId: string): Promise<PartDoc> {
   const normalizedSubComponentIds = normalizeSubComponentIds(data.subComponentIds);
   const part = new Part({
     ...data,
@@ -130,6 +130,6 @@ async function update(
 export default {
   list,
   findById,
-  add,
+  create,
   update,
 };

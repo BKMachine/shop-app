@@ -60,7 +60,7 @@ router.post(
       fs.writeFileSync(destPath, req.file.buffer);
 
       const relPath = path.relative(documentDir, destPath).replace(/\\/g, '/');
-      const document = await DocumentService.add(
+      const document = await DocumentService.create(
         {
           filename,
           originalName: req.file.originalname,

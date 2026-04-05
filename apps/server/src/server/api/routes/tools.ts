@@ -55,7 +55,7 @@ router.post('/tools', requireKnownDevice, async (req, res, next) => {
   if (!data) return next(new HttpError(400, 'No tool data provided.'));
 
   try {
-    const doc = await Tools.add(data, req.deviceId);
+    const doc = await Tools.create(data, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
     next(e);
