@@ -19,8 +19,15 @@
               <div
                 :aria-disabled="!!urlInput"
                 class="upload-drop-area"
-                :class="{ 'upload-drop-area--disabled': !!urlInput }"
+                :class="{
+                  'upload-drop-area--disabled': !!urlInput,
+                  'upload-drop-area--active': isDragging,
+                }"
                 @click="!urlInput && triggerFileInput()"
+                @dragenter.prevent="onDragEnter"
+                @dragleave.prevent="onDragLeave"
+                @dragover.prevent="onDragOver"
+                @drop.prevent="onDrop"
               >
                 <v-icon color="primary" size="64">mdi-image</v-icon>
                 <div class="upload-drop-text">
@@ -330,6 +337,7 @@ const currentTab = ref<'upload' | 'gallery'>('gallery');
 const fileInput = ref<File[]>([]);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
+const isDragging = ref(false);
 const urlInput = ref('');
 const uploadLoading = ref(false);
 const uploadError = ref('');
@@ -341,8 +349,48 @@ const urlPreviewLoaded = ref(false);
 function onFileInputChange(e: Event) {
   const files = (e.target as HTMLInputElement).files;
   if (files && files.length > 0) {
-    selectedFile.value = files[0] ?? null;
+    selectFile(files[0] ?? null);
   }
+}
+
+function selectFile(file: File | null) {
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    uploadError.value = 'Please drop an image file.';
+    return;
+  }
+
+  uploadError.value = '';
+  uploadSuccess.value = false;
+  urlInput.value = '';
+  urlPreviewLoaded.value = false;
+  selectedFile.value = file;
+}
+
+function onDragEnter() {
+  if (uploadLoading.value || !!urlInput.value) return;
+  isDragging.value = true;
+}
+
+function onDragLeave(event: DragEvent) {
+  const currentTarget = event.currentTarget as Node | null;
+  const relatedTarget = event.relatedTarget as Node | null;
+  if (currentTarget && relatedTarget && currentTarget.contains(relatedTarget)) return;
+  isDragging.value = false;
+}
+
+function onDragOver() {
+  if (uploadLoading.value || !!urlInput.value) return;
+  isDragging.value = true;
+}
+
+function onDrop(event: DragEvent) {
+  isDragging.value = false;
+  if (uploadLoading.value || !!urlInput.value) return;
+
+  const file = event.dataTransfer?.files?.[0] ?? null;
+  selectFile(file);
 }
 
 function removeSelectedFile() {
@@ -353,6 +401,7 @@ function removeSelectedFile() {
 
 function resetUploadState() {
   selectedFile.value = null;
+  isDragging.value = false;
   urlInput.value = '';
   filePreviewUrl.value = null;
   urlPreviewLoaded.value = false;
@@ -828,6 +877,11 @@ function onUrlClear() {
 }
 .upload-drop-area:hover {
   border-color: #1976d2;
+}
+
+.upload-drop-area--active {
+  border-color: #1976d2;
+  background: #eaf2fd;
 }
 .upload-drop-text {
   font-size: 1rem;
