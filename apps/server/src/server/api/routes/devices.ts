@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import DeviceService from '../../../database/lib/device/device_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice, { getClientIp } from '../../middleware/requireKnownDevices.js';
+import {
+  assertKnownDevice,
+  getClientIp,
+  requireKnownDevice,
+} from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -43,7 +47,7 @@ router.post('/devices/register', async (req, res, next) => {
 });
 
 router.get('/devices/me', requireKnownDevice, async (req, res, next) => {
-  if (!req.device) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
+  assertKnownDevice(req);
 
   try {
     return res.status(200).json({ device: req.device });

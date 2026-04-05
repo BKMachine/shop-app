@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Reports from '../../../database/lib/report/report_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -15,9 +15,9 @@ router.get('/reports', async (_req, res, next) => {
 });
 
 router.post('/reports', requireKnownDevice, async (req, res, next) => {
-  const data: EmailReportDoc | undefined = req.body?.data ?? req.body;
+  assertKnownDevice(req);
+  const data: EmailReportDoc = req.body?.data ?? req.body;
   if (!data) return next(new HttpError(400, 'No report data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const doc = await Reports.create(data, req.deviceId);
@@ -28,9 +28,9 @@ router.post('/reports', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/reports', requireKnownDevice, async (req, res, next) => {
-  const data: EmailReportDoc | undefined = req.body?.data ?? req.body;
+  assertKnownDevice(req);
+  const data: EmailReportDoc = req.body?.data ?? req.body;
   if (!data) return next(new HttpError(400, 'No report data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     await Reports.update(data, req.deviceId);

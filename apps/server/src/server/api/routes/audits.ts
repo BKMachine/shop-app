@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Audit from '../../../database/lib/audit/audit_service.js';
 import HttpError from '../../middleware/httpError.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -51,7 +52,9 @@ router.post('/audits/parts/stock', async (req, res, next) => {
   }
 });
 
-router.post('/audits', async (req, res, next) => {
+router.post('/audits', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
+  if (!req.device.isAdmin) return next(new HttpError(403, 'Forbidden: admin access required.'));
   const { types, limit, offset }: { types?: Audit['type'][]; limit?: number; offset?: number } =
     req.body;
 

@@ -1,4 +1,3 @@
-import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import Audit from '../audit/audit_service.js';
 import Supplier from './supplier_model.js';
 
@@ -10,19 +9,19 @@ async function findById(id: string): Promise<SupplierDoc | null> {
   return Supplier.findById(id);
 }
 
-async function create(data: SupplierDoc, device = SERVER_DEVICE_ID): Promise<SupplierDoc> {
+async function create(data: SupplierDoc, deviceId: string): Promise<SupplierDoc> {
   const doc = new Supplier(data);
   await doc.save();
-  await Audit.addSupplierAudit(null, doc, device);
+  await Audit.addSupplierAudit(null, doc, deviceId);
   return doc;
 }
 
-async function update(doc: SupplierDoc, device = SERVER_DEVICE_ID): Promise<SupplierDoc | null> {
+async function update(doc: SupplierDoc, deviceId: string): Promise<SupplierDoc | null> {
   const oldDoc = await Supplier.findById(doc._id);
   if (!oldDoc) throw new Error(`Missing supplier document id: ${doc._id}`);
   const updated = await Supplier.findByIdAndUpdate(doc._id, doc, { returnDocument: 'after' });
   if (!updated) throw new Error(`Unable to update supplier document id: ${doc._id}`);
-  await Audit.addSupplierAudit(oldDoc, updated, device);
+  await Audit.addSupplierAudit(oldDoc, updated, deviceId);
   return updated;
 }
 

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { isValidId } from '../../../database/index.js';
 import Parts from '../../../database/lib/part/part_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const isAssemblyValidationError = (error: unknown): error is Error => {
@@ -36,9 +36,9 @@ router.get('/parts/:id', async (req, res, next) => {
 });
 
 router.post('/parts', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: PartDoc | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: PartDoc } = req.body;
   if (!data) return next(new HttpError(400, 'No part data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const doc = await Parts.add(data, req.deviceId);
@@ -50,9 +50,9 @@ router.post('/parts', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/parts', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: PartDoc | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: PartDoc } = req.body;
   if (!data) return next(new HttpError(400, 'No part data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const response = await Parts.update(data, req.deviceId, {

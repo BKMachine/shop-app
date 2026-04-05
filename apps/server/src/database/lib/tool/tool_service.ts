@@ -1,4 +1,3 @@
-import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
 import Tool from './tool_model.js';
@@ -28,15 +27,15 @@ async function getAutoReorders(): Promise<ToolDoc[]> {
     .populate('supplier');
 }
 
-async function add(data: ToolDoc, device = SERVER_DEVICE_ID): Promise<ToolDoc> {
+async function add(data: ToolDoc, deviceId: string): Promise<ToolDoc> {
   const tool = new Tool(data);
   await tool.save();
   emit('tool', tool);
-  await Audit.addToolAudit(null, tool, device);
+  await Audit.addToolAudit(null, tool, deviceId);
   return tool;
 }
 
-async function update(newTool: ToolDoc, device = SERVER_DEVICE_ID): Promise<ToolDoc | null> {
+async function update(newTool: ToolDoc, deviceId: string): Promise<ToolDoc | null> {
   const id = newTool._id;
   const oldTool: ToolDoc | null = await Tool.findById(id);
   if (!oldTool) throw new Error(`Missing tool document id: ${id}`);
@@ -44,13 +43,13 @@ async function update(newTool: ToolDoc, device = SERVER_DEVICE_ID): Promise<Tool
   const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { returnDocument: 'after' });
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   emit('tool', updatedTool);
-  await Audit.addToolAudit(oldTool, updatedTool, device);
+  await Audit.addToolAudit(oldTool, updatedTool, deviceId);
   return updatedTool;
 }
 
 async function pick(
   scanCode: string,
-  device = SERVER_DEVICE_ID,
+  deviceId: string,
 ): Promise<{ status: number; tool: ToolDoc | null }> {
   // Find tool by matching passed scanCode to tool item or barcode property
   const oldTool = await Tool.findOne({
@@ -70,14 +69,14 @@ async function pick(
     .populate('supplier');
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   emit('tool', updatedTool);
-  await Audit.addToolAudit(oldTool, updatedTool, device);
+  await Audit.addToolAudit(oldTool, updatedTool, deviceId);
   return { status: 200, tool: updatedTool };
 }
 
 async function stock(
   id: string,
   amount: number,
-  device = SERVER_DEVICE_ID,
+  deviceId: string,
 ): Promise<{ status: number; tool: ToolDoc | null }> {
   const oldTool = await Tool.findById(id).populate('vendor').populate('supplier');
   if (!oldTool) return { status: 404, tool: null };
@@ -91,7 +90,7 @@ async function stock(
     .populate('supplier');
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   emit('tool', updatedTool);
-  await Audit.addToolAudit(oldTool, updatedTool, device);
+  await Audit.addToolAudit(oldTool, updatedTool, deviceId);
   return { status: 200, tool: updatedTool };
 }
 

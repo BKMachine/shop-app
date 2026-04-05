@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { isValidId } from '../../../database/index.js';
 import Tools from '../../../database/lib/tool/tool_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -50,9 +50,9 @@ router.get('/tools/info/:scanCode', async (req, res, next) => {
 });
 
 router.post('/tools', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: ToolDoc | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: ToolDoc } = req.body;
   if (!data) return next(new HttpError(400, 'No tool data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const doc = await Tools.add(data, req.deviceId);
@@ -63,9 +63,9 @@ router.post('/tools', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/tools', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: ToolDoc | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: ToolDoc } = req.body;
   if (!data) return next(new HttpError(400, 'No tool data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const response = await Tools.update(data, req.deviceId);
@@ -76,9 +76,9 @@ router.put('/tools', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/tools/pick', requireKnownDevice, async (req, res, next) => {
-  const { scanCode }: { scanCode: string | undefined } = req.body;
+  assertKnownDevice(req);
+  const { scanCode }: { scanCode?: string } = req.body;
   if (!scanCode) return next(new HttpError(400, 'scanCode is required.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const { status, tool } = await Tools.pick(scanCode, req.deviceId);
@@ -89,10 +89,10 @@ router.put('/tools/pick', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/tools/stock', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
   const { id, amount }: { id: string; amount: number } = req.body;
   if (!id || amount === undefined || amount === null)
     return next(new HttpError(400, 'id and amount are required.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const { status, tool } = await Tools.stock(id, amount, req.deviceId);

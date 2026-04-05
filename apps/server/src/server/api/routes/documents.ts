@@ -8,7 +8,7 @@ import DocumentService from '../../../database/lib/document/document_service.js'
 import PartService from '../../../database/lib/part/part_service.js';
 import { documentDir } from '../../../directories.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -40,10 +40,10 @@ router.post(
   requireKnownDevice,
   upload.single('document'),
   async (req, res, next) => {
+    assertKnownDevice(req);
     const { entityId } = req.params;
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
     if (!req.file) return next(new HttpError(400, 'No document uploaded'));
-    if (!req.deviceId) return next(new HttpError(401, 'Missing device context'));
 
     try {
       const part = await PartService.findById(entityId);
@@ -60,16 +60,19 @@ router.post(
       fs.writeFileSync(destPath, req.file.buffer);
 
       const relPath = path.relative(documentDir, destPath).replace(/\\/g, '/');
-      const document = await DocumentService.add({
-        filename,
-        originalName: req.file.originalname,
-        relPath,
-        mimeType: req.file.mimetype,
-        extension: normalizedExt,
-        size: req.file.size,
-        entityType: 'part',
-        entityId,
-      });
+      const document = await DocumentService.add(
+        {
+          filename,
+          originalName: req.file.originalname,
+          relPath,
+          mimeType: req.file.mimetype,
+          extension: normalizedExt,
+          size: req.file.size,
+          entityType: 'part',
+          entityId,
+        },
+        req.deviceId,
+      );
 
       if (!part.documentIds) part.documentIds = [];
       const documentId = document._id.toString();
@@ -88,10 +91,10 @@ router.delete(
   '/entities/part/:entityId/documents/:documentId',
   requireKnownDevice,
   async (req, res, next) => {
+    assertKnownDevice(req);
     const { entityId, documentId } = req.params;
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
     if (!isValidId(documentId)) return next(new HttpError(400, 'Invalid document id'));
-    if (!req.deviceId) return next(new HttpError(401, 'Missing device context'));
 
     try {
       const document = await DocumentService.findById(documentId);
@@ -109,7 +112,7 @@ router.delete(
       const filePath = path.join(documentDir, document.relPath);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-      await DocumentService.remove(documentId);
+      await DocumentService.remove(documentId, req.deviceId);
 
       if (part.documentIds) {
         part.documentIds = part.documentIds.filter((id) => id.toString() !== documentId);

@@ -137,7 +137,7 @@ function fitTextToBox(
   return size;
 }
 
-function sanitize(text: string | undefined) {
+function sanitize(text?: string) {
   return (text || '').replace(/\s+/g, ' ').trim();
 }
 

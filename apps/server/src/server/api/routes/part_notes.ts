@@ -3,7 +3,7 @@ import { isValidId } from '../../../database/index.js';
 import PartService from '../../../database/lib/part/part_service.js';
 import PartNoteService from '../../../database/lib/part_note/part_note_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -20,10 +20,10 @@ router.get('/parts/:partId/notes', async (req, res, next) => {
 });
 
 router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
   const { partId } = req.params;
   const { text, priority } = req.body || {};
   if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
-  if (!req.device) return next(new HttpError(401, 'Missing device context'));
   if (typeof text !== 'string' || !text.trim()) return next(new HttpError(400, 'text is required'));
   if (!['critical', 'default'].includes(priority))
     return next(new HttpError(400, 'Invalid priority'));
@@ -42,7 +42,7 @@ router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) =
         updatedByDeviceId: req.device.deviceId,
         updatedByDisplayName: req.device.displayName,
       },
-      req.device._id.toString(),
+      req.deviceId,
     );
 
     res.status(200).json(note);
@@ -52,11 +52,11 @@ router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) =
 });
 
 router.put('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
   const { partId, noteId } = req.params;
   const { text, priority } = req.body || {};
   if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
   if (!isValidId(noteId)) return next(new HttpError(400, 'Invalid note id'));
-  if (!req.device) return next(new HttpError(401, 'Missing device context'));
   if (typeof text !== 'string' || !text.trim()) return next(new HttpError(400, 'text is required'));
   if (!['critical', 'default'].includes(priority))
     return next(new HttpError(400, 'Invalid priority'));
@@ -71,7 +71,7 @@ router.put('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, 
     note.updatedByDeviceId = req.device.deviceId;
     note.updatedByDisplayName = req.device.displayName;
 
-    const updated = await PartNoteService.update(note, req.device._id.toString());
+    const updated = await PartNoteService.update(note, req.deviceId);
     if (!updated) return next(new HttpError(404, 'Note not found'));
 
     res.status(200).json(updated);
@@ -81,10 +81,10 @@ router.put('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, 
 });
 
 router.delete('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
   const { partId, noteId } = req.params;
   if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
   if (!isValidId(noteId)) return next(new HttpError(400, 'Invalid note id'));
-  if (!req.deviceId) return next(new HttpError(401, 'Missing device context'));
 
   try {
     const note = await PartNoteService.findById(noteId);

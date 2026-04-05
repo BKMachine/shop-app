@@ -1,6 +1,6 @@
 import StoredDocument from './document_model.js';
 
-async function add(data: unknown): Promise<StoredDocumentDoc> {
+async function add(data: unknown, _deviceId: string): Promise<StoredDocumentDoc> {
   const doc = new StoredDocument(data);
   await doc.save();
   return doc;
@@ -14,7 +14,7 @@ async function listByEntity(entityType: 'part', entityId: string): Promise<Store
   return StoredDocument.find({ entityType, entityId }).sort({ createdAt: -1 });
 }
 
-async function remove(id: string): Promise<boolean> {
+async function remove(id: string, _deviceId: string): Promise<boolean> {
   const result = await StoredDocument.findByIdAndDelete(id);
   return result !== null;
 }

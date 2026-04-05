@@ -1,4 +1,3 @@
-import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
 import Part from './part_model.js';
@@ -32,10 +31,7 @@ function normalizeSubComponentIds(subComponentIds: unknown): PartSubComponent[] 
   );
 }
 
-async function validateSubComponentIds(
-  partId: string | undefined,
-  subComponentIds: PartSubComponent[],
-) {
+async function validateSubComponentIds(subComponentIds: PartSubComponent[], partId?: string) {
   if (!partId) {
     return subComponentIds;
   }
@@ -87,7 +83,7 @@ async function findById(id: string): Promise<PartDoc | null> {
   return Part.findById(id).populate('customer').populate('material');
 }
 
-async function add(data: PartDoc, device = SERVER_DEVICE_ID): Promise<PartDoc> {
+async function add(data: PartDoc, deviceId: string): Promise<PartDoc> {
   const normalizedSubComponentIds = normalizeSubComponentIds(data.subComponentIds);
   const part = new Part({
     ...data,
@@ -95,7 +91,7 @@ async function add(data: PartDoc, device = SERVER_DEVICE_ID): Promise<PartDoc> {
   });
   await part.save();
   emit('part', part);
-  await Audit.addPartAudit(null, part, device);
+  await Audit.addPartAudit(null, part, deviceId);
   return part;
 }
 
@@ -105,14 +101,14 @@ interface UpdatePartOptions {
 
 async function update(
   newPart: PartDoc,
-  device = SERVER_DEVICE_ID,
+  deviceId: string,
   options: UpdatePartOptions = {},
 ): Promise<PartDoc | null> {
   const id = newPart._id;
   const oldPart: PartDoc | null = await Part.findById(id);
   if (!oldPart) throw new Error(`Missing part document id: ${id}`);
   const normalizedSubComponentIds = normalizeSubComponentIds(newPart.subComponentIds);
-  await validateSubComponentIds(id.toString(), normalizedSubComponentIds);
+  await validateSubComponentIds(normalizedSubComponentIds, id.toString());
   const updatePayload = {
     ...newPart,
     subComponentIds: normalizedSubComponentIds,
@@ -127,7 +123,7 @@ async function update(
   const updatedPart = await Part.findByIdAndUpdate(id, updatePayload, { returnDocument: 'after' });
   if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);
   emit('part', updatedPart);
-  await Audit.addPartAudit(oldPart, updatedPart, device);
+  await Audit.addPartAudit(oldPart, updatedPart, deviceId);
   return updatedPart;
 }
 

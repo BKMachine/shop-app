@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Suppliers from '../../../database/lib/supplier/supplier_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -15,9 +15,9 @@ router.get('/suppliers', async (_req, res, next) => {
 });
 
 router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: SupplierDoc | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: SupplierDoc  } = req.body;
   if (!data) return next(new HttpError(400, 'No supplier data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const doc = await Suppliers.create(data, req.deviceId);
@@ -28,9 +28,9 @@ router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/suppliers', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: SupplierDoc | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: SupplierDoc  } = req.body;
   if (!data) return next(new HttpError(400, 'No supplier data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     await Suppliers.update(data, req.deviceId);

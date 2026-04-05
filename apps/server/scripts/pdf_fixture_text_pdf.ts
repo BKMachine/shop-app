@@ -1,3 +1,9 @@
+/* 
+  This file is a CLI utility for extracting text from PDF files and writing it to new files in various formats.
+  It supports processing individual PDF files or recursively searching directories for PDFs.
+  The output format can be plain text, a TypeScript module exporting the text, or a new PDF containing the extracted text.
+  The utility includes options for specifying the output directory, writing in place, and controlling overwriting behavior.
+*/
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PDFDocument, StandardFonts } from 'pdf-lib';

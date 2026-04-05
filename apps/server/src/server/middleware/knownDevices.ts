@@ -1,9 +1,29 @@
 import type { NextFunction, Request, Response } from 'express';
 import DeviceService from '../../database/lib/device/device_service.js';
+import HttpError from './httpError.js';
 
 const LAST_SEEN_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 
-export default async function requireKnownDevice(req: Request, res: Response, next: NextFunction) {
+export type KnownDeviceContext = NonNullable<Express.Request['deviceContext']>;
+
+type KnownDeviceFields = {
+  device: DeviceDoc;
+  deviceId: string;
+  deviceContext: KnownDeviceContext;
+};
+
+export type KnownDeviceRequest = Request & KnownDeviceFields;
+
+/**
+ * Validates the `X-Device-Id` header, loads the corresponding device, and
+ * attaches authenticated device context to the Express request.
+ *
+ * On success this populates `req.device`, `req.deviceId`, and
+ * `req.deviceContext` before calling `next()`. On failure it sends the
+ * appropriate client-facing response for missing, unknown, blocked, or
+ * unapproved devices.
+ */
+export async function requireKnownDevice(req: Request, res: Response, next: NextFunction) {
   try {
     const rawDeviceId = req.header('x-device-id')?.trim();
 
@@ -44,6 +64,7 @@ export default async function requireKnownDevice(req: Request, res: Response, ne
     req.device = device;
     req.deviceId = device._id.toString();
     req.deviceContext = {
+      deviceId: rawDeviceId,
       clientIp,
       userAgent,
     };
@@ -77,6 +98,20 @@ export default async function requireKnownDevice(req: Request, res: Response, ne
     next();
   } catch (error) {
     next(error);
+  }
+}
+
+/**
+ * Narrows a request to the authenticated known-device shape after
+ * `requireKnownDevice` has already run.
+ *
+ * This is an internal invariant check, not a client auth response path. If the
+ * expected device context is missing, it throws a 500 `HttpError` because the
+ * route or middleware chain is misconfigured.
+ */
+export function assertKnownDevice<T extends Request>(req: T): asserts req is T & KnownDeviceFields {
+  if (!req.device || !req.deviceId || !req.deviceContext) {
+    throw new HttpError(500, 'Known device context was expected but is missing.');
   }
 }
 

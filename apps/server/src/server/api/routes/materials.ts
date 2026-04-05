@@ -4,7 +4,7 @@ import Materials from '../../../database/lib/material/material_service.js';
 import { buildHighlightedPdf } from '../../../services/pdfs/pdf_highlight_service.js';
 import pdfParserService from '../../../services/pdfs/pdf_parser_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -19,9 +19,9 @@ router.get('/materials', async (_req, res, next) => {
 });
 
 router.post('/materials', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: Material | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: Material } = req.body;
   if (!data) return next(new HttpError(400, 'No material data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const doc = await Materials.add(data, req.deviceId);
@@ -32,9 +32,9 @@ router.post('/materials', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/materials', requireKnownDevice, async (req, res, next) => {
-  const { data }: { data: Material | undefined } = req.body;
+  assertKnownDevice(req);
+  const { data }: { data?: Material } = req.body;
   if (!data) return next(new HttpError(400, 'No material data provided.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const response = await Materials.update(data, req.deviceId);
@@ -64,10 +64,10 @@ router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next)
 });
 
 router.post('/materials/parse-pdf/apply', requireKnownDevice, async (req, res, next) => {
-  const { updates }: { updates: MaterialApplyUpdate[] | undefined } = req.body;
+  assertKnownDevice(req);
+  const { updates }: { updates?: MaterialApplyUpdate[] } = req.body;
   if (!updates || !Array.isArray(updates))
     return next(new HttpError(400, 'updates array is required.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const updated = await Promise.all(

@@ -1,4 +1,3 @@
-import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import { normalizeDimensions } from '@repo/utilities/materials';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
@@ -8,18 +7,15 @@ async function list(): Promise<MaterialDoc[]> {
   return await Material.find();
 }
 
-async function add(data: Material, device = SERVER_DEVICE_ID): Promise<MaterialDoc> {
+async function add(data: Material, deviceId: string): Promise<MaterialDoc> {
   const material = new Material(normalizeDimensions(data));
   await material.save();
-  await Audit.addMaterialAudit(null, material, device);
+  await Audit.addMaterialAudit(null, material, deviceId);
   emit('material', material);
   return material;
 }
 
-async function update(
-  newMaterial: Material,
-  device = SERVER_DEVICE_ID,
-): Promise<MaterialDoc | null> {
+async function update(newMaterial: Material, deviceId: string): Promise<MaterialDoc | null> {
   const id = newMaterial._id;
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -27,7 +23,7 @@ async function update(
     returnDocument: 'after',
   });
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
+  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, deviceId);
   emit('material', updatedMaterial);
   return updatedMaterial;
 }
@@ -57,7 +53,7 @@ async function findByParsedMaterial(data: Partial<Material>): Promise<MaterialDo
 async function updateCostPerFoot(
   id: string,
   costPerFoot: number,
-  device = SERVER_DEVICE_ID,
+  deviceId: string,
 ): Promise<MaterialDoc | null> {
   const oldMaterial: MaterialDoc | null = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -67,7 +63,7 @@ async function updateCostPerFoot(
     { returnDocument: 'after' },
   );
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
-  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, device);
+  await Audit.addMaterialAudit(oldMaterial, updatedMaterial, deviceId);
   emit('material', updatedMaterial);
   return updatedMaterial;
 }

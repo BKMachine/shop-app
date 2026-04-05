@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import { imageDir } from '../../../directories.js';
 import logger from '../../../logger.js';
 import { emit } from '../../../server/sockets.js';
@@ -49,7 +48,7 @@ async function findLatestByEntity(
   return Image.findOne({ entityType, entityId, status: 'attached' }).sort({ createdAt: -1 });
 }
 
-async function cleanupExpired(): Promise<{ deleted: number; errors: string[] }> {
+async function cleanupExpired(deviceId: string): Promise<{ deleted: number; errors: string[] }> {
   const result = { deleted: 0, errors: [] as string[] };
   try {
     const expiredImages = await Image.find({ expiresAt: { $lt: new Date() } });
@@ -61,7 +60,7 @@ async function cleanupExpired(): Promise<{ deleted: number; errors: string[] }> 
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
         // Delete document from database
-        await remove(img._id.toString(), SERVER_DEVICE_ID);
+        await remove(img._id.toString(), deviceId);
         result.deleted++;
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);

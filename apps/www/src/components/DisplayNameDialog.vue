@@ -52,17 +52,7 @@ async function onSave() {
 
   saving.value = true;
   try {
-    const response = await api.post<{
-      device: {
-        id: string;
-        deviceId: string;
-        displayName: string;
-        deviceType: Device['deviceType'];
-        isAdmin: boolean;
-        approved: boolean;
-        blocked: boolean;
-      };
-    }>('/devices/register', {
+    const response = await api.post<{ device: Device }>('/devices/register', {
       deviceId: getOrCreateDeviceId(),
       displayName: normalizedName,
       deviceType: 'pc',

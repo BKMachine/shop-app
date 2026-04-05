@@ -3,14 +3,14 @@ import logger from '../../../logger.js';
 import CupsService from '../../../services/cups_service.js';
 import LabelPdfService from '../../../services/label_pdf_service.js';
 import HttpError from '../../middleware/httpError.js';
-import requireKnownDevice from '../../middleware/requireKnownDevices.js';
+import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
 router.post('/print/location', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
   const { loc, pos }: PrintLocationBody = req.body;
   if (!loc || !pos) return next(new HttpError(400, 'loc and pos are required.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const pdf = await LabelPdfService.buildLocationLabel({ loc, pos });
@@ -28,9 +28,9 @@ router.post('/print/location', requireKnownDevice, async (req, res, next) => {
 });
 
 router.post('/print/item', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
   const { item, description, brand, barcode } = req.body as PrintItemBody & { barcode?: string };
   if (!item || !description) return next(new HttpError(400, 'item and description are required.'));
-  if (!req.deviceId) return next(new HttpError(401, 'Unauthorized: device not recognized.'));
 
   try {
     const pdf = await LabelPdfService.buildItemLabel({ item, description, brand, barcode });

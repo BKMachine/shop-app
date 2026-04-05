@@ -19,12 +19,12 @@ async function addAudit(
   type: Audit['type'],
   oldDoc: unknown | null,
   newDoc: unknown | null,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
   const doc = new Audit({
     type,
     timestamp: new Date(),
-    device: new Types.ObjectId(device),
+    device: new Types.ObjectId(deviceId),
     old: normalizeAuditPayload(oldDoc),
     new: normalizeAuditPayload(newDoc),
   });
@@ -35,9 +35,9 @@ async function addAudit(
 async function addToolAudit(
   oldTool: ToolDoc | null,
   newTool: ToolDoc,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('tool', oldTool, newTool, device);
+  await addAudit('tool', oldTool, newTool, deviceId);
   emit('tool_audit');
 }
 
@@ -82,9 +82,9 @@ async function getAllToolAudits(from: string, to: string): Promise<AuditDoc[]> {
 async function addPartAudit(
   oldPart: PartDoc | null,
   newPart: PartDoc,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('part', oldPart, newPart, device);
+  await addAudit('part', oldPart, newPart, deviceId);
   emit('part_audit');
 }
 
@@ -127,49 +127,49 @@ async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
 async function addMaterialAudit(
   oldMaterial: MaterialDoc | null,
   newMaterial: MaterialDoc,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('material', oldMaterial, newMaterial, device);
+  await addAudit('material', oldMaterial, newMaterial, deviceId);
 }
 
 async function addCustomerAudit(
   oldCustomer: CustomerDoc | null,
   newCustomer: CustomerDoc | null,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('customer', oldCustomer, newCustomer, device);
+  await addAudit('customer', oldCustomer, newCustomer, deviceId);
 }
 
 async function addSupplierAudit(
   oldSupplier: SupplierDoc | null,
   newSupplier: SupplierDoc | null,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('supplier', oldSupplier, newSupplier, device);
+  await addAudit('supplier', oldSupplier, newSupplier, deviceId);
 }
 
 async function addVendorAudit(
   oldVendor: VendorDoc | null,
   newVendor: VendorDoc | null,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('vendor', oldVendor, newVendor, device);
+  await addAudit('vendor', oldVendor, newVendor, deviceId);
 }
 
 async function addReportAudit(
   oldReport: EmailReportDoc | null,
   newReport: EmailReportDoc | null,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('report', oldReport, newReport, device);
+  await addAudit('report', oldReport, newReport, deviceId);
 }
 
 async function addPartNoteAudit(
   oldNote: PartNoteDoc | null,
   newNote: PartNoteDoc | null,
-  device: string,
+  deviceId: string,
 ): Promise<void> {
-  await addAudit('part_note', oldNote, newNote, device);
+  await addAudit('part_note', oldNote, newNote, deviceId);
 }
 
 async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Promise<AuditDoc[]> {
