@@ -13,9 +13,15 @@ async function create(data: unknown, _deviceId: string): Promise<ImageDoc> {
 }
 
 async function update(image: ImageDoc, _deviceId: string): Promise<ImageDoc | null> {
+  const updatePayload = {
+    ...image,
+    updatedAt: new Date(),
+    expiresAt: image.status === 'attached' ? null : image.expiresAt,
+  };
+
   const updated = await Image.findByIdAndUpdate(
     image._id,
-    { ...image, updatedAt: new Date() },
+    updatePayload,
     { returnDocument: 'after' },
   );
   emit('imageUploaded');
@@ -51,7 +57,7 @@ async function findLatestByEntity(
 async function cleanupExpired(deviceId: string): Promise<{ deleted: number; errors: string[] }> {
   const result = { deleted: 0, errors: [] as string[] };
   try {
-    const expiredImages = await Image.find({ expiresAt: { $lt: new Date() } });
+    const expiredImages = await Image.find({ status: 'temp', expiresAt: { $lt: new Date() } });
 
     for (const img of expiredImages) {
       try {

@@ -169,7 +169,7 @@ declare global {
     status: 'temp' | 'attached';
     entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor' | null;
     entityId: string | null;
-    expiresAt?: Date;
+    expiresAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
   }
