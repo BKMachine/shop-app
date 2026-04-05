@@ -40,4 +40,18 @@ router.put('/reports', requireKnownDevice, async (req, res, next) => {
   }
 });
 
+router.delete('/reports/:id', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
+  const id = String(req.params.id ?? '').trim();
+  if (!id) return next(new HttpError(400, 'No report id provided.'));
+
+  try {
+    const removed = await Reports.remove(id, req.deviceId);
+    if (!removed) return next(new HttpError(404, 'Report recipient not found.'));
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;

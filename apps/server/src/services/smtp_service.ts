@@ -1,5 +1,6 @@
 import { CronJob } from 'cron';
 import nodemailer from 'nodemailer';
+import Reports from '../database/lib/report/report_service.js';
 import Tool from '../database/lib/tool/tool_service.js';
 import logger from '../logger.js';
 
@@ -55,16 +56,51 @@ async function reorders() {
     html += `${x.item} - Qty: ${x.reorderQty} - $${x.cost}/ea.${orderLink}<br>`;
   });
 
-  const to: string[] = ['dave@bkmachine.net'];
-  if (process.env.NODE_ENV === 'production')
-    to.push('jeff@bkmachine.net', 'accounting@bkmachine.net');
+  const recipients = await getReportRecipients();
+
+  if (recipients.to.length === 0 && recipients.cc.length === 0) {
+    logger.warn('Skipping tool reorder email because no recipients are configured.');
+    return null;
+  }
 
   return transporter.sendMail({
     from: 'noreply@bkmachine.net',
-    to: to.join(', '),
+    to: recipients.to.join(', '),
+    cc: recipients.cc.length ? recipients.cc.join(', ') : undefined,
     subject: 'Tool Reorders 🛒',
     html,
   });
+}
+
+async function getReportRecipients(): Promise<{ to: string[]; cc: string[] }> {
+  if (process.env.NODE_ENV !== 'production') {
+    return {
+      to: ['dave@bkmachine.net'],
+      cc: [],
+    };
+  }
+
+  const reports = await Reports.list();
+  const to = new Set<string>();
+  const cc = new Set<string>();
+
+  for (const report of reports) {
+    const email = String(report.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!email) continue;
+    if (report.tooling?.to) to.add(email);
+    if (report.tooling?.cc) cc.add(email);
+  }
+
+  for (const email of to) {
+    cc.delete(email);
+  }
+
+  return {
+    to: [...to],
+    cc: [...cc],
+  };
 }
 
 export default {
