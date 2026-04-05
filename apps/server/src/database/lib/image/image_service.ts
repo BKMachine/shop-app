@@ -3,32 +3,53 @@ import path from 'node:path';
 import { imageDir } from '../../../directories.js';
 import logger from '../../../logger.js';
 import { emit } from '../../../server/sockets.js';
+import Audit from '../audit/audit_service.js';
 import Image from './image_model.js';
 
-async function create(data: unknown, _deviceId: string): Promise<ImageDoc> {
+function isAuditableImage(image: Pick<ImageDoc, 'status' | 'entityType' | 'entityId'> | null) {
+  return Boolean(image && image.status === 'attached' && image.entityType && image.entityId);
+}
+
+async function create(data: unknown, deviceId: string): Promise<ImageDoc> {
   const doc = new Image(data);
   await doc.save();
   emit('imageUploaded');
+  if (isAuditableImage(doc)) await Audit.addImageAudit(null, doc, deviceId);
   return doc;
 }
 
-async function update(image: ImageDoc, _deviceId: string): Promise<ImageDoc | null> {
+async function update(image: ImageDoc, deviceId: string): Promise<ImageDoc | null> {
+  const oldImage = await Image.findById(image._id);
+  if (!oldImage) throw new Error(`Missing image document id: ${image._id}`);
+
   const updatePayload = {
     ...image,
     updatedAt: new Date(),
     expiresAt: image.status === 'attached' ? null : image.expiresAt,
   };
 
-  const updated = await Image.findByIdAndUpdate(
-    image._id,
-    updatePayload,
-    { returnDocument: 'after' },
-  );
+  const updated = await Image.findByIdAndUpdate(image._id, updatePayload, {
+    returnDocument: 'after',
+  });
   emit('imageUploaded');
+
+  if (updated) {
+    const hadAuditableState = isAuditableImage(oldImage);
+    const hasAuditableState = isAuditableImage(updated);
+
+    if (!hadAuditableState && hasAuditableState) {
+      await Audit.addImageAudit(null, updated, deviceId);
+    } else if (hadAuditableState && hasAuditableState) {
+      await Audit.addImageAudit(oldImage, updated, deviceId);
+    } else if (hadAuditableState && !hasAuditableState) {
+      await Audit.addImageAudit(oldImage, null, deviceId);
+    }
+  }
+
   return updated;
 }
 
-async function listRecents(): Promise<ImageDoc[]> {
+async function listTemps(): Promise<ImageDoc[]> {
   return Image.find({ status: 'temp' }).sort({ createdAt: -1 });
 }
 
@@ -87,16 +108,17 @@ async function cleanupExpired(deviceId: string): Promise<{ deleted: number; erro
   return result;
 }
 
-async function remove(id: string, _deviceId: string): Promise<boolean> {
+async function remove(id: string, deviceId: string): Promise<boolean> {
   const result = await Image.findByIdAndDelete(id);
+  if (isAuditableImage(result)) await Audit.addImageAudit(result, null, deviceId);
   emit('imageDeleted');
   return result !== null;
 }
 
-async function removeMany(ids: string[], _deviceId: string): Promise<number> {
+async function removeAllTemps(ids: string[], _deviceId: string): Promise<number> {
   if (!ids.length) return 0;
 
-  const result = await Image.deleteMany({ _id: { $in: ids } });
+  const result = await Image.deleteMany({ _id: { $in: ids }, status: 'temp' });
   if (result.deletedCount) {
     emit('imageDeleted');
   }
@@ -107,12 +129,12 @@ async function removeMany(ids: string[], _deviceId: string): Promise<number> {
 export default {
   create,
   update,
-  listRecents,
+  listTemps,
   findById,
   listByIds,
   listByEntity,
   findLatestByEntity,
   cleanupExpired,
   remove,
-  removeMany,
+  removeAllTemps,
 };

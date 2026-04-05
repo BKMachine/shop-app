@@ -176,10 +176,10 @@ router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
   }
 });
 
-// Get recent temp image uploads
-router.get('/uploads/recent', async (_req, res, next) => {
+// Get temporary images
+router.get('/uploads/temps', async (_req, res, next) => {
   try {
-    const images = await ImageService.listRecents();
+    const images = await ImageService.listTemps();
 
     const response: MyImageData[] = images.map((image) => ({
       id: image._id.toString(),
@@ -190,7 +190,7 @@ router.get('/uploads/recent', async (_req, res, next) => {
 
     res.status(200).json(response);
   } catch (err) {
-    next(new HttpError(500, 'Failed to load recent images', { cause: err }));
+    next(new HttpError(500, 'Failed to load temp images', { cause: err }));
   }
 });
 
@@ -537,7 +537,7 @@ router.delete('/uploads', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
 
   try {
-    const tempImages = await ImageService.listRecents();
+    const tempImages = await ImageService.listTemps();
     const imageIds: string[] = [];
 
     for (const image of tempImages) {
@@ -546,7 +546,7 @@ router.delete('/uploads', requireKnownDevice, async (req, res, next) => {
       imageIds.push(image._id.toString());
     }
 
-    const deletedCount = await ImageService.removeMany(imageIds, req.deviceId);
+    const deletedCount = await ImageService.removeAllTemps(imageIds, req.deviceId);
 
     res.status(200).json({
       success: true,

@@ -265,6 +265,8 @@ function getEntityLabel(type: Audit['type']) {
     tool: 'Tool',
     material: 'Material',
     part: 'Part',
+    image: 'Image',
+    document: 'Document',
     customer: 'Customer',
     supplier: 'Supplier',
     vendor: 'Vendor',
@@ -280,6 +282,8 @@ function getEntityIcon(type: Audit['type']) {
     tool: 'mdi-tools',
     material: 'mdi-cube-scan',
     part: 'mdi-dots-triangle',
+    image: 'mdi-image-outline',
+    document: 'mdi-file-document-outline',
     customer: 'mdi-account-multiple-outline',
     supplier: 'mdi-truck-delivery-outline',
     vendor: 'mdi-package-variant-closed',
@@ -386,6 +390,8 @@ function getAuditSubject(audit: Audit) {
   const candidate = audit.new ?? audit.old ?? {};
   const record = normalizeRecord(candidate);
   return (
+    record.originalName ||
+    record.filename ||
     record.description ||
     record.name ||
     record.email ||
@@ -399,7 +405,10 @@ function getAuditSubject(audit: Audit) {
 function getAuditImageUrl(audit: Audit) {
   const newValue = normalizeRecord(audit.new);
   const oldValue = normalizeRecord(audit.old);
+  const relPathCandidate =
+    getStringField(newValue, 'relPath') || getStringField(oldValue, 'relPath');
   const candidates = [
+    audit.type === 'image' && relPathCandidate ? `/images/${relPathCandidate}` : '',
     getStringField(newValue, 'img'),
     getStringField(oldValue, 'img'),
     getStringField(newValue, 'logo'),
@@ -416,10 +425,15 @@ function getAuditImageUrl(audit: Audit) {
 function getAuditRoute(audit: Audit): RouteLocationRaw | undefined {
   const record = normalizeRecord(audit.new ?? audit.old);
   const id = typeof record._id === 'string' ? record._id : undefined;
+  const entityType = getStringField(record, 'entityType');
+  const entityId = getStringField(record, 'entityId');
 
   if (!id) return undefined;
   if (audit.type === 'tool') return { name: 'viewTool', params: { id } };
   if (audit.type === 'part') return { name: 'viewPart', params: { id } };
+  if ((audit.type === 'image' || audit.type === 'document') && entityType === 'part' && entityId) {
+    return { name: 'viewPart', params: { id: entityId } };
+  }
 
   return undefined;
 }
@@ -726,6 +740,16 @@ function getJsonLineClass(line: AuditJsonLine) {
   --audit-theme-soft: rgba(38, 166, 154, 0.12);
 }
 
+.audit-theme-image {
+  --audit-theme-color: #00897b;
+  --audit-theme-soft: rgba(0, 137, 123, 0.12);
+}
+
+.audit-theme-document {
+  --audit-theme-color: #6d4c41;
+  --audit-theme-soft: rgba(109, 76, 65, 0.12);
+}
+
 .audit-theme-material {
   --audit-theme-color: #7e57c2;
   --audit-theme-soft: rgba(126, 87, 194, 0.12);
@@ -758,6 +782,8 @@ function getJsonLineClass(line: AuditJsonLine) {
 
 .audit-card.audit-theme-tool,
 .audit-card.audit-theme-part,
+.audit-card.audit-theme-image,
+.audit-card.audit-theme-document,
 .audit-card.audit-theme-material,
 .audit-card.audit-theme-customer,
 .audit-card.audit-theme-supplier,
@@ -769,6 +795,8 @@ function getJsonLineClass(line: AuditJsonLine) {
 
 .audit-icon.audit-theme-tool,
 .audit-icon.audit-theme-part,
+.audit-icon.audit-theme-image,
+.audit-icon.audit-theme-document,
 .audit-icon.audit-theme-material,
 .audit-icon.audit-theme-customer,
 .audit-icon.audit-theme-supplier,

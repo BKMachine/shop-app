@@ -122,7 +122,7 @@
 
               <div v-else-if="!tempImages.length" class="text-medium-emphasis">
                 <v-alert type="info" variant="tonal">
-                  No recently uploaded images available. Upload one to get started.
+                  No temporary images available. Upload one to get started.
                 </v-alert>
               </div>
 
@@ -574,8 +574,8 @@ async function loadGallery(selectInitialTab: boolean = false) {
   galleryError.value = '';
 
   try {
-    const recentRes = await api.get('/images/uploads/recent');
-    tempImages.value = recentRes.data.map((img: ImageData) => ({
+    const tempRes = await api.get('/images/uploads/temps');
+    tempImages.value = tempRes.data.map((img: ImageData) => ({
       id: img.id,
       url: img.url,
       createdAt: img.createdAt,

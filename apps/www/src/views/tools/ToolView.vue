@@ -456,7 +456,7 @@ const tool = ref<Tool>({
 const toolOriginal = ref<Tool>({} as Tool);
 
 const category = ref<ToolCategory>('milling');
-const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'stock' : 'stock');
+const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'stock');
 const id = computed(() => router.currentRoute.value.params.id);
 const valid = ref(false);
 const loading = ref(false);

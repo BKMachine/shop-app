@@ -4,23 +4,23 @@
       <div>
         <div class="report-settings__eyebrow">Automated delivery</div>
         <h3 class="report-settings__title">Email Report Recipients</h3>
- 
       </div>
 
       <div class="report-settings__chips">
         <v-chip prepend-icon="mdi-email-multiple-outline" variant="flat">
-          {{ recipientCount }} recipients
+          {{ recipientCount }}
+          recipients
         </v-chip>
         <v-chip color="primary" prepend-icon="mdi-send-outline" variant="tonal">
-          {{ toCount }} to
+          {{ toCount }}
+          to
         </v-chip>
         <v-chip color="secondary" prepend-icon="mdi-email-outline" variant="tonal">
-          {{ ccCount }} cc
+          {{ ccCount }}
+          cc
         </v-chip>
       </div>
     </div>
-
-    
 
     <v-card class="report-settings__composer" rounded="lg" variant="outlined">
       <v-card-text>
@@ -88,7 +88,11 @@
                 />
               </td>
               <td class="report-settings__report-cell text-center">
-                <div aria-label="Tooling report recipients" class="report-settings__report-toggle-group" role="group">
+                <div
+                  aria-label="Tooling report recipients"
+                  class="report-settings__report-toggle-group"
+                  role="group"
+                >
                   <v-checkbox
                     v-model="email.tooling.to"
                     class="report-settings__checkbox"
@@ -179,7 +183,8 @@ async function saveEmail(email: EmailReport) {
   }
 
   const hasDuplicate = emails.value.some(
-    (candidate) => candidate._id !== email._id && normalizeEmailAddress(candidate.email) === email.email,
+    (candidate) =>
+      candidate._id !== email._id && normalizeEmailAddress(candidate.email) === email.email,
   );
 
   if (hasDuplicate) {
@@ -347,7 +352,7 @@ function isValidEmail(value: string) {
 }
 
 .report-settings__group-header::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 12px;
   bottom: 0;

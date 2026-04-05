@@ -1,8 +1,10 @@
+import Audit from '../audit/audit_service.js';
 import StoredDocument from './document_model.js';
 
 async function create(data: unknown, _deviceId: string): Promise<StoredDocumentDoc> {
   const doc = new StoredDocument(data);
   await doc.save();
+  await Audit.addDocumentAudit(null, doc, _deviceId);
   return doc;
 }
 
@@ -16,6 +18,9 @@ async function listByEntity(entityType: 'part', entityId: string): Promise<Store
 
 async function remove(id: string, _deviceId: string): Promise<boolean> {
   const result = await StoredDocument.findByIdAndDelete(id);
+  if (result) {
+    await Audit.addDocumentAudit(result, null, _deviceId);
+  }
   return result !== null;
 }
 

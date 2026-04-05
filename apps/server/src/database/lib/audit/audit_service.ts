@@ -32,6 +32,22 @@ async function addAudit(
   emit('audit');
 }
 
+async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Promise<AuditDoc[]> {
+  const query: {
+    type?: { $in: Audit['type'][] };
+  } = {};
+
+  if (types?.length) {
+    query.type = { $in: types };
+  }
+
+  return Audit.find(query, 'type timestamp device old new')
+    .sort({ timestamp: -1 })
+    .skip(offset)
+    .limit(limit)
+    .populate('device', 'displayName deviceType');
+}
+
 async function addToolAudit(
   oldTool: ToolDoc | null,
   newTool: ToolDoc,
@@ -86,6 +102,22 @@ async function addPartAudit(
 ): Promise<void> {
   await addAudit('part', oldPart, newPart, deviceId);
   emit('part_audit');
+}
+
+async function addImageAudit(
+  oldImage: ImageDoc | null,
+  newImage: ImageDoc | null,
+  deviceId: string,
+): Promise<void> {
+  await addAudit('image', oldImage, newImage, deviceId);
+}
+
+async function addDocumentAudit(
+  oldDocument: StoredDocumentDoc | null,
+  newDocument: StoredDocumentDoc | null,
+  deviceId: string,
+): Promise<void> {
+  await addAudit('document', oldDocument, newDocument, deviceId);
 }
 
 async function getPartAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
@@ -172,35 +204,21 @@ async function addPartNoteAudit(
   await addAudit('part_note', oldNote, newNote, deviceId);
 }
 
-async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Promise<AuditDoc[]> {
-  const query: {
-    type?: { $in: Audit['type'][] };
-  } = {};
-
-  if (types?.length) {
-    query.type = { $in: types };
-  }
-
-  return Audit.find(query, 'type timestamp device old new')
-    .sort({ timestamp: -1 })
-    .skip(offset)
-    .limit(limit)
-    .populate('device', 'displayName deviceType');
-}
-
 export default {
   addAudit,
+  getAllAudits,
   addToolAudit,
   getToolAudits,
+  getAllToolAudits,
   addPartAudit,
   getPartAudits,
-  getAllToolAudits,
   getAllPartAudits,
+  addImageAudit,
+  addDocumentAudit,
   addMaterialAudit,
   addCustomerAudit,
   addSupplierAudit,
   addVendorAudit,
   addReportAudit,
   addPartNoteAudit,
-  getAllAudits,
 };

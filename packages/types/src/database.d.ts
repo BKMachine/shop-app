@@ -12,6 +12,8 @@ declare global {
       | 'tool'
       | 'material'
       | 'part'
+      | 'image'
+      | 'document'
       | 'customer'
       | 'supplier'
       | 'vendor'

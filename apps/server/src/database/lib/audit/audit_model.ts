@@ -3,7 +3,18 @@ import { model, Schema } from 'mongoose';
 const schema = new Schema<AuditDoc>({
   type: {
     type: String,
-    enum: ['tool', 'material', 'part', 'customer', 'supplier', 'vendor', 'report', 'part_note'],
+    enum: [
+      'tool',
+      'material',
+      'part',
+      'image',
+      'document',
+      'customer',
+      'supplier',
+      'vendor',
+      'report',
+      'part_note',
+    ],
     required: true,
   },
   timestamp: Date,
