@@ -352,7 +352,7 @@
                   </v-dialog>
                 </template>
                 <template #details>
-                  <div class="stock-value-details">
+                  <div class="stock-value-details mb-1">
                     <button
                       class="stock-value-toggle"
                       type="button"
