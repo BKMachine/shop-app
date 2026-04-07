@@ -351,6 +351,17 @@
                     </template>
                   </v-dialog>
                 </template>
+                <template #details>
+                  <div class="stock-value-details">
+                    <button
+                      class="stock-value-toggle"
+                      type="button"
+                      @click="showStockValue = !showStockValue"
+                    >
+                      {{ showStockValue ? stockValueDisplay : 'Show Value' }}
+                    </button>
+                  </div>
+                </template>
               </v-text-field>
             </v-col>
             <v-col cols="4">
@@ -450,6 +461,7 @@ const saveFlag = ref(false);
 const partMaterialCost = ref(0);
 const imageManagerVisible = ref(false);
 const criticalNotesCount = ref(0);
+const showStockValue = ref(false);
 const subComponentRemovalDialog = ref({
   visible: false,
   partId: '',
@@ -561,6 +573,13 @@ const currentRateTone = computed(() => getToneForRate(currentRate.value));
 
 const currentRateDisplay = computed(() => {
   return `$${currentRate.value.toFixed(2)}/hr`;
+});
+const stockValue = computed(() => (Number(part.value.stock) || 0) * Number(part.value.price || 0));
+const stockValueDisplay = computed(() => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(stockValue.value);
 });
 
 const normalizedPartFilesPath = computed(() => normalizeFolderPath(part.value.partFilesPath));
@@ -932,6 +951,24 @@ async function loadCriticalNotesCount() {
 .clickable-chip {
   cursor: pointer;
 }
+
+.stock-value-details {
+  min-height: 18px;
+  padding-top: 2px;
+}
+
+.stock-value-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 300;
+  color: #1e88e5;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
 .v-window-item {
   padding: 0 1rem 1rem 1rem;
 }
