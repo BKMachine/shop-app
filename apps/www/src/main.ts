@@ -7,6 +7,11 @@ import './assets/style.css';
 import { socket } from '@/plugins/socket';
 import { usePartStore } from './stores/parts_store';
 
+if (import.meta.env.DEV) {
+  const baseTitle = document.title || 'BK Machine';
+  document.title = `[DEV] ${baseTitle}`;
+}
+
 const app = createApp(App);
 registerPlugins(app);
 app.mount('#app');
