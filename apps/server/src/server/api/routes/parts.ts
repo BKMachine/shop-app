@@ -22,6 +22,19 @@ router.get('/parts', async (_req, res, next) => {
   }
 });
 
+router.get('/parts/info/:scanCode', async (req, res, next) => {
+  const { scanCode } = req.params;
+  if (!isValidId(scanCode)) return next(new HttpError(400, 'Invalid part id'));
+
+  try {
+    const part = await Parts.findByScanCode(scanCode);
+    if (!part) return next(new HttpError(404, 'Part not found.'));
+    res.status(200).json(part);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/parts/:id', async (req, res, next) => {
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid part id'));
@@ -61,6 +74,21 @@ router.put('/parts', requireKnownDevice, async (req, res, next) => {
     res.status(200).json(response);
   } catch (e) {
     if (isAssemblyValidationError(e)) return next(new HttpError(400, e.message));
+    next(e);
+  }
+});
+
+router.put('/parts/stock', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
+  const { id, amount }: { id?: string; amount?: number } = req.body;
+  if (!id || amount === undefined || amount === null)
+    return next(new HttpError(400, 'id and amount are required.'));
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid part id'));
+
+  try {
+    const { status, part } = await Parts.stock(id, amount, req.deviceId);
+    res.status(status).json(part);
+  } catch (e) {
     next(e);
   }
 });

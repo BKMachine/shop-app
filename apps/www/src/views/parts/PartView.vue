@@ -636,32 +636,30 @@ onBeforeUnmount(() => {
   partStore.setLastId(part.value._id);
 });
 
+watch(
+  () => partStore.trigger.partID,
+  (partId) => {
+    if (router.currentRoute.value.name !== 'viewPart') return;
+    if (!partId || partId !== router.currentRoute.value.params.id) return;
+
+    const match = partStore.rawParts.find((candidate) => candidate._id === partId);
+    if (!match) return;
+
+    if (partIsAltered.value && saveFlag.value === false) {
+      alert('Part was updated. Local changes will be lost.');
+    }
+
+    applyFetchedPart(match);
+  },
+);
+
 function fetchPart(showSpinner: boolean = true) {
   const { id } = router.currentRoute.value.params;
   if (showSpinner) loading.value = true;
   axios
     .get<Part>(`/parts/${id}`)
     .then(({ data }) => {
-      const mergedPart = { ...defaultPartValues, ...data };
-      mergedPart.subComponentIds = (mergedPart.subComponentIds || [])
-        .map((entry) => {
-          if (typeof entry === 'string') {
-            return { partId: entry, qty: 1 };
-          }
-
-          return {
-            partId: String(entry.partId),
-            qty: Math.max(1, Number(entry.qty) || 1),
-          };
-        })
-        .filter(
-          (entry, index, array) =>
-            array.findIndex((candidate) => candidate.partId === entry.partId) === index &&
-            entry.partId !== mergedPart._id,
-        );
-      part.value = cloneDeep(mergedPart);
-      partOriginal.value = cloneDeep(mergedPart);
-      void loadCriticalNotesCount();
+      applyFetchedPart(data);
     })
     .catch(() => {
       alert('Part not found.');
@@ -669,6 +667,29 @@ function fetchPart(showSpinner: boolean = true) {
     .finally(() => {
       loading.value = false;
     });
+}
+
+function applyFetchedPart(source: Part) {
+  const mergedPart = { ...defaultPartValues, ...source };
+  mergedPart.subComponentIds = (mergedPart.subComponentIds || [])
+    .map((entry) => {
+      if (typeof entry === 'string') {
+        return { partId: entry, qty: 1 };
+      }
+
+      return {
+        partId: String(entry.partId),
+        qty: Math.max(1, Number(entry.qty) || 1),
+      };
+    })
+    .filter(
+      (entry, index, array) =>
+        array.findIndex((candidate) => candidate.partId === entry.partId) === index &&
+        entry.partId !== mergedPart._id,
+    );
+  part.value = cloneDeep(mergedPart);
+  partOriginal.value = cloneDeep(mergedPart);
+  void loadCriticalNotesCount();
 }
 
 async function savePart() {

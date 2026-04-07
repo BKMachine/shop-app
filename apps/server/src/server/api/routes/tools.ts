@@ -93,6 +93,7 @@ router.put('/tools/stock', requireKnownDevice, async (req, res, next) => {
   const { id, amount }: { id: string; amount: number } = req.body;
   if (!id || amount === undefined || amount === null)
     return next(new HttpError(400, 'id and amount are required.'));
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid tool id'));
 
   try {
     const { status, tool } = await Tools.stock(id, amount, req.deviceId);

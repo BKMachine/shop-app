@@ -217,6 +217,19 @@ export const usePartStore = defineStore('parts', () => {
     await loadPartNotes(partId);
   }
 
+  const trigger = ref({ partID: '' });
+
+  function SOCKET_part(part: Part) {
+    const index = rawParts.value.findIndex((x) => x._id === part._id);
+    if (index > -1) {
+      rawParts.value[index] = part;
+      trigger.value.partID = part._id;
+      setTimeout(() => {
+        trigger.value.partID = '';
+      }, 500);
+    }
+  }
+
   return {
     rawParts,
     parts,
@@ -226,6 +239,7 @@ export const usePartStore = defineStore('parts', () => {
     documentsByPartId,
     notesByPartId,
     lastId,
+    trigger,
     fetch,
     setLastId,
     add,
@@ -247,5 +261,6 @@ export const usePartStore = defineStore('parts', () => {
     updatePartImage,
     updatePartImageIds,
     updatePartDocumentIds,
+    SOCKET_part,
   };
 });

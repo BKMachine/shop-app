@@ -78,12 +78,13 @@ async function stock(
   amount: number,
   deviceId: string,
 ): Promise<{ status: number; tool: ToolDoc | null }> {
-  const oldTool = await Tool.findById(id).populate('vendor').populate('supplier');
+  const oldTool = await Tool.findById(id);
   if (!oldTool) return { status: 404, tool: null };
-  if (oldTool.stock + amount < 0) return { status: 400, tool: oldTool };
-  // Copy tool before any changes are made
+  if (oldTool.stock + amount < 0) return { status: 400, tool: null };
+
   const newTool: ToolDoc = oldTool.toObject();
   newTool.stock += amount;
+
   const computedTool = computedToolChanges(oldTool, newTool);
   const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { returnDocument: 'after' })
     .populate('vendor')

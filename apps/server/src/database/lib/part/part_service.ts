@@ -79,6 +79,10 @@ async function list(): Promise<PartDoc[]> {
   return Part.find({});
 }
 
+async function findByScanCode(scanCode: string): Promise<PartDoc | null> {
+  return Part.findById(scanCode).populate('customer');
+}
+
 async function findById(id: string): Promise<PartDoc | null> {
   return Part.findById(id).populate('customer').populate('material');
 }
@@ -127,9 +131,32 @@ async function update(
   return updatedPart;
 }
 
+async function stock(
+  id: string,
+  amount: number,
+  deviceId: string,
+): Promise<{ status: number; part: PartDoc | null }> {
+  const oldPart = await Part.findById(id);
+  if (!oldPart) return { status: 404, part: null };
+  if (oldPart.stock + amount < 0) return { status: 400, part: null };
+
+  const newPart: PartDoc = oldPart.toObject();
+  newPart.stock += amount;
+
+  const updatedPart = await Part.findByIdAndUpdate(id, newPart, { returnDocument: 'after' })
+    .populate('customer')
+    .populate('material');
+  if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);
+  emit('part', updatedPart);
+  await Audit.addPartAudit(oldPart, updatedPart, deviceId);
+  return { status: 200, part: updatedPart };
+}
+
 export default {
   list,
+  findByScanCode,
   findById,
   create,
   update,
+  stock,
 };
