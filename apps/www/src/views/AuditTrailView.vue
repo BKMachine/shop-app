@@ -281,7 +281,7 @@ function getEntityIcon(type: Audit['type']) {
   const icons: Record<Audit['type'], string> = {
     tool: 'mdi-tools',
     material: 'mdi-cube-scan',
-    part: 'mdi-dots-triangle',
+    part: 'mdi-shape',
     image: 'mdi-image-outline',
     document: 'mdi-file-document-outline',
     customer: 'mdi-account-multiple-outline',

@@ -12,9 +12,7 @@
     <v-navigation-drawer v-model="drawer">
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
-        <v-list-item link prepend-icon="mdi-dots-triangle" :to="{ name: 'parts' }">
-          Parts
-        </v-list-item>
+        <v-list-item link prepend-icon="mdi-shape " :to="{ name: 'parts' }"> Parts </v-list-item>
 
         <v-list-item link prepend-icon="mdi-tools" :to="{ name: 'tools' }"> Tools </v-list-item>
         <v-list-item link prepend-icon="mdi-map-marker" :to="{ name: 'locations' }">
