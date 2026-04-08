@@ -17,6 +17,7 @@
           <v-window-item value="upload">
             <v-card-text class="upload-tab-root">
               <div
+                v-if="!urlInput"
                 :aria-disabled="!!urlInput"
                 class="upload-drop-area"
                 :class="{
@@ -31,7 +32,10 @@
               >
                 <v-icon color="primary" size="64">mdi-image</v-icon>
                 <div class="upload-drop-text">
-                  <span>Drop your image here, or <span class="upload-browse">browse</span></span>
+                  <span>
+                    Drop your image here, <span class="upload-browse">browse</span>, or paste from
+                    clipboard
+                  </span>
                 </div>
                 <div class="upload-drop-types">Supports: PNG, JPG, JPEG, WEBP</div>
                 <input
@@ -57,12 +61,15 @@
                   <v-icon>mdi-close</v-icon>
                 </v-btn>
               </div>
-              <div v-if="filePreviewUrl" class="upload-url-preview">
-                <img alt="Preview" class="upload-url-img-preview" :src="filePreviewUrl" />
+              <div v-if="filePreviewUrl" class="upload-file-preview">
+                <img alt="Preview" class="upload-file-img-preview" :src="filePreviewUrl" />
               </div>
-              <div class="upload-or-divider"><span>or</span></div>
+              <div v-if="!urlInput && !selectedFile " class="upload-or-divider">
+                <span>or</span>
+              </div>
               <div class="upload-url-row">
                 <v-text-field
+                  v-if="!selectedFile"
                   v-model="urlInput"
                   class="upload-url-input"
                   clearable
@@ -73,14 +80,23 @@
                   @click:clear="onUrlClear"
                 />
               </div>
+              <div
+                v-if="validImageUrl && urlPreviewLoading"
+                class="text-medium-emphasis text-body-2"
+              >
+                Checking image preview...
+              </div>
               <div v-if="validImageUrl" class="upload-url-preview">
                 <img
-                  alt="Invalid URL"
+                  alt="URL preview"
                   class="upload-url-img-preview"
-                  :src="urlInput"
-                  @error="urlPreviewLoaded = false"
-                  @load="urlPreviewLoaded = true"
+                  :src="normalizedUrlInput"
+                  @error="onUrlPreviewError"
+                  @load="onUrlPreviewLoad"
                 />
+              </div>
+              <div v-if="validImageUrl && urlPreviewError" class="text-error text-body-2">
+                The URL did not load as an image in preview.
               </div>
 
               <div v-if="uploadError" class="text-error mt-2">{{ uploadError }}</div>
@@ -91,7 +107,7 @@
                 <v-btn
                   v-if="props.entityId"
                   color="secondary"
-                  :disabled="(!selectedFile && !(validImageUrl && urlPreviewLoaded)) || uploadLoading"
+                  :disabled="(!selectedFile && !canUploadFromUrl) || uploadLoading"
                   :loading="uploadLoading"
                   variant="outlined"
                   @click="importImage(false)"
@@ -100,7 +116,7 @@
                 </v-btn>
                 <v-btn
                   color="primary"
-                  :disabled="(!selectedFile && !(validImageUrl && urlPreviewLoaded)) || uploadLoading"
+                  :disabled="(!selectedFile && !canUploadFromUrl) || uploadLoading"
                   :loading="uploadLoading"
                   variant="flat"
                   @click="importImage(true)"
@@ -184,12 +200,18 @@
                     @click="toggleTempSelection(img.id)"
                   >
                     <div
-                      v-if="backgroundRemovalId === img.id || autoCropId === img.id"
+                      v-if="backgroundRemovalId === img.id || autoCropId === img.id || rotatingId === img.id"
                       class="image-card__busy-overlay"
                     >
                       <v-progress-circular color="primary" indeterminate />
                       <div class="text-caption mt-2">
-                        {{ backgroundRemovalId === img.id ? 'Removing background...' : 'Auto cropping...' }}
+                        {{ backgroundRemovalId === img.id
+                            ? 'Removing background...'
+                            : autoCropId === img.id
+                              ? 'Auto cropping...'
+                              : rotatingDirection === 'ccw'
+                                ? 'Rotating 90 degrees CCW...'
+                                : 'Rotating 90 degrees CW...' }}
                       </div>
                     </div>
                     <v-img
@@ -205,6 +227,46 @@
                     </v-card-subtitle>
 
                     <div class="image-card__actions px-2 pb-2 mt-2">
+                      <div class="image-card__action-row">
+                        <v-btn
+                          block
+                          color="secondary"
+                          :disabled="
+                            deleteAllLoading ||
+                            backgroundRemovalId === img.id ||
+                            autoCropId === img.id ||
+                            rotatingId === img.id ||
+                            deletingId === img.id
+                          "
+                          :loading="rotatingId === img.id && rotatingDirection === 'ccw'"
+                          prepend-icon="mdi-rotate-left"
+                          size="x-small"
+                          title="Rotate 90 degrees counterclockwise"
+                          variant="outlined"
+                          @click.stop="attemptRotate(img.id, 'ccw')"
+                        >
+                          90 CCW
+                        </v-btn>
+                        <v-btn
+                          block
+                          color="secondary"
+                          :disabled="
+                            deleteAllLoading ||
+                            backgroundRemovalId === img.id ||
+                            autoCropId === img.id ||
+                            rotatingId === img.id ||
+                            deletingId === img.id
+                          "
+                          :loading="rotatingId === img.id && rotatingDirection === 'cw'"
+                          prepend-icon="mdi-rotate-right"
+                          size="x-small"
+                          title="Rotate 90 degrees clockwise"
+                          variant="outlined"
+                          @click.stop="attemptRotate(img.id, 'cw')"
+                        >
+                          90 CW
+                        </v-btn>
+                      </div>
                       <v-btn
                         block
                         color="secondary"
@@ -212,6 +274,7 @@
                           deleteAllLoading ||
                           backgroundRemovalId === img.id ||
                           autoCropId === img.id ||
+                          rotatingId === img.id ||
                           deletingId === img.id
                         "
                         :loading="backgroundRemovalId === img.id"
@@ -230,6 +293,7 @@
                           deleteAllLoading ||
                           backgroundRemovalId === img.id ||
                           autoCropId === img.id ||
+                          rotatingId === img.id ||
                           deletingId === img.id
                         "
                         :loading="autoCropId === img.id"
@@ -246,7 +310,12 @@
                         block
                         class="image-card__delete"
                         color="error"
-                        :disabled="deleteAllLoading || backgroundRemovalId === img.id || autoCropId === img.id"
+                        :disabled="
+                          deleteAllLoading ||
+                          backgroundRemovalId === img.id ||
+                          autoCropId === img.id ||
+                          rotatingId === img.id
+                        "
                         :loading="deletingId === img.id"
                         prepend-icon="mdi-delete"
                         size="x-small"
@@ -345,6 +414,33 @@ const uploadSuccess = ref(false);
 const uploadProgress = ref(0);
 const filePreviewUrl = ref<string | null>(null);
 const urlPreviewLoaded = ref(false);
+const urlPreviewLoading = ref(false);
+const urlPreviewError = ref(false);
+
+function getClipboardImageFile(event: ClipboardEvent): File | null {
+  const items = event.clipboardData?.items;
+  if (!items) return null;
+
+  for (const item of items) {
+    if (!item.type.startsWith('image/')) {
+      continue;
+    }
+
+    const file = item.getAsFile();
+    if (!file) {
+      continue;
+    }
+
+    return file.name
+      ? file
+      : new File([file], `clipboard-image.${file.type.split('/')[1] ?? 'png'}`, {
+          type: file.type,
+          lastModified: Date.now(),
+        });
+  }
+
+  return null;
+}
 
 function onFileInputChange(e: Event) {
   const files = (e.target as HTMLInputElement).files;
@@ -365,6 +461,8 @@ function selectFile(file: File | null) {
   uploadSuccess.value = false;
   urlInput.value = '';
   urlPreviewLoaded.value = false;
+  urlPreviewLoading.value = false;
+  urlPreviewError.value = false;
   selectedFile.value = file;
 }
 
@@ -393,6 +491,20 @@ function onDrop(event: DragEvent) {
   selectFile(file);
 }
 
+function onPaste(event: ClipboardEvent) {
+  if (!dialog.value || currentTab.value !== 'upload' || uploadLoading.value || !!urlInput.value) {
+    return;
+  }
+
+  const clipboardFile = getClipboardImageFile(event);
+  if (!clipboardFile) {
+    return;
+  }
+
+  event.preventDefault();
+  selectFile(clipboardFile);
+}
+
 function removeSelectedFile() {
   selectedFile.value = null;
   filePreviewUrl.value = null;
@@ -405,6 +517,8 @@ function resetUploadState() {
   urlInput.value = '';
   filePreviewUrl.value = null;
   urlPreviewLoaded.value = false;
+  urlPreviewLoading.value = false;
+  urlPreviewError.value = false;
   uploadError.value = '';
   uploadSuccess.value = false;
   uploadProgress.value = 0;
@@ -447,6 +561,8 @@ const tempImages = ref<ImageData[]>([]);
 const deletingId = ref('');
 const backgroundRemovalId = ref('');
 const autoCropId = ref('');
+const rotatingId = ref('');
+const rotatingDirection = ref<'cw' | 'ccw' | ''>('');
 const selectedTempImageIds = ref<string[]>([]);
 const assignLoading = ref(false);
 const assignSuccess = ref(false);
@@ -458,7 +574,11 @@ const deleteAllLoading = ref(false);
 const canSelectMultiple = computed(() => props.entityType === 'part');
 const isGalleryBusy = computed(() => {
   return Boolean(
-    deleteAllLoading.value || deletingId.value || backgroundRemovalId.value || autoCropId.value,
+    deleteAllLoading.value ||
+      deletingId.value ||
+      backgroundRemovalId.value ||
+      autoCropId.value ||
+      rotatingId.value,
   );
 });
 
@@ -525,11 +645,13 @@ function handleImageDeleted() {
 onMounted(() => {
   socket.on('imageUploaded', handleImageUploaded);
   socket.on('imageDeleted', handleImageDeleted);
+  window.addEventListener('paste', onPaste);
 });
 
 onBeforeUnmount(() => {
   socket.off('imageUploaded', handleImageUploaded);
   socket.off('imageDeleted', handleImageDeleted);
+  window.removeEventListener('paste', onPaste);
 });
 
 watch(dialog, (isOpen) => {
@@ -636,13 +758,13 @@ async function uploadFile(attachAfterUpload: boolean) {
 }
 
 async function uploadUrl(attachAfterUpload: boolean) {
-  if (!urlInput.value) return;
+  if (!normalizedUrlInput.value) return;
 
   uploadLoading.value = true;
   uploadError.value = '';
   uploadSuccess.value = false;
   try {
-    const { data } = await api.post('/images/uploads/url', { url: urlInput.value });
+    const { data } = await api.post('/images/uploads/url', { url: normalizedUrlInput.value });
 
     if (attachAfterUpload && props.entityId) {
       await attachUploadedImage(data.id);
@@ -654,6 +776,8 @@ async function uploadUrl(attachAfterUpload: boolean) {
 
     urlInput.value = '';
     urlPreviewLoaded.value = false;
+    urlPreviewLoading.value = false;
+    urlPreviewError.value = false;
   } catch (err) {
     uploadError.value = 'Failed to download and upload image';
     console.error(err);
@@ -730,7 +854,7 @@ async function assignSelectedToEntity() {
 }
 
 async function attemptBackgroundRemoval(imageId: string) {
-  if (!imageId || backgroundRemovalId.value || autoCropId.value) return;
+  if (!imageId || backgroundRemovalId.value || autoCropId.value || rotatingId.value) return;
 
   backgroundRemovalId.value = imageId;
   galleryError.value = '';
@@ -747,7 +871,7 @@ async function attemptBackgroundRemoval(imageId: string) {
 }
 
 async function attemptAutoCrop(imageId: string) {
-  if (!imageId || backgroundRemovalId.value || autoCropId.value) return;
+  if (!imageId || backgroundRemovalId.value || autoCropId.value || rotatingId.value) return;
 
   autoCropId.value = imageId;
   galleryError.value = '';
@@ -760,6 +884,25 @@ async function attemptAutoCrop(imageId: string) {
     console.error('Failed auto crop:', err);
   } finally {
     autoCropId.value = '';
+  }
+}
+
+async function attemptRotate(imageId: string, direction: 'cw' | 'ccw') {
+  if (!imageId || backgroundRemovalId.value || autoCropId.value || rotatingId.value) return;
+
+  rotatingId.value = imageId;
+  rotatingDirection.value = direction;
+  galleryError.value = '';
+
+  try {
+    await api.post(`/images/uploads/${imageId}/rotate`, { direction });
+    await loadGallery();
+  } catch (err: unknown) {
+    galleryError.value = getErrorMessage(err, 'Failed to rotate the image.');
+    console.error('Failed rotate:', err);
+  } finally {
+    rotatingId.value = '';
+    rotatingDirection.value = '';
   }
 }
 
@@ -813,16 +956,19 @@ function triggerFileInput() {
   fileInputRef.value?.click();
 }
 
+const normalizedUrlInput = computed(() => urlInput.value.trim());
+
 const validImageUrl = computed(() => {
-  if (!urlInput.value) return false;
+  if (!normalizedUrlInput.value) return false;
   try {
-    const url = new URL(urlInput.value);
-    // Basic check for image extension
-    return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(url.pathname);
+    const url = new URL(normalizedUrlInput.value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
   } catch {
     return false;
   }
 });
+
+const canUploadFromUrl = computed(() => validImageUrl.value && urlPreviewLoaded.value);
 
 watch(selectedFile, (file) => {
   if (file) {
@@ -838,12 +984,28 @@ watch(selectedFile, (file) => {
 
 watch(urlInput, () => {
   urlPreviewLoaded.value = false;
+  urlPreviewLoading.value = validImageUrl.value;
+  urlPreviewError.value = false;
 });
 
 function onUrlClear() {
   urlInput.value = '';
   urlPreviewLoaded.value = false;
+  urlPreviewLoading.value = false;
+  urlPreviewError.value = false;
   uploadError.value = '';
+}
+
+function onUrlPreviewLoad() {
+  urlPreviewLoaded.value = true;
+  urlPreviewLoading.value = false;
+  urlPreviewError.value = false;
+}
+
+function onUrlPreviewError() {
+  urlPreviewLoaded.value = false;
+  urlPreviewLoading.value = false;
+  urlPreviewError.value = Boolean(normalizedUrlInput.value);
 }
 </script>
 
@@ -858,6 +1020,8 @@ function onUrlClear() {
   background: #f8fafd;
   border-radius: 14px;
   padding: 1.2rem 1rem 1rem 1rem;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
 }
 .upload-drop-area {
   width: 100%;
@@ -952,6 +1116,32 @@ function onUrlClear() {
   width: 100%;
   max-width: 500px;
 }
+.upload-file-preview {
+  width: 100%;
+  max-width: 560px;
+  height: min(34vh, 300px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: #fff;
+  border: 1px solid #e3e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.upload-url-preview {
+  width: 100%;
+  max-width: 560px;
+  max-height: min(24vh, 220px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: #fff;
+  border: 1px solid #e3e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
 .upload-url-input {
   flex: 1;
 }
@@ -964,7 +1154,6 @@ function onUrlClear() {
   justify-content: flex-end;
   gap: 0.7rem;
   width: 100%;
-  margin-top: 1.2rem;
 }
 .image-card {
   display: flex;
@@ -1008,6 +1197,13 @@ function onUrlClear() {
   align-items: stretch;
 }
 
+.image-card__action-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
 .position-relative {
   position: relative;
 }
@@ -1037,7 +1233,15 @@ function onUrlClear() {
 
 .upload-url-img-preview {
   max-width: 100%;
-  max-height: 100px;
+  width: auto;
+  max-height: min(22vh, 200px);
+  object-fit: contain;
+}
+
+.upload-file-img-preview {
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 </style>

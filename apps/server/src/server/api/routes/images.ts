@@ -14,6 +14,7 @@ import VendorService from '../../../database/lib/vendor/vendor_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
 import { removeImageBackground } from '../../../services/background_removal_service.js';
 import { autoCropImage } from '../../../services/image_auto_crop_service.js';
+import { rotateImage } from '../../../services/image_rotation_service.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
@@ -37,7 +38,7 @@ function getErrorMessage(error: unknown): string {
     const message = (error as { message?: unknown }).message;
     if (typeof message === 'string' && message) return message;
   }
-  return 'Failed to remove background';
+  return 'Image processing failed';
 }
 
 async function getPartEntity(entityType: string, entityId: string) {
@@ -251,6 +252,52 @@ router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next)
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await autoCropImage(sourcePath);
+    const newImage = await ImageService.create(
+      {
+        filename: processed.filename,
+        relPath: processed.relPath,
+        mimeType: processed.mimeType,
+        status: 'temp',
+        entityType: null,
+        entityId: null,
+      },
+      req.deviceId,
+    );
+
+    const response: MyImageData = {
+      id: newImage._id.toString(),
+      url: `/images/${newImage.relPath}`,
+      createdAt: newImage.createdAt.toISOString(),
+      isMain: false,
+    };
+
+    res.status(200).json(response);
+  } catch (err) {
+    const message = getErrorMessage(err);
+    next(new HttpError(500, message, { cause: err, expose: true }));
+  }
+});
+
+router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
+  const { id } = req.params;
+  const { direction } = req.body ?? {};
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+  if (direction !== 'cw' && direction !== 'ccw') {
+    return next(new HttpError(400, 'direction must be cw or ccw'));
+  }
+
+  try {
+    const image = await ImageService.findById(id);
+    if (!image) return next(new HttpError(404, 'Image not found'));
+    if (image.status !== 'temp') {
+      return next(new HttpError(400, 'Only temporary images can be rotated'));
+    }
+
+    const sourcePath = path.join(imageDir, image.relPath);
+    if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
+
+    const processed = await rotateImage(sourcePath, direction === 'cw' ? 90 : -90);
     const newImage = await ImageService.create(
       {
         filename: processed.filename,

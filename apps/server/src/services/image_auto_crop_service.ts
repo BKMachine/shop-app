@@ -74,7 +74,7 @@ export async function autoCropImage(sourcePath: string): Promise<{
   mimeType: string;
   relPath: string;
 }> {
-  const image = sharp(sourcePath, { failOn: 'none' }).ensureAlpha();
+  const image = sharp(sourcePath, { failOn: 'none' }).rotate().ensureAlpha();
   const metadata = await image.metadata();
 
   if (!metadata.width || !metadata.height) {
@@ -92,7 +92,12 @@ export async function autoCropImage(sourcePath: string): Promise<{
   const filename = `${randomUUID()}.png`;
   const outputPath = path.join(tempDir, filename);
 
-  await sharp(sourcePath, { failOn: 'none' }).ensureAlpha().extract(crop).png().toFile(outputPath);
+  await sharp(sourcePath, { failOn: 'none' })
+    .rotate()
+    .ensureAlpha()
+    .extract(crop)
+    .png()
+    .toFile(outputPath);
 
   return {
     filename,
