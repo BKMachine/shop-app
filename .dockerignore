@@ -8,7 +8,7 @@
 README.md
 node_modules
 Dockerfile
-Dockerfile-*
+Dockerfile.*
 
 *.log
 logs
@@ -26,3 +26,6 @@ coverage
 
 apps/printer
 **/.env
+
+**/*/.venv-*
+**/*/.rembg-models

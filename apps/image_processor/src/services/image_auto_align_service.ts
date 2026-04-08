@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import path from 'node:path';
 import sharp from 'sharp';
-import { imageDir, tempDir } from '../directories.js';
+import type { InputImage, ProcessedImage } from './image_processing_types.js';
 
 const ALPHA_THRESHOLD = 8;
 const BACKGROUND_DISTANCE_THRESHOLD = 28;
@@ -202,31 +200,23 @@ function estimateRotationDegrees(
   return angleDegrees;
 }
 
-export async function autoAlignImage(sourcePath: string): Promise<{
-  filename: string;
-  mimeType: string;
-  relPath: string;
-}> {
-  const normalizedImage = sharp(sourcePath, { failOn: 'none' }).rotate().ensureAlpha();
+export async function autoAlignImage(input: InputImage): Promise<ProcessedImage> {
+  const normalizedImage = sharp(input.buffer, { failOn: 'none' }).rotate().ensureAlpha();
   const { data, info } = await normalizedImage.raw().toBuffer({ resolveWithObject: true });
 
   const angleDegrees = estimateRotationDegrees(data, info.width, info.height, info.channels);
-
-  const filename = `${randomUUID()}.png`;
-  const outputPath = path.join(tempDir, filename);
-
-  await sharp(sourcePath, { failOn: 'none' })
+  const buffer = await sharp(input.buffer, { failOn: 'none' })
     .rotate()
     .ensureAlpha()
     .rotate(-angleDegrees, {
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
     .png()
-    .toFile(outputPath);
+    .toBuffer();
 
   return {
-    filename,
+    buffer,
     mimeType: 'image/png',
-    relPath: path.relative(imageDir, outputPath).replace(/\\/g, '/'),
+    extension: '.png',
   };
 }

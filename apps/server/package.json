@@ -11,13 +11,11 @@
     "check": "biome check --write",
     "ci": "biome ci",
     "check-types": "tsc --noEmit",
-    "install:rembg": "bash ./scripts/install_rembg.sh",
     "repair:images": "tsx -r dotenv/config ./scripts/repair_image_database.ts",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./jest.config.cjs",
     "fixture:pdf-text": "tsx ./scripts/pdf_fixture_text_pdf.ts"
   },
   "dependencies": {
-    "@imgly/background-removal-node": "^1.4.5",
     "@pdf-lib/fontkit": "^1.1.1",
     "@repo/utilities": "workspace:*",
     "axios": "^1.13.5",

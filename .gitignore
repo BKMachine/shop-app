@@ -5,4 +5,4 @@ node_modules
 logs
 dist
 data
-apps/image_processor
+.venv-*

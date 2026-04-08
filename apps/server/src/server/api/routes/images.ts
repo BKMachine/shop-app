@@ -13,13 +13,16 @@ import ToolService from '../../../database/lib/tool/tool_service.js';
 import VendorService from '../../../database/lib/vendor/vendor_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
 import {
-  removeImageBackground,
+  autoAlignImage,
+  autoCropImage,
   type BackgroundRemovalBackend,
   type BackgroundRemovalModel,
-} from '../../../services/background_removal_service.js';
-import { autoAlignImage } from '../../../services/image_auto_align_service.js';
-import { autoCropImage } from '../../../services/image_auto_crop_service.js';
-import { rotateImage } from '../../../services/image_rotation_service.js';
+  ImageProcessorClientError,
+  isSkippableAutoAlignError,
+  processImageStack,
+  removeImageBackground,
+  rotateImage,
+} from '../../../services/image_processor_client.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
@@ -46,9 +49,20 @@ function getErrorMessage(error: unknown): string {
   return 'Image processing failed';
 }
 
-function isSkippableAutoAlignError(error: unknown): boolean {
-  const message = getErrorMessage(error);
-  return message.includes('already aligned closely enough');
+function getErrorStatusCode(error: unknown, fallback: number): number {
+  if (error instanceof ImageProcessorClientError) {
+    return error.statusCode;
+  }
+
+  return fallback;
+}
+
+function getExtensionForMimeType(mimeType: string): string {
+  const normalizedMimeType = mimeType.trim().toLowerCase().split(';')[0] ?? '';
+  if (normalizedMimeType === 'image/jpeg') return '.jpg';
+  if (normalizedMimeType === 'image/png') return '.png';
+  if (normalizedMimeType === 'image/webp') return '.webp';
+  return '.bin';
 }
 
 async function getPartEntity(entityType: string, entityId: string) {
@@ -150,43 +164,28 @@ async function createTempImageFromProcessed(
   } satisfies MyImageData;
 }
 
-async function runTempImagePipeline(sourcePath: string, stage: 1 | 2 | 3) {
-  const generatedRelPaths: string[] = [];
-  let currentPath = sourcePath;
-  let processed = await removeImageBackground(currentPath);
-  generatedRelPaths.push(processed.relPath);
-  currentPath = path.join(imageDir, processed.relPath);
+function writeProcessedTempImage(processed: {
+  buffer: Buffer;
+  mimeType: string;
+  extension?: string;
+}) {
+  const extension = processed.extension || getExtensionForMimeType(processed.mimeType);
+  const filename = `${randomUUID()}${extension}`;
+  const outputPath = path.join(tempDir, filename);
+  fs.writeFileSync(outputPath, processed.buffer);
 
-  try {
-    if (stage >= 2) {
-      try {
-        processed = await autoAlignImage(currentPath);
-        generatedRelPaths.push(processed.relPath);
-        currentPath = path.join(imageDir, processed.relPath);
-      } catch (error) {
-        if (!isSkippableAutoAlignError(error)) {
-          throw error;
-        }
-      }
-    }
+  return {
+    filename,
+    mimeType: processed.mimeType,
+    relPath: path.relative(imageDir, outputPath).replace(/\\/g, '/'),
+  };
+}
 
-    if (stage >= 3) {
-      processed = await autoCropImage(currentPath);
-      generatedRelPaths.push(processed.relPath);
-    }
-
-    for (const relPath of generatedRelPaths.slice(0, -1)) {
-      await deleteImageFileIfPresent(relPath);
-    }
-
-    return processed;
-  } catch (error) {
-    for (const relPath of generatedRelPaths) {
-      await deleteImageFileIfPresent(relPath);
-    }
-
-    throw error;
-  }
+async function createTempImageFromBuffer(
+  processed: { buffer: Buffer; mimeType: string; extension?: string },
+  deviceId: string,
+) {
+  return createTempImageFromProcessed(writeProcessedTempImage(processed), deviceId);
 }
 
 // Upload a temp image via file
@@ -312,29 +311,12 @@ router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, re
       backend: requestedBackend,
       model: requestedModel,
     });
-    const newImage = await ImageService.create(
-      {
-        filename: processed.filename,
-        relPath: processed.relPath,
-        mimeType: processed.mimeType,
-        status: 'temp',
-        entityType: null,
-        entityId: null,
-      },
-      req.deviceId,
-    );
-
-    const response: MyImageData = {
-      id: newImage._id.toString(),
-      url: `/images/${newImage.relPath}`,
-      createdAt: newImage.createdAt.toISOString(),
-      isMain: false,
-    };
+    const response = await createTempImageFromBuffer(processed, req.deviceId);
 
     res.status(200).json(response);
   } catch (err) {
     const message = getErrorMessage(err);
-    const statusCode = message.includes('not configured') ? 503 : 500;
+    const statusCode = getErrorStatusCode(err, message.includes('not configured') ? 503 : 500);
     next(new HttpError(statusCode, message, { cause: err, expose: true }));
   }
 });
@@ -354,29 +336,12 @@ router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next)
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await autoCropImage(sourcePath);
-    const newImage = await ImageService.create(
-      {
-        filename: processed.filename,
-        relPath: processed.relPath,
-        mimeType: processed.mimeType,
-        status: 'temp',
-        entityType: null,
-        entityId: null,
-      },
-      req.deviceId,
-    );
-
-    const response: MyImageData = {
-      id: newImage._id.toString(),
-      url: `/images/${newImage.relPath}`,
-      createdAt: newImage.createdAt.toISOString(),
-      isMain: false,
-    };
+    const response = await createTempImageFromBuffer(processed, req.deviceId);
 
     res.status(200).json(response);
   } catch (err) {
     const message = getErrorMessage(err);
-    next(new HttpError(500, message, { cause: err, expose: true }));
+    next(new HttpError(getErrorStatusCode(err, 500), message, { cause: err, expose: true }));
   }
 });
 
@@ -396,24 +361,7 @@ router.post('/uploads/:id/auto-align', requireKnownDevice, async (req, res, next
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await autoAlignImage(sourcePath);
-    const newImage = await ImageService.create(
-      {
-        filename: processed.filename,
-        relPath: processed.relPath,
-        mimeType: processed.mimeType,
-        status: 'temp',
-        entityType: null,
-        entityId: null,
-      },
-      req.deviceId,
-    );
-
-    const response: MyImageData = {
-      id: newImage._id.toString(),
-      url: `/images/${newImage.relPath}`,
-      createdAt: newImage.createdAt.toISOString(),
-      isMain: false,
-    };
+    const response = await createTempImageFromBuffer(processed, req.deviceId);
 
     res.status(200).json(response);
   } catch (err) {
@@ -437,7 +385,7 @@ router.post('/uploads/:id/auto-align', requireKnownDevice, async (req, res, next
     }
 
     const message = getErrorMessage(err);
-    next(new HttpError(500, message, { cause: err, expose: true }));
+    next(new HttpError(getErrorStatusCode(err, 500), message, { cause: err, expose: true }));
   }
 });
 
@@ -460,13 +408,20 @@ router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, n
     const sourcePath = path.join(imageDir, image.relPath);
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
-    const processed = await runTempImagePipeline(sourcePath, requestedStage as 1 | 2 | 3);
-    const response = await createTempImageFromProcessed(processed, req.deviceId);
+    const processed = await processImageStack(sourcePath, requestedStage as 1 | 2 | 3, {
+      backend:
+        req.body?.backend === 'imgly' || req.body?.backend === 'rembg' ? req.body.backend : null,
+      model:
+        req.body?.model === 'small' || req.body?.model === 'medium' || req.body?.model === 'large'
+          ? req.body.model
+          : null,
+    });
+    const response = await createTempImageFromBuffer(processed, req.deviceId);
 
     res.status(200).json(response);
   } catch (err) {
     const message = getErrorMessage(err);
-    const statusCode = message.includes('not configured') ? 503 : 500;
+    const statusCode = getErrorStatusCode(err, message.includes('not configured') ? 503 : 500);
     next(new HttpError(statusCode, message, { cause: err, expose: true }));
   }
 });
@@ -491,29 +446,12 @@ router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) =>
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await rotateImage(sourcePath, direction === 'cw' ? 90 : -90);
-    const newImage = await ImageService.create(
-      {
-        filename: processed.filename,
-        relPath: processed.relPath,
-        mimeType: processed.mimeType,
-        status: 'temp',
-        entityType: null,
-        entityId: null,
-      },
-      req.deviceId,
-    );
-
-    const response: MyImageData = {
-      id: newImage._id.toString(),
-      url: `/images/${newImage.relPath}`,
-      createdAt: newImage.createdAt.toISOString(),
-      isMain: false,
-    };
+    const response = await createTempImageFromBuffer(processed, req.deviceId);
 
     res.status(200).json(response);
   } catch (err) {
     const message = getErrorMessage(err);
-    next(new HttpError(500, message, { cause: err, expose: true }));
+    next(new HttpError(getErrorStatusCode(err, 500), message, { cause: err, expose: true }));
   }
 });
 

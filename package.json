@@ -13,14 +13,17 @@
     "check": "turbo run check",
     "ci": "turbo run ci",
     "check-types": "turbo run check-types",
-    "build:server": "docker build -t bkmachine/shop-app .",
-    "build:status": "docker build -f ./Dockerfile-status -t bkmachine/cnc-status .",
-    "build:haas_serial": "docker build -f ./Dockerfile-haas_serial -t bkmachine/haas-serial .",
-    "build:all": "pnpm run build:server && pnpm run build:status && pnpm run build:haas_serial",
+    "build:image_processor": "docker build -f ./Dockerfile.image_processor -t bkmachine/image-processor .",
+    "build:haas_serial": "docker build -f ./Dockerfile.haas_serial -t bkmachine/haas-serial .",
+    "build:server": "docker build -f ./Dockerfile.server -t bkmachine/shop-app .",
+    "build:status": "docker build -f ./Dockerfile.status -t bkmachine/cnc-status .",
+    "build:all": "pnpm run build:image_processor && pnpm run build:haas_serial && pnpm run build:server && pnpm run build:status",
+
+    "publish:image_processor": "pnpm run build:image_processor && docker push bkmachine/image-processor",
+    "publish:haas_serial": "pnpm run build:haas_serial && docker push bkmachine/haas-serial",
     "publish:server": "pnpm run build:server && docker push bkmachine/shop-app",
     "publish:status": "pnpm run build:status && docker push bkmachine/cnc-status",
-    "publish:haas_serial": "pnpm run build:haas_serial && docker push bkmachine/haas-serial",
-    "publish:all": "pnpm run publish:server && pnpm run publish:status && pnpm run publish:haas_serial"
+    "publish:all": "pnpm run publish:image_processor && pnpm run publish:haas_serial && pnpm run publish:server && pnpm run publish:status"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",

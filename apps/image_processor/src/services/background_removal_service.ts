@@ -2,12 +2,19 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { removeBackground } from '@imgly/background-removal-node';
-import { imageDir, tempDir } from '../directories.js';
+import { tempDir } from '../directories.js';
 import logger from '../logger.js';
+import type {
+  BackgroundRemovalBackend,
+  BackgroundRemovalModel,
+  InputImage,
+  ProcessedImage,
+} from './image_processing_types.js';
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -18,9 +25,6 @@ const serviceDir = path.dirname(fileURLToPath(import.meta.url));
 const rembgVenvPythonPath = path.resolve(serviceDir, '../../.venv-rembg/bin/python');
 const rembgModelCacheDir = path.resolve(serviceDir, '../../.rembg-models');
 const rembgScriptPath = path.resolve(serviceDir, '../../scripts/remove_background_rembg.py');
-
-export type BackgroundRemovalBackend = 'imgly' | 'rembg';
-export type BackgroundRemovalModel = 'small' | 'medium' | 'large';
 
 type RemoveImageBackgroundOptions = {
   backend?: BackgroundRemovalBackend | null;
@@ -107,9 +111,11 @@ function getRembgTimeoutMs() {
   return Number.isFinite(raw) && raw > 0 ? raw : 300000;
 }
 
-function getMimeTypeForSource(sourcePath: string): string {
-  const ext = path.extname(sourcePath).toLowerCase();
+function getMimeTypeForSource(input: InputImage): string {
+  const normalizedMimeType = input.mimeType?.trim().toLowerCase();
+  if (normalizedMimeType) return normalizedMimeType;
 
+  const ext = path.extname(input.filename ?? '').toLowerCase();
   if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
   if (ext === '.png') return 'image/png';
   if (ext === '.webp') return 'image/webp';
@@ -117,26 +123,34 @@ function getMimeTypeForSource(sourcePath: string): string {
   return 'application/octet-stream';
 }
 
-function createProcessedTempImageFile(resultBuffer: Buffer) {
-  const filename = `${randomUUID()}.png`;
-  const outputPath = path.join(tempDir, filename);
+function getSourceExtension(input: InputImage): string {
+  const ext = path.extname(input.filename ?? '').toLowerCase();
+  if (ext) return ext;
 
-  fs.writeFileSync(outputPath, resultBuffer);
+  const mimeType = getMimeTypeForSource(input);
+  if (mimeType === 'image/jpeg') return '.jpg';
+  if (mimeType === 'image/png') return '.png';
+  if (mimeType === 'image/webp') return '.webp';
 
+  return '.bin';
+}
+
+function createProcessedImage(buffer: Buffer): ProcessedImage {
   return {
-    filename,
+    buffer,
     mimeType: 'image/png',
-    relPath: path.relative(imageDir, outputPath).replace(/\\/g, '/'),
+    extension: '.png',
   };
 }
 
 async function removeImageBackgroundWithImgly(
-  sourcePath: string,
+  input: InputImage,
   requestedModel?: BackgroundRemovalModel | null,
 ) {
   const backgroundRemovalModel = resolveBackgroundRemovalModel(requestedModel);
-  const sourceBuffer = fs.readFileSync(sourcePath);
-  const sourceBlob = new Blob([sourceBuffer], { type: getMimeTypeForSource(sourcePath) });
+  const sourceBlob = new Blob([Uint8Array.from(input.buffer)], {
+    type: getMimeTypeForSource(input),
+  });
   const resultBlob = await removeBackground(sourceBlob, {
     debug: false,
     model: backgroundRemovalModel,
@@ -148,29 +162,34 @@ async function removeImageBackgroundWithImgly(
   });
 
   const resultBuffer = Buffer.from(await resultBlob.arrayBuffer());
-  return createProcessedTempImageFile(resultBuffer);
+  return createProcessedImage(resultBuffer);
 }
 
-async function removeImageBackgroundWithRembg(sourcePath: string) {
+async function removeImageBackgroundWithRembg(input: InputImage) {
   fs.mkdirSync(rembgModelCacheDir, { recursive: true });
+  fs.mkdirSync(tempDir, { recursive: true });
 
-  const filename = `${randomUUID()}.png`;
-  const outputPath = path.join(tempDir, filename);
+  const jobId = randomUUID();
+  const inputPath = path.join(tempDir, `${jobId}${getSourceExtension(input)}`);
+  const outputPath = path.join(tempDir, `${jobId}.png`);
   const args = [
     rembgScriptPath,
     '--input',
-    sourcePath,
+    inputPath,
     '--output',
     outputPath,
     '--model',
     getRembgModel(),
   ];
 
+  fs.writeFileSync(inputPath, input.buffer);
+
   try {
     const { stdout, stderr } = await execFileAsync(getRembgPythonBin(), args, {
       env: {
         ...process.env,
         CUDA_VISIBLE_DEVICES: '',
+        TMPDIR: os.tmpdir(),
         U2NET_HOME: rembgModelCacheDir,
       },
       timeout: getRembgTimeoutMs(),
@@ -178,22 +197,22 @@ async function removeImageBackgroundWithRembg(sourcePath: string) {
 
     if (stdout.trim()) logger.info(`rembg stdout: ${stdout.trim()}`);
     if (stderr.trim()) logger.warn(`rembg stderr: ${stderr.trim()}`);
+
+    if (!fs.existsSync(outputPath)) {
+      throw new Error('rembg finished without writing an output image.');
+    }
+
+    return createProcessedImage(fs.readFileSync(outputPath));
   } catch (error) {
     const message = getExecErrorMessage(error);
     throw new Error(
-      `rembg failed. ${message} Install the Python deps with "pnpm --dir apps/server run install:rembg".`,
+      `rembg failed. ${message} Install the Python deps with "pnpm --dir apps/image_processor run install:rembg".`,
     );
+  } finally {
+    for (const filePath of [inputPath, outputPath]) {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
   }
-
-  if (!fs.existsSync(outputPath)) {
-    throw new Error('rembg finished without writing an output image.');
-  }
-
-  return {
-    filename,
-    mimeType: 'image/png',
-    relPath: path.relative(imageDir, outputPath).replace(/\\/g, '/'),
-  };
 }
 
 function getExecErrorMessage(error: unknown): string {
@@ -212,28 +231,24 @@ function getExecErrorMessage(error: unknown): string {
 }
 
 export async function removeImageBackground(
-  sourcePath: string,
+  input: InputImage,
   options: RemoveImageBackgroundOptions = {},
-): Promise<{
-  filename: string;
-  mimeType: string;
-  relPath: string;
-}> {
+): Promise<ProcessedImage> {
   const backend = resolveBackgroundRemovalBackend(options.backend);
   const requestedModel = options.model;
 
-  logger.info(`Removing background using ${backend} for image: ${sourcePath}`);
+  logger.info(`Removing background using ${backend} for image: ${input.filename ?? 'upload'}`);
 
   try {
     if (backend === 'rembg') {
-      return await removeImageBackgroundWithRembg(sourcePath);
+      return await removeImageBackgroundWithRembg(input);
     }
 
-    return await removeImageBackgroundWithImgly(sourcePath, requestedModel);
+    return await removeImageBackgroundWithImgly(input, requestedModel);
   } catch (error) {
     logger.error('Background removal failed', {
-      sourcePath,
-      sourceMimeType: getMimeTypeForSource(sourcePath),
+      sourceFilename: input.filename ?? null,
+      sourceMimeType: getMimeTypeForSource(input),
       backend,
       requestedModel,
       backgroundRemovalPublicPath,

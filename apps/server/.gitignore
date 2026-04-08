@@ -1,4 +1,3 @@
 public/downloads/folder_helper
 scripts/*
 !scripts/*.ts
-.venv-*

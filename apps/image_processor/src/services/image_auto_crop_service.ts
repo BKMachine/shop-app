@@ -1,7 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import path from 'node:path';
 import sharp from 'sharp';
-import { imageDir, tempDir } from '../directories.js';
+import type { InputImage, ProcessedImage } from './image_processing_types.js';
 
 const ALPHA_THRESHOLD = 8;
 const SUBJECT_FILL_RATIO = 0.9;
@@ -100,12 +98,8 @@ function planCrop(bounds: CropBounds, imageWidth: number, imageHeight: number): 
   };
 }
 
-export async function autoCropImage(sourcePath: string): Promise<{
-  filename: string;
-  mimeType: string;
-  relPath: string;
-}> {
-  const image = sharp(sourcePath, { failOn: 'none' }).rotate().ensureAlpha();
+export async function autoCropImage(input: InputImage): Promise<ProcessedImage> {
+  const image = sharp(input.buffer, { failOn: 'none' }).rotate().ensureAlpha();
   const metadata = await image.metadata();
 
   if (!metadata.width || !metadata.height) {
@@ -120,10 +114,7 @@ export async function autoCropImage(sourcePath: string): Promise<{
   }
 
   const cropPlan = planCrop(bounds, info.width, info.height);
-  const filename = `${randomUUID()}.png`;
-  const outputPath = path.join(tempDir, filename);
-
-  let pipeline = sharp(sourcePath, { failOn: 'none' })
+  let pipeline = sharp(input.buffer, { failOn: 'none' })
     .rotate()
     .ensureAlpha()
     .extract(cropPlan.extract);
@@ -140,11 +131,9 @@ export async function autoCropImage(sourcePath: string): Promise<{
     });
   }
 
-  await pipeline.png().toFile(outputPath);
-
   return {
-    filename,
+    buffer: await pipeline.png().toBuffer(),
     mimeType: 'image/png',
-    relPath: path.relative(imageDir, outputPath).replace(/\\/g, '/'),
+    extension: '.png',
   };
 }

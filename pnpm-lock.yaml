@@ -103,9 +103,27 @@ importers:
 
   apps/image_processor:
     dependencies:
+      '@imgly/background-removal-node':
+        specifier: ^1.4.5
+        version: 1.4.5
       '@repo/utilities':
         specifier: workspace:*
         version: link:../../packages/utilities
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
+      http-terminator:
+        specifier: ^3.2.0
+        version: 3.2.0
+      morgan:
+        specifier: ^1.10.1
+        version: 1.10.1
+      multer:
+        specifier: ^2.0.2
+        version: 2.0.2
+      sharp:
+        specifier: ^0.32.6
+        version: 0.32.6
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -113,6 +131,15 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
+      '@types/morgan':
+        specifier: ^1.9.10
+        version: 1.9.10
+      '@types/multer':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/node':
         specifier: ^25.5.2
         version: 25.5.2
@@ -125,6 +152,9 @@ importers:
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
+      rimraf:
+        specifier: ^6.1.3
+        version: 6.1.3
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -134,9 +164,6 @@ importers:
 
   apps/server:
     dependencies:
-      '@imgly/background-removal-node':
-        specifier: ^1.4.5
-        version: 1.4.5
       '@pdf-lib/fontkit':
         specifier: ^1.1.1
         version: 1.1.1
