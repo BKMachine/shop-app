@@ -10,6 +10,7 @@
         <v-tabs v-model="currentTab">
           <v-tab value="upload">Upload</v-tab>
           <v-tab value="gallery">Temp Gallery</v-tab>
+          <v-tab v-if="showItemGalleryTab" value="item">Item Gallery</v-tab>
         </v-tabs>
 
         <v-window v-model="currentTab">
@@ -200,23 +201,27 @@
                     @click="toggleTempSelection(img.id)"
                   >
                     <div
-                      v-if="backgroundRemovalId === img.id || autoCropId === img.id || rotatingId === img.id"
+                      v-if="backgroundRemovalId === img.id || autoAlignId === img.id || autoCropId === img.id || stackProcessingId === img.id || rotatingId === img.id"
                       class="image-card__busy-overlay"
                     >
                       <v-progress-circular color="primary" indeterminate />
                       <div class="text-caption mt-2">
                         {{ backgroundRemovalId === img.id
-                            ? 'Removing background...'
-                            : autoCropId === img.id
-                              ? 'Auto cropping...'
-                              : rotatingDirection === 'ccw'
+                            ? backgroundRemovalLabel
+                            : autoAlignId === img.id
+                              ? 'Auto aligning...'
+                              : autoCropId === img.id
+                                ? 'Auto cropping...'
+                            : stackProcessingId === img.id
+                            ? stackProcessingLabel
+                            : rotatingDirection === 'ccw'
                                 ? 'Rotating 90 degrees CCW...'
                                 : 'Rotating 90 degrees CW...' }}
                       </div>
                     </div>
                     <v-img
                       aspect-ratio="1"
-                      class="image-card__preview"
+                      class="image-card__preview image-card__preview--checker"
                       contain
                       :src="img.url"
                       width="100%"
@@ -226,7 +231,7 @@
                       {{ formatImageDate(img.createdAt) }}
                     </v-card-subtitle>
 
-                    <div class="image-card__actions px-2 pb-2 mt-2">
+                    <div class="image-card__actions pb-2 mt-2">
                       <div class="image-card__action-row">
                         <v-btn
                           block
@@ -234,7 +239,9 @@
                           :disabled="
                             deleteAllLoading ||
                             backgroundRemovalId === img.id ||
+                            autoAlignId === img.id ||
                             autoCropId === img.id ||
+                            stackProcessingId === img.id ||
                             rotatingId === img.id ||
                             deletingId === img.id
                           "
@@ -253,7 +260,9 @@
                           :disabled="
                             deleteAllLoading ||
                             backgroundRemovalId === img.id ||
+                            autoAlignId === img.id ||
                             autoCropId === img.id ||
+                            stackProcessingId === img.id ||
                             rotatingId === img.id ||
                             deletingId === img.id
                           "
@@ -267,53 +276,141 @@
                           90 CW
                         </v-btn>
                       </div>
-                      <v-btn
-                        block
-                        color="secondary"
-                        :disabled="
-                          deleteAllLoading ||
-                          backgroundRemovalId === img.id ||
-                          autoCropId === img.id ||
-                          rotatingId === img.id ||
-                          deletingId === img.id
-                        "
-                        :loading="backgroundRemovalId === img.id"
-                        prepend-icon="mdi-auto-fix"
-                        size="x-small"
-                        title="Attempt background removal"
-                        variant="outlined"
-                        @click.stop="attemptBackgroundRemoval(img.id)"
-                      >
-                        Remove BG
-                      </v-btn>
-                      <v-btn
-                        block
-                        color="secondary"
-                        :disabled="
-                          deleteAllLoading ||
-                          backgroundRemovalId === img.id ||
-                          autoCropId === img.id ||
-                          rotatingId === img.id ||
-                          deletingId === img.id
-                        "
-                        :loading="autoCropId === img.id"
-                        prepend-icon="mdi-crop"
-                        size="x-small"
-                        title="Auto crop transparent padding"
-                        variant="outlined"
-                        @click.stop="attemptAutoCrop(img.id)"
-                      >
-                        Auto Crop
-                      </v-btn>
+                      <div class="image-card__processing-row image-card__indented-action">
+                        <button
+                          class="image-card__stack-button"
+                          :class="{ 'image-card__stack-button--busy': stackProcessingId === img.id }"
+                          :disabled="
+                            deleteAllLoading ||
+                            backgroundRemovalId === img.id ||
+                            autoAlignId === img.id ||
+                            autoCropId === img.id ||
+                            Boolean(stackProcessingId) ||
+                            rotatingId === img.id ||
+                            deletingId === img.id
+                          "
+                          title="Run background removal, auto align, and auto crop"
+                          type="button"
+                          @click.stop="runStackProcess(img.id)"
+                        >
+                          <v-icon size="12">mdi-auto-fix</v-icon>
+                        </button>
+                        <div class="image-card__processing-actions">
+                          <div class="image-card__split-action">
+                            <v-btn
+                              block
+                              color="secondary"
+                              :disabled="
+                                deleteAllLoading ||
+                                backgroundRemovalId === img.id ||
+                                autoAlignId === img.id ||
+                                autoCropId === img.id ||
+                                stackProcessingId === img.id ||
+                                rotatingId === img.id ||
+                                deletingId === img.id
+                              "
+                              :loading="backgroundRemovalId === img.id"
+                              prepend-icon="mdi-auto-fix"
+                              size="x-small"
+                              title="Attempt background removal with IMGLY"
+                              variant="outlined"
+                              @click.stop="attemptBackgroundRemoval(img.id, 'imgly')"
+                            >
+                              Remove BG
+                            </v-btn>
+                            <v-menu location="bottom end">
+                              <template #activator="{ props: menuProps }">
+                                <v-btn
+                                  color="secondary"
+                                  :disabled="
+                                    deleteAllLoading ||
+                                    backgroundRemovalId === img.id ||
+                                    autoAlignId === img.id ||
+                                    autoCropId === img.id ||
+                                    stackProcessingId === img.id ||
+                                    rotatingId === img.id ||
+                                    deletingId === img.id
+                                    "
+                                  size="x-small"
+                                  title="Choose background removal backend"
+                                  v-bind="menuProps"
+                                  variant="outlined"
+                                  @click.stop
+                                >
+                                  <v-icon size="12px">mdi-chevron-down</v-icon>
+                                </v-btn>
+                              </template>
+                              <v-list density="compact">
+                                <v-list-item
+                                  prepend-icon="mdi-auto-fix"
+                                  subtitle="Fast local default"
+                                  title="Use IMGLY"
+                                  @click="attemptBackgroundRemoval(img.id, 'imgly')"
+                                />
+                                <v-list-item
+                                  prepend-icon="mdi-image-outline"
+                                  subtitle="CPU-only local fallback via rembg"
+                                  title="Use rembg"
+                                  @click="attemptBackgroundRemoval(img.id, 'rembg')"
+                                />
+                              </v-list>
+                            </v-menu>
+                          </div>
+                          <v-btn
+                            block
+                            color="secondary"
+                            :disabled="
+                              deleteAllLoading ||
+                              backgroundRemovalId === img.id ||
+                              autoAlignId === img.id ||
+                              autoCropId === img.id ||
+                              stackProcessingId === img.id ||
+                              rotatingId === img.id ||
+                              deletingId === img.id
+                            "
+                            :loading="autoAlignId === img.id"
+                            prepend-icon="mdi-image-filter-center-focus"
+                            size="x-small"
+                            title="Automatically align the subject horizontally"
+                            variant="outlined"
+                            @click.stop="attemptAutoAlign(img.id)"
+                          >
+                            Auto Align
+                          </v-btn>
+                          <v-btn
+                            block
+                            color="secondary"
+                            :disabled="
+                              deleteAllLoading ||
+                              backgroundRemovalId === img.id ||
+                              autoAlignId === img.id ||
+                              autoCropId === img.id ||
+                              stackProcessingId === img.id ||
+                              rotatingId === img.id ||
+                              deletingId === img.id
+                            "
+                            :loading="autoCropId === img.id"
+                            prepend-icon="mdi-crop"
+                            size="x-small"
+                            title="Auto crop transparent padding"
+                            variant="outlined"
+                            @click.stop="attemptAutoCrop(img.id)"
+                          >
+                            Auto Crop
+                          </v-btn>
+                        </div>
+                      </div>
                       <v-btn
                         v-if="!isTempSelected(img.id)"
                         block
-                        class="image-card__delete"
+                        class="image-card__delete image-card__indented-action"
                         color="error"
                         :disabled="
                           deleteAllLoading ||
                           backgroundRemovalId === img.id ||
+                          autoAlignId === img.id ||
                           autoCropId === img.id ||
+                          stackProcessingId === img.id ||
                           rotatingId === img.id
                         "
                         :loading="deletingId === img.id"
@@ -324,6 +421,70 @@
                         @click.stop="confirmDeleteImage(img.id)"
                       >
                         Delete
+                      </v-btn>
+                    </div>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-window-item>
+
+          <v-window-item v-if="showItemGalleryTab" value="item">
+            <v-card-text>
+              <div v-if="loadingItemGallery" class="d-flex justify-center my-6">
+                <v-progress-circular indeterminate />
+              </div>
+
+              <div v-else-if="itemGalleryError" class="text-error">{{ itemGalleryError }}</div>
+
+              <div v-else-if="!itemImages.length" class="text-medium-emphasis">
+                <v-alert type="info" variant="tonal">
+                  No item images found. Upload or assign an image to get started.
+                </v-alert>
+              </div>
+
+              <v-row v-else dense>
+                <v-col cols="12">
+                  <div class="d-flex align-center justify-space-between mb-3">
+                    <div class="text-body-2 text-medium-emphasis">
+                      Item images: {{ itemImages.length }}
+                    </div>
+                    <div class="text-body-2 text-medium-emphasis">
+                      Copy an item image to Temp Gallery for editing.
+                    </div>
+                  </div>
+                </v-col>
+                <v-col v-for="img in itemImages" :key="img.id" cols="12" lg="3" md="4" sm="6">
+                  <v-card class="image-card pa-3 position-relative" elevation="2" hover>
+                    <div v-if="itemCopyBusyImageId === img.id" class="image-card__busy-overlay">
+                      <v-progress-circular color="primary" indeterminate />
+                      <div class="text-caption mt-2">Copying to Temp Gallery...</div>
+                    </div>
+                    <v-img
+                      aspect-ratio="1"
+                      class="image-card__preview image-card__preview--checker"
+                      contain
+                      :src="img.url"
+                      width="100%"
+                    />
+
+                    <v-card-subtitle class="image-card__date text-caption mt-1 px-2">
+                      {{ formatImageDate(img.createdAt) }}
+                    </v-card-subtitle>
+
+                    <div class="image-card__actions pb-2 mt-2">
+                      <v-btn
+                        block
+                        color="primary"
+                        :disabled="Boolean(itemCopyBusyImageId)"
+                        :loading="itemCopyBusyImageId === img.id"
+                        prepend-icon="mdi-content-copy"
+                        size="x-small"
+                        title="Copy image to temp gallery"
+                        variant="flat"
+                        @click.stop="copyItemImageToTempGallery(img.id)"
+                      >
+                        Copy To Temp
                       </v-btn>
                     </div>
                   </v-card>
@@ -374,6 +535,8 @@ interface ImageData {
   status?: 'temp' | 'attached';
 }
 
+type BackgroundRemovalBackend = 'imgly' | 'rembg';
+
 type ApiErrorPayload = {
   error?: string;
   message?: string;
@@ -400,7 +563,10 @@ const dialog = computed({
 });
 
 // Tabs
-const currentTab = ref<'upload' | 'gallery'>('gallery');
+const currentTab = ref<'upload' | 'item' | 'gallery'>('gallery');
+const showItemGalleryTab = computed(() => {
+  return (props.entityType === 'part' || props.entityType === 'tool') && Boolean(props.entityId);
+});
 
 // Upload
 const fileInput = ref<File[]>([]);
@@ -558,11 +724,19 @@ async function attachUploadedImage(imageId: string) {
 const loadingGallery = ref(false);
 const galleryError = ref('');
 const tempImages = ref<ImageData[]>([]);
+const loadingItemGallery = ref(false);
+const itemGalleryError = ref('');
+const itemImages = ref<MyImageData[]>([]);
 const deletingId = ref('');
 const backgroundRemovalId = ref('');
+const backgroundRemovalBackend = ref<BackgroundRemovalBackend | ''>('');
+const autoAlignId = ref('');
 const autoCropId = ref('');
+const stackProcessingId = ref('');
+const stackProcessingStage = ref<0 | 1 | 2 | 3>(0);
 const rotatingId = ref('');
 const rotatingDirection = ref<'cw' | 'ccw' | ''>('');
+const itemCopyBusyImageId = ref('');
 const selectedTempImageIds = ref<string[]>([]);
 const assignLoading = ref(false);
 const assignSuccess = ref(false);
@@ -577,11 +751,22 @@ const isGalleryBusy = computed(() => {
     deleteAllLoading.value ||
       deletingId.value ||
       backgroundRemovalId.value ||
+      autoAlignId.value ||
       autoCropId.value ||
+      stackProcessingId.value ||
       rotatingId.value,
   );
 });
-
+const stackProcessingLabel = computed(() => {
+  if (stackProcessingStage.value === 1) return 'Removing background...';
+  if (stackProcessingStage.value === 2) return 'Removing background and aligning...';
+  if (stackProcessingStage.value === 3) return 'Removing background, aligning, and cropping...';
+  return 'Processing image...';
+});
+const backgroundRemovalLabel = computed(() => {
+  if (backgroundRemovalBackend.value === 'rembg') return 'Removing background with rembg...';
+  return 'Removing background...';
+});
 const isTempSelected = (imageId: string): boolean => {
   return selectedTempImageIds.value.includes(imageId);
 };
@@ -633,12 +818,14 @@ function formatImageDate(createdAt: string): string {
 function handleImageUploaded() {
   if (dialog.value) {
     loadGallery();
+    loadItemGallery();
   }
 }
 
 function handleImageDeleted() {
   if (dialog.value) {
     loadGallery();
+    loadItemGallery();
   }
 }
 
@@ -658,7 +845,7 @@ watch(dialog, (isOpen) => {
   if (isOpen) {
     resetUploadState();
     initializingDialog.value = true;
-    loadGallery(true).finally(() => {
+    loadDialogGalleries(true).finally(() => {
       initializingDialog.value = false;
     });
     return;
@@ -667,6 +854,13 @@ watch(dialog, (isOpen) => {
   initializingDialog.value = false;
   clearTempSelection();
   assignSuccess.value = false;
+  itemCopyBusyImageId.value = '';
+  backgroundRemovalId.value = '';
+  backgroundRemovalBackend.value = '';
+  autoAlignId.value = '';
+  autoCropId.value = '';
+  stackProcessingId.value = '';
+  stackProcessingStage.value = 0;
   deleteConfirmVisible.value = false;
   deleteTargetId.value = '';
   deleteAllConfirmVisible.value = false;
@@ -678,7 +872,7 @@ watch(
     clearTempSelection();
     assignSuccess.value = false;
     if (dialog.value) {
-      loadGallery();
+      loadDialogGalleries();
     }
   },
 );
@@ -687,11 +881,27 @@ watch(currentTab, (tab) => {
   if (tab === 'upload') {
     resetUploadState();
     galleryError.value = '';
+    itemGalleryError.value = '';
     assignSuccess.value = false;
   }
 });
 
-async function loadGallery(selectInitialTab: boolean = false) {
+async function loadDialogGalleries(selectInitialTab: boolean = false) {
+  const [loadedTempImages] = await Promise.all([loadGallery(), loadItemGallery()]);
+
+  if (!selectInitialTab) {
+    return;
+  }
+
+  if (loadedTempImages.length > 0) {
+    currentTab.value = 'gallery';
+    return;
+  }
+
+  currentTab.value = 'upload';
+}
+
+async function loadGallery() {
   loadingGallery.value = true;
   galleryError.value = '';
 
@@ -703,15 +913,38 @@ async function loadGallery(selectInitialTab: boolean = false) {
       createdAt: img.createdAt,
       status: 'temp',
     }));
-
-    if (selectInitialTab) {
-      currentTab.value = tempImages.value.length > 0 ? 'gallery' : 'upload';
-    }
+    return tempImages.value;
   } catch (err) {
     galleryError.value = 'Failed to load images';
     console.error(err);
+    return [];
   } finally {
     loadingGallery.value = false;
+  }
+}
+
+async function loadItemGallery() {
+  if (!showItemGalleryTab.value || !props.entityId || !props.entityType) {
+    itemImages.value = [];
+    itemGalleryError.value = '';
+    return [];
+  }
+
+  loadingItemGallery.value = true;
+  itemGalleryError.value = '';
+
+  try {
+    const { data } = await api.get<MyImageData[]>(
+      `/images/entities/${props.entityType}/${props.entityId}/images`,
+    );
+    itemImages.value = data;
+    return itemImages.value;
+  } catch (err) {
+    itemGalleryError.value = 'Failed to load item images';
+    console.error(err);
+    return [];
+  } finally {
+    loadingItemGallery.value = false;
   }
 }
 
@@ -853,25 +1086,104 @@ async function assignSelectedToEntity() {
   }
 }
 
-async function attemptBackgroundRemoval(imageId: string) {
-  if (!imageId || backgroundRemovalId.value || autoCropId.value || rotatingId.value) return;
+async function copyItemImageToTemp(imageId: string) {
+  if (!props.entityId || !props.entityType) {
+    throw new Error('Missing entity context');
+  }
+
+  const { data } = await api.post<MyImageData>(
+    `/images/entities/${props.entityType}/${props.entityId}/images/${imageId}/copy-to-temp`,
+  );
+  return data;
+}
+
+async function copyItemImageToTempGallery(imageId: string) {
+  if (!imageId || itemCopyBusyImageId.value) return;
+
+  itemCopyBusyImageId.value = imageId;
+  itemGalleryError.value = '';
+
+  try {
+    await copyItemImageToTemp(imageId);
+
+    await loadGallery();
+    currentTab.value = 'gallery';
+  } catch (err: unknown) {
+    itemGalleryError.value = getErrorMessage(err, 'Failed to copy image to temp gallery.');
+    console.error('Failed copying item image to temp gallery:', err);
+  } finally {
+    itemCopyBusyImageId.value = '';
+  }
+}
+
+async function attemptBackgroundRemoval(
+  imageId: string,
+  backend: BackgroundRemovalBackend = 'imgly',
+) {
+  if (
+    !imageId ||
+    backgroundRemovalId.value ||
+    autoAlignId.value ||
+    autoCropId.value ||
+    stackProcessingId.value ||
+    rotatingId.value
+  )
+    return;
 
   backgroundRemovalId.value = imageId;
+  backgroundRemovalBackend.value = backend;
   galleryError.value = '';
 
   try {
-    await api.post(`/images/uploads/${imageId}/remove-background`);
+    await api.post(`/images/uploads/${imageId}/remove-background`, {
+      backend,
+      model: backend === 'imgly' ? 'large' : undefined,
+    });
     await loadGallery();
   } catch (err: unknown) {
     galleryError.value = getErrorMessage(err, 'Failed to remove the image background.');
     console.error('Failed background removal:', err);
   } finally {
     backgroundRemovalId.value = '';
+    backgroundRemovalBackend.value = '';
+  }
+}
+
+async function attemptAutoAlign(imageId: string) {
+  if (
+    !imageId ||
+    backgroundRemovalId.value ||
+    autoAlignId.value ||
+    autoCropId.value ||
+    stackProcessingId.value ||
+    rotatingId.value
+  )
+    return;
+
+  autoAlignId.value = imageId;
+  galleryError.value = '';
+
+  try {
+    await api.post(`/images/uploads/${imageId}/auto-align`);
+    await loadGallery();
+  } catch (err: unknown) {
+    galleryError.value = getErrorMessage(err, 'Failed to auto align the image.');
+    console.error('Failed auto align:', err);
+  } finally {
+    autoAlignId.value = '';
   }
 }
 
 async function attemptAutoCrop(imageId: string) {
-  if (!imageId || backgroundRemovalId.value || autoCropId.value || rotatingId.value) return;
+  if (
+    !imageId ||
+    backgroundRemovalId.value ||
+    autoAlignId.value ||
+    autoCropId.value ||
+    stackProcessingId.value ||
+    rotatingId.value
+  )
+    return;
 
   autoCropId.value = imageId;
   galleryError.value = '';
@@ -887,8 +1199,28 @@ async function attemptAutoCrop(imageId: string) {
   }
 }
 
+async function runStackProcess(imageId: string) {
+  if (!imageId || stackProcessingId.value || rotatingId.value) return;
+
+  const stage = 3;
+  stackProcessingId.value = imageId;
+  stackProcessingStage.value = stage;
+  galleryError.value = '';
+
+  try {
+    await api.post(`/images/uploads/${imageId}/process-stack`, { stage });
+    await loadGallery();
+  } catch (err: unknown) {
+    galleryError.value = getErrorMessage(err, 'Failed to process image.');
+    console.error('Failed staged image processing:', err);
+  } finally {
+    stackProcessingId.value = '';
+    stackProcessingStage.value = 0;
+  }
+}
+
 async function attemptRotate(imageId: string, direction: 'cw' | 'ccw') {
-  if (!imageId || backgroundRemovalId.value || autoCropId.value || rotatingId.value) return;
+  if (!imageId || stackProcessingId.value || rotatingId.value) return;
 
   rotatingId.value = imageId;
   rotatingDirection.value = direction;
@@ -1186,7 +1518,23 @@ function onUrlPreviewError() {
 
 .image-card__preview {
   width: 100%;
-  background: #f4f7fb;
+  background-repeat: repeat;
+  background-position: 0 0;
+}
+
+.image-card__preview--checker {
+  background-color: #f6f8fa;
+  background-image:
+    linear-gradient(45deg, rgba(148, 163, 184, 0.16) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(148, 163, 184, 0.16) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.16) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.16) 75%);
+  background-size: 18px 18px;
+  background-position:
+    0 0,
+    0 9px,
+    9px -9px,
+    -9px 0;
 }
 
 .image-card__actions {
@@ -1195,6 +1543,7 @@ function onUrlPreviewError() {
   flex-direction: column;
   gap: 0.4rem;
   align-items: stretch;
+  padding-inline: 0.45rem;
 }
 
 .image-card__action-row {
@@ -1202,6 +1551,83 @@ function onUrlPreviewError() {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
+}
+
+.image-card__indented-action {
+  margin-inline: 0;
+}
+
+.image-card__processing-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.image-card__processing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.image-card__split-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: stretch;
+}
+
+.image-card__stack-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100%;
+  padding: 0.45rem 0.25rem;
+  border: 1px solid #90caf9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #edf5ff 0%, #d9ebff 100%);
+  color: #0d47a1;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.image-card__stack-button:hover:not(:disabled) {
+  border-color: #1976d2;
+  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.16);
+}
+
+.image-card__stack-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.image-card__stack-button--busy {
+  border-color: #1976d2;
+}
+
+.image-card__stack-label {
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.image-card__stack-subtitle {
+  margin-top: 0.18rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .position-relative {

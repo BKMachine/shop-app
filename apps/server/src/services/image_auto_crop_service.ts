@@ -13,6 +13,16 @@ type CropBounds = {
   height: number;
 };
 
+type CropPlan = {
+  extract: CropBounds;
+  extend: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
+};
+
 function findOpaqueBounds(
   data: Uint8Array,
   width: number,
@@ -48,9 +58,12 @@ function findOpaqueBounds(
   };
 }
 
-function expandBounds(bounds: CropBounds, imageWidth: number, imageHeight: number): CropBounds {
+function planCrop(bounds: CropBounds, imageWidth: number, imageHeight: number): CropPlan {
   const targetWidth = Math.min(imageWidth, Math.ceil(bounds.width / SUBJECT_FILL_RATIO));
   const targetHeight = Math.min(imageHeight, Math.ceil(bounds.height / SUBJECT_FILL_RATIO));
+
+  const finalWidth = Math.ceil(bounds.width / SUBJECT_FILL_RATIO);
+  const finalHeight = Math.ceil(bounds.height / SUBJECT_FILL_RATIO);
 
   const centerX = bounds.left + bounds.width / 2;
   const centerY = bounds.top + bounds.height / 2;
@@ -61,11 +74,29 @@ function expandBounds(bounds: CropBounds, imageWidth: number, imageHeight: numbe
   left = Math.max(0, Math.min(left, imageWidth - targetWidth));
   top = Math.max(0, Math.min(top, imageHeight - targetHeight));
 
-  return {
+  const extract = {
     left,
     top,
     width: targetWidth,
     height: targetHeight,
+  };
+
+  const missingWidth = Math.max(0, finalWidth - extract.width);
+  const missingHeight = Math.max(0, finalHeight - extract.height);
+
+  const extendLeft = Math.floor(missingWidth / 2);
+  const extendRight = missingWidth - extendLeft;
+  const extendTop = Math.floor(missingHeight / 2);
+  const extendBottom = missingHeight - extendTop;
+
+  return {
+    extract,
+    extend: {
+      top: extendTop,
+      bottom: extendBottom,
+      left: extendLeft,
+      right: extendRight,
+    },
   };
 }
 
@@ -88,16 +119,28 @@ export async function autoCropImage(sourcePath: string): Promise<{
     throw new Error('No visible subject found to auto crop');
   }
 
-  const crop = expandBounds(bounds, info.width, info.height);
+  const cropPlan = planCrop(bounds, info.width, info.height);
   const filename = `${randomUUID()}.png`;
   const outputPath = path.join(tempDir, filename);
 
-  await sharp(sourcePath, { failOn: 'none' })
+  let pipeline = sharp(sourcePath, { failOn: 'none' })
     .rotate()
     .ensureAlpha()
-    .extract(crop)
-    .png()
-    .toFile(outputPath);
+    .extract(cropPlan.extract);
+
+  if (
+    cropPlan.extend.top ||
+    cropPlan.extend.bottom ||
+    cropPlan.extend.left ||
+    cropPlan.extend.right
+  ) {
+    pipeline = pipeline.extend({
+      ...cropPlan.extend,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    });
+  }
+
+  await pipeline.png().toFile(outputPath);
 
   return {
     filename,
