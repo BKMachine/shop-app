@@ -321,6 +321,7 @@
                             <v-menu location="bottom end">
                               <template #activator="{ props: menuProps }">
                                 <v-btn
+                                  class="bg-removal-selector"
                                   color="secondary"
                                   :disabled="
                                     deleteAllLoading ||
@@ -1669,5 +1670,12 @@ function onUrlPreviewError() {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.bg-removal-selector {
+  width: 20px;
+  min-width: 20px;
+  max-width: 20px;
+  padding-inline: 0;
 }
 </style>
