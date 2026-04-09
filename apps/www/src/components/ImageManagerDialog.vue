@@ -344,15 +344,21 @@
                               <v-list density="compact">
                                 <v-list-item
                                   prepend-icon="mdi-auto-fix"
-                                  subtitle="Fast local default"
+                                  subtitle="Fast - quick cleanup"
                                   title="Use IMGLY"
                                   @click="attemptBackgroundRemoval(img.id, 'imgly')"
                                 />
                                 <v-list-item
                                   prepend-icon="mdi-image-outline"
-                                  subtitle="CPU-only local fallback via rembg"
+                                  subtitle="Medium - simple shapes"
                                   title="Use rembg"
                                   @click="attemptBackgroundRemoval(img.id, 'rembg')"
+                                />
+                                <v-list-item
+                                  prepend-icon="mdi-image-filter-center-focus"
+                                  subtitle="Slow - best edges for shiny tools"
+                                  title="Use BiRefNet"
+                                  @click="attemptBackgroundRemoval(img.id, 'birefnet')"
                                 />
                               </v-list>
                             </v-menu>
@@ -536,7 +542,7 @@ interface ImageData {
   status?: 'temp' | 'attached';
 }
 
-type BackgroundRemovalBackend = 'imgly' | 'rembg';
+type BackgroundRemovalBackend = 'birefnet' | 'imgly' | 'rembg';
 
 type ApiErrorPayload = {
   error?: string;
@@ -765,6 +771,9 @@ const stackProcessingLabel = computed(() => {
   return 'Processing image...';
 });
 const backgroundRemovalLabel = computed(() => {
+  if (backgroundRemovalBackend.value === 'birefnet') {
+    return 'Removing background with BiRefNet...';
+  }
   if (backgroundRemovalBackend.value === 'rembg') return 'Removing background with rembg...';
   return 'Removing background...';
 });

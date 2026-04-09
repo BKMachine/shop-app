@@ -62,6 +62,25 @@ function getExtensionForMimeType(mimeType: string): string {
   if (normalizedMimeType === 'image/jpeg') return '.jpg';
   if (normalizedMimeType === 'image/png') return '.png';
   if (normalizedMimeType === 'image/webp') return '.webp';
+  if (normalizedMimeType === 'image/gif') return '.gif';
+  return '.bin';
+}
+
+function getExtensionForDownload(mimeType: string, sourceUrl: string): string {
+  const normalizedMimeType = mimeType.trim().toLowerCase().split(';')[0] ?? '';
+  const mimeTypeExtension = getExtensionForMimeType(normalizedMimeType);
+  if (mimeTypeExtension !== '.bin') return mimeTypeExtension;
+
+  try {
+    const urlPath = new URL(sourceUrl).pathname;
+    const extension = path.extname(urlPath).toLowerCase();
+    if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(extension)) {
+      return extension;
+    }
+  } catch {
+    return '.bin';
+  }
+
   return '.bin';
 }
 
@@ -229,15 +248,10 @@ router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
 
   try {
     const resp = await axios.get(url, { responseType: 'arraybuffer' });
-
-    const contentType = resp.headers['content-type'] || '';
-    let ext = '.bin';
-    if (contentType.includes('jpeg')) ext = '.jpg';
-    else if (contentType.includes('png')) ext = '.png';
-    else if (contentType.includes('webp')) ext = '.webp';
+    const contentType = resp.headers['content-type'] || 'application/octet-stream';
 
     const fileUuid = randomUUID();
-    const filename = fileUuid + ext;
+    const filename = fileUuid + getExtensionForDownload(contentType, url);
     const filePath = path.join(tempDir, filename);
 
     fs.writeFileSync(filePath, resp.data);
@@ -295,7 +309,11 @@ router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, re
       ? req.body.model
       : undefined;
   const requestedBackend: BackgroundRemovalBackend | undefined =
-    req.body?.backend === 'imgly' || req.body?.backend === 'rembg' ? req.body.backend : undefined;
+    req.body?.backend === 'birefnet' ||
+    req.body?.backend === 'imgly' ||
+    req.body?.backend === 'rembg'
+      ? req.body.backend
+      : undefined;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
 
   try {
@@ -410,7 +428,11 @@ router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, n
 
     const processed = await processImageStack(sourcePath, requestedStage as 1 | 2 | 3, {
       backend:
-        req.body?.backend === 'imgly' || req.body?.backend === 'rembg' ? req.body.backend : null,
+        req.body?.backend === 'birefnet' ||
+        req.body?.backend === 'imgly' ||
+        req.body?.backend === 'rembg'
+          ? req.body.backend
+          : null,
       model:
         req.body?.model === 'small' || req.body?.model === 'medium' || req.body?.model === 'large'
           ? req.body.model

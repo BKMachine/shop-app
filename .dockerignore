@@ -28,4 +28,4 @@ apps/printer
 **/.env
 
 **/*/.venv-*
-**/*/.rembg-models
+**/*/models

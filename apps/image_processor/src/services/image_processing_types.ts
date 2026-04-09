@@ -1,4 +1,4 @@
-export type BackgroundRemovalBackend = 'imgly' | 'rembg';
+export type BackgroundRemovalBackend = 'birefnet' | 'imgly' | 'rembg';
 export type BackgroundRemovalModel = 'small' | 'medium' | 'large';
 
 export type ProcessedImage = {

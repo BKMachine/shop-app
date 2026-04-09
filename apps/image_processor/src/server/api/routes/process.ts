@@ -1,5 +1,7 @@
+import path from 'node:path';
 import { type Response, Router } from 'express';
-import multer from 'multer';
+import multer, { MulterError } from 'multer';
+import sharp from 'sharp';
 import { removeImageBackground } from '../../../services/background_removal_service.js';
 import { autoAlignImage } from '../../../services/image_auto_align_service.js';
 import { autoCropImage } from '../../../services/image_auto_crop_service.js';
@@ -13,18 +15,75 @@ import { rotateImage } from '../../../services/image_rotation_service.js';
 import HttpError from '../../middleware/httpError.js';
 
 const router: Router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const supportedUploadMimeTypes = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 15 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!supportedUploadMimeTypes.has(file.mimetype)) {
+      cb(new HttpError(415, 'Unsupported file type', { expose: true }));
+      return;
+    }
 
-function getUploadedImage(file: Express.Multer.File | undefined): InputImage {
+    cb(null, true);
+  },
+});
+
+function getMimeTypeForSharpFormat(format: string | undefined): string | null {
+  if (format === 'jpeg') return 'image/jpeg';
+  if (format === 'png') return 'image/png';
+  if (format === 'webp') return 'image/webp';
+  if (format === 'gif') return 'image/gif';
+  return null;
+}
+
+async function getUploadedImage(file: Express.Multer.File | undefined): Promise<InputImage> {
   if (!file) {
     throw new HttpError(400, 'image file is required');
   }
 
-  return {
-    buffer: file.buffer,
-    filename: file.originalname,
-    mimeType: file.mimetype,
-  };
+  const normalizedMimeType = file.mimetype.trim().toLowerCase().split(';')[0] ?? '';
+  const filenameExtension = path.extname(file.originalname).toLowerCase();
+
+  try {
+    const metadata = await sharp(file.buffer, { animated: true, failOn: 'none' }).metadata();
+    if (
+      metadata.format === 'gif' ||
+      normalizedMimeType === 'image/gif' ||
+      filenameExtension === '.gif'
+    ) {
+      const parsedName = path.parse(file.originalname);
+
+      return {
+        buffer: await sharp(file.buffer, { animated: true, failOn: 'none', pages: 1 })
+          .png()
+          .toBuffer(),
+        filename: `${parsedName.name || 'image'}.png`,
+        mimeType: 'image/png',
+      };
+    }
+
+    return {
+      buffer: file.buffer,
+      filename: file.originalname,
+      mimeType: getMimeTypeForSharpFormat(metadata.format) || file.mimetype,
+    };
+  } catch {
+    return {
+      buffer: file.buffer,
+      filename: file.originalname,
+      mimeType: file.mimetype,
+    };
+  }
 }
 
 function isBackgroundRemovalModel(value: string | undefined): value is BackgroundRemovalModel {
@@ -32,7 +91,7 @@ function isBackgroundRemovalModel(value: string | undefined): value is Backgroun
 }
 
 function isBackgroundRemovalBackend(value: string | undefined): value is BackgroundRemovalBackend {
-  return value === 'imgly' || value === 'rembg';
+  return value === 'birefnet' || value === 'imgly' || value === 'rembg';
 }
 
 function isSkippableAutoAlignError(error: unknown): boolean {
@@ -50,7 +109,7 @@ router.get('/health', (_req, res) => {
 
 router.post('/remove-background', upload.single('image'), async (req, res, next) => {
   try {
-    const image = getUploadedImage(req.file);
+    const image = await getUploadedImage(req.file);
     const requestedModel = isBackgroundRemovalModel(req.body?.model) ? req.body.model : undefined;
     const requestedBackend = isBackgroundRemovalBackend(req.body?.backend)
       ? req.body.backend
@@ -62,22 +121,34 @@ router.post('/remove-background', upload.single('image'), async (req, res, next)
 
     sendProcessedImage(res, processed);
   } catch (error) {
+    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    }
+
     next(error);
   }
 });
 
 router.post('/auto-crop', upload.single('image'), async (req, res, next) => {
   try {
-    sendProcessedImage(res, await autoCropImage(getUploadedImage(req.file)));
+    sendProcessedImage(res, await autoCropImage(await getUploadedImage(req.file)));
   } catch (error) {
+    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    }
+
     next(error);
   }
 });
 
 router.post('/auto-align', upload.single('image'), async (req, res, next) => {
   try {
-    sendProcessedImage(res, await autoAlignImage(getUploadedImage(req.file)));
+    sendProcessedImage(res, await autoAlignImage(await getUploadedImage(req.file)));
   } catch (error) {
+    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    }
+
     if (isSkippableAutoAlignError(error)) {
       return next(
         new HttpError(409, 'Image is already aligned closely enough', {
@@ -94,7 +165,7 @@ router.post('/auto-align', upload.single('image'), async (req, res, next) => {
 
 router.post('/process-stack', upload.single('image'), async (req, res, next) => {
   try {
-    const image = getUploadedImage(req.file);
+    const image = await getUploadedImage(req.file);
     const requestedStage = Number(req.body?.stage ?? 0);
     if (![1, 2, 3].includes(requestedStage)) {
       throw new HttpError(400, 'stage must be 1, 2, or 3');
@@ -132,6 +203,10 @@ router.post('/process-stack', upload.single('image'), async (req, res, next) => 
 
     sendProcessedImage(res, processed);
   } catch (error) {
+    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    }
+
     next(error);
   }
 });
@@ -143,9 +218,16 @@ router.post('/rotate', upload.single('image'), async (req, res, next) => {
       throw new HttpError(400, 'direction must be cw or ccw');
     }
 
-    const processed = await rotateImage(getUploadedImage(req.file), direction === 'cw' ? 90 : -90);
+    const processed = await rotateImage(
+      await getUploadedImage(req.file),
+      direction === 'cw' ? 90 : -90,
+    );
     sendProcessedImage(res, processed);
   } catch (error) {
+    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    }
+
     next(error);
   }
 });

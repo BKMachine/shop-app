@@ -1,13 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export type BackgroundRemovalBackend = 'imgly' | 'rembg';
+export type BackgroundRemovalBackend = 'birefnet' | 'imgly' | 'rembg';
 export type BackgroundRemovalModel = 'small' | 'medium' | 'large';
 
 type ProcessedImageResponse = {
   buffer: Buffer;
   mimeType: string;
   extension: string;
+};
+
+type BinaryResponse = {
+  buffer: Buffer;
+  mimeType: string;
 };
 
 type ImageProcessorErrorPayload = {
@@ -39,6 +44,7 @@ function getMimeTypeForSourcePath(sourcePath: string): string {
   if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
   if (ext === '.png') return 'image/png';
   if (ext === '.webp') return 'image/webp';
+  if (ext === '.gif') return 'image/gif';
   return 'application/octet-stream';
 }
 
@@ -105,6 +111,25 @@ async function callImageProcessor(
   };
 }
 
+async function callImageProcessorJson(route: string, payload: unknown): Promise<BinaryResponse> {
+  const response = await fetch(`${getImageProcessorBaseUrl()}/api/${route}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseErrorResponse(response);
+  }
+
+  return {
+    buffer: Buffer.from(await response.arrayBuffer()),
+    mimeType: response.headers.get('content-type') || 'application/octet-stream',
+  };
+}
+
 export function isSkippableAutoAlignError(error: unknown): boolean {
   return (
     error instanceof ImageProcessorClientError &&
@@ -152,4 +177,12 @@ export async function processImageStack(
     backend: options.backend ?? undefined,
     model: options.model ?? undefined,
   });
+}
+
+export async function buildLocationLabelPdf(data: PrintLocationBody) {
+  return callImageProcessorJson('labels/location', data);
+}
+
+export async function buildItemLabelPdf(data: PrintItemBody & { barcode?: string }) {
+  return callImageProcessorJson('labels/item', data);
 }

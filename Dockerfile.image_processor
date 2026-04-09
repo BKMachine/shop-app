@@ -39,6 +39,7 @@ RUN python3 -m venv /app/apps/image_processor/.venv-rembg \
 	&& /app/apps/image_processor/.venv-rembg/bin/pip install "rembg[cpu,cli]"
 COPY --from=image-processor-deploy /app/deploy/image_processor/node_modules /app/apps/image_processor/node_modules
 COPY --from=image-processor-builder /app/apps/image_processor/dist /app/apps/image_processor/dist
+COPY --from=image-processor-builder /app/apps/image_processor/assets /app/apps/image_processor/assets
 COPY --from=image-processor-builder /app/apps/image_processor/scripts /app/apps/image_processor/scripts
 ENV NODE_ENV=production
 EXPOSE 3000

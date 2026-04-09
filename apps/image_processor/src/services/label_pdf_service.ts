@@ -9,6 +9,7 @@ import sharp from 'sharp';
 const POINTS_PER_INCH = 72;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 type ItemLabelData = PrintItemBody & { barcode?: string };
 
 function resolveAssetPath(...segments: string[]) {
@@ -34,7 +35,6 @@ const LOCATION_LABEL = {
   height: 1.0 * POINTS_PER_INCH,
 };
 
-const LOCATION_SLOT_HEIGHT_INCHES = 0.5;
 const LOCATION_OBJECTS = {
   text: {
     x: 0.105,
@@ -50,6 +50,7 @@ const LOCATION_OBJECTS = {
     height: 0.299,
   },
 };
+
 const LOCATION_TEXT_LAYOUT = {
   x: LOCATION_OBJECTS.text.x,
   y: LOCATION_OBJECTS.text.y,
@@ -57,6 +58,7 @@ const LOCATION_TEXT_LAYOUT = {
   height: LOCATION_OBJECTS.text.height,
   fontSize: LOCATION_OBJECTS.text.fontSize,
 };
+
 const LOCATION_QR_LAYOUT = {
   x: LOCATION_OBJECTS.qr.x,
   y: LOCATION_OBJECTS.qr.y,
@@ -100,16 +102,6 @@ const ITEM_LAYOUT = {
   },
 };
 
-const LOCATION_TOP_PREVIEW = {
-  width: 400,
-  height: 203,
-  background: '#c9c9c9',
-  labelX: 6,
-  labelY: 9,
-  labelWidth: 385,
-  labelHeight: 193,
-  labelRadius: 40,
-};
 const LOCATION_LABEL_RASTER_SIZE = 900;
 
 function fitText(font: PDFFont, text: string, maxWidth: number, startSize: number, minSize = 8) {
@@ -154,7 +146,7 @@ function dataUrlToBuffer(dataUrl: string) {
   return Buffer.from(base64, 'base64');
 }
 
-function getLocationTextPlacement(font: PDFFont, position: string, slotTop = 0) {
+function getLocationTextPlacement(font: PDFFont, position: string) {
   const textWidth = inches(LOCATION_TEXT_LAYOUT.width);
   const textHeight = inches(LOCATION_TEXT_LAYOUT.height);
   const fontSize = fitText(font, position, textWidth, LOCATION_TEXT_LAYOUT.fontSize, 8);
@@ -162,7 +154,7 @@ function getLocationTextPlacement(font: PDFFont, position: string, slotTop = 0) 
   const textHeightAtSize = font.heightAtSize(fontSize);
   const textBaselineAdjust = 3.1;
   const textY =
-    toPdfY(LOCATION_LABEL.height, slotTop + LOCATION_TEXT_LAYOUT.y, LOCATION_TEXT_LAYOUT.height) +
+    toPdfY(LOCATION_LABEL.height, LOCATION_TEXT_LAYOUT.y, LOCATION_TEXT_LAYOUT.height) +
     (textHeight - textHeightAtSize) / 2 +
     textBaselineAdjust;
 
@@ -180,60 +172,6 @@ function escapeXml(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&apos;');
-}
-
-async function buildLocationLabel(data: PrintLocationBody) {
-  const labelImageBuffer = await buildLocationLabelImage(data);
-  const pdf = await PDFDocument.create();
-  const page = pdf.addPage([LOCATION_LABEL.width, LOCATION_LABEL.height]);
-  const labelImage = await pdf.embedPng(labelImageBuffer);
-
-  page.drawImage(labelImage, {
-    x: 0,
-    y: 0,
-    width: LOCATION_LABEL.width,
-    height: LOCATION_LABEL.height,
-  });
-
-  return Buffer.from(await pdf.save());
-}
-
-async function buildLocationLabelTopPreviewPng(data: PrintLocationBody) {
-  const labelImage = await sharp(
-    await buildLocationLabelImage(data, LOCATION_TOP_PREVIEW.labelWidth * 3),
-  )
-    .resize(LOCATION_TOP_PREVIEW.labelWidth, LOCATION_TOP_PREVIEW.labelHeight, {
-      fit: 'fill',
-      kernel: 'nearest',
-    })
-    .png()
-    .toBuffer();
-
-  const svg = Buffer.from(
-    `<svg width="${LOCATION_TOP_PREVIEW.width}" height="${LOCATION_TOP_PREVIEW.height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="${LOCATION_TOP_PREVIEW.background}" />
-      <rect
-        x="${LOCATION_TOP_PREVIEW.labelX}"
-        y="${LOCATION_TOP_PREVIEW.labelY}"
-        width="${LOCATION_TOP_PREVIEW.labelWidth}"
-        height="${LOCATION_TOP_PREVIEW.labelHeight}"
-        rx="${LOCATION_TOP_PREVIEW.labelRadius}"
-        ry="${LOCATION_TOP_PREVIEW.labelRadius}"
-        fill="#ffffff"
-      />
-    </svg>`,
-  );
-
-  return sharp(svg)
-    .composite([
-      {
-        input: labelImage,
-        left: LOCATION_TOP_PREVIEW.labelX,
-        top: LOCATION_TOP_PREVIEW.labelY,
-      },
-    ])
-    .png()
-    .toBuffer();
 }
 
 async function buildLocationLabelImage(data: PrintLocationBody, size = LOCATION_LABEL_RASTER_SIZE) {
@@ -255,7 +193,7 @@ async function buildLocationLabelImage(data: PrintLocationBody, size = LOCATION_
     },
   });
 
-  const slotHeightPx = inches(LOCATION_SLOT_HEIGHT_INCHES) * scale;
+  const slotHeightPx = inches(0.5) * scale;
   const columnWidthPx = slotHeightPx;
   const qrDataUrl = `data:image/png;base64,${dataUrlToBuffer(qrPngDataUrl).toString('base64')}`;
 
@@ -291,6 +229,22 @@ async function buildLocationLabelImage(data: PrintLocationBody, size = LOCATION_
   );
 
   return sharp(svg).png().toBuffer();
+}
+
+async function buildLocationLabel(data: PrintLocationBody) {
+  const labelImageBuffer = await buildLocationLabelImage(data);
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([LOCATION_LABEL.width, LOCATION_LABEL.height]);
+  const labelImage = await pdf.embedPng(labelImageBuffer);
+
+  page.drawImage(labelImage, {
+    x: 0,
+    y: 0,
+    width: LOCATION_LABEL.width,
+    height: LOCATION_LABEL.height,
+  });
+
+  return Buffer.from(await pdf.save());
 }
 
 async function buildItemLabel(data: ItemLabelData) {
@@ -399,6 +353,5 @@ async function buildItemLabel(data: ItemLabelData) {
 
 export default {
   buildLocationLabel,
-  buildLocationLabelTopPreviewPng,
   buildItemLabel,
 };
