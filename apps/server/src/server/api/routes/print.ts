@@ -11,6 +11,32 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
+function getPartLabelImageBaseUrl() {
+  return process.env.PART_LABEL_IMAGE_BASE_URL?.trim() || process.env.BASE_URL?.trim() || '';
+}
+
+function resolvePartImageUrlForLabel(partImageUrl: string | undefined) {
+  if (!partImageUrl) return undefined;
+
+  const baseUrl = getPartLabelImageBaseUrl();
+  try {
+    const sourceUrl = new URL(partImageUrl);
+    if (!baseUrl) return sourceUrl.toString();
+
+    if (!sourceUrl.pathname.startsWith('/images/')) {
+      return sourceUrl.toString();
+    }
+
+    return new URL(`${sourceUrl.pathname}${sourceUrl.search}`, `${baseUrl}/`).toString();
+  } catch {
+    if (!baseUrl || !partImageUrl.startsWith('/images/')) {
+      return partImageUrl;
+    }
+
+    return new URL(partImageUrl, `${baseUrl}/`).toString();
+  }
+}
+
 router.post('/print/location', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   const { loc, pos }: PrintLocationBody = req.body;
@@ -64,13 +90,17 @@ router.post('/print/part-position', requireKnownDevice, async (req, res, next) =
   }
 
   try {
+    const resolvedPartImageUrl = resolvePartImageUrlForLabel(partImageUrl);
+    if (resolvedPartImageUrl) {
+      logger.info(`Part label image URL resolved to ${resolvedPartImageUrl}`);
+    }
     const pdf = await buildPartPositionLabelPdf({
       partId,
       part,
       description,
       loc,
       pos,
-      partImageUrl,
+      partImageUrl: resolvedPartImageUrl,
     });
     await CupsService.printAddressLabel(pdf.buffer, {
       item: part,

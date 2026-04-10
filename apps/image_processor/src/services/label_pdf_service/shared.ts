@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { PDFFont } from 'pdf-lib';
 import QRCode from 'qrcode';
 import sharp from 'sharp';
+import logger from '../../logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,6 +115,14 @@ export async function buildPartImageOrFallbackBuffer(
   const targetHeight = Math.max(1, Math.round(height * 4));
 
   if (imageUrl) {
+    let parsedUrl: URL | null = null;
+
+    try {
+      parsedUrl = new URL(imageUrl);
+    } catch {
+      parsedUrl = null;
+    }
+
     try {
       const response = await fetch(imageUrl);
       if (response.ok) {
@@ -128,8 +137,35 @@ export async function buildPartImageOrFallbackBuffer(
           .png()
           .toBuffer();
       }
-    } catch {
-      // Fall through to generated placeholder.
+
+      logger.error(
+        `Label image fetch returned non-OK response. url=${imageUrl} status=${response.status} statusText=${response.statusText} contentType=${response.headers.get('content-type') || 'unknown'}`,
+      );
+      if (parsedUrl) {
+        logger.error(
+          `Label image fetch URL details. protocol=${parsedUrl.protocol} host=${parsedUrl.host} hostname=${parsedUrl.hostname} port=${parsedUrl.port || '(default)'} pathname=${parsedUrl.pathname}`,
+        );
+      }
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      const cause =
+        err.cause instanceof Error
+          ? `${err.cause.name}: ${err.cause.message}`
+          : err.cause != null
+            ? String(err.cause)
+            : 'none';
+
+      logger.error(
+        `Label image fetch failed. url=${imageUrl} errorName=${err.name} errorMessage=${err.message} cause=${cause}`,
+      );
+      if (parsedUrl) {
+        logger.error(
+          `Label image fetch URL details. protocol=${parsedUrl.protocol} host=${parsedUrl.host} hostname=${parsedUrl.hostname} port=${parsedUrl.port || '(default)'} pathname=${parsedUrl.pathname}`,
+        );
+      }
+      if (err.stack) {
+        logger.error(`Label image fetch stack: ${err.stack}`);
+      }
     }
   }
 
