@@ -147,7 +147,7 @@ async function printLocationLabel(pdf: Buffer, data: PrintLocationBody) {
   await sendPdfToQueue(locationLabel, pdf, jobName);
 }
 
-async function printAddressLabel(pdf: Buffer, data: PrintAddressLabelBody) {
+async function printAddressLabel(pdf: Buffer, data: PrintItemBody) {
   if (!enabled) return;
 
   const jobName = `address-${sanitizeJobSegment(data.item)}`;

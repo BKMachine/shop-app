@@ -33,7 +33,7 @@ router.post('/print/location', requireKnownDevice, async (req, res, next) => {
 
 async function sendAddressLabel(req: Request, res: Response, next: NextFunction) {
   assertKnownDevice(req);
-  const { item, description, brand, barcode } = req.body as PrintAddressLabelBody & {
+  const { item, description, brand, barcode } = req.body as PrintItemBody & {
     barcode?: string;
   };
   if (!item || !description) return next(new HttpError(400, 'item and description are required.'));
