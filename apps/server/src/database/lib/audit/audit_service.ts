@@ -2,6 +2,8 @@ import { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import Audit from './audit_model.js';
 
+const hiddenAuditTypes = new Set<Audit['type']>(['image', 'document']);
+
 function normalizeAuditPayload(doc: unknown): unknown | null {
   if (!doc) return null;
 
@@ -34,11 +36,13 @@ async function addAudit(
 
 async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Promise<AuditDoc[]> {
   const query: {
-    type?: { $in: Audit['type'][] };
+    type?: { $in?: Audit['type'][]; $nin?: Audit['type'][] };
   } = {};
 
   if (types?.length) {
     query.type = { $in: types };
+  } else {
+    query.type = { $nin: Array.from(hiddenAuditTypes) };
   }
 
   return Audit.find(query, 'type timestamp device old new')
