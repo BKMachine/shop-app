@@ -378,7 +378,12 @@
                 class="ml-2"
                 label="Position"
                 @update:model-value="part.position = part.position?.toUpperCase()"
-              > </v-text-field>
+              >
+                <template #append-inner>
+                  <v-icon icon="mdi-map-marker-outline" @click="gotoLocation" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printPartPosition" />
+                </template>
+              </v-text-field>
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -794,8 +799,6 @@ const partIsAltered = computed<boolean>(() => {
 
 const requiredRule = (val: string) => !!val || 'Required';
 
-function printItem() {}
-
 function gotoLocation() {
   if (!part.value.location || !part.value.position) return;
   router.push({ name: 'locations', query: { loc: part.value.location, pos: part.value.position } });
@@ -829,6 +832,27 @@ function printLocation() {
   const pos = part.value.position;
   if (!loc || !pos) return;
   printer.printLocation({ loc, pos });
+}
+
+function printPartPosition() {
+  const partId = part.value._id;
+  const labelPart = part.value.part;
+  const description = part.value.description;
+  const loc = part.value.location;
+  const pos = part.value.position;
+  const imageUrl = part.value.img?.trim()
+    ? new URL(part.value.img, window.location.origin).toString()
+    : undefined;
+
+  if (!partId || !labelPart || !description || !loc || !pos) return;
+  printer.printPartPosition({
+    partId,
+    part: labelPart,
+    description,
+    loc,
+    pos,
+    partImageUrl: imageUrl,
+  });
 }
 
 function addNew() {

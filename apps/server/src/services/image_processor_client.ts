@@ -183,6 +183,10 @@ export async function buildLocationLabelPdf(data: PrintLocationBody) {
   return callImageProcessorJson('labels/location', data);
 }
 
-export async function buildItemLabelPdf(data: PrintItemBody & { barcode?: string }) {
-  return callImageProcessorJson('labels/item', data);
+export async function buildAddressLabelPdf(data: PrintItemBody & { barcode?: string }) {
+  return callImageProcessorJson('labels/address', data);
+}
+
+export async function buildPartPositionLabelPdf(data: PrintPartPositionBody) {
+  return callImageProcessorJson('labels/part-position', data);
 }

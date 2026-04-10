@@ -20,14 +20,22 @@ async function printLocation(data: PrintLocationBody) {
   return response;
 }
 
-async function printItem(data: PrintItemBody) {
+async function printAddress(data: PrintItemBody) {
   if (!data.item || !data.description) return;
-  const response = await axios.post('/print/item', data, { responseType: 'blob' });
+  const response = await axios.post('/print/address', data, { responseType: 'blob' });
+  openPdfPreview(response.data);
+  return response;
+}
+
+async function printPartPosition(data: PrintPartPositionBody) {
+  if (!data.partId || !data.part || !data.description || !data.loc || !data.pos) return;
+  const response = await axios.post('/print/part-position', data, { responseType: 'blob' });
   openPdfPreview(response.data);
   return response;
 }
 
 export default {
   printLocation,
-  printItem,
+  printAddress,
+  printPartPosition,
 };

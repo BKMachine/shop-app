@@ -69,6 +69,15 @@ declare global {
     brand: string;
   }
 
+  interface PrintPartPositionBody {
+    partId: string;
+    part: string;
+    description: string;
+    loc: string;
+    pos: string;
+    partImageUrl?: string;
+  }
+
   interface PrintRequest {
     printerName: string;
     labelXml: string;

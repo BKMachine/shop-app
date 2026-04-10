@@ -642,7 +642,7 @@ function printItem() {
 
   if (!item || !description || !vendor) return;
   const brand = typeof vendor === 'string' ? vendor : vendor.name;
-  printer.printItem({ item, description, brand });
+  printer.printAddress({ item, description, brand });
 }
 
 function printBarcode() {
@@ -652,7 +652,7 @@ function printBarcode() {
 
   if (!item || !description || !vendor) return;
   const brand = typeof vendor === 'string' ? vendor : vendor.name;
-  printer.printItem({ item, description, brand });
+  printer.printAddress({ item, description, brand });
 }
 
 /* STOCK TAB LOGIC */

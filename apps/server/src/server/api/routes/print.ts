@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { type NextFunction, type Request, type Response, Router } from 'express';
 import logger from '../../../logger.js';
 import CupsService from '../../../services/cups_service.js';
 import {
-  buildItemLabelPdf,
+  buildAddressLabelPdf,
   buildLocationLabelPdf,
+  buildPartPositionLabelPdf,
 } from '../../../services/image_processor_client.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
@@ -30,20 +31,58 @@ router.post('/print/location', requireKnownDevice, async (req, res, next) => {
   }
 });
 
-router.post('/print/item', requireKnownDevice, async (req, res, next) => {
+async function sendAddressLabel(req: Request, res: Response, next: NextFunction) {
   assertKnownDevice(req);
-  const { item, description, brand, barcode } = req.body as PrintItemBody & { barcode?: string };
+  const { item, description, brand, barcode } = req.body as PrintAddressLabelBody & {
+    barcode?: string;
+  };
   if (!item || !description) return next(new HttpError(400, 'item and description are required.'));
 
   try {
-    const pdf = await buildItemLabelPdf({ item, description, brand, barcode });
-    await CupsService.printItemLabel(pdf.buffer, { item, description, brand }).catch((error) => {
+    const pdf = await buildAddressLabelPdf({ item, description, brand, barcode });
+    await CupsService.printAddressLabel(pdf.buffer, { item, description, brand }).catch((error) => {
       logger.warn(
-        `CUPS item print failed: ${error instanceof Error ? error.message : String(error)}`,
+        `CUPS address print failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="item-label-preview.pdf"');
+    res.setHeader('Content-Disposition', 'inline; filename="address-label-preview.pdf"');
+    res.status(200).send(pdf.buffer);
+  } catch (e) {
+    next(e);
+  }
+}
+
+router.post('/print/address', requireKnownDevice, sendAddressLabel);
+router.post('/print/item', requireKnownDevice, sendAddressLabel);
+
+router.post('/print/part-position', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
+  const { partId, part, description, loc, pos, partImageUrl }: PrintPartPositionBody = req.body;
+  if (!partId || !part || !description || !loc || !pos) {
+    return next(new HttpError(400, 'partId, part, description, loc, and pos are required.'));
+  }
+
+  try {
+    const pdf = await buildPartPositionLabelPdf({
+      partId,
+      part,
+      description,
+      loc,
+      pos,
+      partImageUrl,
+    });
+    await CupsService.printAddressLabel(pdf.buffer, {
+      item: part,
+      description,
+      brand: `${loc} | ${pos}`,
+    }).catch((error) => {
+      logger.warn(
+        `CUPS part position print failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="part-position-label-preview.pdf"');
     res.status(200).send(pdf.buffer);
   } catch (e) {
     next(e);
