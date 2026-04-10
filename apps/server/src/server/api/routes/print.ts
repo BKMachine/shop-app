@@ -90,17 +90,13 @@ router.post('/print/part-position', requireKnownDevice, async (req, res, next) =
   }
 
   try {
-    const resolvedPartImageUrl = resolvePartImageUrlForLabel(partImageUrl);
-    if (resolvedPartImageUrl) {
-      logger.info(`Part label image URL resolved to ${resolvedPartImageUrl}`);
-    }
     const pdf = await buildPartPositionLabelPdf({
       partId,
       part,
       description,
       loc,
       pos,
-      partImageUrl: resolvedPartImageUrl,
+      partImageUrl,
     });
     await CupsService.printAddressLabel(pdf.buffer, {
       item: part,

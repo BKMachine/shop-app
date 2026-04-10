@@ -56,6 +56,15 @@ function roughlyEqual(left: number, right: number) {
   return Math.abs(left - right) <= PDF_SIZE_TOLERANCE_POINTS;
 }
 
+function matchesLabelSize(width: number, height: number, label: LabelDefinition) {
+  const matchesExpectedOrientation =
+    roughlyEqual(width, label.widthPoints) && roughlyEqual(height, label.heightPoints);
+  const matchesRotatedOrientation =
+    roughlyEqual(width, label.heightPoints) && roughlyEqual(height, label.widthPoints);
+
+  return matchesExpectedOrientation || matchesRotatedOrientation;
+}
+
 function describeLabel(label: LabelDefinition) {
   return `${label.widthPoints}x${label.heightPoints}pt (${pointsToInches(label.widthPoints)}x${pointsToInches(label.heightPoints)}in)`;
 }
@@ -104,7 +113,7 @@ async function validatePdfSize(pdf: Buffer, label: LabelDefinition) {
   const page = document.getPage(0);
   const { width, height } = page.getSize();
 
-  if (!roughlyEqual(width, label.widthPoints) || !roughlyEqual(height, label.heightPoints)) {
+  if (!matchesLabelSize(width, height, label)) {
     throw new Error(
       `Refusing ${label.kind} label print because PDF page size ${width.toFixed(2)}x${height.toFixed(2)}pt does not match expected ${describeLabel(label)} for media ${label.media}.`,
     );

@@ -1,4 +1,5 @@
 import axios from './axios';
+import { toastError, toastSuccess } from './vue-toast-notification';
 
 function openPdfPreview(blob: Blob) {
   const previewUrl = URL.createObjectURL(blob);
@@ -29,9 +30,16 @@ async function printAddress(data: PrintItemBody) {
 
 async function printPartPosition(data: PrintPartPositionBody) {
   if (!data.partId || !data.part || !data.description || !data.loc || !data.pos) return;
-  const response = await axios.post('/print/part-position', data, { responseType: 'blob' });
-  openPdfPreview(response.data);
-  return response;
+  await axios
+    .post('/print/part-position', data, { responseType: 'blob' })
+    .then((response) => {
+      if (import.meta.env.DEV) openPdfPreview(response.data);
+      toastSuccess('Sent to printer!');
+    })
+    .catch((error) => {
+      console.error('Error printing part position label:', error);
+      toastError('Failed to print part position label.');
+    });
 }
 
 export default {
