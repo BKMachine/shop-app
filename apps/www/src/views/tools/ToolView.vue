@@ -121,28 +121,7 @@
             </v-col>
           </v-row>
           <v-row no-gutters>
-            <v-col cols="6">
-              <v-select
-                v-model="tool.vendor"
-                class="mr-2"
-                clearable
-                item-title="name"
-                item-value="_id"
-                :items="vendorStore.vendors"
-                label="Brand"
-              >
-                <template #item="{ props, item }">
-                  <v-list-item v-bind="props" title="">
-                    <template #prepend>
-                      <v-avatar rounded="0">
-                        <v-img class="vendor-logo" :src="item.raw.logo" />
-                      </v-avatar>
-                    </template>
-                    {{ item.raw.name }}
-                  </v-list-item>
-                </template>
-              </v-select>
-            </v-col>
+            <v-col cols="6"> <VendorSelect v-model="tool.vendor" class="mr-2" /> </v-col>
             <v-col cols="6">
               <v-select
                 v-model="tool.coating"
@@ -277,28 +256,7 @@
                 @keydown="isNumber($event)"
               />
             </v-col>
-            <v-col cols="3">
-              <v-select
-                v-model="tool.supplier"
-                class="mr-2"
-                clearable
-                item-title="name"
-                item-value="_id"
-                :items="supplierStore.suppliers"
-                label="Supplier"
-              >
-                <template #item="{ props, item }">
-                  <v-list-item v-bind="props" title="">
-                    <template #prepend>
-                      <v-avatar rounded="0">
-                        <v-img class="vendor-logo" :src="item.raw.logo" />
-                      </v-avatar>
-                    </template>
-                    {{ item.raw.name }}
-                  </v-list-item>
-                </template>
-              </v-select>
-            </v-col>
+            <v-col cols="3"> <SupplierSelect v-model="tool.supplier" class="mr-2" /> </v-col>
             <v-col cols="6">
               <v-text-field
                 v-model="tool.orderLink"
@@ -430,20 +388,20 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CurrencyInput from '@/components/CurrencyInput.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
+import SupplierSelect from '@/components/SupplierSelect.vue';
 import ToolStockGraph from '@/components/ToolStockGraph.vue';
+import VendorSelect from '@/components/VendorSelect.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
-import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
-const supplierStore = useSupplierStore();
 
 const tool = ref<Tool>({
   stock: 0,
