@@ -11,32 +11,6 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
-function getPartLabelImageBaseUrl() {
-  return process.env.PART_LABEL_IMAGE_BASE_URL?.trim() || process.env.BASE_URL?.trim() || '';
-}
-
-function resolvePartImageUrlForLabel(partImageUrl: string | undefined) {
-  if (!partImageUrl) return undefined;
-
-  const baseUrl = getPartLabelImageBaseUrl();
-  try {
-    const sourceUrl = new URL(partImageUrl);
-    if (!baseUrl) return sourceUrl.toString();
-
-    if (!sourceUrl.pathname.startsWith('/images/')) {
-      return sourceUrl.toString();
-    }
-
-    return new URL(`${sourceUrl.pathname}${sourceUrl.search}`, `${baseUrl}/`).toString();
-  } catch {
-    if (!baseUrl || !partImageUrl.startsWith('/images/')) {
-      return partImageUrl;
-    }
-
-    return new URL(partImageUrl, `${baseUrl}/`).toString();
-  }
-}
-
 router.post('/print/location', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   const { loc, pos }: PrintLocationBody = req.body;
