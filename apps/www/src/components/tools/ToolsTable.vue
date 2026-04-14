@@ -141,7 +141,7 @@ const props = defineProps<{
   loadingMore: boolean;
   category: ToolCategory;
   search: string;
-  toolType: string;
+  toolType: string | null;
   cuttingDia: string;
   minFluteLength: string;
   sortBy: string;
@@ -162,7 +162,7 @@ const toolStore = useToolStore();
 const searchText = ref<string>(props.search);
 const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
-const selectedToolType = ref<string>(props.toolType);
+const selectedToolType = ref<string | null>(props.toolType);
 const tableHost = ref<HTMLElement | null>(null);
 const tableHeight = ref(700);
 const isAtTableBottom = ref(false);

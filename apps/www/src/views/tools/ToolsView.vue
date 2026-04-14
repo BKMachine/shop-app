@@ -51,7 +51,7 @@ const route = useRoute();
 
 const tab = ref<ToolCategory>('milling');
 const search = ref<string>('');
-const toolType = ref<string>('');
+const toolType = ref<string | null>(null);
 const cuttingDia = ref<string>('');
 const minFluteLength = ref<string>('');
 const sortBy = ref<string>('');
@@ -71,7 +71,7 @@ function updateSearch(text: string) {
   syncFiltersToQuery();
 }
 
-function updateToolType(value: string) {
+function updateToolType(value: string | null) {
   toolType.value = value;
   syncFiltersToQuery();
 }
@@ -117,7 +117,7 @@ function applyRouteFilters() {
   }
 
   search.value = normalizeQueryValue(route.query.search) ?? '';
-  toolType.value = normalizeQueryValue(route.query.toolType) ?? '';
+  toolType.value = normalizeQueryValue(route.query.toolType) ?? null;
   cuttingDia.value = normalizeQueryValue(route.query.cuttingDia) ?? '';
   minFluteLength.value = normalizeQueryValue(route.query.minFluteLength) ?? '';
   sortBy.value = normalizeQueryValue(route.query.sort) ?? '';
@@ -160,7 +160,7 @@ function syncFiltersToQuery() {
 
 function clearAllFilters() {
   search.value = '';
-  toolType.value = '';
+  toolType.value = null;
   cuttingDia.value = '';
   minFluteLength.value = '';
   syncFiltersToQuery();
