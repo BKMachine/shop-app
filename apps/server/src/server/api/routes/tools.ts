@@ -18,6 +18,8 @@ router.get('/tools', async (req, res, next) => {
       category: normalizeQueryValue(req.query.category) as ToolFilterCategory | undefined,
       search: normalizeQueryValue(req.query.search),
       toolType: normalizeQueryValue(req.query.toolType),
+      location: normalizeQueryValue(req.query.location),
+      position: normalizeQueryValue(req.query.position),
       cuttingDia: normalizeQueryValue(req.query.cuttingDia),
       minFluteLength: normalizeQueryValue(req.query.minFluteLength),
       sort: normalizeQueryValue(req.query.sort),
@@ -36,6 +38,19 @@ router.get('/tools/locations', async (_req, res, next) => {
   try {
     const locations = await Tools.getToolLocations();
     res.status(200).json(locations);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Get distinct tool positions for a given location
+router.get('/tools/positions', async (req, res, next) => {
+  const location = normalizeQueryValue(req.query.location);
+  if (!location) return next(new HttpError(400, 'location query parameter is required'));
+
+  try {
+    const positions = await Tools.getToolPositions(location);
+    res.status(200).json(positions);
   } catch (e) {
     next(e);
   }

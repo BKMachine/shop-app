@@ -20,6 +20,8 @@ function buildToolQuery(filters: ToolListFilters) {
   const exprConditions: Record<string, unknown>[] = [];
 
   if (filters.category && filters.category !== 'all') query.category = filters.category;
+  if (filters.location?.trim()) query.location = filters.location.trim();
+  if (filters.position?.trim()) query.position = filters.position.trim();
 
   if (filters.search?.trim()) {
     const regex = new RegExp(escapeRegExp(filters.search.trim()), 'i');
@@ -241,6 +243,10 @@ function getToolLocations(): Promise<string[]> {
   return Tool.distinct('location', { location: { $ne: null } });
 }
 
+function getToolPositions(location: string): Promise<string[]> {
+  return Tool.distinct('position', { location, position: { $ne: null } });
+}
+
 export default {
   list,
   findById,
@@ -251,4 +257,5 @@ export default {
   pick,
   stock,
   getToolLocations,
+  getToolPositions,
 };

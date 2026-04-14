@@ -4,39 +4,38 @@
       <v-card>
         <v-card-title class="header my-4 d-flex">
           Stock by Location
-          <div v-if="tools.length && location">
-            - {{ tools.length }} result{{ tools.length === 1 ? '' : 's' }}
+          <div v-if="toolStore.total && location">
+            &nbsp;- {{ toolStore.total }} result{{ toolStore.total === 1 ? '' : 's' }}
           </div>
           <v-spacer />
-          <v-btn :color="printColor" :disabled="!printEnabled" @click="print">
-            <v-icon icon="mdi-printer-outline" />
-          </v-btn>
         </v-card-title>
         <v-card-text>
           <v-row>
             <v-col cols="6">
-              <v-select
-                v-model="location"
-                clearable
-                :items="toolStore.locations"
-                label="Location"
-                @update:model-value="updateLocation"
-              />
+              <v-select v-model="location" clearable :items="locations" label="Location" />
             </v-col>
             <v-col cols="6">
-              <v-select
-                v-model="position"
-                clearable
-                :items="positions"
-                label="Position"
-                @update:model-value="updateQueryString"
-              />
+              <v-select v-model="position" clearable :items="positions" label="Position">
+                <template #no-data>
+                  <v-list-item>
+                    <v-list-item-title v-if="!location">
+                      Please select a location first
+                    </v-list-item-title>
+                    <v-list-item-title v-else>
+                      No positions found for this location
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+              </v-select>
             </v-col>
           </v-row>
-          <v-data-table-virtual
-            v-if="tools.length"
+          <v-data-table
+            v-if="location"
+            v-model:items-per-page="itemsPerPage"
+            v-model:page="page"
             :headers="headers"
-            :items="tools"
+            :items="toolStore.tools"
+            :items-length="toolStore.total"
             :loading="toolStore.loading"
             @click:row="openTool"
           >
@@ -47,7 +46,7 @@
             <template #['item.stock']="{ item }">
               <span class="stock">{{ item.stock }}</span>
             </template>
-          </v-data-table-virtual>
+          </v-data-table>
         </v-card-text>
       </v-card>
     </v-col>
@@ -55,40 +54,126 @@
 </template>
 
 <script setup lang="ts">
-import uniq from 'lodash/uniq';
-import { computed, onMounted, ref, watch } from 'vue';
-import printer from '@/plugins/printer';
+import { onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import api from '@/plugins/axios';
+import { normalizeQueryValue } from '@/plugins/utils';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
+const route = useRoute();
 const toolStore = useToolStore();
 
 const location = ref('');
 const position = ref('');
+const page = ref(1);
+const itemsPerPage = ref(getStoredItemsPerPage());
+const locations = ref<string[]>([]);
+const positions = ref<string[]>([]);
+const QUERY_KEYS = ['loc', 'pos', 'page'] as const;
 
-const positions = computed(() => {
-  if (!location.value) return [];
-  return uniq(
-    toolStore.tools
-      .filter((x) => x.position && x.location === location.value)
-      .map((x) => x.position)
-      .sort((a, b) => {
-        const c = (a as string).toLowerCase();
-        const d = (b as string).toLowerCase();
-        if (c < d) return -1;
-        else if (c > d) return 1;
-        else return 0;
-      }),
+onMounted(() => {
+  void fetchToolLocations();
+});
+
+watch(
+  () => route.query,
+  () => {
+    applyRouteFilters();
+    void fetchToolPositions();
+    void fetchTools();
+  },
+  { immediate: true },
+);
+
+watch(location, (value, oldValue) => {
+  if (value === oldValue) return;
+  if (value === (normalizeQueryValue(route.query.loc) ?? '')) return;
+  position.value = '';
+  updateQueryString(true);
+});
+
+watch(position, (value, oldValue) => {
+  if (value === oldValue) return;
+  if (value === (normalizeQueryValue(route.query.pos) ?? '')) return;
+  updateQueryString(true);
+});
+
+watch(page, (value) => {
+  const routePage = Number(normalizeQueryValue(route.query.page));
+  const normalizedRoutePage = Number.isFinite(routePage) && routePage > 0 ? routePage : 1;
+  if (value !== normalizedRoutePage) updateQueryString();
+});
+
+watch(itemsPerPage, (value, oldValue) => {
+  if (value === oldValue) return;
+  window.localStorage.setItem('ipp', String(value));
+  page.value = 1;
+  void fetchTools();
+});
+
+function getStoredItemsPerPage() {
+  const stored = Number(window.localStorage.getItem('ipp'));
+  return Number.isFinite(stored) && stored > 0 ? stored : 10;
+}
+
+async function fetchToolLocations() {
+  const { data } = await api.get<string[]>('/tools/locations');
+  locations.value = data.sort((left, right) => left.localeCompare(right));
+}
+
+async function fetchToolPositions() {
+  if (!location.value) {
+    positions.value = [];
+    return;
+  }
+
+  const { data } = await api.get<string[]>('/tools/positions', {
+    params: { location: location.value },
+  });
+
+  positions.value = data.sort((left, right) => left.localeCompare(right));
+}
+
+function updateQueryString(resetPage: boolean = false) {
+  if (resetPage) {
+    page.value = 1;
+  }
+
+  const baseQuery = Object.fromEntries(
+    Object.entries(route.query).filter(([key]) => !QUERY_KEYS.includes(key as never)),
   );
-});
 
-const tools = computed(() => {
-  if (!location.value) return [];
-  let filteredLocation = toolStore.tools.filter((x) => x.location === location.value);
-  if (position.value)
-    filteredLocation = filteredLocation.filter((x) => x.position === position.value);
-  return filteredLocation;
-});
+  router.replace({
+    query: {
+      ...baseQuery,
+      ...(location.value ? { loc: location.value } : {}),
+      ...(position.value ? { pos: position.value } : {}),
+      ...(page.value > 1 ? { page: String(page.value) } : {}),
+    },
+  });
+}
+
+function applyRouteFilters() {
+  location.value = normalizeQueryValue(route.query.loc) ?? '';
+  position.value = normalizeQueryValue(route.query.pos) ?? '';
+
+  const nextPage = Number(normalizeQueryValue(route.query.page));
+  page.value = Number.isFinite(nextPage) && nextPage > 0 ? nextPage : 1;
+}
+
+async function fetchTools() {
+  if (!location.value) return;
+
+  await toolStore.fetch({
+    location: location.value,
+    position: position.value || undefined,
+    limit: itemsPerPage.value,
+    offset: (page.value - 1) * itemsPerPage.value,
+    sort: 'description',
+    order: 'asc',
+  });
+}
 
 const headers: readonly { [key: string]: unknown }[] = [
   {
@@ -122,55 +207,6 @@ const headers: readonly { [key: string]: unknown }[] = [
 function openTool(event: unknown, { item }: { item: Tool }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
-
-function updateQueryString() {
-  router.push({
-    name: 'locations',
-    query: { loc: location.value, pos: position.value },
-  });
-}
-
-function updateLocation() {
-  position.value = '';
-  updateQueryString();
-}
-
-const query = computed(() => {
-  return router.currentRoute.value.query;
-});
-
-onMounted(setSelectFields);
-watch(query, setSelectFields);
-
-function setSelectFields() {
-  const { loc, pos } = router.currentRoute.value.query;
-  if (loc) location.value = loc as string;
-  if (pos) position.value = pos as string;
-}
-
-async function print() {
-  await printer
-    .printLocation({ loc: location.value, pos: position.value })
-    .then(() => {
-      flashPrintColor('#57a03c');
-    })
-    .catch(() => {
-      flashPrintColor('#be3c3c');
-    });
-}
-
-const printColorIdle = '#aa60c3';
-const printColor = ref(printColorIdle);
-function flashPrintColor(color: string) {
-  printColor.value = color;
-  setTimeout(() => {
-    printColor.value = printColorIdle;
-  }, 500);
-}
-
-const printEnabled = computed(() => {
-  return location.value && position.value;
-});
 </script>
 
 <style scoped>

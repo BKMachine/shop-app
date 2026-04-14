@@ -45,6 +45,8 @@ declare global {
     category?: ToolFilterCategory;
     search?: string;
     toolType?: string;
+    location?: string;
+    position?: string;
     cuttingDia?: string;
     minFluteLength?: string;
     sort?: string;
