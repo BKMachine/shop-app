@@ -1,7 +1,15 @@
 declare global {
-  type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other' | 'all';
+  type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other';
+  type ToolFilterCategory = ToolCategory | 'all';
 
-  interface ToolBase {
+  interface ToolCategoryGroups {
+    milling: string[];
+    turning: string[];
+    swiss: string[];
+    other: string[];
+  }
+
+  interface Tool {
     _id: string;
     description: string;
     vendor?: Vendor;
@@ -11,6 +19,7 @@ declare global {
     stock: number;
     img?: string;
     category: ToolCategory;
+    toolType?: string;
     coating?: string;
     flutes?: number;
     autoReorder: boolean;
@@ -28,30 +37,12 @@ declare global {
     fluteLength?: number;
   }
 
-  type MillingToolType = import('../../../apps/www/src/plugins/toolTypes').MillingType;
-  type TurningToolType = import('../../../apps/www/src/plugins/toolTypes').TurningType;
-  type OtherToolType = import('../../../apps/www/src/plugins/toolTypes').OtherType;
-
-  interface MillingTool extends ToolBase {
-    toolType: MillingToolType;
-  }
-
-  interface TurningTool extends ToolBase {
-    toolType: TurningToolType;
-  }
-
-  interface OtherTool extends ToolBase {
-    toolType: OtherToolType;
-  }
-
-  type Tool = MillingTool | TurningTool | OtherTool;
-
   interface ToolDoc extends Omit<Tool, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 
   interface ToolListFilters {
-    category?: ToolCategory;
+    category?: ToolFilterCategory;
     search?: string;
     toolType?: string;
     cuttingDia?: string;

@@ -59,6 +59,19 @@ declare global {
     _id: Types.ObjectId;
   }
 
+  /* TOOL CATEGORY SETTINGS */
+
+  interface ToolCategorySettings {
+    _id: 'tool-categories';
+    groups: ToolCategoryGroups;
+  }
+
+  type ToolCategoryTypeCounts = Record<ToolCategory, Record<string, number>>;
+
+  interface ToolCategorySettingsResponse extends ToolCategorySettings {
+    counts: ToolCategoryTypeCounts;
+  }
+
   /* MATERIAL */
 
   interface Material {

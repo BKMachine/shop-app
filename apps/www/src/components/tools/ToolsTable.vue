@@ -67,6 +67,35 @@
             </v-row>
             <v-row />
           </div>
+          <div v-else-if="category !== 'all'">
+            <v-row>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="searchText"
+                  clearable
+                  label="Search"
+                  prepend-inner-icon="mdi-magnify"
+                  single-line
+                  variant="outlined"
+                >
+                  <template #details>
+                    <div class="search-details">
+                      <button
+                        class="clear-filters-hint"
+                        type="button"
+                        @click="emits('clearAllFilters')"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  </template>
+                </v-text-field>
+              </v-col>
+              <v-col cols="6">
+                <v-select v-model="selectedToolType" clearable :items="types" label="Tool Type" />
+              </v-col>
+            </v-row>
+          </div>
           <div v-else>
             <v-text-field
               v-model="searchText"
@@ -127,9 +156,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import MissingImage from '@/components/MissingImage.vue';
-import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
 import router from '@/router';
+import { useToolCategoryStore } from '@/stores/tool_category_store';
 import { useToolStore } from '@/stores/tool_store';
 
 const props = defineProps<{
@@ -139,7 +168,7 @@ const props = defineProps<{
   totalItems: number;
   hasMore: boolean;
   loadingMore: boolean;
-  category: ToolCategory;
+  category: ToolFilterCategory;
   search: string;
   toolType: string | null;
   cuttingDia: string;
@@ -159,6 +188,7 @@ const emits = defineEmits([
 ]);
 
 const toolStore = useToolStore();
+const toolCategoryStore = useToolCategoryStore();
 const searchText = ref<string>(props.search);
 const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
@@ -189,7 +219,7 @@ const resultsTitle = computed(() => {
 });
 
 const types = computed<readonly string[]>(() => {
-  return toolTypes[props.category];
+  return toolCategoryStore.getTypes(props.category);
 });
 
 watch(searchText, () => {

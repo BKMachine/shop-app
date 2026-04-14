@@ -387,13 +387,15 @@ import ToolLocationSelect from '@/components/tools/ToolLocationSelect.vue';
 import VendorSelect from '@/components/VendorSelect.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
-import toolTypes from '@/plugins/toolTypes';
+import { isToolCategory } from '@/plugins/toolCategories';
 import { isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
+import { useToolCategoryStore } from '@/stores/tool_category_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
+const toolCategoryStore = useToolCategoryStore();
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
@@ -428,9 +430,9 @@ function setTabFromQuery() {
 
 onBeforeMount(() => {
   // Get tool category from local storage to determine which tab to show
-  const type = window.localStorage.getItem('type') as ToolCategory | null;
+  const type = window.localStorage.getItem('type');
   // Default to milling tab
-  category.value = type ? type : 'milling';
+  category.value = isToolCategory(type) ? type : 'milling';
 });
 
 onMounted(() => {
@@ -650,7 +652,7 @@ const fluteText = computed(() => {
 });
 
 const types = computed<readonly string[]>(() => {
-  return toolTypes[tool.value.category || category.value];
+  return toolCategoryStore.getTypes(tool.value.category || category.value);
 });
 
 const showMillingOpts = computed<boolean>(() => {

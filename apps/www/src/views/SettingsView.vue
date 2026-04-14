@@ -48,6 +48,14 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
+          <v-icon class="mr-2" icon="mdi-shape-outline" />
+          Tool Categories
+        </v-expansion-panel-title>
+        <v-expansion-panel-text> <ToolCategorySettings /> </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title>
           <v-icon class="mr-2" icon="mdi-account-multiple-outline" />
           Customers
         </v-expansion-panel-title>
@@ -87,6 +95,7 @@ import { onMounted } from 'vue';
 import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
 import SettingsReport from '@/components/settings/SettingsReport.vue';
 import SupplierSettings from '@/components/settings/SettingsSupplier.vue';
+import ToolCategorySettings from '@/components/settings/SettingsToolCategories.vue';
 import VendorSettings from '@/components/settings/SettingsVendor.vue';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useFolderHelperState } from '@/state/folderHelper';

@@ -15,7 +15,7 @@ function normalizeQueryValue(value: unknown): string | undefined {
 router.get('/tools', async (req, res, next) => {
   try {
     const data = await Tools.list({
-      category: normalizeQueryValue(req.query.category) as ToolCategory | undefined,
+      category: normalizeQueryValue(req.query.category) as ToolFilterCategory | undefined,
       search: normalizeQueryValue(req.query.search),
       toolType: normalizeQueryValue(req.query.toolType),
       cuttingDia: normalizeQueryValue(req.query.cuttingDia),

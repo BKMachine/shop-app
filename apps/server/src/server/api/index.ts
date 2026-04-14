@@ -12,6 +12,7 @@ import PartRoutes from './routes/parts.js';
 import PrintRoutes from './routes/print.js';
 import ReportRoutes from './routes/reports.js';
 import SupplierRoutes from './routes/suppliers.js';
+import ToolCategoryRoutes from './routes/tool_categories.js';
 import ToolRoutes from './routes/tools.js';
 import VendorRoutes from './routes/vendors.js';
 
@@ -33,6 +34,7 @@ router.get('/version', (_req, res, next) => {
 router.use(CustomerRoutes);
 router.use(SupplierRoutes);
 router.use(VendorRoutes);
+router.use(ToolCategoryRoutes);
 router.use(ToolRoutes);
 router.use(AuditRoutes);
 router.use(PrintRoutes);

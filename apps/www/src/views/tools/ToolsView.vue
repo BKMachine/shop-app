@@ -42,6 +42,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ToolsTable from '@/components/tools/ToolsTable.vue';
+import { isToolFilterCategory } from '@/plugins/toolCategories';
 import { normalizeQueryValue } from '@/plugins/utils';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
@@ -49,7 +50,7 @@ import { useToolStore } from '@/stores/tool_store';
 const toolStore = useToolStore();
 const route = useRoute();
 
-const tab = ref<ToolCategory>('milling');
+const tab = ref<ToolFilterCategory>('milling');
 const search = ref<string>('');
 const toolType = ref<string | null>(null);
 const cuttingDia = ref<string>('');
@@ -86,7 +87,15 @@ function updateMinFluteLength(value: string) {
   syncFiltersToQuery();
 }
 
-function onTabChange(value: ToolCategory) {
+function onTabChange(value: ToolFilterCategory) {
+  if (tab.value !== value) {
+    toolType.value = null;
+    if (value !== 'milling') {
+      cuttingDia.value = '';
+      minFluteLength.value = '';
+    }
+  }
+
   tab.value = value;
   window.localStorage.setItem('type', value);
   syncFiltersToQuery();
@@ -109,11 +118,11 @@ watch(
 
 function applyRouteFilters() {
   const routeTab = normalizeQueryValue(route.query.tab);
-  if (routeTab && isToolCategory(routeTab)) {
+  if (routeTab && isToolFilterCategory(routeTab)) {
     tab.value = routeTab;
   } else {
     const storedType = window.localStorage.getItem('type');
-    if (storedType && isToolCategory(storedType)) tab.value = storedType;
+    if (storedType && isToolFilterCategory(storedType)) tab.value = storedType;
   }
 
   search.value = normalizeQueryValue(route.query.search) ?? '';
@@ -128,7 +137,7 @@ async function fetchTools() {
   await toolStore.fetch({
     category: tab.value === 'all' ? undefined : tab.value,
     search: search.value || undefined,
-    toolType: tab.value === 'milling' ? toolType.value || undefined : undefined,
+    toolType: tab.value !== 'all' ? toolType.value || undefined : undefined,
     cuttingDia: tab.value === 'milling' ? cuttingDia.value || undefined : undefined,
     minFluteLength: tab.value === 'milling' ? minFluteLength.value || undefined : undefined,
     limit: 20,
@@ -148,7 +157,7 @@ function syncFiltersToQuery() {
       ...baseQuery,
       tab: tab.value,
       ...(search.value ? { search: search.value } : {}),
-      ...(toolType.value && tab.value === 'milling' ? { toolType: toolType.value } : {}),
+      ...(toolType.value && tab.value !== 'all' ? { toolType: toolType.value } : {}),
       ...(cuttingDia.value && tab.value === 'milling' ? { cuttingDia: cuttingDia.value } : {}),
       ...(minFluteLength.value && tab.value === 'milling'
         ? { minFluteLength: minFluteLength.value }
@@ -164,10 +173,6 @@ function clearAllFilters() {
   cuttingDia.value = '';
   minFluteLength.value = '';
   syncFiltersToQuery();
-}
-
-function isToolCategory(value: string): value is ToolCategory {
-  return ['milling', 'turning', 'swiss', 'other', 'all'].includes(value);
 }
 
 const currentHeaders = computed(() => {
