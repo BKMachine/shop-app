@@ -78,7 +78,6 @@ import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
 import { useScannerStore } from '@/stores/scanner_store';
 import { useSupplierStore } from '@/stores/supplier_store';
-import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const customerStore = useCustomerStore();
@@ -86,7 +85,6 @@ const materialsStore = useMaterialsStore();
 const partStore = usePartStore();
 const scannerStore = useScannerStore();
 const supplierStore = useSupplierStore();
-const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
 // onscan.js by default ignores chars other than alphanumeric
@@ -128,7 +126,6 @@ onBeforeMount(() => {
   partStore.fetch();
   supplierStore.fetch();
   vendorStore.fetch();
-  toolStore.fetch();
   void fetchCurrentDevice();
 });
 

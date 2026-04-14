@@ -65,6 +65,19 @@ interface EntityConfig<TDoc extends RepairableEntity> {
   describe: (doc: TDoc) => string;
 }
 
+async function listAllTools(): Promise<ToolDoc[]> {
+  const items: ToolDoc[] = [];
+  let offset = 0;
+  const limit = 100;
+
+  while (true) {
+    const page = await ToolService.list({ limit, offset });
+    items.push(...page.items);
+    if (!page.hasMore) return items;
+    offset += page.items.length;
+  }
+}
+
 const IMAGE_EXTENSIONS = new Set([
   '.avif',
   '.bmp',
@@ -83,7 +96,7 @@ const entityConfigs: EntityConfig<RepairableEntity>[] = [
   {
     type: 'tool',
     folderName: 'tools',
-    list: () => ToolService.list() as Promise<RepairableEntity[]>,
+    list: () => listAllTools(),
     update: (doc) => ToolService.update(doc as ToolDoc, SERVER_DEVICE_ID),
     getImageUrl: (doc) => doc.img?.trim() ?? '',
     setImageUrl: (doc, value) => {

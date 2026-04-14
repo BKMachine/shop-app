@@ -7,56 +7,11 @@
 /// <reference path="./src/express.d.ts" />
 /// <reference path="./src/pdf_parser.d.ts" />
 /// <reference path="./src/materials.d.ts" />
+/// <reference path="./src/tooling.d.ts" />
 
 declare global {
   type Rule = (value: string) => boolean | string;
   type Rules<Key extends string = string> = Record<Key, Rule>;
-
-  interface ToolDocBase {
-    _id: string;
-    description: string;
-    vendor?: Vendor | string;
-    supplier?: Supplier | string;
-    item?: string;
-    barcode?: string;
-    stock: number;
-    img?: string;
-    category: ToolCategory;
-    coating?: string;
-    flutes?: number;
-    autoReorder: boolean;
-    reorderQty: number;
-    reorderThreshold: number;
-    productLink?: string;
-    techDataLink?: string;
-    orderLink?: string;
-    cost: number;
-    onOrder: boolean;
-    orderedOn?: string;
-    location?: string;
-    position?: string;
-    cuttingDia?: number;
-    fluteLength?: number;
-  }
-
-  interface MillingTool extends ToolDocBase {
-    toolType: MillingToolType;
-  }
-
-  interface TurningTool extends ToolDocBase {
-    toolType: TurningToolType;
-  }
-
-  interface OtherTool extends ToolDocBase {
-    toolType: OtherToolType;
-  }
-
-  type Tool = MillingTool | TurningTool | OtherTool;
-
-  type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other' | 'all';
-  type MillingToolType = import('../../apps/www/src/plugins/toolTypes').MillingType;
-  type TurningToolType = import('../../apps/www/src/plugins/toolTypes').TurningType;
-  type OtherToolType = import('../../apps/www/src/plugins/toolTypes').OtherType;
 
   interface PrintLocationBody {
     loc: string;
@@ -82,14 +37,6 @@ declare global {
     printerName: string;
     labelXml: string;
   }
-
-  interface ToolReorders extends ToolDoc {
-    item: string;
-    vendor: Vendor;
-    supplier: Supplier;
-  }
-
-  type ToolDocReorders = ToolDoc & ToolReorders;
 
   interface RecentImage {
     id: string;

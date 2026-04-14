@@ -1,3 +1,5 @@
+import type { LocationQueryValue } from 'vue-router';
+
 export function isNumber(evt: KeyboardEvent) {
   const keysAllowed: string[] = [
     '0',
@@ -291,4 +293,11 @@ export function buildMaterialDescription(material: Material): string {
   }
 
   return description;
+}
+
+export function normalizeQueryValue(
+  value: LocationQueryValue | LocationQueryValue[] | undefined,
+): string | undefined {
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  return firstValue ?? undefined;
 }

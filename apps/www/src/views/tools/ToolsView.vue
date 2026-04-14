@@ -1,5 +1,11 @@
 <template>
-  <v-tabs v-model="tab" align-tabs="center" bg-color="primary" grow @update:model-value="onChange">
+  <v-tabs
+    v-model="tab"
+    align-tabs="center"
+    bg-color="primary"
+    grow
+    @update:model-value="onTabChange"
+  >
     <v-tab class="milling" value="milling"> Mill </v-tab>
     <v-tab class="turning" value="turning"> Lathe </v-tab>
     <v-tab class="swiss" value="swiss"> Swiss </v-tab>
@@ -7,136 +13,58 @@
     <v-tab class="all" value="all"> All </v-tab>
   </v-tabs>
 
-  <v-window v-model="tab" class="mt-3">
-    <v-window-item value="milling">
-      <ToolsDataTable
-        v-if="tab === 'milling'"
-        :category="tab"
-        :cutting-dia="cuttingDia"
-        :headers="millingHeaders"
-        :items="toolStore.millingTools"
-        :min-flute-length="minFluteLength"
-        :search="search"
-        title="Mill Department Tooling"
-        :tool-type="toolType"
-        @clear-all-filters="clearAllFilters"
-        @update-cutting-dia="updateCuttingDia"
-        @update-min-flute-length="updateMinFluteLength"
-        @update-search="updateSearch"
-        @update-tool-type="updateToolType"
-      />
-    </v-window-item>
-
-    <v-window-item value="turning">
-      <ToolsDataTable
-        v-if="tab === 'turning'"
-        :category="tab"
-        :cutting-dia="cuttingDia"
-        :headers="turningHeaders"
-        :items="toolStore.turningTools"
-        :min-flute-length="minFluteLength"
-        :search="search"
-        title="Lathe Department Tooling"
-        :tool-type="toolType"
-        @clear-all-filters="clearAllFilters"
-        @update-cutting-dia="updateCuttingDia"
-        @update-min-flute-length="updateMinFluteLength"
-        @update-search="updateSearch"
-        @update-tool-type="updateToolType"
-      />
-    </v-window-item>
-
-    <v-window-item value="swiss">
-      <ToolsDataTable
-        v-if="tab === 'swiss'"
-        :category="tab"
-        :cutting-dia="cuttingDia"
-        :headers="turningHeaders"
-        :items="toolStore.swissTools"
-        :min-flute-length="minFluteLength"
-        :search="search"
-        title="Swiss Department Tooling"
-        :tool-type="toolType"
-        @clear-all-filters="clearAllFilters"
-        @update-cutting-dia="updateCuttingDia"
-        @update-min-flute-length="updateMinFluteLength"
-        @update-search="updateSearch"
-        @update-tool-type="updateToolType"
-      />
-    </v-window-item>
-
-    <v-window-item value="other">
-      <ToolsDataTable
-        v-if="tab === 'other'"
-        :category="tab"
-        :cutting-dia="cuttingDia"
-        :headers="otherHeaders"
-        :items="toolStore.otherTools"
-        :min-flute-length="minFluteLength"
-        :search="search"
-        title="Miscellaneous Items"
-        :tool-type="toolType"
-        @clear-all-filters="clearAllFilters"
-        @update-cutting-dia="updateCuttingDia"
-        @update-min-flute-length="updateMinFluteLength"
-        @update-search="updateSearch"
-        @update-tool-type="updateToolType"
-      />
-    </v-window-item>
-
-    <v-window-item value="all">
-      <ToolsDataTable
-        v-if="tab === 'all'"
-        :category="tab"
-        :cutting-dia="cuttingDia"
-        :headers="otherHeaders"
-        :items="toolStore.tools"
-        :min-flute-length="minFluteLength"
-        :search="search"
-        title="All Items"
-        :tool-type="toolType"
-        @clear-all-filters="clearAllFilters"
-        @update-cutting-dia="updateCuttingDia"
-        @update-min-flute-length="updateMinFluteLength"
-        @update-search="updateSearch"
-        @update-tool-type="updateToolType"
-      />
-    </v-window-item>
-  </v-window>
+  <ToolsTable
+    :category="tab"
+    class="mt-3"
+    :cutting-dia="cuttingDia"
+    :has-more="toolStore.hasMore"
+    :headers="currentHeaders"
+    :items="toolStore.tools"
+    :loading-more="toolStore.loadingMore"
+    :min-flute-length="minFluteLength"
+    :order="order"
+    :search="search"
+    :sort-by="sortBy"
+    :title="currentTitle"
+    :tool-type="toolType"
+    :total-items="toolStore.total"
+    @clear-all-filters="clearAllFilters"
+    @load-more="toolStore.fetchNextPage"
+    @update-cutting-dia="updateCuttingDia"
+    @update-min-flute-length="updateMinFluteLength"
+    @update-search="updateSearch"
+    @update-search-by="updateSearchBy"
+    @update-tool-type="updateToolType"
+  />
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, ref, watch } from 'vue';
-import { type LocationQueryValue, useRoute } from 'vue-router';
-import ToolsDataTable from '@/components/ToolsDataTable.vue';
+import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import ToolsTable from '@/components/tools/ToolsTable.vue';
+import { normalizeQueryValue } from '@/plugins/utils';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 const route = useRoute();
+
 const tab = ref<ToolCategory>('milling');
 const search = ref<string>('');
 const toolType = ref<string>('');
 const cuttingDia = ref<string>('');
 const minFluteLength = ref<string>('');
+const sortBy = ref<string>('');
+const order = ref<'asc' | 'desc'>('asc');
 const FILTER_QUERY_KEYS = [
   'tab',
   'search',
   'toolType',
   'cuttingDia',
   'minFluteLength',
-  'page',
+  'sort',
+  'order',
 ] as const;
-
-onBeforeMount(() => {
-  applyRouteFilters();
-
-  if (!firstQueryValue(route.query.tab)) {
-    const type = window.localStorage.getItem('type');
-    if (!type) window.localStorage.setItem('type', tab.value);
-    else tab.value = type as ToolCategory;
-  }
-});
 
 function updateSearch(text: string) {
   search.value = text;
@@ -158,10 +86,15 @@ function updateMinFluteLength(value: string) {
   syncFiltersToQuery();
 }
 
-function onChange(value: ToolCategory) {
+function onTabChange(value: ToolCategory) {
   tab.value = value;
   window.localStorage.setItem('type', value);
-  toolStore.setTabChange(true);
+  syncFiltersToQuery();
+}
+
+function updateSearchBy(value: { key: string; order: 'asc' | 'desc' }[]) {
+  sortBy.value = value[0] ? value[0].key : '';
+  order.value = value[0] ? value[0].order : 'asc';
   syncFiltersToQuery();
 }
 
@@ -169,22 +102,43 @@ watch(
   () => route.query,
   () => {
     applyRouteFilters();
+    void fetchTools();
   },
+  { immediate: true },
 );
 
 function applyRouteFilters() {
-  const routeTab = firstQueryValue(route.query.tab);
+  const routeTab = normalizeQueryValue(route.query.tab);
   if (routeTab && isToolCategory(routeTab)) {
     tab.value = routeTab;
+  } else {
+    const storedType = window.localStorage.getItem('type');
+    if (storedType && isToolCategory(storedType)) tab.value = storedType;
   }
 
-  search.value = firstQueryValue(route.query.search) ?? '';
-  toolType.value = firstQueryValue(route.query.toolType) ?? '';
-  cuttingDia.value = firstQueryValue(route.query.cuttingDia) ?? '';
-  minFluteLength.value = firstQueryValue(route.query.minFluteLength) ?? '';
+  search.value = normalizeQueryValue(route.query.search) ?? '';
+  toolType.value = normalizeQueryValue(route.query.toolType) ?? '';
+  cuttingDia.value = normalizeQueryValue(route.query.cuttingDia) ?? '';
+  minFluteLength.value = normalizeQueryValue(route.query.minFluteLength) ?? '';
+  sortBy.value = normalizeQueryValue(route.query.sort) ?? '';
+  order.value = normalizeQueryValue(route.query.order) === 'desc' ? 'desc' : 'asc';
+}
+
+async function fetchTools() {
+  await toolStore.fetch({
+    category: tab.value === 'all' ? undefined : tab.value,
+    search: search.value || undefined,
+    toolType: tab.value === 'milling' ? toolType.value || undefined : undefined,
+    cuttingDia: tab.value === 'milling' ? cuttingDia.value || undefined : undefined,
+    minFluteLength: tab.value === 'milling' ? minFluteLength.value || undefined : undefined,
+    limit: 20,
+    order: order.value || undefined,
+    sort: sortBy.value || undefined,
+  });
 }
 
 function syncFiltersToQuery() {
+  // Preserve any existing query parameters that are not related to filters
   const baseQuery = Object.fromEntries(
     Object.entries(route.query).filter(([key]) => !FILTER_QUERY_KEYS.includes(key as never)),
   );
@@ -199,6 +153,7 @@ function syncFiltersToQuery() {
       ...(minFluteLength.value && tab.value === 'milling'
         ? { minFluteLength: minFluteLength.value }
         : {}),
+      ...(sortBy.value ? { sort: sortBy.value, order: order.value } : {}),
     },
   });
 }
@@ -211,16 +166,23 @@ function clearAllFilters() {
   syncFiltersToQuery();
 }
 
-function firstQueryValue(
-  value: LocationQueryValue | LocationQueryValue[] | undefined,
-): string | undefined {
-  const firstValue = Array.isArray(value) ? value[0] : value;
-  return firstValue ?? undefined;
-}
-
 function isToolCategory(value: string): value is ToolCategory {
   return ['milling', 'turning', 'swiss', 'other', 'all'].includes(value);
 }
+
+const currentHeaders = computed(() => {
+  if (tab.value === 'milling') return millingHeaders;
+  if (tab.value === 'turning' || tab.value === 'swiss') return turningHeaders;
+  return otherHeaders;
+});
+
+const currentTitle = computed(() => {
+  if (tab.value === 'milling') return 'Mill Department Tooling';
+  if (tab.value === 'turning') return 'Lathe Department Tooling';
+  if (tab.value === 'swiss') return 'Swiss Department Tooling';
+  if (tab.value === 'other') return 'Miscellaneous Items';
+  return 'All Items';
+});
 
 const millingHeaders = [
   {

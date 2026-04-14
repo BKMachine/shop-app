@@ -8,7 +8,7 @@
         </v-btn>
       </div>
     </v-card-title>
-    <v-card-text>
+    <v-card-text class="tool-table-card-text">
       <v-card flat>
         <template #text>
           <div v-if="category === 'milling'">
@@ -91,31 +91,41 @@
           </div>
         </template>
 
-        <v-data-table
-          v-model:items-per-page="itemsPerPage"
-          v-model:page="page"
-          :headers="headers"
-          :items="filteredItems"
-          :loading="toolStore.loading"
-          :search="search"
-          @click:row="openTool"
-        >
-          <template #['item.img']="{ item }">
-            <v-img v-if="item.img" :id="item._id" class="tool-img" :src="item.img" />
-            <MissingImage v-else :id="item._id" class="tool-img tool-img-fallback" />
-          </template>
-          <template #['item.location']="{ item }"> {{ location(item) }} </template>
-          <template #['item.stock']="{ item }">
-            <span class="stock">{{ item.stock }}</span>
-          </template>
-        </v-data-table>
+        <div ref="tableHost" class="tool-table-host">
+          <v-data-table-virtual
+            :custom-key-sort="customKeySort"
+            fixed-header
+            :headers="headers"
+            :height="tableHeight"
+            :items="items"
+            :loading="toolStore.loading"
+            :sort-by="tableSortBy"
+            @click:row="openTool"
+            @update:sort-by="updateSearchBy"
+          >
+            <template #['item.img']="{ item }">
+              <v-img v-if="item.img" :id="item._id" class="tool-img" :src="item.img" />
+              <MissingImage v-else :id="item._id" class="tool-img tool-img-fallback" />
+            </template>
+            <template #['item.location']="{ item }"> {{ location(item) }} </template>
+            <template #['item.stock']="{ item }">
+              <span class="stock">{{ item.stock }}</span>
+            </template>
+            <template #bottom>
+              <div v-if="isAtTableBottom" class="tool-table-status">
+                <span v-if="loadingMore">Loading more tools...</span>
+                <span v-else-if="!hasMore && items.length">All tools loaded.</span>
+              </div>
+            </template>
+          </v-data-table-virtual>
+        </div>
       </v-card>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import MissingImage from '@/components/MissingImage.vue';
 import toolTypes from '@/plugins/toolTypes';
 import { isNumber } from '@/plugins/utils';
@@ -126,11 +136,16 @@ const props = defineProps<{
   title: string;
   headers: { key: string; title?: string }[];
   items: Tool[];
+  totalItems: number;
+  hasMore: boolean;
+  loadingMore: boolean;
   category: ToolCategory;
   search: string;
   toolType: string;
   cuttingDia: string;
   minFluteLength: string;
+  sortBy: string;
+  order: 'asc' | 'desc';
 }>();
 
 const emits = defineEmits([
@@ -138,20 +153,38 @@ const emits = defineEmits([
   'updateToolType',
   'updateCuttingDia',
   'updateMinFluteLength',
+  'updateSearchBy',
+  'loadMore',
   'clearAllFilters',
 ]);
 
 const toolStore = useToolStore();
 const searchText = ref<string>(props.search);
-const page = ref(1);
-const itemsPerPage = ref(10);
 const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
 const selectedToolType = ref<string>(props.toolType);
+const tableHost = ref<HTMLElement | null>(null);
+const tableHeight = ref(700);
+const isAtTableBottom = ref(false);
+let scrollElement: HTMLElement | null = null;
+const tableSortBy = computed(() => {
+  return props.sortBy ? [{ key: props.sortBy, order: props.order }] : [];
+});
+
+const customKeySort = computed(() => {
+  return Object.fromEntries(
+    props.headers
+      .map(({ key }) => key)
+      .filter((key): key is string => Boolean(key))
+      .map((key) => [key, () => 0]),
+  );
+});
+
 const resultsTitle = computed(() => {
   let title = props.title;
-  if (props.items.length !== filteredItems.value.length)
-    title += ` - ${filteredItems.value.length} results`;
+  if (props.totalItems > 0) {
+    title += ` - ${props.totalItems} result${props.totalItems === 1 ? '' : 's'}`;
+  }
   return `${title}`;
 });
 
@@ -203,90 +236,139 @@ watch(
   },
 );
 
-const filteredItems = computed<Tool[]>(() => {
-  if (props.category === 'milling') {
-    let cuttingDiaNum: number;
-    let minFluteLengthNum: number;
-    try {
-      if (cuttingDiaFilter.value) cuttingDiaNum = parseFloat(cuttingDiaFilter.value);
-      if (minFluteLengthFilter.value) minFluteLengthNum = parseFloat(minFluteLengthFilter.value);
-    } catch (e) {
-      return props.items;
-    }
-    return [...props.items]
-      .filter((x) => {
-        if (selectedToolType.value) {
-          if (selectedToolType.value === x.toolType) return true;
-        }
-        return !selectedToolType.value;
-      })
-      .filter((x) => {
-        if (Number.isNaN(cuttingDiaNum)) return cuttingDiaFilter.value;
-        if (cuttingDiaNum && x.cuttingDia) {
-          if (cuttingDiaNum > 0 && x.cuttingDia.toString().startsWith(cuttingDiaNum.toString()))
-            return true;
-        }
-        return !cuttingDiaFilter.value;
-      })
-      .filter((x) => {
-        if (Number.isNaN(minFluteLengthNum)) return minFluteLengthFilter.value;
-        if (minFluteLengthFilter.value && x.fluteLength) {
-          if (minFluteLengthNum > 0 && minFluteLengthNum <= x.fluteLength) return true;
-        }
-        return !minFluteLengthFilter.value;
-      });
-  }
-  return props.items;
-});
+function updateSearchBy(value: { key: string; order: 'asc' | 'desc' }[]) {
+  if (toolStore.loading || props.loadingMore) return;
+  emits('updateSearchBy', value);
+}
 
 function openTool(event: unknown, { item }: { item: Tool }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
 
-watch(page, () => {
-  const query = { ...router.currentRoute.value.query };
-  if (page.value === 1) delete query.page;
-  else query.page = String(page.value);
-  router.replace({ query });
-});
+function handleTableScroll() {
+  if (!scrollElement) return;
+  updateIsAtTableBottom();
+  if (toolStore.loading || props.loadingMore || !props.hasMore) return;
 
-watch(itemsPerPage, () => {
-  localStorage.setItem('ipp', itemsPerPage.value.toString());
-});
+  const remaining =
+    scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
 
-onMounted(() => {
-  // Do items per page before page number
-  const ipp = localStorage.getItem('ipp');
-  if (ipp) {
-    const ippNum = parseInt(ipp, 10);
-    if (!Number.isNaN(ippNum)) itemsPerPage.value = ippNum;
+  if (remaining <= 240) {
+    emits('loadMore');
+  }
+}
+
+function updateIsAtTableBottom() {
+  if (!scrollElement) {
+    isAtTableBottom.value = false;
+    return;
   }
 
-  const tabChanged = toolStore.tabChange;
-  if (tabChanged) {
-    page.value = 1;
-    toolStore.setTabChange(false);
-  } else {
-    const query = router.currentRoute.value.query;
-    if (query.page) {
-      const pageNum = parseInt(query.page as string, 10);
-      if (!Number.isNaN(pageNum)) page.value = pageNum;
-    }
+  const remaining =
+    scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
+
+  isAtTableBottom.value = remaining <= 8;
+}
+
+async function bindScrollElement() {
+  await nextTick();
+  const nextScrollElement = tableHost.value?.querySelector(
+    '.v-table__wrapper',
+  ) as HTMLElement | null;
+
+  if (scrollElement === nextScrollElement) {
+    await loadMoreIfTableNotScrollable();
+    return;
   }
 
-  setTimeout(() => {
-    if (toolStore.lastId) {
-      const el = document.getElementById(toolStore.lastId);
-      if (el) {
-        const parent = el.parentElement?.parentElement;
-        if (parent) {
-          parent.classList.add('highlighted');
-        }
+  if (scrollElement) {
+    scrollElement.removeEventListener('scroll', handleTableScroll);
+  }
+
+  scrollElement = nextScrollElement;
+  if (scrollElement) {
+    scrollElement.addEventListener('scroll', handleTableScroll, { passive: true });
+  }
+
+  updateIsAtTableBottom();
+
+  await loadMoreIfTableNotScrollable();
+}
+
+function updateTableHeight() {
+  if (!tableHost.value) return;
+
+  const rect = tableHost.value.getBoundingClientRect();
+  const viewportHeight = window.visualViewport?.height || window.innerHeight;
+  const bottomPadding = 32;
+  const nextHeight = Math.max(320, Math.floor(viewportHeight - rect.top - bottomPadding));
+  tableHeight.value = nextHeight;
+  updateIsAtTableBottom();
+}
+
+async function loadMoreIfTableNotScrollable() {
+  await nextTick();
+  updateIsAtTableBottom();
+  if (!scrollElement) return;
+  if (toolStore.loading || props.loadingMore || !props.hasMore) return;
+  if (scrollElement.scrollHeight <= scrollElement.clientHeight + 24) {
+    emits('loadMore');
+  }
+}
+
+watch(
+  () => props.items,
+  async () => {
+    await bindScrollElement();
+    if (!toolStore.lastId) return;
+    await nextTick();
+    const el = document.getElementById(toolStore.lastId);
+    if (el) {
+      const parent = el.parentElement?.parentElement;
+      if (parent) {
+        parent.classList.add('highlighted');
       }
       toolStore.setLastId(null);
     }
-  }, 150);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => props.hasMore,
+  () => {
+    void loadMoreIfTableNotScrollable();
+  },
+);
+
+onMounted(() => {
+  updateTableHeight();
+  window.addEventListener('resize', updateTableHeight);
+  void bindScrollElement();
 });
+
+onBeforeUnmount(() => {
+  if (scrollElement) {
+    scrollElement.removeEventListener('scroll', handleTableScroll);
+  }
+  window.removeEventListener('resize', updateTableHeight);
+});
+
+watch(
+  () => props.category,
+  async () => {
+    await nextTick();
+    updateTableHeight();
+  },
+);
+
+watch(
+  () => props.items.length,
+  async () => {
+    await nextTick();
+    updateTableHeight();
+  },
+);
 
 function location(tool: Tool): string {
   let text = tool.location || '';
@@ -307,6 +389,12 @@ function location(tool: Tool): string {
   padding-top: 2px;
 }
 
+.v-card-text.tool-table-card-text {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
 .clear-filters-hint {
   padding: 0;
   border: 0;
@@ -324,6 +412,20 @@ function location(tool: Tool): string {
 .highlighted {
   background: #efefef;
 }
+
+.tool-table-host {
+  position: relative;
+}
+
+.tool-table-status {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
 .tool-img {
   max-height: 50px;
 }

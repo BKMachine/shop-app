@@ -267,14 +267,7 @@
             </v-col>
           </v-row>
           <v-row no-gutters>
-            <v-col cols="3">
-              <v-combobox
-                v-model="tool.location"
-                class="mr-2"
-                :items="toolStore.locations"
-                label="Location"
-              />
-            </v-col>
+            <v-col cols="3"> <ToolLocationSelect v-model="tool.location" /> </v-col>
             <v-col cols="3">
               <v-text-field
                 v-model="tool.position"
@@ -390,6 +383,7 @@ import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import ToolStockGraph from '@/components/ToolStockGraph.vue';
+import ToolLocationSelect from '@/components/tools/ToolLocationSelect.vue';
 import VendorSelect from '@/components/VendorSelect.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
@@ -455,19 +449,16 @@ onMounted(() => {
   });
 
   // Update tool if changed from another user
-  watch(toolStore.trigger, () => {
+  watch(toolStore.toolUpdateSignal, () => {
     if (routeName !== 'viewTool') return;
-    if (toolStore.trigger.toolID === '') return;
-    const match = toolStore.rawTools.find((x) => x._id === routeParams.id);
-    if (!match) return;
-    if (match._id !== toolStore.trigger.toolID) return;
+    if (toolStore.toolUpdateSignal.id === '') return;
+    if (routeParams.id !== toolStore.toolUpdateSignal.id) return;
     // Alert user that the currently viewed tool has updated if not the user that did the update
     // but only if changes are currently being made
     if (!isEqual(tool.value, toolOriginal.value) && saveFlag.value === false) {
       alert('Tool was updated. Local changes will be lost.');
     }
-    tool.value = { ...match };
-    toolOriginal.value = { ...match };
+    fetchTool(false);
   });
 });
 
