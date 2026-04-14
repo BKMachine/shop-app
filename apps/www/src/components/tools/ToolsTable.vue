@@ -154,8 +154,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import MissingImage from '@/components/MissingImage.vue';
+import { useVirtualTableScroll } from '@/lib/useVirtualTableScroll';
 import { isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
@@ -194,9 +195,12 @@ const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
 const selectedToolType = ref<string | null>(props.toolType);
 const tableHost = ref<HTMLElement | null>(null);
-const tableHeight = ref(700);
-const isAtTableBottom = ref(false);
-let scrollElement: HTMLElement | null = null;
+const { bindScrollElement, isAtTableBottom, tableHeight, updateTableHeight } =
+  useVirtualTableScroll({
+    tableHost,
+    canLoadMore: () => !toolStore.loading && !props.loadingMore && props.hasMore,
+    onLoadMore: () => emits('loadMore'),
+  });
 const tableSortBy = computed(() => {
   return props.sortBy ? [{ key: props.sortBy, order: props.order }] : [];
 });
@@ -275,77 +279,6 @@ function openTool(event: unknown, { item }: { item: Tool }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
 
-function handleTableScroll() {
-  if (!scrollElement) return;
-  updateIsAtTableBottom();
-  if (toolStore.loading || props.loadingMore || !props.hasMore) return;
-
-  const remaining =
-    scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
-
-  if (remaining <= 240) {
-    emits('loadMore');
-  }
-}
-
-function updateIsAtTableBottom() {
-  if (!scrollElement) {
-    isAtTableBottom.value = false;
-    return;
-  }
-
-  const remaining =
-    scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
-
-  isAtTableBottom.value = remaining <= 8;
-}
-
-async function bindScrollElement() {
-  await nextTick();
-  const nextScrollElement = tableHost.value?.querySelector(
-    '.v-table__wrapper',
-  ) as HTMLElement | null;
-
-  if (scrollElement === nextScrollElement) {
-    await loadMoreIfTableNotScrollable();
-    return;
-  }
-
-  if (scrollElement) {
-    scrollElement.removeEventListener('scroll', handleTableScroll);
-  }
-
-  scrollElement = nextScrollElement;
-  if (scrollElement) {
-    scrollElement.addEventListener('scroll', handleTableScroll, { passive: true });
-  }
-
-  updateIsAtTableBottom();
-
-  await loadMoreIfTableNotScrollable();
-}
-
-function updateTableHeight() {
-  if (!tableHost.value) return;
-
-  const rect = tableHost.value.getBoundingClientRect();
-  const viewportHeight = window.visualViewport?.height || window.innerHeight;
-  const bottomPadding = 32;
-  const nextHeight = Math.max(320, Math.floor(viewportHeight - rect.top - bottomPadding));
-  tableHeight.value = nextHeight;
-  updateIsAtTableBottom();
-}
-
-async function loadMoreIfTableNotScrollable() {
-  await nextTick();
-  updateIsAtTableBottom();
-  if (!scrollElement) return;
-  if (toolStore.loading || props.loadingMore || !props.hasMore) return;
-  if (scrollElement.scrollHeight <= scrollElement.clientHeight + 24) {
-    emits('loadMore');
-  }
-}
-
 watch(
   () => props.items,
   async () => {
@@ -367,22 +300,9 @@ watch(
 watch(
   () => props.hasMore,
   () => {
-    void loadMoreIfTableNotScrollable();
+    void bindScrollElement();
   },
 );
-
-onMounted(() => {
-  updateTableHeight();
-  window.addEventListener('resize', updateTableHeight);
-  void bindScrollElement();
-});
-
-onBeforeUnmount(() => {
-  if (scrollElement) {
-    scrollElement.removeEventListener('scroll', handleTableScroll);
-  }
-  window.removeEventListener('resize', updateTableHeight);
-});
 
 watch(
   () => props.category,
