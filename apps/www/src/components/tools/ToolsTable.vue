@@ -141,9 +141,11 @@
               <span class="stock">{{ item.stock }}</span>
             </template>
             <template #bottom>
-              <div v-if="isAtTableBottom" class="tool-table-status">
-                <span v-if="loadingMore">Loading more tools...</span>
-                <span v-else-if="!hasMore && items.length">All tools loaded.</span>
+              <div v-if="isTableScrollable" class="tool-table-status">
+                <span v-if="isAtTableBottom && loadingMore">Loading more tools...</span>
+                <span v-else-if="isAtTableBottom && !hasMore && items.length">
+                  All tools loaded.
+                </span>
               </div>
             </template>
           </v-data-table-virtual>
@@ -195,7 +197,7 @@ const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
 const selectedToolType = ref<string | null>(props.toolType);
 const tableHost = ref<HTMLElement | null>(null);
-const { bindScrollElement, isAtTableBottom, tableHeight, updateTableHeight } =
+const { bindScrollElement, isAtTableBottom, isTableScrollable, tableHeight, updateTableHeight } =
   useVirtualTableScroll({
     tableHost,
     canLoadMore: () => !toolStore.loading && !props.loadingMore && props.hasMore,

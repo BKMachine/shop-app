@@ -11,6 +11,7 @@ export const useToolStore = defineStore('tools', () => {
   const currentQuery = ref<ToolListFilters>({});
   const loading = ref(false);
   const loadingMore = ref(false);
+  const activeRequestId = ref(0);
 
   // Remove empty or undefined query parameters
   function normalizeQuery(query: ToolListFilters): ToolListFilters {
@@ -22,6 +23,7 @@ export const useToolStore = defineStore('tools', () => {
   }
 
   async function fetch(query: ToolListFilters = {}, append = false) {
+    const requestId = ++activeRequestId.value;
     const nextQuery = normalizeQuery(query);
     const nextLimit = Math.min(Math.max(Number(nextQuery.limit) || limit.value || 10, 1), 100);
     const nextOffset = append ? tools.value.length : Math.max(Number(nextQuery.offset) || 0, 0);
@@ -45,6 +47,10 @@ export const useToolStore = defineStore('tools', () => {
         params: requestQuery,
       });
 
+      if (requestId !== activeRequestId.value) {
+        return;
+      }
+
       if (append) {
         const existingIds = new Set(tools.value.map((tool) => tool._id));
         tools.value = [...tools.value, ...data.items.filter((tool) => !existingIds.has(tool._id))];
@@ -57,9 +63,22 @@ export const useToolStore = defineStore('tools', () => {
       offset.value = requestQuery.offset || 0;
       hasMore.value = data.hasMore;
     } finally {
-      if (append) loadingMore.value = false;
-      else loading.value = false;
+      if (requestId === activeRequestId.value) {
+        if (append) loadingMore.value = false;
+        else loading.value = false;
+      }
     }
+  }
+
+  function reset() {
+    activeRequestId.value++;
+    tools.value = [];
+    total.value = 0;
+    offset.value = 0;
+    hasMore.value = false;
+    currentQuery.value = {};
+    loading.value = false;
+    loadingMore.value = false;
   }
 
   async function fetchNextPage() {
@@ -147,6 +166,7 @@ export const useToolStore = defineStore('tools', () => {
     toolUpdateSignal,
     fetch,
     fetchNextPage,
+    reset,
     add,
     update,
     updateToolImage,

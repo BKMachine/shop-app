@@ -49,9 +49,9 @@
             </template>
 
             <template #bottom>
-              <div v-if="isAtTableBottom" class="tool-table-status">
-                <span v-if="toolStore.loadingMore">Loading more tools...</span>
-                <span v-else-if="!toolStore.hasMore && toolStore.tools.length">
+              <div v-if="isTableScrollable" class="tool-table-status">
+                <span v-if="isAtTableBottom && toolStore.loadingMore">Loading more tools...</span>
+                <span v-else-if="isAtTableBottom && !toolStore.hasMore && toolStore.tools.length">
                   All tools loaded.
                 </span>
               </div>
@@ -81,7 +81,7 @@ const itemsPerPage = ref(getStoredItemsPerPage());
 const locations = ref<string[]>([]);
 const positions = ref<string[]>([]);
 const tableHost = ref<HTMLElement | null>(null);
-const { bindScrollElement, isAtTableBottom, tableHeight, updateTableHeight } =
+const { bindScrollElement, isAtTableBottom, isTableScrollable, tableHeight, updateTableHeight } =
   useVirtualTableScroll({
     tableHost,
     canLoadMore: () => !toolStore.loading && !toolStore.loadingMore && toolStore.hasMore,
@@ -185,7 +185,7 @@ function applyRouteFilters() {
 
 async function fetchTools(append: boolean) {
   if (!location.value) {
-    toolStore.tools = [];
+    toolStore.reset();
     return;
   }
 
