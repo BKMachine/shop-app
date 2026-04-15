@@ -48,7 +48,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-shape-outline" />
+          <v-icon class="mr-2" icon="mdi-tag-multiple-outline" />
           Tool Categories
         </v-expansion-panel-title>
         <v-expansion-panel-text> <ToolCategorySettings /> </v-expansion-panel-text>
