@@ -120,40 +120,28 @@
           </div>
         </template>
 
-        <div ref="tableHost" class="tool-table-host">
-          <v-data-table-virtual
-            :custom-key-sort="customKeySort"
-            fixed-header
-            :headers="headers"
-            :height="tableHeight"
-            :items="items"
-            :loading="toolStore.loading"
-            :sort-by="tableSortBy"
-            @click:row="openTool"
-            @update:sort-by="updateSearchBy"
-          >
-            <template #['item.img']="{ item }">
-              <v-img v-if="item.img" :id="item._id" class="tool-img" :src="item.img" />
-              <MissingImage v-else :id="item._id" class="tool-img tool-img-fallback" />
-            </template>
-            <template #['item.location']="{ item }"> {{ location(item) }} </template>
-            <template #['item.stock']="{ item }">
-              <span class="stock">{{ item.stock }}</span>
-            </template>
-            <template #bottom>
-              <div v-if="showTableStatus" class="tool-table-status">
-                <v-progress-linear
-                  v-if="loadingMore"
-                  class="tool-table-progress"
-                  color="primary"
-                  indeterminate
-                  rounded
-                />
-                <span v-else-if="showAllToolsLoaded">All tools loaded.</span>
-              </div>
-            </template>
-          </v-data-table-virtual>
-        </div>
+        <InfiniteScrollDataTable
+          ref="tableRef"
+          :custom-key-sort="customKeySort"
+          :has-more="hasMore"
+          :headers="headers"
+          :items="items"
+          :loading="toolStore.loading"
+          :loading-more="loadingMore"
+          :sort-by="tableSortBy"
+          @click:row="openTool"
+          @load-more="emits('loadMore')"
+          @update:sort-by="updateSearchBy"
+        >
+          <template #['item.img']="{ item }">
+            <v-img v-if="item.img" :id="item._id" class="tool-img" :src="item.img" />
+            <MissingImage v-else :id="item._id" class="tool-img tool-img-fallback" />
+          </template>
+          <template #['item.location']="{ item }"> {{ location(item) }} </template>
+          <template #['item.stock']="{ item }">
+            <span class="stock">{{ item.stock }}</span>
+          </template>
+        </InfiniteScrollDataTable>
       </v-card>
     </v-card-text>
   </v-card>
@@ -161,8 +149,8 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
+import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
-import { useVirtualTableScroll } from '@/lib/useVirtualTableScroll';
 import { isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
@@ -200,13 +188,7 @@ const searchText = ref<string>(props.search);
 const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
 const selectedToolType = ref<string | null>(props.toolType);
-const tableHost = ref<HTMLElement | null>(null);
-const { bindScrollElement, isAtTableBottom, isTableScrollable, tableHeight, updateTableHeight } =
-  useVirtualTableScroll({
-    tableHost,
-    canLoadMore: () => !toolStore.loading && !props.loadingMore && props.hasMore,
-    onLoadMore: () => emits('loadMore'),
-  });
+const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const tableSortBy = computed(() => {
   return props.sortBy ? [{ key: props.sortBy, order: props.order }] : [];
 });
@@ -218,16 +200,6 @@ const customKeySort = computed(() => {
       .filter((key): key is string => Boolean(key))
       .map((key) => [key, () => 0]),
   );
-});
-
-const showAllToolsLoaded = computed(() => {
-  return (
-    !props.hasMore && props.items.length > 0 && (!isTableScrollable.value || isAtTableBottom.value)
-  );
-});
-
-const showTableStatus = computed(() => {
-  return props.loadingMore || showAllToolsLoaded.value;
 });
 
 const resultsTitle = computed(() => {
@@ -298,7 +270,7 @@ function openTool(event: unknown, { item }: { item: Tool }) {
 watch(
   () => props.items,
   async () => {
-    await bindScrollElement();
+    await tableRef.value?.refreshLayout();
     if (!toolStore.lastId) return;
     await nextTick();
     const el = document.getElementById(toolStore.lastId);
@@ -314,25 +286,16 @@ watch(
 );
 
 watch(
-  () => props.hasMore,
-  () => {
-    void bindScrollElement();
-  },
-);
-
-watch(
   () => props.category,
   async () => {
-    await nextTick();
-    updateTableHeight();
+    await tableRef.value?.refreshLayout();
   },
 );
 
 watch(
   () => props.items.length,
   async () => {
-    await nextTick();
-    updateTableHeight();
+    await tableRef.value?.refreshLayout();
   },
 );
 
@@ -377,23 +340,6 @@ function location(tool: Tool): string {
 <style scoped>
 .highlighted {
   background: #efefef;
-}
-
-.tool-table-host {
-  position: relative;
-}
-
-.tool-table-status {
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  color: rgba(0, 0, 0, 0.6);
-}
-
-.tool-table-progress {
-  width: 100%;
 }
 
 .tool-img {

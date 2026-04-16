@@ -31,46 +31,32 @@
           </v-row>
         </template>
 
-        <div v-if="location" ref="tableHost" class="tool-table-host">
-          <v-data-table-virtual
-            fixed-header
-            :headers="headers"
-            :height="tableHeight"
-            :items="toolStore.tools"
-            :loading="toolStore.loading"
-            @click:row="openTool"
-          >
-            <template #['item.img']="{ item }">
-              <v-img class="tool-img" :src="item.img" />
-            </template>
+        <InfiniteScrollDataTable
+          v-if="location"
+          ref="tableRef"
+          :has-more="toolStore.hasMore"
+          :headers="headers"
+          :items="toolStore.tools"
+          :loading="toolStore.loading"
+          :loading-more="toolStore.loadingMore"
+          @click:row="openTool"
+          @load-more="fetchTools(true)"
+        >
+          <template #['item.img']="{ item }"> <v-img class="tool-img" :src="item.img" /> </template>
 
-            <template #['item.stock']="{ item }">
-              <span class="stock">{{ item.stock }}</span>
-            </template>
-
-            <template #bottom>
-              <div v-if="showTableStatus" class="tool-table-status">
-                <v-progress-linear
-                  v-if="toolStore.loadingMore"
-                  class="tool-table-progress"
-                  color="primary"
-                  indeterminate
-                  rounded
-                />
-                <span v-else-if="showAllToolsLoaded">All tools loaded.</span>
-              </div>
-            </template>
-          </v-data-table-virtual>
-        </div>
+          <template #['item.stock']="{ item }">
+            <span class="stock">{{ item.stock }}</span>
+          </template>
+        </InfiniteScrollDataTable>
       </v-card>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useVirtualTableScroll } from '@/lib/useVirtualTableScroll';
+import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import api from '@/plugins/axios';
 import { normalizeQueryValue } from '@/plugins/utils';
 import router from '@/router';
@@ -84,23 +70,7 @@ const position = ref('');
 const itemsPerPage = ref(getStoredItemsPerPage());
 const locations = ref<string[]>([]);
 const positions = ref<string[]>([]);
-const tableHost = ref<HTMLElement | null>(null);
-const { bindScrollElement, isAtTableBottom, isTableScrollable, tableHeight, updateTableHeight } =
-  useVirtualTableScroll({
-    tableHost,
-    canLoadMore: () => !toolStore.loading && !toolStore.loadingMore && toolStore.hasMore,
-    onLoadMore: () => fetchTools(true),
-  });
-const showAllToolsLoaded = computed(() => {
-  return (
-    !toolStore.hasMore &&
-    toolStore.tools.length > 0 &&
-    (!isTableScrollable.value || isAtTableBottom.value)
-  );
-});
-const showTableStatus = computed(() => {
-  return toolStore.loadingMore || showAllToolsLoaded.value;
-});
+const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const QUERY_KEYS = ['loc', 'pos'] as const;
 
 void fetchToolLocations();
@@ -137,22 +107,13 @@ watch(itemsPerPage, (value, oldValue) => {
 watch(
   () => toolStore.tools.length,
   async () => {
-    await nextTick();
-    updateTableHeight();
-    await bindScrollElement();
-  },
-);
-
-watch(
-  () => toolStore.hasMore,
-  () => {
-    void bindScrollElement();
+    await tableRef.value?.refreshLayout();
   },
 );
 
 watch(location, async () => {
   await nextTick();
-  updateTableHeight();
+  await tableRef.value?.refreshLayout();
 });
 
 function getStoredItemsPerPage() {
@@ -258,23 +219,5 @@ function openTool(event: unknown, { item }: { item: Tool }) {
 
 .tool-img {
   max-height: 50px;
-}
-
-.tool-table-host {
-  position: relative;
-  overflow: hidden;
-}
-
-.tool-table-status {
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  color: rgba(0, 0, 0, 0.6);
-}
-
-.tool-table-progress {
-  width: 100%;
 }
 </style>
