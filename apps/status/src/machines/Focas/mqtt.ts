@@ -5,7 +5,7 @@ import { focasMachines as machines } from '../index.js';
 import mappings from './focas_mappings.js';
 
 let client: mqtt.MqttClient;
-const machineLocationsManualCycleCalc = ['rd4', 'rd5'];
+const machinesWithProductionCycleTimer = new Set<string>();
 
 export function connect(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -32,6 +32,14 @@ export function disconnect() {
   if (client) {
     client.end();
   }
+}
+
+function hasProductionCycleTimer(subtopic: string, location: string, value: unknown) {
+  return (
+    subtopic === 'production/1' &&
+    location === 'state.data.timers.cycle_time_ms' &&
+    value !== undefined
+  );
 }
 
 export function processMessage(topic: string, message: Buffer) {
@@ -69,6 +77,11 @@ export function processMessage(topic: string, message: Buffer) {
       logger.error(`Error getting value for ${location} in subtopic ${subtopic}:`, error);
       return;
     }
+
+    if (hasProductionCycleTimer(subtopic, location, value)) {
+      machinesWithProductionCycleTimer.add(machineLocation);
+    }
+
     if (value === undefined) return;
 
     // Compare the old property value to the new property value
@@ -105,7 +118,7 @@ export function processMessage(topic: string, message: Buffer) {
 
   const currentStatus = machine.getStatus();
 
-  if (machineLocationsManualCycleCalc.includes(machineLocation)) {
+  if (!machinesWithProductionCycleTimer.has(machineLocation)) {
     if (previousStatus === 'green' && currentStatus !== 'green') {
       const lastCycle: Changes = new Map();
       lastCycle.set('lastCycle', Date.now() - new Date(lastStateTs).valueOf());
