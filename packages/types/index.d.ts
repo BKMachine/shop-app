@@ -1,12 +1,13 @@
 /// <reference path="./src/database.d.ts" />
 /// <reference path="./src/elastic.d.ts" />
+/// <reference path="./src/express.d.ts" />
 /// <reference path="./src/machine.d.ts" />
+/// <reference path="./src/materials.d.ts" />
 /// <reference path="./src/mtconnect.d.ts" />
+/// <reference path="./src/parts.d.ts" />
+/// <reference path="./src/pdf_parser.d.ts" />
 /// <reference path="./src/remote_serial_port.d.ts" />
 /// <reference path="./src/socket.io.d.ts" />
-/// <reference path="./src/express.d.ts" />
-/// <reference path="./src/pdf_parser.d.ts" />
-/// <reference path="./src/materials.d.ts" />
 /// <reference path="./src/tooling.d.ts" />
 
 declare global {
@@ -42,15 +43,6 @@ declare global {
     id: string;
     url: string;
     createdAt: string;
-  }
-
-  type MaterialCategory = 'aluminum' | 'steel' | 'stainless' | 'titanium' | 'other';
-
-  interface MaterialList {
-    [key: string]: {
-      density: number;
-      category: MaterialCategory;
-    };
   }
 
   interface MyImageData {

@@ -1,14 +1,4 @@
 declare global {
-  type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other';
-  type ToolFilterCategory = ToolCategory | 'all';
-
-  interface ToolCategoryGroups {
-    milling: string[];
-    turning: string[];
-    swiss: string[];
-    other: string[];
-  }
-
   interface Tool {
     _id: string;
     description: string;
@@ -39,6 +29,16 @@ declare global {
 
   interface ToolDoc extends Omit<Tool, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
+  }
+
+  type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other';
+  type ToolFilterCategory = ToolCategory | 'all';
+
+  interface ToolCategoryGroups {
+    milling: string[];
+    turning: string[];
+    swiss: string[];
+    other: string[];
   }
 
   interface ToolListFilters {
@@ -74,6 +74,17 @@ declare global {
   }
 
   type ToolDocReorders = ToolDoc & ToolReorders;
+
+  interface ToolCategorySettings {
+    _id: 'tool-categories';
+    groups: ToolCategoryGroups;
+  }
+
+  type ToolCategoryTypeCounts = Record<ToolCategory, Record<string, number>>;
+
+  interface ToolCategorySettingsResponse extends ToolCategorySettings {
+    counts: ToolCategoryTypeCounts;
+  }
 }
 
 export {};

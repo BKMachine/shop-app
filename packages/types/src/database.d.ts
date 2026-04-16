@@ -1,3 +1,7 @@
+// Material types are in materials.d.ts
+// Part types are in parts.d.ts
+// Tool types are in tooling.d.ts
+
 import type { Document, Types } from 'mongoose';
 
 // _id is a string for the frontend
@@ -21,8 +25,8 @@ declare global {
       | 'part_note';
     timestamp: string;
     device: Device;
-    old: any | null;
-    new: any | null;
+    old: unknown | null;
+    new: unknown | null;
   }
 
   interface AuditDoc extends Omit<Audit, '_id'>, Document<Types.ObjectId> {
@@ -56,94 +60,6 @@ declare global {
   }
 
   interface EmailReportDoc extends Omit<EmailReport, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
-  }
-
-  /* TOOL CATEGORY SETTINGS */
-
-  interface ToolCategorySettings {
-    _id: 'tool-categories';
-    groups: ToolCategoryGroups;
-  }
-
-  type ToolCategoryTypeCounts = Record<ToolCategory, Record<string, number>>;
-
-  interface ToolCategorySettingsResponse extends ToolCategorySettings {
-    counts: ToolCategoryTypeCounts;
-  }
-
-  /* MATERIAL */
-
-  interface Material {
-    _id: string;
-    description: string;
-    type: 'Round' | 'Flat';
-    height: number | null;
-    width: number | null;
-    diameter: number | null;
-    wallThickness: number | null;
-    length: number | null;
-    materialType: string;
-    supplier?: Supplier | string;
-    costPerFoot: number | null;
-  }
-
-  interface MaterialDoc extends Omit<Material, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
-  }
-
-  /* PART */
-
-  interface CycleTimes {
-    operation: string;
-    time: number;
-  }
-
-  interface AdditionalCost {
-    name: string;
-    cost: number;
-    url?: string;
-  }
-
-  interface PartSubComponent {
-    partId: string;
-    qty: number;
-  }
-
-  interface Part {
-    _id: string;
-    customer: Customer | string;
-    part: string;
-    description: string;
-    stock: number;
-    location?: string;
-    position?: string;
-    img?: string;
-    productLink?: string;
-    partFilesPath?: string;
-    revision?: string;
-    material?: Material | string;
-    customerSuppliedMaterial?: boolean;
-    materialCutType: 'blanks' | 'bars';
-    materialLength: number;
-    barLength: number;
-    remnantLength: number;
-    createdAt: Date;
-    cycleTimes: CycleTimes[];
-    additionalCosts: AdditionalCost[];
-    price: number;
-    subComponentIds?: PartSubComponent[];
-    imageIds?: string[];
-    documentIds?: string[];
-  }
-
-  interface PartDoc extends Omit<Part, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
-  }
-
-  /* TOOL */
-
-  interface ToolDoc extends Omit<Tool, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 

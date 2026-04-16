@@ -1,5 +1,3 @@
-/// <reference path="../index.d.ts" />
-
 declare global {
   interface LineHighlight {
     text: string;
