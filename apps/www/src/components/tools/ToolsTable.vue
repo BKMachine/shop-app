@@ -141,11 +141,15 @@
               <span class="stock">{{ item.stock }}</span>
             </template>
             <template #bottom>
-              <div v-if="isTableScrollable" class="tool-table-status">
-                <span v-if="isAtTableBottom && loadingMore">Loading more tools...</span>
-                <span v-else-if="isAtTableBottom && !hasMore && items.length">
-                  All tools loaded.
-                </span>
+              <div v-if="showTableStatus" class="tool-table-status">
+                <v-progress-linear
+                  v-if="loadingMore"
+                  class="tool-table-progress"
+                  color="primary"
+                  indeterminate
+                  rounded
+                />
+                <span v-else-if="showAllToolsLoaded">All tools loaded.</span>
               </div>
             </template>
           </v-data-table-virtual>
@@ -214,6 +218,16 @@ const customKeySort = computed(() => {
       .filter((key): key is string => Boolean(key))
       .map((key) => [key, () => 0]),
   );
+});
+
+const showAllToolsLoaded = computed(() => {
+  return (
+    !props.hasMore && props.items.length > 0 && (!isTableScrollable.value || isAtTableBottom.value)
+  );
+});
+
+const showTableStatus = computed(() => {
+  return props.loadingMore || showAllToolsLoaded.value;
 });
 
 const resultsTitle = computed(() => {
@@ -376,6 +390,10 @@ function location(tool: Tool): string {
   justify-content: center;
   font-size: 0.875rem;
   color: rgba(0, 0, 0, 0.6);
+}
+
+.tool-table-progress {
+  width: 100%;
 }
 
 .tool-img {

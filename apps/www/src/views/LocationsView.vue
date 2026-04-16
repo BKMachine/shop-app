@@ -49,11 +49,15 @@
             </template>
 
             <template #bottom>
-              <div v-if="isTableScrollable" class="tool-table-status">
-                <span v-if="isAtTableBottom && toolStore.loadingMore">Loading more tools...</span>
-                <span v-else-if="isAtTableBottom && !toolStore.hasMore && toolStore.tools.length">
-                  All tools loaded.
-                </span>
+              <div v-if="showTableStatus" class="tool-table-status">
+                <v-progress-linear
+                  v-if="toolStore.loadingMore"
+                  class="tool-table-progress"
+                  color="primary"
+                  indeterminate
+                  rounded
+                />
+                <span v-else-if="showAllToolsLoaded">All tools loaded.</span>
               </div>
             </template>
           </v-data-table-virtual>
@@ -64,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useVirtualTableScroll } from '@/lib/useVirtualTableScroll';
 import api from '@/plugins/axios';
@@ -87,6 +91,16 @@ const { bindScrollElement, isAtTableBottom, isTableScrollable, tableHeight, upda
     canLoadMore: () => !toolStore.loading && !toolStore.loadingMore && toolStore.hasMore,
     onLoadMore: () => fetchTools(true),
   });
+const showAllToolsLoaded = computed(() => {
+  return (
+    !toolStore.hasMore &&
+    toolStore.tools.length > 0 &&
+    (!isTableScrollable.value || isAtTableBottom.value)
+  );
+});
+const showTableStatus = computed(() => {
+  return toolStore.loadingMore || showAllToolsLoaded.value;
+});
 const QUERY_KEYS = ['loc', 'pos'] as const;
 
 void fetchToolLocations();
@@ -258,5 +272,9 @@ function openTool(event: unknown, { item }: { item: Tool }) {
   justify-content: center;
   font-size: 0.875rem;
   color: rgba(0, 0, 0, 0.6);
+}
+
+.tool-table-progress {
+  width: 100%;
 }
 </style>
