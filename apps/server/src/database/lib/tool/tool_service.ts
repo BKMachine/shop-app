@@ -189,7 +189,7 @@ async function pick(
   if (oldTool.stock <= 0) return { status: 400, tool: oldTool };
   const id = oldTool._id;
 
-  const newTool: ToolDoc = oldTool.toObject();
+  const newTool: ToolDoc = (oldTool as unknown as { toObject(): ToolDoc }).toObject();
   newTool.stock--;
 
   const computedTool = computedToolChanges(oldTool, newTool);
@@ -211,7 +211,7 @@ async function stock(
   if (!oldTool) return { status: 404, tool: null };
   if (oldTool.stock + amount < 0) return { status: 400, tool: null };
 
-  const newTool: ToolDoc = oldTool.toObject();
+  const newTool: ToolDoc = (oldTool as unknown as { toObject(): ToolDoc }).toObject();
   newTool.stock += amount;
 
   const computedTool = computedToolChanges(oldTool, newTool);

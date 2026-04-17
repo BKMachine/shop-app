@@ -78,6 +78,19 @@ async function listAllTools(): Promise<ToolDoc[]> {
   }
 }
 
+async function listAllParts(): Promise<PartListItem[]> {
+  const items: PartListItem[] = [];
+  let offset = 0;
+  const limit = 100;
+
+  while (true) {
+    const page = await PartService.list({ limit, offset });
+    items.push(...page.items);
+    if (!page.hasMore) return items;
+    offset += page.items.length;
+  }
+}
+
 const IMAGE_EXTENSIONS = new Set([
   '.avif',
   '.bmp',
@@ -293,7 +306,7 @@ async function persistImageUrl<TDoc extends RepairableEntity>(
 }
 
 async function repairPartImages(options: CliOptions, stats: PartRepairStats): Promise<void> {
-  const parts = await PartService.list();
+  const parts = await listAllParts();
   logger.info(`Scanning ${parts.length} part records`);
 
   for (const part of parts) {

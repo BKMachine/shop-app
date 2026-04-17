@@ -24,13 +24,17 @@ declare global {
     subComponentIds?: PartSubComponent[];
     imageIds?: string[];
     documentIds?: string[];
-    derived?: {
-      shopRate: number;
-    };
+    derived?: PartDerived;
   }
 
   interface PartDoc extends Omit<Part, '_id'>, Document<Types.ObjectId> {
     _id: Types.ObjectId;
+  }
+
+  interface PartDerived {
+    shopRate: number;
+    directSubComponentCount: number;
+    directParentCount: number;
   }
 
   interface CycleTimes {
@@ -61,10 +65,13 @@ declare global {
     position?: string;
   }
 
-  interface PartListItem extends Part {}
+  interface PartListItem extends Part {
+    hasSubComponents: boolean;
+    isSubComponent: boolean;
+  }
 
   interface PartListResult {
-    items: PartDoc[];
+    items: PartListItem[];
     total: number;
     limit: number;
     offset: number;

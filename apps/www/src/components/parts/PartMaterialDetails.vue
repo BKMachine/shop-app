@@ -531,16 +531,7 @@ const billableMaterialCost = computed(() => {
 });
 
 const partMaterialCost = computed(() => {
-  if (hasSubComponents.value) {
-    return subComponentMaterialRows.value.reduce(
-      (total, component) =>
-        total + component.materialCost * Math.max(1, Number(component.entry.qty) || 1),
-      0,
-    );
-  }
-
-  if (!props.part.material || typeof props.part.material === 'string') return 0;
-  return calculatePartMaterialCost(props.part, props.part.material);
+  return calculateAssemblyMaterialCost(props.part, resolvePart, resolveMaterial);
 });
 
 watch(

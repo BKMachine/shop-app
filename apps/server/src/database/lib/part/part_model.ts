@@ -31,7 +31,11 @@ const schema = new Schema<PartDoc>({
   documentIds: [{ type: Types.ObjectId, ref: 'documents' }],
   derived: {
     shopRate: { type: Number, default: 0 },
+    directSubComponentCount: { type: Number, default: 0 },
+    directParentCount: { type: Number, default: 0 },
   },
 });
+
+schema.index({ 'subComponentIds.partId': 1 });
 
 export default model<PartDoc>('parts', schema);

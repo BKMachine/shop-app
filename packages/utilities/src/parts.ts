@@ -30,14 +30,8 @@ export function calculatePartsPerBar<TPart extends MaterialUsageInput>(
   const remnantLength = Number(part.remnantLength) || 0;
 
   if (!fullBarLength || !materialLength) return 0;
-
-  if (cutType !== 'bars') {
-    return Math.floor(fullBarLength / materialLength);
-  }
-
-  if (!barLength || barLength <= remnantLength) {
-    return 0;
-  }
+  if (cutType !== 'bars') return Math.floor(fullBarLength / materialLength);
+  if (!barLength || barLength <= remnantLength) return 0;
 
   const subBars = Math.floor(fullBarLength / barLength);
   const remainderLength = fullBarLength % barLength;
@@ -99,21 +93,15 @@ export function calculateAssemblyCycleMinutes<TPart extends AssemblyPartInput>(
   resolvePart: (id: string) => TPart | undefined,
   visited = new Set<string>(),
 ): number {
-  if (!part?._id) {
-    return calculateTotalCycleMinutes(part?.cycleTimes);
-  }
-
-  if (visited.has(part._id)) {
-    return 0;
-  }
+  if (!part?._id) return calculateTotalCycleMinutes(part?.cycleTimes);
+  if (visited.has(part._id)) return 0;
 
   const nextVisited = new Set(visited);
   nextVisited.add(part._id);
 
+  const ownCycleMinutes = calculateTotalCycleMinutes(part.cycleTimes);
   const subComponents = normalizeSubComponentIds(part.subComponentIds);
-  if (!subComponents.length) {
-    return calculateTotalCycleMinutes(part.cycleTimes);
-  }
+  if (!subComponents.length) return ownCycleMinutes;
 
   return subComponents.reduce((total, entry) => {
     const subComponent = resolvePart(entry.partId);
@@ -121,7 +109,7 @@ export function calculateAssemblyCycleMinutes<TPart extends AssemblyPartInput>(
     return (
       total + calculateAssemblyCycleMinutes(subComponent, resolvePart, nextVisited) * entry.qty
     );
-  }, 0);
+  }, ownCycleMinutes);
 }
 
 export function calculateAssemblyMaterialCost<TPart extends AssemblyPartInput>(
@@ -130,21 +118,15 @@ export function calculateAssemblyMaterialCost<TPart extends AssemblyPartInput>(
   resolveMaterial: (material: TPart['material']) => Material | null | undefined,
   visited = new Set<string>(),
 ): number {
-  if (!part?._id) {
-    return calculatePartMaterialCost(part, resolveMaterial(part?.material));
-  }
-
-  if (visited.has(part._id)) {
-    return 0;
-  }
+  if (!part?._id) return calculatePartMaterialCost(part, resolveMaterial(part?.material));
+  if (visited.has(part._id)) return 0;
 
   const nextVisited = new Set(visited);
   nextVisited.add(part._id);
 
+  const ownMaterialCost = calculatePartMaterialCost(part, resolveMaterial(part.material));
   const subComponents = normalizeSubComponentIds(part.subComponentIds);
-  if (!subComponents.length) {
-    return calculatePartMaterialCost(part, resolveMaterial(part.material));
-  }
+  if (!subComponents.length) return ownMaterialCost;
 
   return subComponents.reduce((total, entry) => {
     const subComponent = resolvePart(entry.partId);
@@ -154,7 +136,7 @@ export function calculateAssemblyMaterialCost<TPart extends AssemblyPartInput>(
       calculateAssemblyMaterialCost(subComponent, resolvePart, resolveMaterial, nextVisited) *
         entry.qty
     );
-  }, 0);
+  }, ownMaterialCost);
 }
 
 export function calculatePartShopRate(

@@ -73,6 +73,9 @@
                 item.hasSubComponents ? 'rate-swatch--assembly' : '',
                 `rate-swatch--${getTone(item)}`,
               ]"
+              :title="item.derived?.shopRate
+                ? `$${item.derived.shopRate.toFixed(2)}`
+                : 'No rate'"
               @click.stop="openPartCost(item)"
             />
           </div>
@@ -257,8 +260,7 @@ function loadMore() {
 
 function getTone(item: PartsListRow) {
   if (!item.price) return 'empty';
-  const rate = item.derived?.shopRate ?? item.shopRate;
-  return getToneForRate(rate);
+  return getToneForRate(item.derived?.shopRate || 0);
 }
 
 function openPart(event: unknown, { item }: { item: PartsListRow }) {

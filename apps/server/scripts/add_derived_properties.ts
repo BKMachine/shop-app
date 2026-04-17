@@ -7,8 +7,23 @@ async function main() {
 
   const parts = await Part.find();
   console.log(`Calculating derived properties for ${parts.length} parts...`);
+  const directParentCountByPartId = new Map<string, number>();
+
   for (const part of parts) {
-    calculateDerivedPartProperties(part);
+    for (const subComponent of part.subComponentIds || []) {
+      const partId = String(subComponent.partId);
+      directParentCountByPartId.set(partId, (directParentCountByPartId.get(partId) || 0) + 1);
+    }
+  }
+
+  for (const part of parts) {
+    part.derived = {
+      ...part.derived,
+      shopRate: 0,
+      directSubComponentCount: 0,
+      directParentCount: directParentCountByPartId.get(part._id.toString()) || 0,
+    };
+    await calculateDerivedPartProperties(part);
     await part.save();
   }
   await disconnect();

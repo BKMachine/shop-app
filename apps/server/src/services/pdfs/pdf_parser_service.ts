@@ -14,7 +14,7 @@ export default async function (buffer: Buffer): Promise<{
 
       const existingMaterial = existing
         ? ({
-            ...existing.toObject(),
+            ...(existing as unknown as { toObject(): Material }).toObject(),
             _id: existing._id.toString(),
           } as Material)
         : null;
