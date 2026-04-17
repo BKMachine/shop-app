@@ -25,14 +25,7 @@ function buildToolQuery(filters: ToolListFilters) {
 
   if (filters.search?.trim()) {
     const regex = new RegExp(escapeRegExp(filters.search.trim()), 'i');
-    query.$or = [
-      { description: regex },
-      { item: regex },
-      { barcode: regex },
-      { coating: regex },
-      { location: regex },
-      { position: regex },
-    ];
+    query.$or = [{ description: regex }, { item: regex }, { barcode: regex }, { coating: regex }];
   }
 
   if (filters.toolType?.trim()) query.toolType = filters.toolType.trim();

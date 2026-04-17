@@ -337,7 +337,7 @@ import {
 } from '@/plugins/rates_theme';
 import {
   calculateAssemblyCycleMinutes,
-  calculateRatePerHour,
+  calculatePartShopRate,
   formatCost,
   formatCycle,
   formatCycleLonghand,
@@ -503,7 +503,7 @@ const amountMinusTotalCosts = computed(() => (part.price ? part.price - totalCos
 
 const currentRate = computed(() => {
   if (hasNoProductPrice.value) return 0;
-  return calculateRatePerHour(part.price, totalCostBase.value, effectiveTotalCycleTime.value);
+  return calculatePartShopRate(part.price, totalCostBase.value, effectiveTotalCycleTime.value);
 });
 
 const targetVisualTone = computed(() => getToneForRate(targetHourlyRate.value));

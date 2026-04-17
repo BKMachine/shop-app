@@ -29,6 +29,9 @@ const schema = new Schema<PartDoc>({
   ],
   imageIds: [{ type: Types.ObjectId, ref: 'images' }],
   documentIds: [{ type: Types.ObjectId, ref: 'documents' }],
+  derived: {
+    shopRate: { type: Number, default: 0 },
+  },
 });
 
 export default model<PartDoc>('parts', schema);

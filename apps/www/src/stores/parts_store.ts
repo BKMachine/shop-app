@@ -1,37 +1,19 @@
-import uniq from 'lodash/uniq';
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import axios from '@/plugins/axios';
-import { useCustomerStore } from '@/stores/customer_store';
 
 export const usePartStore = defineStore('parts', () => {
-  const customerStore = useCustomerStore();
-
-  const rawParts = ref<Part[]>([]);
-
-  const parts = computed<Part[]>(() => {
-    return rawParts.value.map((x) => {
-      return {
-        ...x,
-        customer: customerStore.customers.find((y) => y._id === x.customer) || x.customer,
-      };
-    });
-  });
-
-  const locations = computed(() => {
-    return uniq(
-      parts.value
-        .filter((x) => x.location)
-        .map((x) => x.location)
-        .sort((a, b) => {
-          const c = (a as string).toLowerCase();
-          const d = (b as string).toLowerCase();
-          if (c < d) return -1;
-          else if (c > d) return 1;
-          else return 0;
-        }),
-    );
-  });
+  const parts = ref<Part[]>([]);
+  const listParts = ref<PartListItem[]>([]);
+  const listTotal = ref(0);
+  const listLimit = ref(20);
+  const listOffset = ref(0);
+  const listHasMore = ref(false);
+  const listLoading = ref(false);
+  const listLoadingMore = ref(false);
+  const currentListQuery = ref<PartListFilters>({});
+  const activeListRequestId = ref(0);
+  const total = ref(0);
 
   const loading = ref(false);
   const imagesByPartId = ref<Record<string, MyImageData[]>>({});
@@ -39,8 +21,8 @@ export const usePartStore = defineStore('parts', () => {
   const notesByPartId = ref<Record<string, MyPartNoteData[]>>({});
 
   function updateRawPart(partId: string, updater: (part: Part) => void) {
-    const index = rawParts.value.findIndex((part) => part._id === partId);
-    const part = rawParts.value[index];
+    const index = parts.value.findIndex((part) => part._id === partId);
+    const part = parts.value[index];
     if (!part) return;
     updater(part);
   }
@@ -57,16 +39,84 @@ export const usePartStore = defineStore('parts', () => {
     return notesByPartId.value[partId] || [];
   }
 
-  function fetch() {
-    loading.value = true;
-    axios
-      .get<Part[]>('/parts')
-      .then(({ data }) => {
-        rawParts.value = data;
-      })
-      .finally(() => {
-        loading.value = false;
+  function normalizeListQuery(query: PartListFilters): PartListFilters {
+    return Object.fromEntries(
+      Object.entries(query).filter(
+        ([, value]) => value !== '' && value !== undefined && value !== null && value !== false,
+      ),
+    ) as PartListFilters;
+  }
+
+  async function fetchList(query: PartListFilters = {}, append = false) {
+    const requestId = ++activeListRequestId.value;
+    const nextQuery = normalizeListQuery(query);
+    const nextLimit = Math.min(Math.max(Number(nextQuery.limit) || listLimit.value || 10, 1), 100);
+    const nextOffset = append ? listParts.value.length : Math.max(Number(nextQuery.offset) || 0, 0);
+    const requestQuery: PartListFilters = {
+      ...nextQuery,
+      limit: nextLimit,
+      offset: nextOffset,
+    };
+
+    currentListQuery.value = requestQuery;
+
+    if (append) listLoadingMore.value = true;
+    else listLoading.value = true;
+
+    try {
+      const { data } = await axios.get<PartListResponse>('/parts', {
+        params: requestQuery,
       });
+
+      if (requestId !== activeListRequestId.value) {
+        return;
+      }
+
+      if (append) {
+        const existingIds = new Set(listParts.value.map((part) => part._id));
+        listParts.value = [
+          ...listParts.value,
+          ...data.items.filter((part) => !existingIds.has(part._id)),
+        ];
+      } else {
+        listParts.value = data.items;
+      }
+
+      listTotal.value = data.total;
+      total.value = data.total;
+      listLimit.value = data.limit;
+      listOffset.value = data.offset;
+      listHasMore.value = data.hasMore;
+    } finally {
+      if (requestId === activeListRequestId.value) {
+        if (append) listLoadingMore.value = false;
+        else listLoading.value = false;
+      }
+    }
+  }
+
+  function resetList() {
+    activeListRequestId.value++;
+    listParts.value = [];
+    listTotal.value = 0;
+    listOffset.value = 0;
+    listHasMore.value = false;
+    currentListQuery.value = {};
+    listLoading.value = false;
+    listLoadingMore.value = false;
+  }
+
+  async function fetchNextListPage() {
+    if (listLoading.value || listLoadingMore.value || !listHasMore.value) return;
+    await fetchList(currentListQuery.value, true);
+  }
+
+  function refreshListIfLoaded() {
+    if (!listParts.value.length && !Object.keys(currentListQuery.value).length) {
+      return;
+    }
+
+    void fetchList(currentListQuery.value);
   }
 
   const lastId = ref<string | null>(null);
@@ -76,14 +126,16 @@ export const usePartStore = defineStore('parts', () => {
 
   async function add(part: Part) {
     await axios.post<Part>('/parts', { data: part }).then(({ data }) => {
-      rawParts.value.push(data);
+      parts.value.push(data);
+      refreshListIfLoaded();
     });
   }
 
   async function update(part: Part) {
     await axios.put<Part>('/parts', { data: part }).then(({ data }) => {
-      const index = rawParts.value.findIndex((x) => x._id === data._id);
-      if (index > -1) rawParts.value[index] = data;
+      const index = parts.value.findIndex((x) => x._id === data._id);
+      if (index > -1) parts.value[index] = data;
+      refreshListIfLoaded();
     });
   }
 
@@ -220,9 +272,10 @@ export const usePartStore = defineStore('parts', () => {
   const trigger = ref({ partID: '' });
 
   function SOCKET_part(part: Part) {
-    const index = rawParts.value.findIndex((x) => x._id === part._id);
+    const index = parts.value.findIndex((x) => x._id === part._id);
     if (index > -1) {
-      rawParts.value[index] = part;
+      parts.value[index] = part;
+      refreshListIfLoaded();
       trigger.value.partID = part._id;
       setTimeout(() => {
         trigger.value.partID = '';
@@ -231,16 +284,25 @@ export const usePartStore = defineStore('parts', () => {
   }
 
   return {
-    rawParts,
     parts,
-    locations,
+    listParts,
     loading,
+    total,
+    listTotal,
+    listLimit,
+    listOffset,
+    listHasMore,
+    listLoading,
+    listLoadingMore,
+    currentListQuery,
     imagesByPartId,
     documentsByPartId,
     notesByPartId,
     lastId,
     trigger,
-    fetch,
+    fetchList,
+    fetchNextListPage,
+    resetList,
     setLastId,
     add,
     update,

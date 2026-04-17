@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import { isValidId } from '../../../database/index.js';
 import Parts from '../../../database/lib/part/part_service.js';
+import {
+  normalizeBooleanQueryValue,
+  normalizeQueryValue,
+} from '../../../utilities/normalizeQueryValue.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
+
 const isAssemblyValidationError = (error: unknown): error is Error => {
   if (!(error instanceof Error)) return false;
   return (
@@ -13,9 +18,17 @@ const isAssemblyValidationError = (error: unknown): error is Error => {
   );
 };
 
-router.get('/parts', async (_req, res, next) => {
+router.get('/parts', async (req, res, next) => {
   try {
-    const data = await Parts.list();
+    const data = await Parts.list({
+      search: normalizeQueryValue(req.query.search),
+      customer: normalizeQueryValue(req.query.customer),
+      includeSubcomponents: normalizeBooleanQueryValue(req.query.includeSubcomponents),
+      sort: normalizeQueryValue(req.query.sort),
+      order: normalizeQueryValue(req.query.order) === 'desc' ? 'desc' : 'asc',
+      limit: Number(normalizeQueryValue(req.query.limit)),
+      offset: Number(normalizeQueryValue(req.query.offset)),
+    });
     res.status(200).json(data);
   } catch (e) {
     next(e);

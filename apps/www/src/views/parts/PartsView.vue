@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-title class="header my-4">
-      <div>Parts</div>
+      <div>Parts - {{ partStore.total }}</div>
       <div class="header-actions">
         <v-checkbox
           v-model="showSubComponents"
@@ -51,24 +51,27 @@
           />
         </v-col>
       </v-row>
-      <v-data-table
-        v-model:items-per-page="itemsPerPage"
+      <InfiniteScrollDataTable
+        ref="tableRef"
+        :custom-key-sort="customKeySort"
+        :has-more="partStore.listHasMore"
         :headers="headers"
-        :items="tableItems"
-        :loading="partStore.loading"
-        :search="search"
-        :sort-by="[{ key: 'part', order: 'asc' }]"
+        :items="partStore.listParts"
+        :loading="partStore.listLoading"
+        :loading-more="partStore.listLoadingMore"
+        :sort-by="sortBy"
         @click:row="openPart"
+        @load-more="loadMore"
+        @update:sort-by="updateSortBy"
       >
-        <template #['item.marginRate']="{ item }">
+        <template #['item.shopRate']="{ item }">
           <div class="rate-swatch-cell">
             <span
               :class="[
                 'rate-swatch',
                 item.isSubComponent ? 'rate-swatch--subcomponent' : '',
                 item.hasSubComponents ? 'rate-swatch--assembly' : '',
-                item.hasNoProductPrice ? 'rate-swatch--empty' : '',
-                `rate-swatch--${item.marginTone}`,
+                `rate-swatch--${getTone(item)}`,
               ]"
               @click.stop="openPartCost(item)"
             />
@@ -110,7 +113,7 @@
             </v-dialog>
           </div>
         </template>
-      </v-data-table>
+      </InfiniteScrollDataTable>
     </v-card-text>
   </v-card>
 
@@ -126,32 +129,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { type LocationQueryValue, type LocationQueryValueRaw, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
+import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
 import { getToneForRate } from '@/plugins/rates_theme';
-import {
-  calculateAssemblyCycleMinutes,
-  calculateAssemblyMaterialCost,
-  calculateRatePerHour,
-} from '@/plugins/utils';
 import router from '@/router';
-import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
 
+type PartsListRow = Part & {
+  shopRate: number;
+  hasSubComponents: boolean;
+  isSubComponent: boolean;
+  hasNoProductPrice: boolean;
+};
+
 const partStore = usePartStore();
-const materialsStore = useMaterialsStore();
 const route = useRoute();
 
-const page = ref(1);
-const itemsPerPage = ref(10);
+const listPageSize = 30;
+const sortBy = ref<Array<{ key: string; order: 'asc' | 'desc' }>>([{ key: 'part', order: 'asc' }]);
 const search = ref('');
 const selectedCustomerId = ref<string | null>(null);
 const showSubComponents = ref(false);
 const missingImageIds = ref<Record<string, boolean>>({});
-const FILTER_QUERY_KEYS = ['search', 'customer', 'subcomponents'] as const;
+const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
+const FILTER_QUERY_KEYS = ['search', 'customer', 'subcomponents', 'sort', 'order'] as const;
 const isFilterQueryKey = (key: string): key is (typeof FILTER_QUERY_KEYS)[number] =>
   FILTER_QUERY_KEYS.includes(key as (typeof FILTER_QUERY_KEYS)[number]);
 
@@ -176,7 +181,7 @@ const headers = [
   },
   {
     title: '$/hr',
-    key: 'marginRate',
+    key: 'shopRate',
     width: 80,
   },
   {
@@ -189,93 +194,88 @@ const headers = [
   },
 ];
 
-const subComponentPartIds = computed(() => {
-  return new Set(
-    partStore.parts.flatMap((part) =>
-      (part.subComponentIds || []).map((subComponent) => String(subComponent.partId)),
-    ),
-  );
-});
-
-const filteredItems = computed(() => {
-  return partStore.parts.filter((part) => {
-    if (!showSubComponents.value && subComponentPartIds.value.has(part._id)) {
-      return false;
-    }
-
-    const customerId = typeof part.customer === 'string' ? part.customer : part.customer?._id;
-    if (!selectedCustomerId.value) {
-      return true;
-    }
-
-    return customerId === selectedCustomerId.value;
-  });
-});
-
-onMounted(() => {
-  applyRouteFilters();
-
-  if (!materialsStore.materials.length && !materialsStore.loading) {
-    materialsStore.fetch();
-  }
+const customKeySort = computed(() => {
+  return Object.fromEntries(headers.map(({ key }) => [key, () => 0]));
 });
 
 watch(
   () => route.query,
   () => {
     applyRouteFilters();
+    void fetchParts();
+  },
+  { immediate: true },
+);
+
+watch(
+  () => partStore.listParts,
+  async () => {
+    await tableRef.value?.refreshLayout();
+    if (!partStore.lastId) return;
+    await nextTick();
+    const el = document.getElementById(partStore.lastId);
+    if (el) {
+      const parent = el.parentElement?.parentElement;
+      if (parent) {
+        parent.classList.add('highlighted');
+      }
+      partStore.setLastId(null);
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => partStore.listParts.length,
+  async () => {
+    await tableRef.value?.refreshLayout();
   },
 );
 
-const partById = computed(() => {
-  return new Map(partStore.parts.map((part) => [part._id, part]));
-});
-
-function resolvePart(partId: string) {
-  return partById.value.get(partId);
+async function fetchParts() {
+  partStore.resetList();
+  await partStore.fetchList({
+    search: search.value || undefined,
+    customer: selectedCustomerId.value || undefined,
+    includeSubcomponents: showSubComponents.value || undefined,
+    sort: sortBy.value[0]?.key || undefined,
+    order: sortBy.value[0]?.order || undefined,
+    limit: listPageSize,
+    offset: 0,
+  });
 }
 
-function resolveMaterial(material: Part['material']) {
-  if (!material) return null;
-  if (typeof material !== 'string') return material;
-  return materialsStore.materials.find((candidate) => candidate._id === material) || null;
+function updateSortBy(value: Array<{ key: string; order: 'asc' | 'desc' }>) {
+  if (partStore.listLoading || partStore.listLoadingMore) return;
+  sortBy.value = value.length ? value : [{ key: 'part', order: 'asc' }];
+  syncFiltersToQuery();
 }
 
-const tableItems = computed(() =>
-  filteredItems.value.map((part) => {
-    const partMaterialCost = calculateAssemblyMaterialCost(part, resolvePart, resolveMaterial);
-    const totalCycleMinutes = calculateAssemblyCycleMinutes(part, resolvePart);
-    const hasNoProductPrice = part.price == null || part.price === 0;
-    const marginRate = hasNoProductPrice
-      ? 0
-      : calculateRatePerHour(part.price, partMaterialCost, totalCycleMinutes);
+function loadMore() {
+  void partStore.fetchNextListPage();
+}
 
-    return {
-      ...part,
-      hasSubComponents: Boolean(part.subComponentIds?.length),
-      isSubComponent: subComponentPartIds.value.has(part._id),
-      hasNoProductPrice,
-      marginRate,
-      marginTone: getToneForRate(marginRate),
-    };
-  }),
-);
+function getTone(item: PartsListRow) {
+  if (!item.price) return 'empty';
+  const rate = item.derived?.shopRate ?? item.shopRate;
+  return getToneForRate(rate);
+}
 
-function openPart(event: unknown, { item }: { item: Part }) {
+function openPart(event: unknown, { item }: { item: PartsListRow }) {
   router.push({ name: 'viewPart', params: { id: item._id } });
 }
 
-function openPartCost(item: Part) {
+function openPartCost(item: PartsListRow) {
   router.push({ name: 'viewPart', params: { id: item._id }, query: { tab: 'cost' } });
 }
 
-function location(part: Part) {
+function location(part: PartsListRow) {
   let text = part.location || '';
   if (part.position) text += ' - ' + part.position;
   return text;
 }
 
-function hasPartImage(part: Part) {
+function hasPartImage(part: PartsListRow) {
   return Boolean(part.img?.trim()) && !missingImageIds.value[part._id];
 }
 
@@ -297,7 +297,7 @@ const expandedImage = ref({
   left: 0,
 });
 
-function showExpandedImage(part: Part, event: MouseEvent) {
+function showExpandedImage(part: PartsListRow, event: MouseEvent) {
   if (!hasPartImage(part) || !part.img) return;
   const target = event.target as HTMLElement;
   const rect = target.getBoundingClientRect();
@@ -324,6 +324,9 @@ function applyRouteFilters() {
   search.value = firstQueryValue(route.query.search) ?? '';
   selectedCustomerId.value = firstQueryValue(route.query.customer) ?? null;
   showSubComponents.value = firstQueryValue(route.query.subcomponents) === 'true';
+  const sortKey = firstQueryValue(route.query.sort) ?? 'part';
+  const sortOrder = firstQueryValue(route.query.order) === 'desc' ? 'desc' : 'asc';
+  sortBy.value = [{ key: sortKey, order: sortOrder }];
 }
 
 function syncFiltersToQuery() {
@@ -342,6 +345,7 @@ function clearAllFilters() {
   search.value = '';
   selectedCustomerId.value = null;
   showSubComponents.value = false;
+  sortBy.value = [{ key: 'part', order: 'asc' }];
   syncFiltersToQuery();
 }
 
@@ -355,6 +359,7 @@ function buildFilterQuery() {
     ...(search.value ? { search: search.value } : {}),
     ...(selectedCustomerId.value ? { customer: selectedCustomerId.value } : {}),
     ...(showSubComponents.value ? { subcomponents: 'true' } : {}),
+    ...(sortBy.value[0]?.key ? { sort: sortBy.value[0].key, order: sortBy.value[0].order } : {}),
   };
 }
 
@@ -444,6 +449,10 @@ function areFilterQueriesEqual(
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.highlighted {
+  background: #efefef;
 }
 
 .rate-swatch {

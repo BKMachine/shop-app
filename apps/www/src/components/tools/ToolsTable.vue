@@ -13,7 +13,7 @@
         <template #text>
           <div v-if="category === 'milling'">
             <v-row>
-              <v-col cols="6">
+              <v-col cols="5">
                 <v-text-field
                   v-model="searchText"
                   class="milling-search"
@@ -36,9 +36,9 @@
                   </template>
                 </v-text-field>
               </v-col>
-              <v-col cols="6">
+              <v-col cols="7">
                 <v-row>
-                  <v-col cols="4">
+                  <v-col cols="6">
                     <v-select
                       v-model="selectedToolType"
                       clearable
@@ -46,7 +46,7 @@
                       label="Tool Type"
                     />
                   </v-col>
-                  <v-col cols="4">
+                  <v-col cols="3">
                     <v-text-field
                       v-model="cuttingDiaFilter"
                       clearable
@@ -54,7 +54,7 @@
                       @keydown="isNumber($event)"
                     />
                   </v-col>
-                  <v-col cols="4">
+                  <v-col cols="3">
                     <v-text-field
                       v-model="minFluteLengthFilter"
                       clearable

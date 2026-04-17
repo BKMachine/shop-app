@@ -1,15 +1,11 @@
 import { Router } from 'express';
 import { isValidId } from '../../../database/index.js';
 import Tools from '../../../database/lib/tool/tool_service.js';
+import { normalizeQueryValue } from '../../../utilities/normalizeQueryValue.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
-
-function normalizeQueryValue(value: unknown): string | undefined {
-  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : undefined;
-  return typeof value === 'string' ? value : undefined;
-}
 
 // Pagination, filtering, and sorting for the tools table. All query parameters are optional.
 router.get('/tools', async (req, res, next) => {

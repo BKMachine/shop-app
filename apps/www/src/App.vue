@@ -75,7 +75,6 @@ import router from '@/router';
 import { deviceState, fetchCurrentDevice } from '@/state/device';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
-import { usePartStore } from '@/stores/parts_store';
 import { useScannerStore } from '@/stores/scanner_store';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
@@ -83,7 +82,6 @@ import { useVendorStore } from '@/stores/vendor_store';
 
 const customerStore = useCustomerStore();
 const materialsStore = useMaterialsStore();
-const partStore = usePartStore();
 const scannerStore = useScannerStore();
 const supplierStore = useSupplierStore();
 const toolCategoryStore = useToolCategoryStore();
@@ -125,7 +123,6 @@ const drawer = ref(true);
 onBeforeMount(() => {
   void customerStore.fetch();
   void materialsStore.fetch();
-  void partStore.fetch();
   void supplierStore.fetch();
   void toolCategoryStore.fetch();
   void vendorStore.fetch();

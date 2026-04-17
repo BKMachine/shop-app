@@ -24,6 +24,9 @@ declare global {
     subComponentIds?: PartSubComponent[];
     imageIds?: string[];
     documentIds?: string[];
+    derived?: {
+      shopRate: number;
+    };
   }
 
   interface PartDoc extends Omit<Part, '_id'>, Document<Types.ObjectId> {
@@ -54,17 +57,14 @@ declare global {
     order?: 'asc' | 'desc';
     limit?: number;
     offset?: number;
+    location?: string;
+    position?: string;
   }
 
-  interface PartListItem extends Part {
-    shopRate: number;
-    hasSubComponents: boolean;
-    isSubComponent: boolean;
-    hasNoProductPrice: boolean;
-  }
+  interface PartListItem extends Part {}
 
   interface PartListResult {
-    items: PartListItem[];
+    items: PartDoc[];
     total: number;
     limit: number;
     offset: number;
@@ -72,6 +72,10 @@ declare global {
   }
 
   interface PartListResponse extends PartListResult {}
+
+  interface UpdatePartOptions {
+    preserveManagedMediaFields?: boolean;
+  }
 }
 
 export {};

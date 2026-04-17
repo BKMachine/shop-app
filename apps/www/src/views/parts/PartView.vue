@@ -432,7 +432,7 @@ import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vu
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { getToneForRate } from '@/plugins/rates_theme';
-import { calculateAssemblyCycleMinutes, calculateRatePerHour, isNumber } from '@/plugins/utils';
+import { calculateAssemblyCycleMinutes, calculatePartShopRate, isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useFolderHelperState } from '@/state/folderHelper';
@@ -566,7 +566,7 @@ const effectiveTotalCycleMinutes = computed(() => {
 
 const currentRate = computed(() => {
   if (hasNoProductPrice.value) return 0;
-  const rate = calculateRatePerHour(
+  const rate = calculatePartShopRate(
     part.value.price,
     partMaterialCost.value,
     effectiveTotalCycleMinutes.value,
@@ -608,7 +608,7 @@ onMounted(() => {
   setTabFromQuery();
   void loadFolderHelperManifest();
 
-  if (!partStore.rawParts.length && !partStore.loading) {
+  if (!partStore.parts.length && !partStore.loading) {
     partStore.fetch();
   }
 
@@ -666,7 +666,7 @@ watch(
     if (router.currentRoute.value.name !== 'viewPart') return;
     if (!partId || partId !== router.currentRoute.value.params.id) return;
 
-    const match = partStore.rawParts.find((candidate) => candidate._id === partId);
+    const match = partStore.parts.find((candidate) => candidate._id === partId);
     if (!match) return;
 
     if (partIsAltered.value && saveFlag.value === false) {
