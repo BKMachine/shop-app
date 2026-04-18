@@ -25,8 +25,8 @@ declare global {
       | 'part_note';
     timestamp: string;
     device: Device;
-    old: unknown | null;
-    new: unknown | null;
+    old: any | null;
+    new: any | null;
   }
 
   interface AuditDoc extends Omit<Audit, '_id'>, Document<Types.ObjectId> {

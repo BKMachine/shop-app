@@ -1,3 +1,5 @@
+import type { Document, Types } from 'mongoose';
+
 declare global {
   interface Material {
     _id: string;

@@ -16,7 +16,7 @@ router.get('/vendors', async (_req, res, next) => {
 
 router.post('/vendors', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { data }: { data?: VendorDoc } = req.body;
+  const { data }: { data?: Vendor } = req.body;
   if (!data) return next(new HttpError(400, 'No vendor data provided.'));
 
   try {
@@ -29,7 +29,7 @@ router.post('/vendors', requireKnownDevice, async (req, res, next) => {
 
 router.put('/vendors', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { data }: { data?: VendorDoc } = req.body;
+  const { data }: { data?: Vendor } = req.body;
   if (!data) return next(new HttpError(400, 'No vendor data provided.'));
 
   try {

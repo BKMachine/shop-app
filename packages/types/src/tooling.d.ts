@@ -1,3 +1,5 @@
+import type { Document, Types } from 'mongoose';
+
 declare global {
   interface Tool {
     _id: string;

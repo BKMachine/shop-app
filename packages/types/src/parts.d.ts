@@ -1,3 +1,5 @@
+import type { Document, Types } from 'mongoose';
+
 declare global {
   interface Part {
     _id: string;

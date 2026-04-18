@@ -9,14 +9,14 @@ async function findById(id: string): Promise<SupplierDoc | null> {
   return Supplier.findById(id);
 }
 
-async function create(data: SupplierDoc, deviceId: string): Promise<SupplierDoc> {
+async function create(data: Supplier, deviceId: string): Promise<SupplierDoc> {
   const doc = new Supplier(data);
   await doc.save();
   await Audit.addSupplierAudit(null, doc, deviceId);
   return doc;
 }
 
-async function update(doc: SupplierDoc, deviceId: string): Promise<SupplierDoc | null> {
+async function update(doc: Supplier, deviceId: string): Promise<SupplierDoc> {
   const oldDoc = await Supplier.findById(doc._id);
   if (!oldDoc) throw new Error(`Missing supplier document id: ${doc._id}`);
   const updated = await Supplier.findByIdAndUpdate(doc._id, doc, { returnDocument: 'after' });
