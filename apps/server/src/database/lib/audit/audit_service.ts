@@ -162,7 +162,7 @@ async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
 
 async function addMaterialAudit(
   oldMaterial: MaterialDoc | null,
-  newMaterial: MaterialDoc,
+  newMaterial: MaterialDoc | null,
   deviceId: string,
 ): Promise<void> {
   await addAudit('material', oldMaterial, newMaterial, deviceId);

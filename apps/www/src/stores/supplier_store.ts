@@ -49,12 +49,27 @@ export const useSupplierStore = defineStore('suppliers', () => {
     if (supplier) supplier.logo = logo;
   }
 
+  async function removeSupplierLogo(supplierId: string) {
+    return api
+      .delete(`/images/entities/supplier/${supplierId}/image`)
+      .then(() => {
+        updateSupplierLogo(supplierId, '');
+        toastSuccess('Supplier logo removed successfully');
+        return true;
+      })
+      .catch(() => {
+        toastError('Failed to remove supplier logo');
+        return false;
+      });
+  }
+
   return {
     _suppliers,
     suppliers,
     fetch,
     add,
     update,
+    removeSupplierLogo,
     updateSupplierLogo,
   };
 });

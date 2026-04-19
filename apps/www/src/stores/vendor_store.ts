@@ -54,11 +54,26 @@ export const useVendorStore = defineStore('vendors', () => {
     if (vendor) vendor.logo = logo;
   }
 
+  async function removeVendorLogo(vendorId: string) {
+    return api
+      .delete(`/images/entities/vendor/${vendorId}/image`)
+      .then(() => {
+        updateVendorLogo(vendorId, '');
+        toastSuccess('Vendor logo removed successfully');
+        return true;
+      })
+      .catch(() => {
+        toastError('Failed to remove vendor logo');
+        return false;
+      });
+  }
+
   return {
     vendors,
     fetch,
     add,
     update,
+    removeVendorLogo,
     updateVendorLogo,
   };
 });

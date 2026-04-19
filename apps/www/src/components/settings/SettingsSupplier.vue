@@ -94,7 +94,6 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import SettingsTiles from '@/components/settings/SettingsTiles.vue';
-import api from '@/plugins/axios';
 import { useSupplierStore } from '@/stores/supplier_store';
 
 const supplierStore = useSupplierStore();
@@ -171,10 +170,11 @@ async function removeLogo() {
 
   removingImage.value = true;
   try {
-    await api.delete(`/images/entities/supplier/${editingItem.value._id}/image`);
-    editingItem.value.logo = '';
-    supplierStore.updateSupplierLogo(editingItem.value._id, '');
-    deleteImageConfirmVisible.value = false;
+    const removed = await supplierStore.removeSupplierLogo(editingItem.value._id);
+    if (removed) {
+      editingItem.value.logo = '';
+      deleteImageConfirmVisible.value = false;
+    }
   } finally {
     removingImage.value = false;
   }

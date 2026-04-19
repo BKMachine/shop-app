@@ -49,11 +49,26 @@ export const useCustomerStore = defineStore('customers', () => {
     if (customer) customer.logo = logo;
   }
 
+  async function removeCustomerLogo(customerId: string) {
+    return api
+      .delete(`/images/entities/customer/${customerId}/image`)
+      .then(() => {
+        updateCustomerLogo(customerId, '');
+        toastSuccess('Customer logo removed successfully');
+        return true;
+      })
+      .catch(() => {
+        toastError('Failed to remove customer logo');
+        return false;
+      });
+  }
+
   return {
     customers,
     fetch,
     add,
     update,
+    removeCustomerLogo,
     updateCustomerLogo,
   };
 });

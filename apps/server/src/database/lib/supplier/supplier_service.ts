@@ -1,4 +1,4 @@
-import Audit from '../audit/audit_service.js';
+import AuditService from '../audit/audit_service.js';
 import Supplier from './supplier_model.js';
 
 async function list(): Promise<SupplierDoc[]> {
@@ -12,7 +12,7 @@ async function findById(id: string): Promise<SupplierDoc | null> {
 async function create(data: Omit<Supplier, '_id'>, deviceId: string): Promise<SupplierDoc> {
   const doc = new Supplier(data);
   await doc.save();
-  await Audit.addSupplierAudit(null, doc, deviceId);
+  await AuditService.addSupplierAudit(null, doc, deviceId);
   return doc;
 }
 
@@ -21,7 +21,7 @@ async function update(doc: Supplier, deviceId: string): Promise<SupplierDoc> {
   if (!oldDoc) throw new Error(`Missing supplier document id: ${doc._id}`);
   const updated = await Supplier.findByIdAndUpdate(doc._id, doc, { returnDocument: 'after' });
   if (!updated) throw new Error(`Unable to update supplier document id: ${doc._id}`);
-  await Audit.addSupplierAudit(oldDoc, updated, deviceId);
+  await AuditService.addSupplierAudit(oldDoc, updated, deviceId);
   return updated;
 }
 

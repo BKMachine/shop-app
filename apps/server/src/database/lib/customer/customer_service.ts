@@ -1,4 +1,4 @@
-import Audit from '../audit/audit_service.js';
+import AuditService from '../audit/audit_service.js';
 import Customer from './customer_model.js';
 
 async function list(): Promise<CustomerDoc[]> {
@@ -12,7 +12,7 @@ async function findById(id: string): Promise<CustomerDoc | null> {
 async function create(data: Omit<Customer, '_id'>, deviceId: string): Promise<CustomerDoc> {
   const doc = new Customer(data);
   await doc.save();
-  await Audit.addCustomerAudit(null, doc, deviceId);
+  await AuditService.addCustomerAudit(null, doc, deviceId);
   return doc;
 }
 
@@ -21,7 +21,7 @@ async function update(doc: Customer, deviceId: string): Promise<CustomerDoc> {
   if (!oldDoc) throw new Error(`Missing customer document id: ${doc._id}`);
   const updated = await Customer.findByIdAndUpdate(doc._id, doc, { returnDocument: 'after' });
   if (!updated) throw new Error(`Unable to update customer document id: ${doc._id}`);
-  await Audit.addCustomerAudit(oldDoc, updated, deviceId);
+  await AuditService.addCustomerAudit(oldDoc, updated, deviceId);
   return updated;
 }
 
