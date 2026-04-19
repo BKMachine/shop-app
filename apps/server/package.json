@@ -33,7 +33,8 @@
     "pdfjs-dist": "^5.4.296",
     "socket.io": "^4.8.3",
     "uuid": "^13.0.0",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

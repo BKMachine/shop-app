@@ -1,39 +1,46 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import axios from '@/plugins/axios';
+import api from '@/plugins/axios';
+import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
 export const useCustomerStore = defineStore('customers', () => {
   const _customers = ref<Customer[]>([]);
 
   const customers = computed(() => {
-    return [..._customers.value].sort((a, b) => {
-      const c = a.name.toLowerCase();
-      const d = b.name.toLowerCase();
-      if (c < d) return -1;
-      else if (d < c) return 1;
-      else return 0;
-    });
+    return [..._customers.value].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+    );
   });
 
   function fetch() {
-    axios.get<Customer[]>('/customers').then(({ data }) => {
+    api.get<Customer[]>('/customers').then(({ data }) => {
       _customers.value = data;
     });
   }
 
   async function add(customer: Customer) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, ...rest } = customer;
-    await axios.post<Customer>('/customers', { data: rest }).then(({ data }) => {
-      _customers.value.push(data);
-    });
+    await api
+      .post<Customer>('/customers', { customer })
+      .then(({ data }) => {
+        _customers.value.push(data);
+        toastSuccess('Customer added successfully');
+      })
+      .catch(() => {
+        toastError('Failed to add customer');
+      });
   }
 
   async function update(customer: Customer) {
-    await axios.put<Customer>('/customers', { data: customer }).then(() => {
-      const index = _customers.value.findIndex((x) => x._id === customer._id);
-      if (index > -1) _customers.value[index] = customer;
-    });
+    await api
+      .put<Customer>('/customers', { customer })
+      .then(() => {
+        const index = _customers.value.findIndex((x) => x._id === customer._id);
+        if (index > -1) _customers.value[index] = customer;
+        toastSuccess('Customer updated successfully');
+      })
+      .catch(() => {
+        toastError('Failed to update customer');
+      });
   }
 
   function updateCustomerLogo(customerId: string, logo: string) {
@@ -43,7 +50,6 @@ export const useCustomerStore = defineStore('customers', () => {
   }
 
   return {
-    _customers,
     customers,
     fetch,
     add,

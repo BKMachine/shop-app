@@ -1,9 +1,27 @@
 import { Router } from 'express';
+import * as z from 'zod';
 import Customers from '../../../database/lib/customer/customer_service.js';
+import logger from '../../../logger.js';
+import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
+
+const CreateCustomerPayload = z.strictObject({
+  customer: z.strictObject({
+    name: z.string(),
+    homepage: z.httpUrl().optional(),
+    logo: z.string().optional(),
+  }),
+});
+
+const UpdateCustomerPayload = z.strictObject({
+  customer: CreateCustomerPayload.shape.customer.extend({
+    _id: mongoObjectId,
+    __v: z.number().optional(),
+  }),
+});
 
 router.get('/customers', async (_req, res, next) => {
   try {
@@ -16,11 +34,14 @@ router.get('/customers', async (_req, res, next) => {
 
 router.post('/customers', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { data }: { data?: Customer } = req.body;
-  if (!data) return next(new HttpError(400, 'No customer data provided.'));
+  const { success, data, error } = CreateCustomerPayload.safeParse(req.body);
+  if (!success) {
+    logger.error('Invalid customer data provided:', error.message);
+    return next(new HttpError(400, 'Invalid customer data provided.'));
+  }
 
   try {
-    const doc = await Customers.create(data, req.deviceId);
+    const doc = await Customers.create(data.customer, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -29,11 +50,14 @@ router.post('/customers', requireKnownDevice, async (req, res, next) => {
 
 router.put('/customers', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { data }: { data?: Customer } = req.body;
-  if (!data) return next(new HttpError(400, 'No customer data provided.'));
+  const { success, data, error } = UpdateCustomerPayload.safeParse(req.body);
+  if (!success) {
+    logger.error('Invalid customer data provided:', error.message);
+    return next(new HttpError(400, 'Invalid customer data provided.'));
+  }
 
   try {
-    await Customers.update(data, req.deviceId);
+    await Customers.update(data.customer, req.deviceId);
     res.sendStatus(204);
   } catch (e) {
     next(e);

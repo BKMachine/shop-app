@@ -9,7 +9,7 @@ async function findById(id: string): Promise<VendorDoc | null> {
   return Vendor.findById(id);
 }
 
-async function create(data: Vendor, deviceId: string): Promise<VendorDoc> {
+async function create(data: Omit<Vendor, '_id'>, deviceId: string): Promise<VendorDoc> {
   const doc = new Vendor(data);
   await doc.save();
   await Audit.addVendorAudit(null, doc, deviceId);
