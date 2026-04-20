@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import axios from '@/plugins/axios';
+import api from '@/plugins/axios';
 import router from '@/router';
 import { useToolStore } from '@/stores/tool_store';
 
@@ -103,7 +103,7 @@ const unOrderedTotal = computed(() => {
 
 onMounted(() => {
   tools.value = [];
-  axios.get('/tools/reorders').then(({ data }: { data: Tool[] }) => {
+  api.get<Tool[]>('/tools/reorders').then(({ data }) => {
     tools.value = data;
   });
 });
@@ -124,7 +124,7 @@ function openOrder(tool: Tool) {
 }
 
 function mail() {
-  axios.get('/mail/reorders');
+  api.get('/mail/reorders');
   // this.$toast.success('Email Sent', { position: 'bottom', duration: 3000 });
 }
 </script>

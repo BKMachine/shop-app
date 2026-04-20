@@ -1,6 +1,6 @@
 import { model, Schema } from 'mongoose';
 
-const schema = new Schema<EmailReportDoc>({
+const schema = new Schema<EmailReportFields>({
   email: { type: String, unique: true, required: true, trim: true, lowercase: true },
   tooling: {
     to: { type: Boolean, default: false },
@@ -8,4 +8,4 @@ const schema = new Schema<EmailReportDoc>({
   },
 });
 
-export default model<EmailReportDoc>('reports', schema);
+export default model<EmailReportFields>('reports', schema);

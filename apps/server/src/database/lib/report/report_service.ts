@@ -1,18 +1,21 @@
+import type { HydratedDocument } from 'mongoose';
 import Audit from '../audit/audit_service.js';
 import Report from './report_model.js';
+
+type EmailReportDoc = HydratedDocument<EmailReportFields>;
 
 async function list(): Promise<EmailReportDoc[]> {
   return Report.find().sort({ email: 1 });
 }
 
-async function create(data: EmailReportDoc, deviceId: string): Promise<EmailReportDoc> {
+async function create(data: EmailReportCreate, deviceId: string): Promise<EmailReportDoc> {
   const doc = new Report(normalizeReport(data));
   await doc.save();
   await Audit.addReportAudit(null, doc, deviceId);
   return doc;
 }
 
-async function update(doc: EmailReportDoc, deviceId: string): Promise<EmailReportDoc | null> {
+async function update(doc: EmailReportUpdate, deviceId: string): Promise<EmailReportDoc | null> {
   const oldDoc = await Report.findById(doc._id);
   if (!oldDoc) throw new Error(`Missing report document id: ${doc._id}`);
   const updated = await Report.findByIdAndUpdate(doc._id, normalizeReport(doc), {
@@ -32,7 +35,7 @@ async function remove(id: string, deviceId: string): Promise<boolean> {
   return true;
 }
 
-function normalizeReport(data: Pick<EmailReport, 'email' | 'tooling'> & Partial<EmailReportDoc>) {
+function normalizeReport(data: EmailReportFields & Partial<EmailReportUpdate>) {
   return {
     ...data,
     email: String(data.email ?? '')

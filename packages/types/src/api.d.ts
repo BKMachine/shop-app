@@ -54,19 +54,25 @@ declare global {
 
   /* REPORT */
 
-  interface EmailReport {
-    _id: string;
-    email: string;
-    tooling: Email;
-  }
-
   interface Email {
     to: boolean;
     cc: boolean;
   }
 
-  interface EmailReportDoc extends Omit<EmailReport, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface EmailReportFields {
+    email: string;
+    tooling: Email;
+  }
+
+  interface EmailReport extends EmailReportFields {
+    _id: string;
+  }
+
+  interface EmailReportCreate extends EmailReportFields {}
+
+  interface EmailReportUpdate extends EmailReportFields {
+    _id: string;
+    __v?: number;
   }
 
   /* SUPPLIER */

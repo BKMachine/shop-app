@@ -194,7 +194,7 @@ async function saveEmail(email: EmailReport) {
   }
 
   try {
-    await api.put('/reports', { data: email });
+    await api.put('/reports', { report: email });
   } catch {
     toastError('Unable to update report recipient.');
     void fetchEmails();
@@ -219,7 +219,7 @@ async function addEmail() {
 
   try {
     const { data } = await api.post<EmailReport>('/reports', {
-      data: {
+      report: {
         email,
         tooling: {
           to: false,
