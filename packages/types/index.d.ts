@@ -1,4 +1,4 @@
-/// <reference path="./src/database.d.ts" />
+/// <reference path="./src/api.d.ts" />
 /// <reference path="./src/elastic.d.ts" />
 /// <reference path="./src/express.d.ts" />
 /// <reference path="./src/machine.d.ts" />
