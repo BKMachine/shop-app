@@ -1,6 +1,11 @@
 import { model, Schema, Types } from 'mongoose';
 
-const schema = new Schema<ToolDoc>({
+type ToolDocumentFields = ToolFields & {
+  vendor?: Types.ObjectId;
+  supplier?: Types.ObjectId;
+};
+
+const schema = new Schema<ToolDocumentFields>({
   description: { type: String, required: true },
   vendor: { type: Types.ObjectId, ref: 'vendors' },
   supplier: { type: Types.ObjectId, ref: 'suppliers' },
@@ -27,4 +32,4 @@ const schema = new Schema<ToolDoc>({
   toolType: String,
 });
 
-export default model<ToolDoc>('tools', schema);
+export default model<ToolDocumentFields>('tools', schema);

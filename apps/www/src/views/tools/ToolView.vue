@@ -406,6 +406,7 @@ const tool = ref<Tool>({
   autoReorder: false,
   onOrder: false,
   flutes: 0,
+  cost: 0,
 } as Tool);
 const toolOriginal = ref<Tool>({} as Tool);
 

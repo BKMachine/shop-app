@@ -1,7 +1,10 @@
+import type { HydratedDocument } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Audit from '../audit/audit_service.js';
 import Tool from './tool_model.js';
+
+type ToolDoc = HydratedDocument<ToolFields & { vendor?: unknown; supplier?: unknown }>;
 
 const validSortFields = new Set([
   'description',
@@ -93,7 +96,7 @@ function compareTools(left: ToolDoc, right: ToolDoc, field: string, direction: 1
   return result * direction;
 }
 
-async function list(filters: ToolListFilters = {}): Promise<ToolListResult> {
+async function list(filters: ToolListFilters = {}): Promise<ToolListDocs> {
   // Limit is between 1 and 100, default 10.
   // Offset is 0 or more, default 0.
   const limit = Math.min(Math.max(Number(filters.limit) || 10, 1), 100);
@@ -158,7 +161,7 @@ async function getAutoReorders(): Promise<ToolDoc[]> {
     .populate('supplier');
 }
 
-async function create(data: ToolDoc, deviceId: string): Promise<ToolDoc> {
+async function create(data: ToolCreate, deviceId: string): Promise<ToolDoc> {
   const tool = new Tool(data);
   await tool.save();
   emit('tool', tool);
@@ -166,7 +169,7 @@ async function create(data: ToolDoc, deviceId: string): Promise<ToolDoc> {
   return tool;
 }
 
-async function update(newTool: ToolDoc, deviceId: string): Promise<ToolDoc | null> {
+async function update(newTool: ToolUpdate, deviceId: string): Promise<ToolDoc | null> {
   const id = newTool._id;
   const oldTool: ToolDoc | null = await Tool.findById(id);
   if (!oldTool) throw new Error(`Missing tool document id: ${id}`);
@@ -224,7 +227,13 @@ async function stock(
   return { status: 200, tool: updatedTool };
 }
 
-function computedToolChanges(oldTool: ToolDoc, newTool: ToolDoc): ToolDoc {
+function computedToolChanges<
+  T extends {
+    onOrder: boolean;
+    orderedOn?: string;
+    stock: number;
+  },
+>(oldTool: ToolDoc, newTool: T): T {
   // Set the orderedOn date if onOrder is newly set to true
   if (newTool.onOrder && !oldTool.onOrder) newTool.orderedOn = new Date().toISOString();
   // Assume if the current stock has increased that the order has been fulfilled

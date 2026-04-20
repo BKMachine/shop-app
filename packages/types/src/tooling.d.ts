@@ -1,11 +1,6 @@
-import type { Document, Types } from 'mongoose';
-
 declare global {
-  interface Tool {
-    _id: string;
+  interface ToolFields {
     description: string;
-    vendor?: Vendor;
-    supplier?: Supplier;
     item?: string;
     barcode?: string;
     stock: number;
@@ -29,8 +24,32 @@ declare global {
     fluteLength?: number;
   }
 
-  interface ToolDoc extends Omit<Tool, '_id'>, Document<Types.ObjectId> {
+  interface Tool extends ToolFields {
+    _id: string;
+    vendor?: Vendor;
+    supplier?: Supplier;
+  }
+
+  interface ToolCreate extends ToolFields {
+    vendor?: string;
+    supplier?: string;
+  }
+
+  interface ToolUpdate extends ToolCreate {
+    _id: string;
+    __v?: number;
+  }
+
+  interface ToolListItem extends Tool {
+    vendor?: Vendor;
+    supplier?: Supplier;
+  }
+
+  interface ToolReorder extends Tool {
     _id: Types.ObjectId;
+    item: string;
+    vendor: Vendor;
+    supplier: Supplier;
   }
 
   type ToolCategory = 'milling' | 'turning' | 'swiss' | 'other';
@@ -58,24 +77,18 @@ declare global {
   }
 
   type ToolListResult = {
-    items: ToolDoc[];
+    items: Tool[];
     total: number;
     limit: number;
     offset: number;
     hasMore: boolean;
   };
 
-  interface ToolListResponse extends Omit<ToolListResult, 'items'> {
-    items: Tool[];
+  interface ToolListDocs extends Omit<ToolListResult, 'items'> {
+    items: ToolDoc[];
   }
 
-  interface ToolReorders extends ToolDoc {
-    item: string;
-    vendor: Vendor;
-    supplier: Supplier;
-  }
-
-  type ToolDocReorders = ToolDoc & ToolReorders;
+  type ToolListResponse = ToolListResult;
 
   interface ToolCategorySettings {
     _id: 'tool-categories';

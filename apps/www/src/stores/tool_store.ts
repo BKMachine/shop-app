@@ -96,18 +96,25 @@ export const useToolStore = defineStore('tools', () => {
   }
 
   async function add(tool: Tool) {
-    const data = {
+    const payload: ToolCreate = {
       ...tool,
-      category: tool.category.toLowerCase(),
+      vendor: tool.vendor?._id,
+      supplier: tool.supplier?._id,
     };
 
-    await axios.post<Tool>('/tools', { data }).then(({ data }) => {
+    await axios.post<Tool>('/tools', { tool: payload }).then(({ data }) => {
       handleToolMutation(data);
     });
   }
 
   async function update(tool: Tool) {
-    await axios.put<Tool>('/tools', { data: tool }).then(({ data }) => {
+    const payload: ToolUpdate = {
+      ...tool,
+      vendor: tool.vendor?._id,
+      supplier: tool.supplier?._id,
+    };
+
+    await axios.put<Tool>('/tools', { tool: payload }).then(({ data }) => {
       handleToolMutation(data);
     });
   }
