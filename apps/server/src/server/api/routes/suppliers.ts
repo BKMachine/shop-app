@@ -9,7 +9,7 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 const router: Router = Router();
 
 const SupplierFieldsSchema = z.strictObject({
-  name: z.string().max(20),
+  name: z.string().trim().min(1).max(20),
   homepage: z.httpUrl().optional(),
   logo: z.string().optional(),
 });
