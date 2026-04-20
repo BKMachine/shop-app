@@ -1,3 +1,5 @@
+import type { HydratedDocument } from 'mongoose';
+
 declare global {
   interface ToolFields {
     description: string;
@@ -85,7 +87,7 @@ declare global {
   };
 
   interface ToolListDocs extends Omit<ToolListResult, 'items'> {
-    items: ToolDoc[];
+    items: HydratedDocument<ToolFields>[];
   }
 
   type ToolListResponse = ToolListResult;
