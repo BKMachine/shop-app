@@ -8,7 +8,7 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
-const CreateVendorPayload = z.strictObject({
+const CreateVendorRequest = z.strictObject({
   vendor: z.strictObject({
     name: z.string(),
     homepage: z.httpUrl().optional(),
@@ -16,13 +16,15 @@ const CreateVendorPayload = z.strictObject({
     coatings: z.array(z.string()).optional(),
   }),
 });
+export type CreateVendorPayload = z.infer<typeof CreateVendorRequest.shape.vendor>;
 
-const UpdateVendorPayload = z.strictObject({
-  vendor: CreateVendorPayload.shape.vendor.extend({
+const UpdateVendorRequest = z.strictObject({
+  vendor: CreateVendorRequest.shape.vendor.extend({
     _id: mongoObjectId,
     __v: z.number().optional(),
   }),
 });
+export type UpdateVendorPayload = z.infer<typeof UpdateVendorRequest.shape.vendor>;
 
 router.get('/vendors', async (_req, res, next) => {
   try {
@@ -35,7 +37,7 @@ router.get('/vendors', async (_req, res, next) => {
 
 router.post('/vendors', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { success, data, error } = CreateVendorPayload.safeParse(req.body);
+  const { success, data, error } = CreateVendorRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid vendor data provided:', error.message);
     return next(new HttpError(400, 'Invalid vendor data provided.'));
@@ -51,7 +53,7 @@ router.post('/vendors', requireKnownDevice, async (req, res, next) => {
 
 router.put('/vendors', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { success, data, error } = UpdateVendorPayload.safeParse(req.body);
+  const { success, data, error } = UpdateVendorRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid vendor data provided:', error.message);
     return next(new HttpError(400, 'Invalid vendor data provided.'));

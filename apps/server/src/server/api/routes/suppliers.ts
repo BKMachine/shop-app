@@ -8,20 +8,22 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
-const CreateSupplierPayload = z.strictObject({
+const CreateSupplierRequest = z.strictObject({
   supplier: z.strictObject({
     name: z.string(),
     homepage: z.httpUrl().optional(),
     logo: z.string().optional(),
   }),
 });
+export type CreateSupplierPayload = z.infer<typeof CreateSupplierRequest.shape.supplier>;
 
-const UpdateSupplierPayload = z.strictObject({
-  supplier: CreateSupplierPayload.shape.supplier.extend({
+const UpdateSupplierRequest = z.strictObject({
+  supplier: CreateSupplierRequest.shape.supplier.extend({
     _id: mongoObjectId,
     __v: z.number().optional(),
   }),
 });
+export type UpdateSupplierPayload = z.infer<typeof UpdateSupplierRequest.shape.supplier>;
 
 router.get('/suppliers', async (_req, res, next) => {
   try {
@@ -34,7 +36,7 @@ router.get('/suppliers', async (_req, res, next) => {
 
 router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { success, data, error } = CreateSupplierPayload.safeParse(req.body);
+  const { success, data, error } = CreateSupplierRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid supplier data provided:', error.message);
     return next(new HttpError(400, 'Invalid supplier data provided.'));
@@ -50,7 +52,7 @@ router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
 
 router.put('/suppliers', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { success, data, error } = UpdateSupplierPayload.safeParse(req.body);
+  const { success, data, error } = UpdateSupplierRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid supplier data provided:', error.message);
     return next(new HttpError(400, 'Invalid supplier data provided.'));

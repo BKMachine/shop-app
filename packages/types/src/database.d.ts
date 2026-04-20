@@ -42,7 +42,7 @@ declare global {
     homepage?: string;
   }
 
-  interface CustomerDoc extends Omit<Customer, '_id'>, Document<Types.ObjectId> {
+  interface CustomerDoc extends Customer, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 
@@ -72,7 +72,7 @@ declare global {
     homepage?: string;
   }
 
-  interface SupplierDoc extends Omit<Supplier, '_id'>, Document<Types.ObjectId> {
+  interface SupplierDoc extends Supplier, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 
@@ -86,7 +86,7 @@ declare global {
     coatings?: string[];
   }
 
-  interface VendorDoc extends Omit<Vendor, '_id'>, Document<Types.ObjectId> {
+  interface VendorDoc extends Vendor, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 

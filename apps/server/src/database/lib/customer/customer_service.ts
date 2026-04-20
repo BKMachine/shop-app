@@ -1,3 +1,7 @@
+import type {
+  CreateCustomerPayload,
+  UpdateCustomerPayload,
+} from '../../../server/api/routes/customers.js';
 import AuditService from '../audit/audit_service.js';
 import Customer from './customer_model.js';
 
@@ -9,20 +13,22 @@ async function findById(id: string): Promise<CustomerDoc | null> {
   return Customer.findById(id);
 }
 
-async function create(data: Omit<Customer, '_id'>, deviceId: string): Promise<CustomerDoc> {
-  const doc = new Customer(data);
-  await doc.save();
-  await AuditService.addCustomerAudit(null, doc, deviceId);
-  return doc;
+async function create(data: CreateCustomerPayload, deviceId: string): Promise<CustomerDoc> {
+  const customer = new Customer(data);
+  await customer.save();
+  await AuditService.addCustomerAudit(null, customer, deviceId);
+  return customer;
 }
 
-async function update(doc: Customer, deviceId: string): Promise<CustomerDoc> {
-  const oldDoc = await Customer.findById(doc._id);
-  if (!oldDoc) throw new Error(`Missing customer document id: ${doc._id}`);
-  const updated = await Customer.findByIdAndUpdate(doc._id, doc, { returnDocument: 'after' });
-  if (!updated) throw new Error(`Unable to update customer document id: ${doc._id}`);
-  await AuditService.addCustomerAudit(oldDoc, updated, deviceId);
-  return updated;
+async function update(data: UpdateCustomerPayload, deviceId: string): Promise<CustomerDoc> {
+  const oldCustomer = await Customer.findById(data._id);
+  if (!oldCustomer) throw new Error(`Missing customer document id: ${data._id}`);
+  const updatedCustomer = await Customer.findByIdAndUpdate(data._id, data, {
+    returnDocument: 'after',
+  });
+  if (!updatedCustomer) throw new Error(`Unable to update customer document id: ${data._id}`);
+  await AuditService.addCustomerAudit(oldCustomer, updatedCustomer, deviceId);
+  return updatedCustomer;
 }
 
 export default {

@@ -8,20 +8,22 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
-const CreateCustomerPayload = z.strictObject({
+const CreateCustomerRequest = z.strictObject({
   customer: z.strictObject({
     name: z.string(),
     homepage: z.httpUrl().optional(),
     logo: z.string().optional(),
   }),
 });
+export type CreateCustomerPayload = z.infer<typeof CreateCustomerRequest.shape.customer>;
 
-const UpdateCustomerPayload = z.strictObject({
-  customer: CreateCustomerPayload.shape.customer.extend({
+const UpdateCustomerRequest = z.strictObject({
+  customer: CreateCustomerRequest.shape.customer.extend({
     _id: mongoObjectId,
     __v: z.number().optional(),
   }),
 });
+export type UpdateCustomerPayload = z.infer<typeof UpdateCustomerRequest.shape.customer>;
 
 router.get('/customers', async (_req, res, next) => {
   try {
@@ -34,7 +36,7 @@ router.get('/customers', async (_req, res, next) => {
 
 router.post('/customers', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { success, data, error } = CreateCustomerPayload.safeParse(req.body);
+  const { success, data, error } = CreateCustomerRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid customer data provided:', error.message);
     return next(new HttpError(400, 'Invalid customer data provided.'));
@@ -50,7 +52,7 @@ router.post('/customers', requireKnownDevice, async (req, res, next) => {
 
 router.put('/customers', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { success, data, error } = UpdateCustomerPayload.safeParse(req.body);
+  const { success, data, error } = UpdateCustomerRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid customer data provided:', error.message);
     return next(new HttpError(400, 'Invalid customer data provided.'));
