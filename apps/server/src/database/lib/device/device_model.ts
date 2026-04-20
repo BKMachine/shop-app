@@ -1,6 +1,6 @@
 import { model, Schema } from 'mongoose';
 
-const deviceSchema = new Schema<DeviceDoc>(
+const deviceSchema = new Schema<DeviceFields>(
   {
     deviceId: { type: String, required: true, unique: true, index: true },
     displayName: { type: String, required: true },
@@ -20,4 +20,4 @@ const deviceSchema = new Schema<DeviceDoc>(
   },
 );
 
-export default model<DeviceDoc>('devices', deviceSchema);
+export default model<DeviceFields>('devices', deviceSchema);

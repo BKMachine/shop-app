@@ -1,3 +1,5 @@
+import type { HydratedDocument } from 'mongoose';
+
 declare global {
   namespace Express {
     /**
@@ -32,7 +34,7 @@ declare global {
       /**
        * The approved device document resolved by `requireKnownDevice`.
        */
-      device?: DeviceDoc;
+      device?: HydratedDocument<DeviceFields>;
 
       /**
        * Internal database id for the authenticated device.

@@ -1,8 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
+import type { HydratedDocument } from 'mongoose';
 import DeviceService from '../../database/lib/device/device_service.js';
 import HttpError from './httpError.js';
 
 const LAST_SEEN_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
+
+type DeviceDoc = HydratedDocument<DeviceFields>;
 
 export type KnownDeviceContext = NonNullable<Express.Request['deviceContext']>;
 

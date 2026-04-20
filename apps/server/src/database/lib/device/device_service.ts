@@ -1,4 +1,7 @@
+import type { HydratedDocument } from 'mongoose';
 import Device from './device_model.js';
+
+type DeviceDoc = HydratedDocument<DeviceFields>;
 
 async function findDeviceById(deviceId: string): Promise<DeviceDoc | null> {
   return Device.findOne({ deviceId }).exec();
@@ -8,11 +11,11 @@ async function findByIp(ip: string): Promise<DeviceDoc | null> {
   return Device.findOne({ lastIp: normalizeIp(ip) }).exec();
 }
 
-function updateDevice(deviceId: string, update: Partial<DeviceDoc>): void {
+function updateDevice(deviceId: string, update: Partial<DeviceFields>): void {
   void Device.updateOne({ deviceId }, { $set: update }).exec();
 }
 
-async function addDevice(data: Partial<DeviceDoc>): Promise<DeviceDoc> {
+async function addDevice(data: DeviceCreate): Promise<DeviceDoc> {
   const device = new Device(data);
   await device.save();
   return device;

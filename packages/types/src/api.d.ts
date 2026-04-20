@@ -168,8 +168,7 @@ declare global {
 
   /* DEVICE */
 
-  interface Device {
-    _id: string;
+  interface DeviceFields {
     deviceId: string;
     displayName: string;
     deviceType: 'pc' | 'android' | 'unknown';
@@ -184,7 +183,14 @@ declare global {
     updatedAt: Date;
   }
 
-  interface DeviceDoc extends Omit<Device, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface Device extends DeviceFields {
+    _id: string;
+  }
+
+  interface DeviceCreate extends DeviceFields {}
+
+  interface DeviceUpdate extends DeviceFields {
+    _id: string;
+    __v?: number;
   }
 }

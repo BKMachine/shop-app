@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import * as z from 'zod';
 import DeviceService from '../../../database/lib/device/device_service.js';
+import logger from '../../../logger.js';
 import HttpError from '../../middleware/httpError.js';
 import {
   assertKnownDevice,
@@ -9,18 +11,21 @@ import {
 
 const router: Router = Router();
 
+const RegisterDeviceRequest = z.strictObject({
+  deviceId: z.string().trim().min(1),
+  displayName: z.string().trim().min(1).max(60),
+  deviceType: z.enum(['pc', 'android', 'unknown']).default('unknown'),
+});
+
 router.post('/devices/register', async (req, res, next) => {
-  const deviceId = String(req.body.deviceId ?? '').trim();
-  const displayName = String(req.body.displayName ?? '').trim();
-  const deviceType = String(req.body.deviceType ?? 'unknown').trim() as
-    | 'pc'
-    | 'android'
-    | 'unknown';
-  if (!deviceId) return next(new HttpError(400, 'deviceId is required.'));
-  if (!displayName) return next(new HttpError(400, 'displayName is required.'));
+  const { success, data, error } = RegisterDeviceRequest.safeParse(req.body);
+  if (!success) {
+    logger.error('Invalid device registration data provided:', error.message);
+    return next(new HttpError(400, 'Invalid device registration data provided.'));
+  }
 
   try {
-    const existing = await DeviceService.findDeviceById(deviceId);
+    const existing = await DeviceService.findDeviceById(data.deviceId);
     if (existing) return next(new HttpError(409, 'This device is already registered.'));
 
     const clientIp = getClientIp(req);
@@ -28,9 +33,9 @@ router.post('/devices/register', async (req, res, next) => {
       typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : null;
 
     const device = await DeviceService.addDevice({
-      deviceId,
-      displayName,
-      deviceType,
+      deviceId: data.deviceId,
+      displayName: data.displayName,
+      deviceType: data.deviceType,
       isAdmin: false,
       approved: true,
       blocked: false,
@@ -38,9 +43,11 @@ router.post('/devices/register', async (req, res, next) => {
       lastSeenAt: new Date(),
       lastIp: clientIp,
       lastUserAgent: userAgent,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    return res.status(201).json(device);
+    return res.status(201).json({ device });
   } catch (error) {
     next(error);
   }
