@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 
 export const usePartStore = defineStore('parts', () => {
   const parts = ref<Part[]>([]);
@@ -282,6 +283,10 @@ export const usePartStore = defineStore('parts', () => {
       }, 500);
     }
   }
+
+  socket.on('part', (part: Part) => {
+    SOCKET_part(part);
+  });
 
   return {
     parts,

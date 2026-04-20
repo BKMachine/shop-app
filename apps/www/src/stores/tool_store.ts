@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 
 export const useToolStore = defineStore('tools', () => {
   const tools = ref<Tool[]>([]);
@@ -148,10 +149,9 @@ export const useToolStore = defineStore('tools', () => {
     triggerToolUpdateSignal(tool._id);
   }
 
-  function SOCKET_tool(tool: Tool) {
-    replaceToolData(tool);
-    triggerToolUpdateSignal(tool._id);
-  }
+  socket.on('tool', (tool: Tool) => {
+    handleToolMutation(tool);
+  });
 
   return {
     tools,
@@ -173,6 +173,5 @@ export const useToolStore = defineStore('tools', () => {
     pickTool,
     adjustStock,
     setLastId,
-    SOCKET_tool,
   };
 });
