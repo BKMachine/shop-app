@@ -1,29 +1,21 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import axios from '@/plugins/axios';
-import { useSupplierStore } from '@/stores/supplier_store';
-
+import api from '@/plugins/axios';
 export const useMaterialsStore = defineStore('materials', () => {
-  const supplierStore = useSupplierStore();
-
-  const rawMaterials = ref<Material[]>([]);
+  const _materials = ref<Material[]>([]);
 
   const materials = computed<Material[]>(() => {
-    return rawMaterials.value.map((x) => {
-      return {
-        ...x,
-        supplier: supplierStore.suppliers.find((y) => y._id === x.supplier),
-      };
-    });
+    return [..._materials.value];
   });
 
   const loading = ref(false);
+
   function fetch() {
     loading.value = true;
-    axios
+    api
       .get<Material[]>('/materials')
       .then(({ data }) => {
-        rawMaterials.value = data;
+        _materials.value = data;
       })
       .finally(() => {
         loading.value = false;
@@ -31,17 +23,19 @@ export const useMaterialsStore = defineStore('materials', () => {
   }
 
   async function add(material: Material): Promise<Material> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, ...rest } = material;
-    const { data } = await axios.post<Material>('/materials', { data: rest });
-    rawMaterials.value.push(data);
+    const { data } = await api.post<Material>('/materials', { material });
+    _materials.value.push(data);
     return data;
   }
 
   async function update(material: Material) {
-    await axios.put<Material>('/materials', { data: material }).then(({ data }) => {
-      const index = rawMaterials.value.findIndex((x) => x._id === data._id);
-      if (index > -1) rawMaterials.value[index] = data;
+    const payload = {
+      ...material,
+      supplier: material.supplier._id,
+    };
+    await api.put<Material>('/materials', { material: payload }).then(({ data }) => {
+      const index = _materials.value.findIndex((x) => x._id === data._id);
+      if (index > -1) _materials.value[index] = data;
     });
   }
 

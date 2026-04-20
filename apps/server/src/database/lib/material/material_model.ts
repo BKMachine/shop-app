@@ -2,7 +2,7 @@ import { model, Schema } from 'mongoose';
 
 const schema = new Schema<MaterialDoc>({
   description: { type: String, required: true },
-  type: { type: String, enum: ['Round', 'Flat'], required: true },
+  type: { type: String, enum: ['Flat', 'Round'], required: true },
   height: { type: Number, default: null },
   width: { type: Number, default: null },
   diameter: { type: Number, default: null },

@@ -1,13 +1,17 @@
 import { normalizeDimensions } from '@repo/utilities/materials';
+import type {
+  CreateMaterialPayload,
+  UpdateMaterialPayload,
+} from '../../../server/api/routes/materials.js';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
 import Material from './material_model.js';
 
 async function list(): Promise<MaterialDoc[]> {
-  return await Material.find();
+  return await Material.find({}).populate('supplier');
 }
 
-async function create(data: Material, deviceId: string): Promise<MaterialDoc> {
+async function create(data: CreateMaterialPayload, deviceId: string): Promise<MaterialDoc> {
   const material = new Material(normalizeDimensions(data));
   await material.save();
   await Audit.addMaterialAudit(null, material, deviceId);
@@ -15,27 +19,21 @@ async function create(data: Material, deviceId: string): Promise<MaterialDoc> {
   return material;
 }
 
-async function update(newMaterial: Material, deviceId: string): Promise<MaterialDoc | null> {
-  const id = newMaterial._id;
-  const oldMaterial: MaterialDoc | null = await Material.findById(id);
+async function update(data: UpdateMaterialPayload, deviceId: string): Promise<MaterialDoc | null> {
+  const id = data._id;
+  const oldMaterial = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
-  const updatedMaterial = await Material.findByIdAndUpdate(id, normalizeDimensions(newMaterial), {
+  const updatedMaterial = await Material.findByIdAndUpdate(id, normalizeDimensions(data), {
     returnDocument: 'after',
-  });
+  }).populate('supplier');
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial, deviceId);
   emit('material', updatedMaterial);
   return updatedMaterial;
 }
 
-async function find(data: Material): Promise<MaterialDoc | null> {
-  return await Material.findOne(normalizeDimensions(data));
-}
-
 async function findByParsedMaterial(data: Partial<Material>): Promise<MaterialDoc | null> {
-  if (!data.materialType || !data.type) {
-    return null;
-  }
+  if (!data.materialType || !data.type) return null;
 
   const query = {
     materialType: data.materialType,
@@ -47,7 +45,7 @@ async function findByParsedMaterial(data: Partial<Material>): Promise<MaterialDo
     length: data.length ?? null,
   };
 
-  return await Material.findOne(normalizeDimensions(query));
+  return await Material.findOne(normalizeDimensions(query)).populate('supplier');
 }
 
 async function updateCostPerFoot(
@@ -55,13 +53,13 @@ async function updateCostPerFoot(
   costPerFoot: number,
   deviceId: string,
 ): Promise<MaterialDoc | null> {
-  const oldMaterial: MaterialDoc | null = await Material.findById(id);
+  const oldMaterial = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
   const updatedMaterial = await Material.findByIdAndUpdate(
     id,
     { costPerFoot },
     { returnDocument: 'after' },
-  );
+  ).populate('supplier');
   if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
   await Audit.addMaterialAudit(oldMaterial, updatedMaterial, deviceId);
   emit('material', updatedMaterial);
@@ -72,7 +70,6 @@ export default {
   list,
   create,
   update,
-  find,
   findByParsedMaterial,
   updateCostPerFoot,
 };

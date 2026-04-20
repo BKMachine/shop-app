@@ -1,13 +1,49 @@
 import { Router } from 'express';
 import multer from 'multer';
+import * as z from 'zod';
 import Materials from '../../../database/lib/material/material_service.js';
+import logger from '../../../logger.js';
 import { buildHighlightedPdf } from '../../../services/pdfs/pdf_highlight_service.js';
 import pdfParserService from '../../../services/pdfs/pdf_parser_service.js';
+import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+const CreateMaterialRequest = z.strictObject({
+  material: z.strictObject({
+    description: z.string(),
+    type: z.enum(['Round', 'Flat']),
+    height: z.number().nullable(),
+    width: z.number().nullable(),
+    diameter: z.number().nullable(),
+    wallThickness: z.number().nullable(),
+    length: z.number().nullable(),
+    materialType: z.string(),
+    supplier: mongoObjectId,
+    costPerFoot: z.number().nullable(),
+  }),
+});
+export type CreateMaterialPayload = z.infer<typeof CreateMaterialRequest.shape.material>;
+
+const UpdateMaterialRequest = z.strictObject({
+  material: CreateMaterialRequest.shape.material.extend({
+    _id: mongoObjectId,
+    __v: z.number().optional(),
+  }),
+});
+export type UpdateMaterialPayload = z.infer<typeof UpdateMaterialRequest.shape.material>;
+
+const MaterialApplyUpdateRequest = z.strictObject({
+  updates: z.array(
+    z.strictObject({
+      materialId: mongoObjectId,
+      costPerFoot: z.number(),
+    }),
+  ),
+});
 
 router.get('/materials', async (_req, res, next) => {
   try {
@@ -20,11 +56,14 @@ router.get('/materials', async (_req, res, next) => {
 
 router.post('/materials', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { data }: { data?: Material } = req.body;
-  if (!data) return next(new HttpError(400, 'No material data provided.'));
+  const { success, data, error } = CreateMaterialRequest.safeParse(req.body);
+  if (!success) {
+    logger.error('Invalid material data provided:', error.message);
+    return next(new HttpError(400, 'Invalid material data.'));
+  }
 
   try {
-    const doc = await Materials.create(data, req.deviceId);
+    const doc = await Materials.create(data.material, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
     next(e);
@@ -33,11 +72,14 @@ router.post('/materials', requireKnownDevice, async (req, res, next) => {
 
 router.put('/materials', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { data }: { data?: Material } = req.body;
-  if (!data) return next(new HttpError(400, 'No material data provided.'));
+  const { success, data, error } = UpdateMaterialRequest.safeParse(req.body);
+  if (!success) {
+    logger.error('Invalid material data provided:', error.message);
+    return next(new HttpError(400, 'Invalid material data.'));
+  }
 
   try {
-    const response = await Materials.update(data, req.deviceId);
+    const response = await Materials.update(data.material, req.deviceId);
     if (!response) return next(new HttpError(404, 'Material not found.'));
     res.status(200).json(response);
   } catch (e) {
@@ -65,13 +107,15 @@ router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next)
 
 router.post('/materials/parse-pdf/apply', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { updates }: { updates?: MaterialApplyUpdate[] } = req.body;
-  if (!updates || !Array.isArray(updates))
-    return next(new HttpError(400, 'updates array is required.'));
+  const { success, data, error } = MaterialApplyUpdateRequest.safeParse(req.body);
+  if (!success) {
+    logger.error('Invalid updates data provided:', error.message);
+    return next(new HttpError(400, 'Invalid updates data.'));
+  }
 
   try {
     const updated = await Promise.all(
-      updates.map(async ({ materialId, costPerFoot }) => {
+      data.updates.map(async ({ materialId, costPerFoot }) => {
         return await Materials.updateCostPerFoot(materialId, costPerFoot, req.deviceId);
       }),
     );

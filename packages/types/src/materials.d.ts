@@ -4,18 +4,18 @@ declare global {
   interface Material {
     _id: string;
     description: string;
-    type: 'Round' | 'Flat';
+    type: 'Flat' | 'Round';
     height: number | null;
     width: number | null;
     diameter: number | null;
     wallThickness: number | null;
     length: number | null;
     materialType: string;
-    supplier?: Supplier | string;
+    supplier: Supplier;
     costPerFoot: number | null;
   }
 
-  interface MaterialDoc extends Omit<Material, '_id'>, Document<Types.ObjectId> {
+  interface MaterialDoc extends Material, Document<Types.ObjectId> {
     _id: Types.ObjectId;
   }
 

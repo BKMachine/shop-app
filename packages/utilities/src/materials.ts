@@ -9,7 +9,7 @@ interface MaterialWeightInput {
 }
 
 type MaterialDimensionsInput = {
-  type: string;
+  type: 'Flat' | 'Round';
   width: number | null;
   height: number | null;
 };

@@ -2,6 +2,7 @@ import type {
   CreateSupplierPayload,
   UpdateSupplierPayload,
 } from '../../../server/api/routes/suppliers.js';
+import { emit } from '../../../server/sockets.js';
 import AuditService from '../audit/audit_service.js';
 import Supplier from './supplier_model.js';
 
@@ -17,6 +18,7 @@ async function create(data: CreateSupplierPayload, deviceId: string): Promise<Su
   const supplier = new Supplier(data);
   await supplier.save();
   await AuditService.addSupplierAudit(null, supplier, deviceId);
+  emit('supplier', supplier);
   return supplier;
 }
 
@@ -28,6 +30,7 @@ async function update(data: UpdateSupplierPayload, deviceId: string): Promise<Su
   });
   if (!updatedSupplier) throw new Error(`Unable to update supplier document id: ${data._id}`);
   await AuditService.addSupplierAudit(oldSupplier, updatedSupplier, deviceId);
+  emit('supplier', updatedSupplier);
   return updatedSupplier;
 }
 

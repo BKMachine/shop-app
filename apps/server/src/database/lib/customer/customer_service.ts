@@ -2,6 +2,7 @@ import type {
   CreateCustomerPayload,
   UpdateCustomerPayload,
 } from '../../../server/api/routes/customers.js';
+import { emit } from '../../../server/sockets.js';
 import AuditService from '../audit/audit_service.js';
 import Customer from './customer_model.js';
 
@@ -17,6 +18,7 @@ async function create(data: CreateCustomerPayload, deviceId: string): Promise<Cu
   const customer = new Customer(data);
   await customer.save();
   await AuditService.addCustomerAudit(null, customer, deviceId);
+  emit('customer', customer);
   return customer;
 }
 
@@ -28,6 +30,7 @@ async function update(data: UpdateCustomerPayload, deviceId: string): Promise<Cu
   });
   if (!updatedCustomer) throw new Error(`Unable to update customer document id: ${data._id}`);
   await AuditService.addCustomerAudit(oldCustomer, updatedCustomer, deviceId);
+  emit('customer', updatedCustomer);
   return updatedCustomer;
 }
 
