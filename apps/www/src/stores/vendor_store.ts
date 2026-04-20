@@ -18,7 +18,7 @@ export const useVendorStore = defineStore('vendors', () => {
     });
   }
 
-  async function add(vendor: Vendor) {
+  async function add(vendor: VendorCreate) {
     await api
       .post<Vendor>('/vendors', { vendor })
       .then(({ data }) => {
@@ -30,7 +30,7 @@ export const useVendorStore = defineStore('vendors', () => {
       });
   }
 
-  async function update(vendor: Vendor) {
+  async function update(vendor: VendorUpdate) {
     if (vendor.coatings) {
       vendor.coatings = vendor.coatings.sort((a, b) =>
         a.localeCompare(b, undefined, { sensitivity: 'base' }),

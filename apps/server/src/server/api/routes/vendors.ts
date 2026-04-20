@@ -8,23 +8,23 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
-const CreateVendorRequest = z.strictObject({
-  vendor: z.strictObject({
-    name: z.string(),
-    homepage: z.httpUrl().optional(),
-    logo: z.string().optional(),
-    coatings: z.array(z.string()).optional(),
-  }),
+const VendorFieldsSchema = z.strictObject({
+  name: z.string(),
+  homepage: z.httpUrl().optional(),
+  logo: z.string().optional(),
+  coatings: z.array(z.string()).optional(),
 });
-export type CreateVendorPayload = z.infer<typeof CreateVendorRequest.shape.vendor>;
+
+const CreateVendorRequest = z.strictObject({
+  vendor: VendorFieldsSchema,
+});
 
 const UpdateVendorRequest = z.strictObject({
-  vendor: CreateVendorRequest.shape.vendor.extend({
+  vendor: VendorFieldsSchema.extend({
     _id: mongoObjectId,
     __v: z.number().optional(),
   }),
 });
-export type UpdateVendorPayload = z.infer<typeof UpdateVendorRequest.shape.vendor>;
 
 router.get('/vendors', async (_req, res, next) => {
   try {

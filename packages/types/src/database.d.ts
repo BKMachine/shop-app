@@ -35,15 +35,21 @@ declare global {
 
   /* CUSTOMER */
 
-  interface Customer {
-    _id: string;
+  interface CustomerFields {
     name: string;
     logo?: string;
     homepage?: string;
   }
 
-  interface CustomerDoc extends Customer, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface Customer extends CustomerFields {
+    _id: string;
+  }
+
+  interface CustomerCreate extends CustomerFields {}
+
+  interface CustomerUpdate extends CustomerFields {
+    _id: string;
+    __v?: number;
   }
 
   /* REPORT */
@@ -65,29 +71,41 @@ declare global {
 
   /* SUPPLIER */
 
-  interface Supplier {
-    _id: string;
+  interface SupplierFields {
     name: string;
     logo?: string;
     homepage?: string;
   }
 
-  interface SupplierDoc extends Supplier, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface Supplier extends SupplierFields {
+    _id: string;
+  }
+
+  interface SupplierCreate extends SupplierFields {}
+
+  interface SupplierUpdate extends SupplierFields {
+    _id: string;
+    __v?: number;
   }
 
   /* VENDOR */
 
-  interface Vendor {
-    _id: string;
+  interface VendorFields {
     name: string;
     logo?: string;
     homepage?: string;
     coatings?: string[];
   }
 
-  interface VendorDoc extends Vendor, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface Vendor extends VendorFields {
+    _id: string;
+  }
+
+  interface VendorCreate extends VendorFields {}
+
+  interface VendorUpdate extends VendorFields {
+    _id: string;
+    __v?: number;
   }
 
   /* IMAGE */

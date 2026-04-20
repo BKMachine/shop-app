@@ -1,10 +1,9 @@
-import type {
-  CreateVendorPayload,
-  UpdateVendorPayload,
-} from '../../../server/api/routes/vendors.js';
+import type { HydratedDocument } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import AuditService from '../audit/audit_service.js';
 import Vendor from './vendor_model.js';
+
+type VendorDoc = HydratedDocument<VendorFields>;
 
 async function list(): Promise<VendorDoc[]> {
   return Vendor.find({});
@@ -14,7 +13,7 @@ async function findById(id: string): Promise<VendorDoc | null> {
   return Vendor.findById(id);
 }
 
-async function create(data: CreateVendorPayload, deviceId: string): Promise<VendorDoc> {
+async function create(data: VendorCreate, deviceId: string): Promise<VendorDoc> {
   const vendor = new Vendor(data);
   await vendor.save();
   await AuditService.addVendorAudit(null, vendor, deviceId);
@@ -22,7 +21,7 @@ async function create(data: CreateVendorPayload, deviceId: string): Promise<Vend
   return vendor;
 }
 
-async function update(data: UpdateVendorPayload, deviceId: string): Promise<VendorDoc> {
+async function update(data: VendorUpdate, deviceId: string): Promise<VendorDoc> {
   const oldVendor = await Vendor.findById(data._id);
   if (!oldVendor) throw new Error(`Missing vendor document id: ${data._id}`);
   const updatedVendor = await Vendor.findByIdAndUpdate(data._id, data, { returnDocument: 'after' });

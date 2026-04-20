@@ -1,9 +1,9 @@
 import { model, Schema } from 'mongoose';
 
-const schema = new Schema<SupplierDoc>({
+const schema = new Schema<SupplierFields>({
   name: { type: String, unique: true, required: true },
   logo: String,
   homepage: String,
 });
 
-export default model<SupplierDoc>('suppliers', schema);
+export default model<SupplierFields>('suppliers', schema);

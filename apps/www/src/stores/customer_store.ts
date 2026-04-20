@@ -18,7 +18,7 @@ export const useCustomerStore = defineStore('customers', () => {
     });
   }
 
-  async function add(customer: Customer) {
+  async function add(customer: CustomerCreate) {
     await api
       .post<Customer>('/customers', { customer })
       .then(({ data }) => {
@@ -30,7 +30,7 @@ export const useCustomerStore = defineStore('customers', () => {
       });
   }
 
-  async function update(customer: Customer) {
+  async function update(customer: CustomerUpdate) {
     await api
       .put<Customer>('/customers', { customer })
       .then(() => {

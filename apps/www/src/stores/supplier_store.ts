@@ -18,7 +18,7 @@ export const useSupplierStore = defineStore('suppliers', () => {
     });
   }
 
-  async function add(supplier: Omit<Supplier, '_id'>) {
+  async function add(supplier: SupplierCreate) {
     await api
       .post<Supplier>('/suppliers', { supplier })
       .then(({ data }) => {
@@ -30,7 +30,7 @@ export const useSupplierStore = defineStore('suppliers', () => {
       });
   }
 
-  async function update(supplier: Supplier) {
+  async function update(supplier: SupplierUpdate) {
     await api
       .put<Supplier>('/suppliers', { supplier })
       .then(() => {
