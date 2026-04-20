@@ -134,7 +134,16 @@ export function formatCycleLonghand(val: number | string | null | undefined): st
   return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 }
 
-export function buildMaterialDescription(material: Material): string {
+interface MaterialDescriptionInput {
+  type: string;
+  materialType: string;
+  wallThickness: number | null;
+  height: number | null;
+  width: number | null;
+  diameter: number | null;
+}
+
+export function buildMaterialDescription<T extends MaterialDescriptionInput>(material: T): string {
   if (!material.type || !material.materialType) return '';
 
   const type = material.wallThickness ? 'Tubing' : 'Bar';

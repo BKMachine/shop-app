@@ -19,7 +19,7 @@ declare global {
   }
 
   interface ParserResults {
-    material: Partial<Material>;
+    material: Partial<MaterialCreate>;
     costPerFoot: number;
     unitType: string;
     rate: number;

@@ -1,17 +1,17 @@
 import { normalizeDimensions } from '@repo/utilities/materials';
-import type {
-  CreateMaterialPayload,
-  UpdateMaterialPayload,
-} from '../../../server/api/routes/materials.js';
+import type { HydratedDocument } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
+import type { MaterialDocumentFields } from './material_model.js';
 import Material from './material_model.js';
+
+type MaterialDoc = HydratedDocument<MaterialDocumentFields>;
 
 async function list(): Promise<MaterialDoc[]> {
   return await Material.find({}).populate('supplier');
 }
 
-async function create(data: CreateMaterialPayload, deviceId: string): Promise<MaterialDoc> {
+async function create(data: MaterialCreate, deviceId: string): Promise<MaterialDoc> {
   const material = new Material(normalizeDimensions(data));
   await material.save();
   await Audit.addMaterialAudit(null, material, deviceId);
@@ -19,7 +19,7 @@ async function create(data: CreateMaterialPayload, deviceId: string): Promise<Ma
   return material;
 }
 
-async function update(data: UpdateMaterialPayload, deviceId: string): Promise<MaterialDoc | null> {
+async function update(data: MaterialUpdate, deviceId: string): Promise<MaterialDoc> {
   const id = data._id;
   const oldMaterial = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
@@ -32,7 +32,7 @@ async function update(data: UpdateMaterialPayload, deviceId: string): Promise<Ma
   return updatedMaterial;
 }
 
-async function findByParsedMaterial(data: Partial<Material>): Promise<MaterialDoc | null> {
+async function findByParsedMaterial(data: Partial<MaterialCreate>): Promise<MaterialDoc | null> {
   if (!data.materialType || !data.type) return null;
 
   const query = {
@@ -52,7 +52,7 @@ async function updateCostPerFoot(
   id: string,
   costPerFoot: number,
   deviceId: string,
-): Promise<MaterialDoc | null> {
+): Promise<MaterialDoc> {
   const oldMaterial = await Material.findById(id);
   if (!oldMaterial) throw new Error(`Missing material document id: ${id}`);
   const updatedMaterial = await Material.findByIdAndUpdate(

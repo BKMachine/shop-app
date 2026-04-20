@@ -22,18 +22,14 @@ export const useMaterialsStore = defineStore('materials', () => {
       });
   }
 
-  async function add(material: Material): Promise<Material> {
+  async function add(material: MaterialCreate): Promise<Material> {
     const { data } = await api.post<Material>('/materials', { material });
     _materials.value.push(data);
     return data;
   }
 
-  async function update(material: Material) {
-    const payload = {
-      ...material,
-      supplier: material.supplier._id,
-    };
-    await api.put<Material>('/materials', { material: payload }).then(({ data }) => {
+  async function update(material: MaterialUpdate) {
+    await api.put<Material>('/materials', { material }).then(({ data }) => {
       const index = _materials.value.findIndex((x) => x._id === data._id);
       if (index > -1) _materials.value[index] = data;
     });

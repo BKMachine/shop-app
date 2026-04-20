@@ -169,7 +169,7 @@
 import { computed } from 'vue';
 
 const props = defineProps<{
-  material: Material;
+  material: MaterialFields;
 }>();
 
 // SVG size in px

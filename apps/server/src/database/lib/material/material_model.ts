@@ -1,6 +1,10 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, type Types } from 'mongoose';
 
-const schema = new Schema<MaterialDoc>({
+export type MaterialDocumentFields = MaterialFields & {
+  supplier: Types.ObjectId;
+};
+
+const schema = new Schema<MaterialDocumentFields>({
   description: { type: String, required: true },
   type: { type: String, enum: ['Flat', 'Round'], required: true },
   height: { type: Number, default: null },
@@ -13,4 +17,4 @@ const schema = new Schema<MaterialDoc>({
   costPerFoot: { type: Number, default: null },
 });
 
-export default model<MaterialDoc>('materials', schema);
+export default model<MaterialDocumentFields>('materials', schema);

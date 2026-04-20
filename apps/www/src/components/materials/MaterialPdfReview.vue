@@ -321,7 +321,7 @@ interface ParsedLineContext {
 }
 
 interface ParserResults {
-  material: Partial<Material>;
+  material: Partial<MaterialCreate>;
   costPerFoot: number;
   unitType: string;
   rate: number;
@@ -523,12 +523,11 @@ function isResolved(result: MaterialParsePreview, index: number): boolean {
   return false;
 }
 
-function buildMaterialFromParsedResult(result: MaterialParsePreview): Material | null {
+function buildMaterialFromParsedResult(result: MaterialParsePreview): MaterialCreate | null {
   const parsedMaterial = result.parsed.material;
-  if (!parsedMaterial.materialType || !parsedMaterial.type) return null;
+  if (!parsedMaterial.materialType || !parsedMaterial.type || !parsedMaterial.supplier) return null;
 
-  const material: Material = {
-    _id: '0',
+  const material: MaterialCreate = {
     description: '',
     materialType: parsedMaterial.materialType,
     type: parsedMaterial.type,

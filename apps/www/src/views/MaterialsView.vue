@@ -5,7 +5,7 @@
       <v-col cols="4">
         <MaterialsList
           :materials="materials"
-          :selected-material-id="selectedMaterial._id"
+          :selected-material-id="selectedMaterialId"
           @select="selectMaterial"
         />
       </v-col>
@@ -274,8 +274,13 @@ import { useMaterialsStore } from '@/stores/materials_store';
 const materialsStore = useMaterialsStore();
 const materials = computed(() => materialsStore.materials);
 
-const defaultMaterial: Material = {
-  _id: '0',
+type EditableMaterial = MaterialFields & {
+  _id?: string;
+  supplier: Supplier | string | null;
+  __v?: number;
+};
+
+const defaultMaterial: EditableMaterial = {
   description: '',
   materialType: '',
   type: 'Flat',
@@ -284,11 +289,11 @@ const defaultMaterial: Material = {
   diameter: null,
   wallThickness: null,
   length: 144,
-  supplier: undefined,
+  supplier: null,
   costPerFoot: 0,
 };
 
-const selectedMaterial = ref<Material>({ ...defaultMaterial });
+const selectedMaterial = ref<EditableMaterial>({ ...defaultMaterial });
 const formValid = ref(true);
 const form = ref();
 const pdfReviewDialog = ref(false);
@@ -299,14 +304,15 @@ onMounted(() => {
   materialsStore.fetch();
 });
 
-const isNewMaterial = computed<boolean>(() => selectedMaterial.value._id === '0');
+const selectedMaterialId = computed(() => selectedMaterial.value._id ?? '');
+const isNewMaterial = computed<boolean>(() => !selectedMaterial.value._id);
 
-function getSupplierId(supplier: Material['supplier']): string | undefined {
-  if (!supplier) return undefined;
+function getSupplierId(supplier: EditableMaterial['supplier']): string | null {
+  if (!supplier) return null;
   return typeof supplier === 'string' ? supplier : supplier._id;
 }
 
-function toComparableMaterial(material: Material) {
+function toComparableMaterial(material: EditableMaterial | Material) {
   return {
     ...material,
     supplier: getSupplierId(material.supplier),
@@ -362,9 +368,25 @@ function saveMaterial() {
   form.value.validate();
   if (!formValid.value || (existsInStore.value && isNewMaterial.value)) return;
 
+  const supplierId = getSupplierId(selectedMaterial.value.supplier);
+  if (!supplierId) return;
+
+  const basePayload: MaterialCreate = {
+    description: selectedMaterial.value.description,
+    materialType: selectedMaterial.value.materialType,
+    type: selectedMaterial.value.type,
+    height: selectedMaterial.value.height,
+    width: selectedMaterial.value.width,
+    diameter: selectedMaterial.value.diameter,
+    wallThickness: selectedMaterial.value.wallThickness,
+    length: selectedMaterial.value.length,
+    supplier: supplierId,
+    costPerFoot: selectedMaterial.value.costPerFoot,
+  };
+
   if (isNewMaterial.value) {
     materialsStore
-      .add(selectedMaterial.value)
+      .add(basePayload)
       .then(() => {
         addNewMaterial();
         toastSuccess('Material added successfully');
@@ -373,8 +395,17 @@ function saveMaterial() {
         toastError('Failed to add material');
       });
   } else {
+    const materialId = selectedMaterial.value._id;
+    if (!materialId) return;
+
+    const payload: MaterialUpdate = {
+      ...basePayload,
+      _id: materialId,
+      __v: selectedMaterial.value.__v,
+    };
+
     materialsStore
-      .update(selectedMaterial.value)
+      .update(payload)
       .then(() => {
         toastSuccess('Material updated successfully');
       })

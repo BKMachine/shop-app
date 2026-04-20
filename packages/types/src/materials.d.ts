@@ -1,8 +1,5 @@
-import type { Document, Types } from 'mongoose';
-
 declare global {
-  interface Material {
-    _id: string;
+  interface MaterialFields {
     description: string;
     type: 'Flat' | 'Round';
     height: number | null;
@@ -11,12 +8,22 @@ declare global {
     wallThickness: number | null;
     length: number | null;
     materialType: string;
-    supplier: Supplier;
     costPerFoot: number | null;
   }
 
-  interface MaterialDoc extends Material, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface Material extends MaterialFields {
+    _id: string;
+    supplier: Supplier;
+  }
+
+  interface MaterialCreate extends MaterialFields {
+    supplier: string;
+  }
+
+  interface MaterialUpdate extends MaterialFields {
+    _id: string;
+    supplier: string;
+    __v?: number;
   }
 
   type MaterialCategory = 'aluminum' | 'steel' | 'stainless' | 'titanium' | 'other';

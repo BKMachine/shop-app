@@ -12,29 +12,29 @@ import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-const CreateMaterialRequest = z.strictObject({
-  material: z.strictObject({
-    description: z.string(),
-    type: z.enum(['Round', 'Flat']),
-    height: z.number().nullable(),
-    width: z.number().nullable(),
-    diameter: z.number().nullable(),
-    wallThickness: z.number().nullable(),
-    length: z.number().nullable(),
-    materialType: z.string(),
-    supplier: mongoObjectId,
-    costPerFoot: z.number().nullable(),
-  }),
+const MaterialFieldsSchema = z.strictObject({
+  description: z.string(),
+  type: z.enum(['Round', 'Flat']),
+  height: z.number().nullable(),
+  width: z.number().nullable(),
+  diameter: z.number().nullable(),
+  wallThickness: z.number().nullable(),
+  length: z.number().nullable(),
+  materialType: z.string(),
+  supplier: mongoObjectId,
+  costPerFoot: z.number().nullable(),
 });
-export type CreateMaterialPayload = z.infer<typeof CreateMaterialRequest.shape.material>;
+
+const CreateMaterialRequest = z.strictObject({
+  material: MaterialFieldsSchema,
+});
 
 const UpdateMaterialRequest = z.strictObject({
-  material: CreateMaterialRequest.shape.material.extend({
+  material: MaterialFieldsSchema.extend({
     _id: mongoObjectId,
     __v: z.number().optional(),
   }),
 });
-export type UpdateMaterialPayload = z.infer<typeof UpdateMaterialRequest.shape.material>;
 
 const MaterialApplyUpdateRequest = z.strictObject({
   updates: z.array(
