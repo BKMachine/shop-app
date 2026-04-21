@@ -60,8 +60,8 @@ router.put('/vendors', requireKnownDevice, async (req, res, next) => {
   }
 
   try {
-    await Vendors.update(data.vendor, req.deviceId);
-    res.sendStatus(204);
+    const doc = await Vendors.update(data.vendor, req.deviceId);
+    res.status(200).json(doc);
   } catch (e) {
     next(e);
   }
