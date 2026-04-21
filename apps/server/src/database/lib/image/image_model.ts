@@ -2,6 +2,8 @@ import { type HydratedDocument, model, Schema, type Types } from 'mongoose';
 
 type ImageDocumentFields = Omit<ImageFields, 'entityId'> & {
   entityId: Types.ObjectId | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 const schema = new Schema<ImageDocumentFields>(

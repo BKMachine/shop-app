@@ -4,14 +4,17 @@ import path from 'node:path';
 import axios from 'axios';
 import { Router } from 'express';
 import multer from 'multer';
+import * as z from 'zod';
 import { isValidId } from '../../../database/index.js';
 import CustomerService from '../../../database/lib/customer/customer_service.js';
+import type { ImageDoc } from '../../../database/lib/image/image_model.js';
 import ImageService from '../../../database/lib/image/image_service.js';
 import PartService from '../../../database/lib/part/part_service.js';
 import SupplierService from '../../../database/lib/supplier/supplier_service.js';
 import ToolService from '../../../database/lib/tool/tool_service.js';
 import VendorService from '../../../database/lib/vendor/vendor_service.js';
 import { imageDir, tempDir } from '../../../directories.js';
+import logger from '../../../logger.js';
 import {
   autoAlignImage,
   autoCropImage,
@@ -23,6 +26,7 @@ import {
   removeImageBackground,
   rotateImage,
 } from '../../../services/image_processor_client.js';
+import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
@@ -90,8 +94,119 @@ async function getPartEntity(entityType: string, entityId: string) {
 }
 
 const singleImageEntityTypes = ['tool', 'customer', 'supplier', 'vendor'] as const;
-
 type SingleImageEntityType = (typeof singleImageEntityTypes)[number];
+
+const backgroundRemovalModelSchema = z.enum(['small', 'medium', 'large']);
+const backgroundRemovalBackendSchema = z.enum(['birefnet', 'imgly', 'rembg']);
+
+const UploadUrlRequest = z.strictObject({
+  url: z.url(),
+});
+
+const RemoveBackgroundRequest = z.strictObject({
+  model: backgroundRemovalModelSchema.optional(),
+  backend: backgroundRemovalBackendSchema.optional(),
+});
+
+const ProcessStackRequest = z.strictObject({
+  stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  backend: backgroundRemovalBackendSchema.optional(),
+  model: backgroundRemovalModelSchema.optional(),
+});
+
+const RotateImageRequest = z.strictObject({
+  direction: z.enum(['cw', 'ccw']),
+});
+
+const AttachImageRequest = z.strictObject({
+  entityType: z.enum(['tool', 'part', 'customer', 'supplier', 'vendor']),
+  entityId: mongoObjectId,
+  setAsMain: z.boolean().optional(),
+});
+
+const PromoteImageRequest = z.strictObject({
+  entityType: z.literal('part'),
+  entityId: mongoObjectId,
+});
+
+function toPlainEntity(entity: unknown): Record<string, unknown> {
+  if (entity && typeof entity === 'object' && 'toObject' in entity) {
+    const maybeDoc = entity as { toObject?: () => unknown };
+    if (typeof maybeDoc.toObject === 'function') {
+      return maybeDoc.toObject() as Record<string, unknown>;
+    }
+  }
+
+  return entity as Record<string, unknown>;
+}
+
+function getEntityId(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && '_id' in value) {
+    return String((value as { _id: unknown })._id);
+  }
+  if (typeof value === 'object' && value !== null && 'toString' in value) {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+type RouteImage = {
+  _id: { toString(): string } | string;
+  relPath: string;
+  createdAt: Date;
+};
+
+type PartMediaUpdate = Omit<Part, 'customer' | 'material' | 'imageIds' | 'documentIds'> & {
+  customer: string;
+  material?: string | null;
+  imageIds?: string[];
+  documentIds?: string[];
+};
+
+function normalizeIdArray(values: unknown): string[] | undefined {
+  if (!Array.isArray(values)) return undefined;
+
+  return values
+    .map((value) => getEntityId(value))
+    .filter((value): value is string => Boolean(value));
+}
+
+function serializeImage(image: unknown, isMain = false): MyImageData {
+  const routeImage = image as RouteImage;
+
+  return {
+    id: routeImage._id.toString(),
+    url: `/images/${routeImage.relPath}`,
+    createdAt: routeImage.createdAt.toISOString(),
+    isMain,
+  };
+}
+
+function normalizePartMediaUpdate(part: unknown): PartMediaUpdate {
+  const plainPart = toPlainEntity(part);
+
+  return {
+    ...(plainPart as unknown as Part),
+    _id: String(plainPart._id ?? ''),
+    customer: getEntityId(plainPart.customer) ?? '',
+    material: getEntityId(plainPart.material) ?? null,
+    imageIds: normalizeIdArray(plainPart.imageIds),
+    documentIds: normalizeIdArray(plainPart.documentIds),
+  };
+}
+
+function normalizeImageUpdate(image: ImageDoc): ImageUpdate {
+  const plainImage = toPlainEntity(image);
+
+  return {
+    ...(plainImage as unknown as ImageUpdate),
+    _id: String(plainImage._id ?? ''),
+    entityId: getEntityId(plainImage.entityId) ?? null,
+  };
+}
 
 async function getSingleImageEntity(entityType: SingleImageEntityType, entityId: string) {
   if (entityType === 'tool') return ToolService.findById(entityId);
@@ -102,35 +217,51 @@ async function getSingleImageEntity(entityType: SingleImageEntityType, entityId:
 
 async function updateSingleImageEntity(
   entityType: SingleImageEntityType,
-  entity: ToolDoc | CustomerDoc | SupplierDoc | VendorDoc,
+  entity: unknown,
   imageUrl: string,
   deviceId: string,
 ) {
+  const plainEntity = toPlainEntity(entity);
+
   if (entityType === 'tool') {
-    const tool = entity as ToolDoc;
-    tool.img = imageUrl;
-    await ToolService.update(tool, deviceId);
+    const toolUpdate = {
+      ...plainEntity,
+      _id: String(plainEntity._id ?? ''),
+      vendor: getEntityId(plainEntity.vendor),
+      supplier: getEntityId(plainEntity.supplier),
+      img: imageUrl,
+    } as ToolUpdate;
+    await ToolService.update(toolUpdate, deviceId);
     return;
   }
 
   if (entityType === 'customer') {
-    const customer = entity as CustomerDoc;
-    customer.logo = imageUrl;
-    await CustomerService.update(customer, deviceId);
+    const customerUpdate = {
+      ...plainEntity,
+      _id: String(plainEntity._id ?? ''),
+      logo: imageUrl,
+    } as CustomerUpdate;
+    await CustomerService.update(customerUpdate, deviceId);
     return;
   }
 
   if (entityType === 'supplier') {
-    const supplier = entity as SupplierDoc;
-    supplier.logo = imageUrl;
-    await SupplierService.update(supplier, deviceId);
+    const supplierUpdate = {
+      ...plainEntity,
+      _id: String(plainEntity._id ?? ''),
+      logo: imageUrl,
+    } as SupplierUpdate;
+    await SupplierService.update(supplierUpdate, deviceId);
     return;
   }
 
   if (entityType === 'vendor') {
-    const vendor = entity as VendorDoc;
-    vendor.logo = imageUrl;
-    await VendorService.update(vendor, deviceId);
+    const vendorUpdate = {
+      ...plainEntity,
+      _id: String(plainEntity._id ?? ''),
+      logo: imageUrl,
+    } as VendorUpdate;
+    await VendorService.update(vendorUpdate, deviceId);
   }
 }
 
@@ -175,12 +306,7 @@ async function createTempImageFromProcessed(
     deviceId,
   );
 
-  return {
-    id: image._id.toString(),
-    url: `/images/${image.relPath}`,
-    createdAt: image.createdAt.toISOString(),
-    isMain: false,
-  } satisfies MyImageData;
+  return serializeImage(image);
 }
 
 function writeProcessedTempImage(processed: {
@@ -227,12 +353,7 @@ router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (
       req.deviceId,
     );
 
-    const response: MyImageData = {
-      id: image._id.toString(),
-      url: `/images/${image.relPath}`,
-      createdAt: image.createdAt.toISOString(),
-      isMain: false,
-    };
+    const response = serializeImage(image);
 
     res.status(200).json(response);
   } catch (err) {
@@ -243,15 +364,18 @@ router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (
 // Upload a temp image via URL
 router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const { url } = req.body || {};
-  if (!url) return next(new HttpError(400, 'url is required'));
+  const { success, data, error } = UploadUrlRequest.safeParse(req.body);
+  if (!success) {
+    logger.error('Invalid image URL upload request:', error.message);
+    return next(new HttpError(400, 'Invalid image URL upload request'));
+  }
 
   try {
-    const resp = await axios.get(url, { responseType: 'arraybuffer' });
+    const resp = await axios.get(data.url, { responseType: 'arraybuffer' });
     const contentType = resp.headers['content-type'] || 'application/octet-stream';
 
     const fileUuid = randomUUID();
-    const filename = fileUuid + getExtensionForDownload(contentType, url);
+    const filename = fileUuid + getExtensionForDownload(contentType, data.url);
     const filePath = path.join(tempDir, filename);
 
     fs.writeFileSync(filePath, resp.data);
@@ -270,12 +394,7 @@ router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
       req.deviceId,
     );
 
-    const response: MyImageData = {
-      id: image._id.toString(),
-      url: `/images/${image.relPath}`,
-      createdAt: image.createdAt.toISOString(),
-      isMain: false,
-    };
+    const response = serializeImage(image);
 
     res.status(200).json(response);
   } catch (err) {
@@ -288,12 +407,7 @@ router.get('/uploads/temps', async (_req, res, next) => {
   try {
     const images = await ImageService.listTemps();
 
-    const response: MyImageData[] = images.map((image) => ({
-      id: image._id.toString(),
-      url: `/images/${image.relPath}`,
-      createdAt: image.createdAt.toISOString(),
-      isMain: false,
-    }));
+    const response: MyImageData[] = images.map((image) => serializeImage(image));
 
     res.status(200).json(response);
   } catch (err) {
@@ -304,17 +418,12 @@ router.get('/uploads/temps', async (_req, res, next) => {
 router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   const { id } = req.params;
-  const requestedModel: BackgroundRemovalModel | undefined =
-    req.body?.model === 'small' || req.body?.model === 'medium' || req.body?.model === 'large'
-      ? req.body.model
-      : undefined;
-  const requestedBackend: BackgroundRemovalBackend | undefined =
-    req.body?.backend === 'birefnet' ||
-    req.body?.backend === 'imgly' ||
-    req.body?.backend === 'rembg'
-      ? req.body.backend
-      : undefined;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
+  const { success, data, error } = RemoveBackgroundRequest.safeParse(req.body ?? {});
+  if (!success) {
+    logger.error('Invalid remove-background request:', error.message);
+    return next(new HttpError(400, 'Invalid remove background request.'));
+  }
 
   try {
     const image = await ImageService.findById(id);
@@ -326,8 +435,8 @@ router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, re
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
     const processed = await removeImageBackground(sourcePath, {
-      backend: requestedBackend,
-      model: requestedModel,
+      backend: data.backend as BackgroundRemovalBackend | undefined,
+      model: data.model as BackgroundRemovalModel | undefined,
     });
     const response = await createTempImageFromBuffer(processed, req.deviceId);
 
@@ -392,12 +501,7 @@ router.post('/uploads/:id/auto-align', requireKnownDevice, async (req, res, next
       const image = await ImageService.findById(originalImageId);
       if (!image) return next(new HttpError(404, 'Image not found'));
 
-      const response: MyImageData = {
-        id: image._id.toString(),
-        url: `/images/${image.relPath}`,
-        createdAt: image.createdAt.toISOString(),
-        isMain: false,
-      };
+      const response = serializeImage(image);
 
       return res.status(200).json(response);
     }
@@ -410,10 +514,11 @@ router.post('/uploads/:id/auto-align', requireKnownDevice, async (req, res, next
 router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   const { id } = req.params;
-  const requestedStage = Number(req.body?.stage ?? 0);
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
-  if (![1, 2, 3].includes(requestedStage)) {
-    return next(new HttpError(400, 'stage must be 1, 2, or 3'));
+  const { success, data, error } = ProcessStackRequest.safeParse(req.body ?? {});
+  if (!success) {
+    logger.error('Invalid process-stack request:', error.message);
+    return next(new HttpError(400, 'Invalid image processing request.'));
   }
 
   try {
@@ -426,17 +531,9 @@ router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, n
     const sourcePath = path.join(imageDir, image.relPath);
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
-    const processed = await processImageStack(sourcePath, requestedStage as 1 | 2 | 3, {
-      backend:
-        req.body?.backend === 'birefnet' ||
-        req.body?.backend === 'imgly' ||
-        req.body?.backend === 'rembg'
-          ? req.body.backend
-          : null,
-      model:
-        req.body?.model === 'small' || req.body?.model === 'medium' || req.body?.model === 'large'
-          ? req.body.model
-          : null,
+    const processed = await processImageStack(sourcePath, data.stage, {
+      backend: data.backend ?? null,
+      model: data.model ?? null,
     });
     const response = await createTempImageFromBuffer(processed, req.deviceId);
 
@@ -451,10 +548,11 @@ router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, n
 router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   const { id } = req.params;
-  const { direction } = req.body ?? {};
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
-  if (direction !== 'cw' && direction !== 'ccw') {
-    return next(new HttpError(400, 'direction must be cw or ccw'));
+  const { success, data, error } = RotateImageRequest.safeParse(req.body ?? {});
+  if (!success) {
+    logger.error('Invalid rotate request:', error.message);
+    return next(new HttpError(400, 'Invalid image rotation request.'));
   }
 
   try {
@@ -467,7 +565,7 @@ router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) =>
     const sourcePath = path.join(imageDir, image.relPath);
     if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
-    const processed = await rotateImage(sourcePath, direction === 'cw' ? 90 : -90);
+    const processed = await rotateImage(sourcePath, data.direction === 'cw' ? 90 : -90);
     const response = await createTempImageFromBuffer(processed, req.deviceId);
 
     res.status(200).json(response);
@@ -481,12 +579,12 @@ router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) =>
 router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   const { id } = req.params;
-  const { entityType, entityId, setAsMain } = req.body;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
-  if (!['tool', 'part', 'customer', 'supplier', 'vendor'].includes(entityType))
-    return next(new HttpError(400, 'Invalid entityType'));
-  if (!entityId) return next(new HttpError(400, 'entityId required'));
-  if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+  const { success, data, error } = AttachImageRequest.safeParse(req.body ?? {});
+  if (!success) {
+    logger.error('Invalid attach-image request:', error.message);
+    return next(new HttpError(400, 'Invalid image attachment request.'));
+  }
 
   try {
     const image = await ImageService.findById(id);
@@ -496,7 +594,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
     const oldPath = path.join(imageDir, image.relPath);
     if (!fs.existsSync(oldPath)) return next(new HttpError(404, 'File missing on disk'));
 
-    const destDir = path.join(imageDir, `${entityType}s`, String(entityId));
+    const destDir = path.join(imageDir, `${data.entityType}s`, data.entityId);
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
     const destPath = path.join(destDir, image.filename);
@@ -504,45 +602,49 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 
     const newRelPath = path.relative(imageDir, destPath).replace(/\\/g, '/');
 
-    image.relPath = newRelPath;
-    image.status = 'attached';
-    image.entityType = entityType;
-    image.entityId = String(entityId);
-    await ImageService.update(image, req.deviceId);
+    const imageUpdate: ImageUpdate = {
+      ...normalizeImageUpdate(image),
+      relPath: newRelPath,
+      status: 'attached',
+      entityType: data.entityType,
+      entityId: data.entityId,
+    };
+    await ImageService.update(imageUpdate, req.deviceId);
 
     // Update part's imageIds array if entity is a part
-    if (entityType === 'part') {
-      const part = await PartService.findById(entityId);
+    if (data.entityType === 'part') {
+      const part = await PartService.findById(data.entityId);
       if (part) {
-        if (!part.imageIds) part.imageIds = [];
+        const partUpdate = normalizePartMediaUpdate(part);
+        if (!partUpdate.imageIds) partUpdate.imageIds = [];
         const imageStringId = id;
 
         // Remove if already exists (in case of re-attachment)
-        part.imageIds = part.imageIds.filter((imgId) => imgId.toString() !== imageStringId);
+        partUpdate.imageIds = partUpdate.imageIds.filter((imgId) => imgId !== imageStringId);
 
-        if (setAsMain) {
+        if (data.setAsMain) {
           // Insert at beginning if setting as main
-          part.imageIds.unshift(imageStringId);
-          part.img = `/images/${image.relPath}`;
+          partUpdate.imageIds.unshift(imageStringId);
+          partUpdate.img = `/images/${newRelPath}`;
         } else {
           // Append to gallery
-          part.imageIds.push(imageStringId);
+          partUpdate.imageIds.push(imageStringId);
         }
 
-        await PartService.update(part, req.deviceId);
+        await PartService.update(partUpdate, req.deviceId);
       }
     }
 
-    if (singleImageEntityTypes.includes(entityType as SingleImageEntityType)) {
+    if (singleImageEntityTypes.includes(data.entityType as SingleImageEntityType)) {
       const singleImageEntity = await getSingleImageEntity(
-        entityType as SingleImageEntityType,
-        entityId,
+        data.entityType as SingleImageEntityType,
+        data.entityId,
       );
 
       if (singleImageEntity) {
         const priorImages = await ImageService.listByEntity(
-          entityType as SingleImageEntityType,
-          entityId,
+          data.entityType as SingleImageEntityType,
+          data.entityId,
         );
 
         for (const priorImage of priorImages) {
@@ -552,7 +654,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
         }
 
         await updateSingleImageEntity(
-          entityType as SingleImageEntityType,
+          data.entityType as SingleImageEntityType,
           singleImageEntity,
           `/images/${image.relPath}`,
           req.deviceId,
@@ -560,13 +662,11 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
       }
     }
 
-    const response: MyImageData = {
-      id: image._id.toString(),
-      url: `/images/${image.relPath}`,
-      createdAt: image.createdAt.toISOString(),
-      isMain:
-        singleImageEntityTypes.includes(entityType as SingleImageEntityType) || Boolean(setAsMain),
-    };
+    const response = serializeImage(
+      image,
+      singleImageEntityTypes.includes(data.entityType as SingleImageEntityType) ||
+        Boolean(data.setAsMain),
+    );
 
     res.status(200).json(response);
   } catch (err) {
@@ -578,40 +678,36 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 router.post('/:id/promote-to-main', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   const { id } = req.params;
-  const { entityType, entityId } = req.body;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
-  if (!entityType) return next(new HttpError(400, 'entityType required'));
-  if (!entityId) return next(new HttpError(400, 'entityId required'));
-  if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
-  if (entityType !== 'part') return next(new HttpError(400, 'Promote to main is only for parts'));
+  const { success, data, error } = PromoteImageRequest.safeParse(req.body ?? {});
+  if (!success) {
+    logger.error('Invalid promote-image request:', error.message);
+    return next(new HttpError(400, 'Invalid image promotion request.'));
+  }
 
   try {
     const image = await ImageService.findById(id);
     if (!image) return next(new HttpError(404, 'Image not found'));
 
-    const part = await getPartEntity(entityType, entityId);
+    const part = await getPartEntity(data.entityType, data.entityId);
     if (!part) return next(new HttpError(404, 'Part not found'));
 
-    if (!part.imageIds) part.imageIds = [];
+    const partUpdate = normalizePartMediaUpdate(part);
+    if (!partUpdate.imageIds) partUpdate.imageIds = [];
     const imageStringId = id;
 
     // Remove from array if it exists
-    part.imageIds = part.imageIds.filter((imgId) => imgId.toString() !== imageStringId);
+    partUpdate.imageIds = partUpdate.imageIds.filter((imgId) => imgId !== imageStringId);
 
     // Add to beginning (main position)
-    part.imageIds.unshift(imageStringId);
+    partUpdate.imageIds.unshift(imageStringId);
 
     // Update img field to point to this image's path
-    part.img = `/images/${image.relPath}`;
+    partUpdate.img = `/images/${image.relPath}`;
 
-    await PartService.update(part, req.deviceId);
+    await PartService.update(partUpdate, req.deviceId);
 
-    const response: MyImageData = {
-      id: image._id.toString(),
-      url: `/images/${image.relPath}`,
-      createdAt: image.createdAt.toISOString(),
-      isMain: true,
-    };
+    const response = serializeImage(image, true);
 
     res.status(200).json(response);
   } catch (err) {
@@ -640,40 +736,29 @@ router.get('/entities/:entityType/:entityId/images', async (req, res, next) => {
         return;
       }
 
-      const orderedImageIds = part.imageIds.map((imageId) => imageId.toString());
+      const orderedImageIds = part.imageIds.map((imageId: unknown) => String(imageId));
       const mainImageId = orderedImageIds[0] || '';
       const images = await ImageService.listByIds(orderedImageIds);
 
       const imageMap = new Map(images.map((img) => [img._id.toString(), img]));
+      const orderedImages = orderedImageIds
+        .map((imageId: string) => imageMap.get(imageId))
+        .filter((img): img is ImageDoc => Boolean(img));
 
-      response = orderedImageIds
-        .map((imageId) => imageMap.get(imageId))
-        .filter((img): img is NonNullable<typeof img> => Boolean(img))
+      response = orderedImages
         .sort((left, right) => {
           if (left._id.toString() === mainImageId) return -1;
           if (right._id.toString() === mainImageId) return 1;
 
           return left.createdAt.getTime() - right.createdAt.getTime();
         })
-        .map((img) => {
-          return {
-            id: img._id.toString(),
-            url: `/images/${img.relPath}`,
-            createdAt: img.createdAt.toISOString(),
-            isMain: img._id.toString() === mainImageId,
-          };
-        });
+        .map((img) => serializeImage(img, img._id.toString() === mainImageId));
     } else {
       const tool = await getSingleImageEntity('tool', entityId);
       if (!tool) return next(new HttpError(404, 'Tool not found'));
 
       const images = await ImageService.listByEntity('tool', entityId);
-      response = images.map((img, index) => ({
-        id: img._id.toString(),
-        url: `/images/${img.relPath}`,
-        createdAt: img.createdAt.toISOString(),
-        isMain: index === 0,
-      }));
+      response = images.map((img, index) => serializeImage(img, index === 0));
     }
 
     res.status(200).json(response);
@@ -732,12 +817,7 @@ router.post(
         req.deviceId,
       );
 
-      const response: MyImageData = {
-        id: tempImage._id.toString(),
-        url: `/images/${tempImage.relPath}`,
-        createdAt: tempImage.createdAt.toISOString(),
-        isMain: false,
-      };
+      const response = serializeImage(tempImage);
 
       res.status(200).json(response);
     } catch (err) {
@@ -766,23 +846,19 @@ router.post(
       const part = await getPartEntity(entityType, entityId);
       if (!part) return next(new HttpError(404, 'Part not found'));
 
-      if (!part.imageIds) part.imageIds = [];
+      const partUpdate = normalizePartMediaUpdate(part);
+      if (!partUpdate.imageIds) partUpdate.imageIds = [];
       const imageStringId = imageId;
 
       // Check if already added
-      if (part.imageIds.some((imgId) => imgId.toString() === imageStringId))
+      if (partUpdate.imageIds.some((imgId) => imgId === imageStringId))
         return next(new HttpError(400, 'Image already added to part'));
 
       // Append to gallery (don't set as main)
-      part.imageIds.push(imageStringId);
-      await PartService.update(part, req.deviceId);
+      partUpdate.imageIds.push(imageStringId);
+      await PartService.update(partUpdate, req.deviceId);
 
-      const response: MyImageData = {
-        id: image._id.toString(),
-        url: `/images/${image.relPath}`,
-        createdAt: image.createdAt.toISOString(),
-        isMain: false,
-      };
+      const response = serializeImage(image);
 
       res.status(200).json(response);
     } catch (err) {
@@ -856,30 +932,29 @@ router.delete(
       const part = await getPartEntity(entityType, entityId);
       if (!part) return next(new HttpError(404, 'Part not found'));
 
-      if (!part.imageIds) part.imageIds = [];
+      const partUpdate = normalizePartMediaUpdate(part);
+      if (!partUpdate.imageIds) partUpdate.imageIds = [];
 
       const image = await ImageService.findById(imageId);
       if (!image) return next(new HttpError(404, 'Image not found'));
 
-      const imageIdSet = new Set(part.imageIds.map((imgId) => imgId.toString()));
+      const imageIdSet = new Set(partUpdate.imageIds);
       if (!imageIdSet.has(imageId))
         return next(new HttpError(404, 'Image is not attached to this part'));
 
-      const remainingImageIds = part.imageIds
-        .map((id) => id.toString())
-        .filter((id) => id !== imageId);
+      const remainingImageIds = partUpdate.imageIds.filter((id) => id !== imageId);
 
-      part.imageIds = remainingImageIds;
+      partUpdate.imageIds = remainingImageIds;
 
       const nextMainImageId = remainingImageIds[0];
       if (nextMainImageId) {
         const nextMainImage = await ImageService.findById(nextMainImageId);
-        part.img = nextMainImage ? `/images/${nextMainImage.relPath}` : '';
+        partUpdate.img = nextMainImage ? `/images/${nextMainImage.relPath}` : '';
       } else {
-        part.img = '';
+        partUpdate.img = '';
       }
 
-      await PartService.update(part, req.deviceId);
+      await PartService.update(partUpdate, req.deviceId);
 
       const filePath = path.join(imageDir, image.relPath);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -892,7 +967,7 @@ router.delete(
         entityType,
         entityId,
         nextMainImageId: nextMainImageId || '',
-        nextMainImageUrl: part.img || '',
+        nextMainImageUrl: partUpdate.img || '',
       });
     } catch (err) {
       next(new HttpError(500, 'Failed to delete entity image', { cause: err }));

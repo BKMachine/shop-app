@@ -4,13 +4,9 @@ import { imageDir } from '../../../directories.js';
 import logger from '../../../logger.js';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
-import Image from './image_model.js';
+import Image, { type ImageDoc } from './image_model.js';
 
-function isAuditableImage(image: Pick<ImageDoc, 'status' | 'entityType' | 'entityId'> | null) {
-  return Boolean(image && image.status === 'attached' && image.entityType && image.entityId);
-}
-
-async function create(data: unknown, deviceId: string): Promise<ImageDoc> {
+async function create(data: ImageCreate, deviceId: string): Promise<ImageDoc> {
   const doc = new Image(data);
   await doc.save();
   emit('imageUploaded');
@@ -18,7 +14,10 @@ async function create(data: unknown, deviceId: string): Promise<ImageDoc> {
   return doc;
 }
 
-async function update(image: ImageDoc, deviceId: string): Promise<ImageDoc | null> {
+async function update(
+  image: Image | ImageUpdate | ImageDoc,
+  deviceId: string,
+): Promise<ImageDoc | null> {
   const oldImage = await Image.findById(image._id);
   if (!oldImage) throw new Error(`Missing image document id: ${image._id}`);
 
@@ -75,6 +74,20 @@ async function findLatestByEntity(
   return Image.findOne({ entityType, entityId, status: 'attached' }).sort({ createdAt: -1 });
 }
 
+async function remove(id: string, deviceId: string): Promise<boolean> {
+  const result = await Image.findByIdAndDelete(id);
+  if (isAuditableImage(result)) await Audit.addImageAudit(result, null, deviceId);
+  emit('imageDeleted');
+  return result !== null;
+}
+
+async function removeAllTemps(ids: string[], _deviceId: string): Promise<number> {
+  if (!ids.length) return 0;
+  const result = await Image.deleteMany({ _id: { $in: ids }, status: 'temp' });
+  if (result.deletedCount) emit('imageDeleted');
+  return result.deletedCount ?? 0;
+}
+
 async function cleanupExpired(deviceId: string): Promise<{ deleted: number; errors: string[] }> {
   const result = { deleted: 0, errors: [] as string[] };
   try {
@@ -108,22 +121,12 @@ async function cleanupExpired(deviceId: string): Promise<{ deleted: number; erro
   return result;
 }
 
-async function remove(id: string, deviceId: string): Promise<boolean> {
-  const result = await Image.findByIdAndDelete(id);
-  if (isAuditableImage(result)) await Audit.addImageAudit(result, null, deviceId);
-  emit('imageDeleted');
-  return result !== null;
-}
-
-async function removeAllTemps(ids: string[], _deviceId: string): Promise<number> {
-  if (!ids.length) return 0;
-
-  const result = await Image.deleteMany({ _id: { $in: ids }, status: 'temp' });
-  if (result.deletedCount) {
-    emit('imageDeleted');
-  }
-
-  return result.deletedCount ?? 0;
+function isAuditableImage(
+  image: { status?: unknown; entityType?: unknown; entityId?: unknown } | null,
+) {
+  return Boolean(
+    image && image.status === 'attached' && typeof image.entityType === 'string' && image.entityId,
+  );
 }
 
 export default {
@@ -134,7 +137,7 @@ export default {
   listByIds,
   listByEntity,
   findLatestByEntity,
-  cleanupExpired,
   remove,
   removeAllTemps,
+  cleanupExpired,
 };
