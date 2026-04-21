@@ -1,5 +1,15 @@
 import { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
+import type { CustomerDoc } from '../customer/customer_model.js';
+import type { StoredDocumentDoc } from '../document/document_model.js';
+import type { ImageDoc } from '../image/image_model.js';
+import type { MaterialDoc } from '../material/material_model.js';
+import type { PartDoc } from '../part/part_model.js';
+import type { PartNoteDoc } from '../part_note/part_note_model.js';
+import type { EmailReportDoc } from '../report/report_model.js';
+import type { SupplierDoc } from '../supplier/supplier_model.js';
+import type { ToolDoc } from '../tool/tool_model.js';
+import type { VendorDoc } from '../vendor/vendor_model.js';
 import Audit from './audit_model.js';
 
 const hiddenAuditTypes = new Set<Audit['type']>(['image', 'document']);
