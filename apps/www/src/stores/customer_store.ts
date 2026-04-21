@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import api from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
 export const useCustomerStore = defineStore('customers', () => {
@@ -22,7 +23,7 @@ export const useCustomerStore = defineStore('customers', () => {
     await api
       .post<Customer>('/customers', { customer })
       .then(({ data }) => {
-        _customers.value.push(data);
+        upsertCustomer(data);
         toastSuccess('Customer added successfully');
       })
       .catch(() => {
@@ -33,9 +34,8 @@ export const useCustomerStore = defineStore('customers', () => {
   async function update(customer: CustomerUpdate) {
     await api
       .put<Customer>('/customers', { customer })
-      .then(() => {
-        const index = _customers.value.findIndex((x) => x._id === customer._id);
-        if (index > -1) _customers.value[index] = customer;
+      .then(({ data }) => {
+        upsertCustomer(data);
         toastSuccess('Customer updated successfully');
       })
       .catch(() => {
@@ -62,6 +62,16 @@ export const useCustomerStore = defineStore('customers', () => {
         return false;
       });
   }
+
+  function upsertCustomer(customer: Customer) {
+    const index = _customers.value.findIndex((x) => x._id === customer._id);
+    if (index > -1) _customers.value[index] = customer;
+    else _customers.value.push(customer);
+  }
+
+  socket.on('customer', (customer: Customer) => {
+    upsertCustomer(customer);
+  });
 
   return {
     customers,

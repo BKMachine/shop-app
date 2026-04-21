@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import api from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
 export const useSupplierStore = defineStore('suppliers', () => {
@@ -22,7 +23,7 @@ export const useSupplierStore = defineStore('suppliers', () => {
     await api
       .post<Supplier>('/suppliers', { supplier })
       .then(({ data }) => {
-        _suppliers.value.push(data);
+        upsertSupplier(data);
         toastSuccess('Supplier added successfully');
       })
       .catch(() => {
@@ -33,9 +34,8 @@ export const useSupplierStore = defineStore('suppliers', () => {
   async function update(supplier: SupplierUpdate) {
     await api
       .put<Supplier>('/suppliers', { supplier })
-      .then(() => {
-        const index = _suppliers.value.findIndex((x) => x._id === supplier._id);
-        if (index > -1) _suppliers.value[index] = supplier;
+      .then(({ data }) => {
+        upsertSupplier(data);
         toastSuccess('Supplier updated successfully');
       })
       .catch(() => {
@@ -62,6 +62,16 @@ export const useSupplierStore = defineStore('suppliers', () => {
         return false;
       });
   }
+
+  function upsertSupplier(supplier: Supplier) {
+    const index = _suppliers.value.findIndex((x) => x._id === supplier._id);
+    if (index > -1)  _suppliers.value[index] = supplier;
+    else _suppliers.value.push(supplier);
+  }
+
+  socket.on('supplier', (supplier: Supplier) => {
+    upsertSupplier(supplier);
+  });
 
   return {
     _suppliers,

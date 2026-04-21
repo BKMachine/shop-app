@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import api from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
 export const useVendorStore = defineStore('vendors', () => {
@@ -22,7 +23,7 @@ export const useVendorStore = defineStore('vendors', () => {
     await api
       .post<Vendor>('/vendors', { vendor })
       .then(({ data }) => {
-        _vendors.value.push(data);
+        upsertVendor(data);
         toastSuccess('Vendor added successfully!');
       })
       .catch(() => {
@@ -38,9 +39,8 @@ export const useVendorStore = defineStore('vendors', () => {
     }
     await api
       .put<Vendor>('/vendors', { vendor })
-      .then(() => {
-        const index = _vendors.value.findIndex((x) => x._id === vendor._id);
-        if (index > -1) _vendors.value[index] = vendor;
+      .then(({ data }) => {
+        upsertVendor(data);
         toastSuccess('Vendor updated successfully!');
       })
       .catch(() => {
@@ -67,6 +67,16 @@ export const useVendorStore = defineStore('vendors', () => {
         return false;
       });
   }
+
+  function upsertVendor(vendor: Vendor) {
+    const index = _vendors.value.findIndex((x) => x._id === vendor._id);
+    if (index > -1)  _vendors.value[index] = vendor;
+    else _vendors.value.push(vendor);
+  }
+
+  socket.on('vendor', (vendor: Vendor) => {
+    upsertVendor(vendor);
+  });
 
   return {
     vendors,

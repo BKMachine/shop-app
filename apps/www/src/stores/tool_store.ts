@@ -103,7 +103,7 @@ export const useToolStore = defineStore('tools', () => {
     };
 
     await axios.post<Tool>('/tools', { tool: payload }).then(({ data }) => {
-      handleToolMutation(data);
+      upsertTool(data);
     });
   }
 
@@ -115,7 +115,7 @@ export const useToolStore = defineStore('tools', () => {
     };
 
     await axios.put<Tool>('/tools', { tool: payload }).then(({ data }) => {
-      handleToolMutation(data);
+      upsertTool(data);
     });
   }
 
@@ -127,19 +127,14 @@ export const useToolStore = defineStore('tools', () => {
 
   async function pickTool(scanCode: string) {
     await axios.put<Tool>('/tools/pick', { scanCode }).then(({ data }) => {
-      handleToolMutation(data);
+      upsertTool(data);
     });
   }
 
   async function adjustStock(id: string, amount: number) {
     await axios.put<Tool>('/tools/stock', { id, amount }).then(({ data }) => {
-      handleToolMutation(data);
+      upsertTool(data);
     });
-  }
-
-  function replaceToolData(tool: Tool) {
-    const index = tools.value.findIndex((candidate) => candidate._id === tool._id);
-    if (index > -1) tools.value[index] = tool;
   }
 
   const toolUpdateSignal = ref({ id: '' });
@@ -151,13 +146,32 @@ export const useToolStore = defineStore('tools', () => {
     }, 500);
   }
 
-  function handleToolMutation(tool: Tool) {
-    replaceToolData(tool);
+  function upsertTool(tool: Tool) {
+    const index = tools.value.findIndex((candidate) => candidate._id === tool._id);
+    if (index > -1) tools.value[index] = tool;
+    else tools.value.push(tool);
+
     triggerToolUpdateSignal(tool._id);
   }
 
   socket.on('tool', (tool: Tool) => {
-    handleToolMutation(tool);
+    upsertTool(tool);
+  });
+
+  socket.on('vendor', (vendor: Vendor) => {
+    tools.value
+      .filter((tool) => tool.vendor?._id === vendor._id)
+      .forEach((tool) => {
+        tool.vendor = vendor;
+      });
+  });
+
+  socket.on('supplier', (supplier: Supplier) => {
+    tools.value
+      .filter((tool) => tool.supplier?._id === supplier._id)
+      .forEach((tool) => {
+        tool.supplier = supplier;
+      });
   });
 
   return {
