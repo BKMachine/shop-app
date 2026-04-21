@@ -50,7 +50,7 @@
                     :disabled="!isNewMaterial"
                   />
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="3">
                   <v-select
                     v-model="selectedMaterial.type"
                     :disabled="!isNewMaterial"
@@ -60,15 +60,25 @@
                     required
                   />
                 </v-col>
+                <v-col class="d-flex align-center" cols="3">
+                  <v-switch
+                    v-model="selectedMaterial.isMetric"
+                    class="metric-switch"
+                    color="primary"
+                    hide-details
+                    inset
+                    label="Size (mm)"
+                  />
+                </v-col>
               </v-row>
 
               <v-row v-if="selectedMaterial.type === 'Flat'">
                 <v-col cols="4">
                   <v-text-field
-                    v-model.number="selectedMaterial.height"
+                    v-model="heightInput"
                     :disabled="!isNewMaterial"
                     hide-details
-                    label="Height (inches)"
+                    :label="`Height (${crossSectionUnitLabel})`"
                     min="0"
                     required
                     :rules="[requiredRule, numberRequiredRule]"
@@ -78,10 +88,10 @@
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
-                    v-model.number="selectedMaterial.width"
+                    v-model="widthInput"
                     :disabled="!isNewMaterial"
                     hide-details
-                    label="Width (inches)"
+                    :label="`Width (${crossSectionUnitLabel})`"
                     min="0"
                     required
                     :rules="[requiredRule, numberRequiredRule]"
@@ -91,11 +101,11 @@
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
-                    v-model.number="selectedMaterial.wallThickness"
+                    v-model="wallThicknessInput"
                     clearable
                     :disabled="!isNewMaterial"
                     hide-details
-                    label="Wall Thickness"
+                    :label="`Wall Thickness (${crossSectionUnitLabel})`"
                     min="0"
                     required
                     :rules="[numberOptionalRule]"
@@ -108,10 +118,10 @@
               <v-row v-if="selectedMaterial.type === 'Round'">
                 <v-col cols="6">
                   <v-text-field
-                    v-model.number="selectedMaterial.diameter"
+                    v-model="diameterInput"
                     :disabled="!isNewMaterial"
                     hide-details
-                    label="Diameter (inches)"
+                    :label="`Diameter (${crossSectionUnitLabel})`"
                     min="0"
                     required
                     :rules="[requiredRule, numberRequiredRule]"
@@ -121,10 +131,10 @@
                 </v-col>
                 <v-col cols="6">
                   <v-text-field
-                    v-model.number="selectedMaterial.wallThickness"
+                    v-model="wallThicknessInput"
                     :disabled="!isNewMaterial"
                     hide-details
-                    label="Wall Thickness"
+                    :label="`Wall Thickness (${crossSectionUnitLabel})`"
                     min="0"
                     required
                     :rules="[numberOptionalRule]"
@@ -265,6 +275,7 @@ import SupplierSelect from '@/components/SupplierSelect.vue';
 import {
   buildMaterialDescription,
   formatCost,
+  formatCrossSectionDimension,
   formatWeight,
   onlyAllowNumeric,
 } from '@/plugins/utils';
@@ -284,6 +295,7 @@ const defaultMaterial: EditableMaterial = {
   description: '',
   materialType: '',
   type: 'Flat',
+  isMetric: false,
   height: null,
   width: null,
   diameter: null,
@@ -315,6 +327,7 @@ function getSupplierId(supplier: EditableMaterial['supplier']): string | null {
 function toComparableMaterial(material: EditableMaterial | Material) {
   return {
     ...material,
+    isMetric: material.isMetric ?? false,
     supplier: getSupplierId(material.supplier),
   };
 }
@@ -333,6 +346,7 @@ const existsInStore = computed<boolean>(() => {
     if (m._id === material._id) return true;
     if (m.materialType !== material.materialType) return false;
     if (m.type !== material.type) return false;
+    if (Boolean(m.isMetric) !== Boolean(material.isMetric)) return false;
 
     if (material.type === 'Flat') {
       const mDims = [m.height, m.width, m.wallThickness].sort((a, b) => (a ?? 0) - (b ?? 0));
@@ -355,7 +369,7 @@ const existsInStore = computed<boolean>(() => {
 });
 
 function selectMaterial(material: Material) {
-  selectedMaterial.value = { ...material };
+  selectedMaterial.value = { ...material, isMetric: material.isMetric ?? false };
 }
 
 function addNewMaterial() {
@@ -375,6 +389,7 @@ function saveMaterial() {
     description: selectedMaterial.value.description,
     materialType: selectedMaterial.value.materialType,
     type: selectedMaterial.value.type,
+    isMetric: selectedMaterial.value.isMetric ?? false,
     height: selectedMaterial.value.height,
     width: selectedMaterial.value.width,
     diameter: selectedMaterial.value.diameter,
@@ -419,6 +434,52 @@ const description = computed(() => {
   const description = buildMaterialDescription(selectedMaterial.value);
   selectedMaterial.value.description = description;
   return description;
+});
+
+const crossSectionUnitLabel = computed(() => (selectedMaterial.value.isMetric ? 'mm' : 'inches'));
+
+function toCrossSectionDisplayValue(value: number | null): number | null {
+  if (value == null || Number.isNaN(value)) return null;
+  const formatted = formatCrossSectionDimension(value, selectedMaterial.value.isMetric);
+  const parsed = Number.parseFloat(formatted);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function fromCrossSectionDisplayValue(value: unknown): number | null {
+  if (value === '' || value == null) return null;
+
+  const numeric = typeof value === 'number' ? value : Number.parseFloat(String(value));
+  if (!Number.isFinite(numeric)) return null;
+
+  return selectedMaterial.value.isMetric ? numeric / 25.4 : numeric;
+}
+
+const heightInput = computed<number | null>({
+  get: () => toCrossSectionDisplayValue(selectedMaterial.value.height),
+  set: (value) => {
+    selectedMaterial.value.height = fromCrossSectionDisplayValue(value);
+  },
+});
+
+const widthInput = computed<number | null>({
+  get: () => toCrossSectionDisplayValue(selectedMaterial.value.width),
+  set: (value) => {
+    selectedMaterial.value.width = fromCrossSectionDisplayValue(value);
+  },
+});
+
+const diameterInput = computed<number | null>({
+  get: () => toCrossSectionDisplayValue(selectedMaterial.value.diameter),
+  set: (value) => {
+    selectedMaterial.value.diameter = fromCrossSectionDisplayValue(value);
+  },
+});
+
+const wallThicknessInput = computed<number | null>({
+  get: () => toCrossSectionDisplayValue(selectedMaterial.value.wallThickness),
+  set: (value) => {
+    selectedMaterial.value.wallThickness = fromCrossSectionDisplayValue(value);
+  },
 });
 
 const weight = computed(() => {
@@ -469,4 +530,8 @@ const numberOptionalRule = (v: unknown) =>
 </script>
 
 <style scoped>
+.metric-switch {
+  margin-top: 0;
+  margin-bottom: 0;
+}
 </style>

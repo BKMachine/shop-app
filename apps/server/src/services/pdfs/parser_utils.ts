@@ -124,8 +124,14 @@ export function extractDimensionHighlightToken(segment: string): string | null {
 
   const normalizedToken = numericToken.replace(/\s+/g, '-');
   const suffix = value.slice(numericToken.length).trimStart();
+  const rawSuffix = value.slice(numericToken.length);
 
-  return suffix.startsWith('"') ? `${normalizedToken}"` : normalizedToken;
+  if (suffix.startsWith('"')) return `${normalizedToken}"`;
+  if (/^mm\b/i.test(suffix)) {
+    const hasSpaceBeforeUnit = /^\s+mm\b/i.test(rawSuffix);
+    return `${normalizedToken}${hasSpaceBeforeUnit ? ' ' : ''}mm`;
+  }
+  return normalizedToken;
 }
 
 export function extractActualDimensionSegments(line: string): string[] {

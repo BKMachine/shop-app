@@ -7,6 +7,7 @@ type MaterialDocumentFields = Omit<MaterialFields, 'supplier'> & {
 const schema = new Schema<MaterialDocumentFields>({
   description: { type: String, required: true },
   type: { type: String, enum: ['Flat', 'Round'], required: true },
+  isMetric: { type: Boolean, default: false },
   height: { type: Number, default: null },
   width: { type: Number, default: null },
   diameter: { type: Number, default: null },

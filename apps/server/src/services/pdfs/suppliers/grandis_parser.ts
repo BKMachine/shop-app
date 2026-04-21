@@ -1,8 +1,18 @@
 import { extractDimensionHighlightToken, extractPdfDate } from '../parser_utils.js';
 
-const grandis64Regex = /(?:\bTi\b|\bTitanium\b)\s*6\s*(?:AL|Al|al)?\s*[-/]?\s*4V\b/i;
 const GRANDIS_ASSUMED_LENGTH_INCHES = 144;
 const GRANDIS_SUPPLIER_ID = '69c2d236b0d4b0faf02ef132';
+const MILLIMETERS_PER_INCH = 25.4;
+const grandisTitaniumGradeRegex =
+  /\b(?:Ti|Titanium)\b\s*(6\s*(?:AL|Al|al)?\s*[-/]?\s*(?:4V?|7(?:Nb)?))\b/i;
+const grandisMaterialTypeMap: Record<string, string> = {
+  '6-4': '6Al-4V',
+  '6-4v': '6Al-4V',
+  '6al-4v': '6Al-4V',
+  '6-7': '6Al-7Nb',
+  '6-7nb': '6Al-7Nb',
+  '6al-7nb': '6Al-7Nb',
+};
 
 export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
   const extracted = extractPdfDate(text);
@@ -18,14 +28,17 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
     const sizes = text[i + 1] ?? '';
     const amounts = text[i + 2] ?? '';
 
-    const diameterMatch = sizes.match(/\bDia\s*([\d.]+)"/i);
+    const diameterMatch = sizes.match(/\bDia\s*([\d.]+)\s*("|mm)/i);
     const piecesMatch = sizes.match(/-\s*(\d+)\s*pcs\b/i);
     const rateMatch = amounts.match(/\$\s*([\d.]+)\s*\/\s*lb\b/i);
     const weightMatch = amounts.match(/\bNet\s*([\d,.]+)\s*lbs\b/i);
 
     if (!diameterMatch?.[1] || !piecesMatch?.[1] || !rateMatch?.[1] || !weightMatch?.[1]) continue;
 
-    const diameter = Number.parseFloat(diameterMatch[1]);
+    const rawDiameter = Number.parseFloat(diameterMatch[1]);
+    const diameterUnit = diameterMatch[2]?.toLowerCase();
+    const diameter = diameterUnit === 'mm' ? rawDiameter / MILLIMETERS_PER_INCH : rawDiameter;
+    const isMetric = diameterUnit === 'mm';
     const pieces = Number.parseInt(piecesMatch[1], 10);
     const rate = Number.parseFloat(rateMatch[1]);
     const totalWeight = Number.parseFloat(weightMatch[1].replace(/,/g, ''));
@@ -56,6 +69,7 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
     const material: {
       materialType: string;
       type: 'Round' | 'Flat';
+      isMetric: boolean;
       diameter: number | null;
       wallThickness: number | null;
       length: number | null;
@@ -65,6 +79,7 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
     } = {
       materialType,
       type: 'Round',
+      isMetric,
       diameter,
       wallThickness: null,
       length,
@@ -79,7 +94,9 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
       }
     });
 
-    const diameterToken = extractDimensionHighlightToken(`${diameterMatch[1]}"`);
+    const diameterToken = extractDimensionHighlightToken(
+      diameterMatch[0].replace(/^\s*Dia\s*/i, ''),
+    );
     const typeToken = sizes.match(/\bDia\b/i)?.[0] ?? 'Dia';
     const materialTypeToken = extractGrandisMaterialTypeToken(header) ?? materialType;
 
@@ -121,15 +138,30 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
 }
 
 function isGrandisMaterialHeader(line: string): boolean {
-  return grandis64Regex.test(line);
+  return extractGrandisMaterialType(line) !== null;
 }
 
 function extractGrandisMaterialType(header: string): string | null {
-  if (grandis64Regex.test(header)) return '6Al-4V';
-  return null;
+  const grade = extractGrandisGrade(header);
+  return grade ? (grandisMaterialTypeMap[grade] ?? null) : null;
 }
 
 function extractGrandisMaterialTypeToken(header: string): string | null {
-  const token = header.match(/\b6\s*(?:AL|Al|al)?\s*[-/]?\s*4V\b/i)?.[0];
-  return token ?? null;
+  const explicitToken = header.match(/\b6\s*(?:AL|Al|al)?\s*[-/]?\s*(?:4V|7Nb)\b/i)?.[0];
+  if (explicitToken) return explicitToken;
+
+  return header.match(grandisTitaniumGradeRegex)?.[0] ?? null;
+}
+
+function extractGrandisGrade(header: string): string | null {
+  const rawGrade = header.match(grandisTitaniumGradeRegex)?.[1];
+  if (!rawGrade) return null;
+
+  const normalizedGrade = rawGrade.toLowerCase().replace(/\s+/g, '').replace(/\//g, '-');
+  if (normalizedGrade.startsWith('6al-4')) return '6al-4v';
+  if (normalizedGrade.startsWith('6-4')) return normalizedGrade.includes('v') ? '6-4v' : '6-4';
+  if (normalizedGrade.startsWith('6al-7')) return '6al-7nb';
+  if (normalizedGrade.startsWith('6-7')) return normalizedGrade.includes('nb') ? '6-7nb' : '6-7';
+
+  return normalizedGrade;
 }

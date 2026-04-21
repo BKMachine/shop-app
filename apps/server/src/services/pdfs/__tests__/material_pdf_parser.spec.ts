@@ -394,6 +394,7 @@ test('GrandisParser should parse 6AL-4V invoice rows and key Round from Dia', as
       material: expect.objectContaining({
         materialType: '6Al-4V',
         type: 'Round',
+        isMetric: false,
         diameter: 1,
         length: 144,
         supplier: '69c2d236b0d4b0faf02ef132',
@@ -410,6 +411,115 @@ test('GrandisParser should parse 6AL-4V invoice rows and key Round from Dia', as
       { text: 'Dia', label: 'type' },
       { text: '1.0"', label: 'dimension' },
     ]),
+  );
+});
+
+test('GrandisParser should accept mm diameters and normalize to inches', async () => {
+  const text = cleanLines(`
+    Invoice
+    Date
+    4/7/2025
+    Grandis Titanium LLC
+    Item Description Quantity, KG Price Each Amount, USD
+    Ti 6-4 Bars GT#REDACTED-3 Titanium 6Al-4V Bars
+    Dia 25.4mm x R/L - 10 pcs
+    Net 176 lbs x $21.75/lb
+  `);
+
+  const results = await GrandisParser(text);
+
+  expect(results).toHaveLength(1);
+  expect(results[0]).toEqual(
+    expect.objectContaining({
+      unitType: 'lb',
+      rate: 21.75,
+      material: expect.objectContaining({
+        materialType: '6Al-4V',
+        type: 'Round',
+        isMetric: true,
+        diameter: 1,
+        length: 144,
+        supplier: '69c2d236b0d4b0faf02ef132',
+      }),
+    }),
+  );
+
+  expect(results[0]?.lineContext.sizesHighlights).toEqual(
+    expect.arrayContaining([
+      { text: 'Dia', label: 'type' },
+      { text: '25.4mm', label: 'dimension' },
+    ]),
+  );
+});
+
+test('GrandisParser should accept Ti 6-4 shorthand headers with mm diameters', async () => {
+  const text = cleanLines(`
+    Invoice
+    Date
+    4/7/2025
+    Grandis Titanium LLC
+    Item Description Quantity, KG Price Each Amount, USD
+    Ti 6-4 Bars GT#REDACTED-4
+    Dia 25.4mm x R/L - 10 pcs
+    Net 176 lbs x $21.75/lb
+  `);
+
+  const results = await GrandisParser(text);
+
+  expect(results).toHaveLength(1);
+  expect(results[0]).toEqual(
+    expect.objectContaining({
+      material: expect.objectContaining({
+        materialType: '6Al-4V',
+        type: 'Round',
+        isMetric: true,
+        diameter: 1,
+      }),
+    }),
+  );
+
+  expect(results[0]?.lineContext.headerHighlights).toEqual(
+    expect.arrayContaining([{ text: 'Ti 6-4', label: 'materialType' }]),
+  );
+});
+
+test('GrandisParser should map Titanium 6-7 headers to 6Al-7Nb', async () => {
+  const text = cleanLines(`
+    Invoice
+    Date
+    4/7/2025
+    Grandis Titanium LLC
+    Item Description Quantity, KG Price Each Amount, USD
+    Titanium 6-7 Bars GT#REDACTED-5
+    Dia 12 mm x R/L - 27 pcs
+    Net 91 lbs x $12.50/lb
+  `);
+
+  const results = await GrandisParser(text);
+
+  expect(results).toHaveLength(1);
+  expect(results[0]).toEqual(
+    expect.objectContaining({
+      unitType: 'lb',
+      rate: 12.5,
+      material: expect.objectContaining({
+        materialType: '6Al-7Nb',
+        type: 'Round',
+        isMetric: true,
+        diameter: 12 / 25.4,
+      }),
+    }),
+  );
+
+  expect(results[0]?.lineContext.sizesHighlights).toEqual(
+    expect.arrayContaining([
+      { text: 'Dia', label: 'type' },
+      { text: '12 mm', label: 'dimension' },
+    ]),
+  );
+
+  expect(results[0]?.lineContext.headerHighlights).toEqual(
+    expect.arrayContaining([{ text: 'Titanium 6-7', label: 'materialType' }]),
   );
 });
 

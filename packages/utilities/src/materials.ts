@@ -74,6 +74,7 @@ export const materials: MaterialList = {
   '420': { density: 0.279988, category: 'stainless' },
   '440': { density: 0.279627, category: 'stainless' },
   '6Al-4V': { density: 0.160044, category: 'titanium' },
+  '6Al-7Nb': { density: 0.163295, category: 'titanium' },
   Brass: { density: 0.307089, category: 'other' },
   Bronze: { density: 0.317928, category: 'other' },
   Copper: { density: 0.323706, category: 'other' },

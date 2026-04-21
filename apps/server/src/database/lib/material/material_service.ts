@@ -31,7 +31,7 @@ async function update(data: MaterialUpdate, deviceId: string): Promise<MaterialD
 async function findByParsedMaterial(data: Partial<MaterialCreate>): Promise<MaterialDoc | null> {
   if (!data.materialType || !data.type) return null;
 
-  const query = {
+  const normalizedQuery = {
     materialType: data.materialType,
     type: data.type,
     height: data.height ?? null,
@@ -41,7 +41,12 @@ async function findByParsedMaterial(data: Partial<MaterialCreate>): Promise<Mate
     length: data.length ?? null,
   };
 
-  return await Material.findOne(normalizeDimensions(query)).populate('supplier');
+  const query = {
+    ...normalizeDimensions(normalizedQuery),
+    isMetric: data.isMetric ? true : { $ne: true },
+  };
+
+  return await Material.findOne(query).populate('supplier');
 }
 
 async function updateCostPerFoot(

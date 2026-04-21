@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { formatDimension } from '@/plugins/utils';
+import { formatCrossSectionDimension } from '@/plugins/utils';
 
 const props = defineProps<{
   materials: Material[];
@@ -96,17 +96,23 @@ function formatMaterialTitle(material: Material): string {
 }
 
 function formatMaterialSize(material: Material): string {
+  const unit = material.isMetric ? ' mm' : ' in';
+
   if (material.type === 'Flat') {
-    const height = formatDimension(material.height);
-    const width = formatDimension(material.width);
-    const wall = material.wallThickness ? ` × ${formatDimension(material.wallThickness)} wall` : '';
-    return `${height} × ${width}${wall}`;
+    const height = formatCrossSectionDimension(material.height, material.isMetric);
+    const width = formatCrossSectionDimension(material.width, material.isMetric);
+    const wall = material.wallThickness
+      ? ` × ${formatCrossSectionDimension(material.wallThickness, material.isMetric)}${unit} wall`
+      : '';
+    return `${height} × ${width}${unit}${wall}`;
   }
 
   if (material.type === 'Round') {
-    const diameter = formatDimension(material.diameter);
-    const wall = material.wallThickness ? ` × ${formatDimension(material.wallThickness)} wall` : '';
-    return `Ø${diameter}${wall}`;
+    const diameter = formatCrossSectionDimension(material.diameter, material.isMetric);
+    const wall = material.wallThickness
+      ? ` × ${formatCrossSectionDimension(material.wallThickness, material.isMetric)}${unit} wall`
+      : '';
+    return `Ø${diameter}${unit}${wall}`;
   }
 
   return '';

@@ -73,6 +73,17 @@ export function formatDimension(val: number | null | undefined): string {
   return parseFloat(val.toFixed(4)).toString();
 }
 
+const MILLIMETERS_PER_INCH = 25.4;
+
+export function formatCrossSectionDimension(
+  val: number | null | undefined,
+  isMetric = false,
+): string {
+  if (val == null || Number.isNaN(val)) return '';
+  const displayValue = isMetric ? val * MILLIMETERS_PER_INCH : val;
+  return formatDimension(displayValue);
+}
+
 export function formatCost(val: number | null | undefined): string {
   if (val == null || Number.isNaN(val)) return '';
   return val.toFixed(2);
@@ -137,27 +148,34 @@ export function formatCycleLonghand(val: number | string | null | undefined): st
 interface MaterialDescriptionInput {
   type: string;
   materialType: string;
+  isMetric?: boolean;
   wallThickness: number | null;
   height: number | null;
   width: number | null;
   diameter: number | null;
 }
 
+function formatMaterialDimensionToken(value: number | null, isMetric: boolean): string {
+  const formatted = formatCrossSectionDimension(value, isMetric);
+  return formatted ? `${formatted}${isMetric ? 'mm' : '"'}` : '';
+}
+
 export function buildMaterialDescription<T extends MaterialDescriptionInput>(material: T): string {
   if (!material.type || !material.materialType) return '';
 
   const type = material.wallThickness ? 'Tubing' : 'Bar';
+  const isMetric = material.isMetric ?? false;
   let description = '';
 
   if (material.type === 'Flat') {
     const materialInfo = material.wallThickness
-      ? `${material.height}" x ${material.width}" x ${material.wallThickness}"`
-      : `${material.height}" x ${material.width}"`;
+      ? `${formatMaterialDimensionToken(material.height, isMetric)} x ${formatMaterialDimensionToken(material.width, isMetric)} x ${formatMaterialDimensionToken(material.wallThickness, isMetric)}`
+      : `${formatMaterialDimensionToken(material.height, isMetric)} x ${formatMaterialDimensionToken(material.width, isMetric)}`;
     description = `${material.materialType} Flat ${type} - ${materialInfo}`;
   } else if (material.type === 'Round') {
     const diameterInfo = material.wallThickness
-      ? `${material.diameter}" ⌀ x ${material.wallThickness}"`
-      : `${material.diameter}" ⌀`;
+      ? `${formatMaterialDimensionToken(material.diameter, isMetric)} ⌀ x ${formatMaterialDimensionToken(material.wallThickness, isMetric)}`
+      : `${formatMaterialDimensionToken(material.diameter, isMetric)} ⌀`;
     description = `${material.materialType} Round ${type} - ${diameterInfo}`;
   } else {
     description = `${material.materialType}`;

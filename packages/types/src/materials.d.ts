@@ -2,6 +2,7 @@ declare global {
   interface MaterialFields {
     description: string;
     type: 'Flat' | 'Round';
+    isMetric: boolean;
     height: number | null;
     width: number | null;
     diameter: number | null;

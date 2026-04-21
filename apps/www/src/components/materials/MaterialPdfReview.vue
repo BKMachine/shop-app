@@ -293,7 +293,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import api from '@/plugins/axios';
-import { buildMaterialDescription } from '@/plugins/utils';
+import { buildMaterialDescription, formatCrossSectionDimension } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useMaterialsStore } from '@/stores/materials_store';
 
@@ -478,9 +478,16 @@ function materialTitle(result: MaterialParsePreview): string {
   const m = result.parsed.material;
   const mType = m.materialType ?? 'Unknown';
   const type = m.type ?? 'Unknown';
+
+  const dimensionUnit = m.isMetric ? 'mm' : '';
+  const height = formatCrossSectionDimension(m.height, m.isMetric);
+  const width = formatCrossSectionDimension(m.width, m.isMetric);
+  const diameter = formatCrossSectionDimension(m.diameter, m.isMetric);
+  const wall = formatCrossSectionDimension(m.wallThickness, m.isMetric);
+
   return type === 'Flat'
-    ? `${mType} Flat  ${m.height ?? '?'} × ${m.width ?? '?'} × ${m.length ?? '?'}`
-    : `${mType} Round  ⌀${m.diameter ?? '?'}${m.wallThickness ? ` × ${m.wallThickness}` : ''} × ${m.length ?? '?'}`;
+    ? `${mType} Flat  ${height || '?'}${dimensionUnit} × ${width || '?'}${dimensionUnit} × ${m.length ?? '?'}`
+    : `${mType} Round  ⌀${diameter || '?'}${dimensionUnit}${wall ? ` × ${wall}${dimensionUnit}` : ''} × ${m.length ?? '?'}`;
 }
 
 function formatMoney(value: number | null): string {
@@ -531,6 +538,7 @@ function buildMaterialFromParsedResult(result: MaterialParsePreview): MaterialCr
     description: '',
     materialType: parsedMaterial.materialType,
     type: parsedMaterial.type,
+    isMetric: parsedMaterial.isMetric ?? false,
     height: parsedMaterial.height ?? null,
     width: parsedMaterial.width ?? null,
     diameter: parsedMaterial.diameter ?? null,

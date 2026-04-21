@@ -15,6 +15,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const MaterialFieldsSchema = z.strictObject({
   description: z.string(),
   type: z.enum(['Round', 'Flat']),
+  isMetric: z.boolean(),
   height: z.number().nullable(),
   width: z.number().nullable(),
   diameter: z.number().nullable(),
