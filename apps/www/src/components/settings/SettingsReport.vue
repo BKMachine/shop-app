@@ -94,21 +94,21 @@
                   role="group"
                 >
                   <v-checkbox
-                    v-model="email.tooling.to"
                     class="report-settings__checkbox"
                     color="primary"
                     density="compact"
                     hide-details
-                    @update:model-value="saveEmail(email)"
+                    :model-value="email.tooling.to"
+                    @update:model-value="updateToolingTo(email, Boolean($event))"
                   />
 
                   <v-checkbox
-                    v-model="email.tooling.cc"
                     class="report-settings__checkbox"
                     color="secondary"
                     density="compact"
                     hide-details
-                    @update:model-value="saveEmail(email)"
+                    :model-value="email.tooling.cc"
+                    @update:model-value="updateToolingCc(email, Boolean($event))"
                   />
                 </div>
               </td>
@@ -117,7 +117,7 @@
                   color="error"
                   icon="mdi-delete-outline"
                   variant="text"
-                  @click="deleteEmail(email)"
+                  @click="confirmDeleteEmail(email)"
                 />
               </td>
             </tr>
@@ -134,11 +134,23 @@
         </p>
       </v-card-text>
     </v-card>
+
+    <ConfirmDialog
+      v-model="deleteConfirmVisible"
+      confirm-text="Delete"
+      :loading="Boolean(deleteTarget && deletePendingId === deleteTarget._id)"
+      title="Delete Recipient?"
+      @confirm="deleteConfirmedEmail"
+    >
+      This will permanently remove {{ deleteTarget?.email || 'this email recipient' }} from report
+      delivery.
+    </ConfirmDialog>
   </v-card>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import api from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
@@ -146,6 +158,9 @@ const emails = ref<EmailReport[]>([]);
 const draftEmail = ref('');
 const loading = ref(false);
 const addPending = ref(false);
+const deletePendingId = ref('');
+const deleteConfirmVisible = ref(false);
+const deleteTarget = ref<EmailReport | null>(null);
 
 const recipientCount = computed(() => emails.value.length);
 const toCount = computed(() => emails.value.filter((email) => email.tooling.to).length);
@@ -222,7 +237,7 @@ async function addEmail() {
       report: {
         email,
         tooling: {
-          to: false,
+          to: toCount.value === 0,
           cc: false,
         },
       },
@@ -240,13 +255,48 @@ async function addEmail() {
   }
 }
 
-async function deleteEmail(email: EmailReport) {
+async function updateToolingTo(email: EmailReport, nextValue: boolean) {
+  if (!nextValue && isOnlyToolingTo(email._id)) {
+    toastError('Tooling report must have at least one To recipient.');
+    return;
+  }
+
+  email.tooling.to = nextValue;
+  await saveEmail(email);
+}
+
+async function updateToolingCc(email: EmailReport, nextValue: boolean) {
+  email.tooling.cc = nextValue;
+  await saveEmail(email);
+}
+
+function confirmDeleteEmail(email: EmailReport) {
+  if (isOnlyToolingTo(email._id)) {
+    toastError('Tooling report must have at least one To recipient.');
+    return;
+  }
+
+  deleteTarget.value = email;
+  deleteConfirmVisible.value = true;
+}
+
+async function deleteConfirmedEmail() {
+  if (!deleteTarget.value) return;
+
+  const emailId = deleteTarget.value._id;
+
+  deletePendingId.value = emailId;
+
   try {
-    await api.delete(`/reports/${email._id}`);
-    emails.value = emails.value.filter((candidate) => candidate._id !== email._id);
+    await api.delete(`/reports/${emailId}`);
+    emails.value = emails.value.filter((candidate) => candidate._id !== emailId);
+    deleteConfirmVisible.value = false;
+    deleteTarget.value = null;
     toastSuccess('Recipient removed.');
   } catch {
     toastError('Unable to remove report recipient.');
+  } finally {
+    deletePendingId.value = '';
   }
 }
 
@@ -265,6 +315,12 @@ function normalizeEmailAddress(value: string) {
   return String(value ?? '')
     .trim()
     .toLowerCase();
+}
+
+function isOnlyToolingTo(emailId: string) {
+  return (
+    toCount.value === 1 && emails.value.some((email) => email._id === emailId && email.tooling.to)
+  );
 }
 
 function isValidEmail(value: string) {
