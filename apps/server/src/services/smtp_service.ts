@@ -51,7 +51,12 @@ async function reorders() {
     return a.supplier.name > b.supplier.name ? 1 : -1;
   });
 
-  let html = '';
+  const totalCost = sorted.reduce(
+    (sum, tool) => sum + Number(tool.cost) * Number(tool.reorderQty),
+    0,
+  );
+
+  let html = `<p style="color: #c62828; font-size: 18px; font-weight: 700; margin: 0;">Estimated Total: ${formatCurrency(totalCost)}</p><br><br>`;
   let supplier: string;
   let vendor: string;
   sorted.forEach((x) => {
@@ -113,6 +118,12 @@ async function getReportRecipients(): Promise<{ to: string[]; cc: string[] }> {
     cc: [...cc],
   };
 }
+-function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value);
+};
 
 export default {
   reorders,
