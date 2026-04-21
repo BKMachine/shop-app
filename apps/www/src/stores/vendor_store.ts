@@ -70,7 +70,7 @@ export const useVendorStore = defineStore('vendors', () => {
 
   function upsertVendor(vendor: Vendor) {
     const index = _vendors.value.findIndex((x) => x._id === vendor._id);
-    if (index > -1)  _vendors.value[index] = vendor;
+    if (index > -1) _vendors.value[index] = vendor;
     else _vendors.value.push(vendor);
   }
 

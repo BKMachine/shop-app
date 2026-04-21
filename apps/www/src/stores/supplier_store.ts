@@ -65,7 +65,7 @@ export const useSupplierStore = defineStore('suppliers', () => {
 
   function upsertSupplier(supplier: Supplier) {
     const index = _suppliers.value.findIndex((x) => x._id === supplier._id);
-    if (index > -1)  _suppliers.value[index] = supplier;
+    if (index > -1) _suppliers.value[index] = supplier;
     else _suppliers.value.push(supplier);
   }
 

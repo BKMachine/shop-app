@@ -38,7 +38,7 @@ export const useMaterialsStore = defineStore('materials', () => {
 
   function upsertMaterial(material: Material) {
     const index = _materials.value.findIndex((x) => x._id === material._id);
-    if (index > -1)  _materials.value[index] = material;
+    if (index > -1) _materials.value[index] = material;
     else _materials.value.push(material);
   }
 
