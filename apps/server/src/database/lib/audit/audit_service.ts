@@ -8,7 +8,7 @@ import type { PartDoc } from '../part/part_model.js';
 import type { PartNoteDoc } from '../part_note/part_note_model.js';
 import type { EmailReportDoc } from '../report/report_model.js';
 import type { SupplierDoc } from '../supplier/supplier_model.js';
-import type { ToolDoc } from '../tool/tool_model.js';
+import type { ToolDoc, ToolPopulatedDoc } from '../tool/tool_model.js';
 import type { VendorDoc } from '../vendor/vendor_model.js';
 import Audit from './audit_model.js';
 
@@ -63,8 +63,8 @@ async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Pr
 }
 
 async function addToolAudit(
-  oldTool: ToolDoc | null,
-  newTool: ToolDoc,
+  oldTool: ToolDoc | ToolPopulatedDoc | null,
+  newTool: ToolDoc | ToolPopulatedDoc,
   deviceId: string,
 ): Promise<void> {
   await addAudit('tool', oldTool, newTool, deviceId);

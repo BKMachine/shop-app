@@ -1,7 +1,7 @@
 import { emit } from '../../../server/sockets.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Audit from '../audit/audit_service.js';
-import Tool, { type ToolDoc } from './tool_model.js';
+import Tool, { type ToolDoc, type ToolPopulatedDoc } from './tool_model.js';
 
 const validSortFields = new Set([
   'description',
@@ -64,10 +64,9 @@ function getSortDirection(filters: ToolListFilters): 1 | -1 {
   return filters.order === 'desc' ? -1 : 1;
 }
 
-function getSortValue(tool: ToolDoc, field: string): string | number {
+function getSortValue(tool: ToolPopulatedDoc, field: string): string | number {
   if (field === 'vendor.name') {
-    const vendor = tool.vendor as Vendor | undefined;
-    return vendor?.name ?? '';
+    return tool.vendor?.name ?? '';
   }
 
   const value = (tool as unknown as Record<string, unknown>)[field];
@@ -76,7 +75,12 @@ function getSortValue(tool: ToolDoc, field: string): string | number {
   return '';
 }
 
-function compareTools(left: ToolDoc, right: ToolDoc, field: string, direction: 1 | -1): number {
+function compareTools(
+  left: ToolPopulatedDoc,
+  right: ToolPopulatedDoc,
+  field: string,
+  direction: 1 | -1,
+): number {
   const leftValue = getSortValue(left, field);
   const rightValue = getSortValue(right, field);
 
@@ -103,7 +107,9 @@ async function list(filters: ToolListFilters = {}): Promise<ToolListDocs> {
   const direction = getSortDirection(filters);
 
   if (sortField === 'vendor.name') {
-    const items = (await Tool.find(query).populate('vendor').populate('supplier')) as ToolDoc[];
+    const items = (await Tool.find(query)
+      .populate<{ vendor?: Vendor | null }>('vendor')
+      .populate<{ supplier?: Supplier | null }>('supplier')) as ToolPopulatedDoc[];
     const sortedItems = [...items].sort((left, right) =>
       compareTools(left, right, sortField, direction),
     );
@@ -118,15 +124,15 @@ async function list(filters: ToolListFilters = {}): Promise<ToolListDocs> {
     };
   }
 
-  const [items, total] = await Promise.all([
+  const [items, total] = (await Promise.all([
     Tool.find(query)
       .sort({ [sortField]: direction })
       .skip(offset)
       .limit(limit)
-      .populate('vendor')
-      .populate('supplier'),
+      .populate<{ vendor?: Vendor | null }>('vendor')
+      .populate<{ supplier?: Supplier | null }>('supplier'),
     Tool.countDocuments(query),
-  ]);
+  ])) as [ToolPopulatedDoc[], number];
 
   return {
     items,
@@ -137,25 +143,29 @@ async function list(filters: ToolListFilters = {}): Promise<ToolListDocs> {
   };
 }
 
-async function findById(id: string): Promise<ToolDoc | null> {
-  return Tool.findById(id).populate('vendor').populate('supplier');
+async function findById(id: string): Promise<ToolPopulatedDoc | null> {
+  return Tool.findById(id)
+    .populate<{ vendor?: Vendor | null }>('vendor')
+    .populate<{ supplier?: Supplier | null }>('supplier');
 }
 
-async function findByScanCode(scanCode: string): Promise<ToolDoc | null> {
+async function findByScanCode(scanCode: string): Promise<ToolPopulatedDoc | null> {
   return Tool.findOne({
     $or: [{ item: scanCode }, { barcode: scanCode }],
   })
-    .populate('vendor')
-    .populate('supplier');
+    .populate<{ vendor?: Vendor | null }>('vendor')
+    .populate<{ supplier?: Supplier | null }>('supplier');
 }
 
-async function getAutoReorders(): Promise<ToolDoc[]> {
+async function getAutoReorders(): Promise<ToolPopulatedDoc[]> {
   return Tool.find({
     $expr: { $lte: ['$stock', '$reorderThreshold'] },
     autoReorder: true,
+    vendor: { $ne: null },
+    supplier: { $ne: null },
   })
-    .populate('vendor')
-    .populate('supplier');
+    .populate<{ vendor?: Vendor | null }>('vendor')
+    .populate<{ supplier?: Supplier | null }>('supplier');
 }
 
 async function create(data: ToolCreate, deviceId: string): Promise<ToolDoc> {
@@ -166,14 +176,14 @@ async function create(data: ToolCreate, deviceId: string): Promise<ToolDoc> {
   return tool;
 }
 
-async function update(newTool: ToolUpdate, deviceId: string): Promise<ToolDoc | null> {
+async function update(newTool: ToolUpdate, deviceId: string): Promise<ToolPopulatedDoc | null> {
   const id = newTool._id;
   const oldTool: ToolDoc | null = await Tool.findById(id);
   if (!oldTool) throw new Error(`Missing tool document id: ${id}`);
   const computedTool = computedToolChanges(oldTool, newTool);
   const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { returnDocument: 'after' })
-    .populate('vendor')
-    .populate('supplier');
+    .populate<{ vendor?: Vendor | null }>('vendor')
+    .populate<{ supplier?: Supplier | null }>('supplier');
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   emit('tool', updatedTool);
   await Audit.addToolAudit(oldTool, updatedTool, deviceId);
@@ -183,7 +193,7 @@ async function update(newTool: ToolUpdate, deviceId: string): Promise<ToolDoc | 
 async function pick(
   scanCode: string,
   deviceId: string,
-): Promise<{ status: number; tool: ToolDoc | null }> {
+): Promise<{ status: number; tool: ToolPopulatedDoc | null }> {
   const oldTool = await findByScanCode(scanCode);
   if (!oldTool) return { status: 404, tool: null };
   if (oldTool.stock <= 0) return { status: 400, tool: oldTool };
@@ -194,8 +204,8 @@ async function pick(
 
   const computedTool = computedToolChanges(oldTool, newTool);
   const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { returnDocument: 'after' })
-    .populate('vendor')
-    .populate('supplier');
+    .populate<{ vendor?: Vendor | null }>('vendor')
+    .populate<{ supplier?: Supplier | null }>('supplier');
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   emit('tool', updatedTool);
   await Audit.addToolAudit(oldTool, updatedTool, deviceId);
@@ -206,7 +216,7 @@ async function stock(
   id: string,
   amount: number,
   deviceId: string,
-): Promise<{ status: number; tool: ToolDoc | null }> {
+): Promise<{ status: number; tool: ToolPopulatedDoc | null }> {
   const oldTool = await Tool.findById(id);
   if (!oldTool) return { status: 404, tool: null };
   if (oldTool.stock + amount < 0) return { status: 400, tool: null };
@@ -216,8 +226,8 @@ async function stock(
 
   const computedTool = computedToolChanges(oldTool, newTool);
   const updatedTool = await Tool.findByIdAndUpdate(id, computedTool, { returnDocument: 'after' })
-    .populate('vendor')
-    .populate('supplier');
+    .populate<{ vendor?: Vendor | null }>('vendor')
+    .populate<{ supplier?: Supplier | null }>('supplier');
   if (!updatedTool) throw new Error(`Unable to update tool document id: ${id}`);
   emit('tool', updatedTool);
   await Audit.addToolAudit(oldTool, updatedTool, deviceId);
@@ -230,7 +240,7 @@ function computedToolChanges<
     orderedOn?: string;
     stock: number;
   },
->(oldTool: ToolDoc, newTool: T): T {
+>(oldTool: Pick<ToolFields, 'onOrder' | 'stock'>, newTool: T): T {
   // Set the orderedOn date if onOrder is newly set to true
   if (newTool.onOrder && !oldTool.onOrder) newTool.orderedOn = new Date().toISOString();
   // Assume if the current stock has increased that the order has been fulfilled

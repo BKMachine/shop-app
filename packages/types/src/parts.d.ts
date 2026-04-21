@@ -1,36 +1,42 @@
-import type { Document, Types } from 'mongoose';
-
 declare global {
-  interface Part {
-    _id: string;
-    customer: Customer;
+  interface PartFields {
+    customer: string;
     part: string;
     description: string;
     stock: number;
     location?: string;
     position?: string;
-    img?: string;
     productLink?: string;
     partFilesPath?: string;
     revision?: string;
-    material?: Material;
+    material?: string | null;
     customerSuppliedMaterial?: boolean;
     materialCutType: 'blanks' | 'bars';
     materialLength: number;
     barLength: number;
     remnantLength: number;
-    createdAt: Date;
     cycleTimes: CycleTimes[];
     additionalCosts: AdditionalCost[];
     price: number;
     subComponentIds?: PartSubComponent[];
+  }
+
+  interface Part extends Omit<PartFields, 'customer' | 'material'> {
+    _id: string;
+    customer: Customer;
+    material?: Material;
+    img?: string;
+    createdAt: Date;
     imageIds?: string[];
     documentIds?: string[];
     derived?: PartDerived;
   }
 
-  interface PartDoc extends Omit<Part, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface PartCreate extends PartFields {}
+
+  interface PartUpdate extends PartFields {
+    _id: string;
+    __v?: number;
   }
 
   interface PartDerived {

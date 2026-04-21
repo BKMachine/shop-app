@@ -125,15 +125,55 @@ export const usePartStore = defineStore('parts', () => {
     lastId.value = id;
   }
 
-  async function add(part: Part) {
-    await axios.post<Part>('/parts', { data: part }).then(({ data }) => {
+  function getRelatedEntityId(value: string | { _id: string } | undefined | null) {
+    if (!value) return undefined;
+    return typeof value === 'string' ? value : value._id;
+  }
+
+  function toPartCreatePayload(part: Part | PartCreate): PartCreate {
+    return {
+      customer: getRelatedEntityId(part.customer) ?? '',
+      part: part.part,
+      description: part.description,
+      stock: part.stock,
+      location: part.location,
+      position: part.position,
+      productLink: part.productLink,
+      partFilesPath: part.partFilesPath,
+      revision: part.revision,
+      material: getRelatedEntityId(part.material),
+      customerSuppliedMaterial: part.customerSuppliedMaterial,
+      materialCutType: part.materialCutType,
+      materialLength: part.materialLength,
+      barLength: part.barLength,
+      remnantLength: part.remnantLength,
+      cycleTimes: part.cycleTimes,
+      additionalCosts: part.additionalCosts,
+      price: part.price,
+      subComponentIds: (part.subComponentIds || []).map((subComponent) => ({
+        partId: String(subComponent.partId),
+        qty: Math.max(1, Number(subComponent.qty) || 1),
+      })),
+    };
+  }
+
+  function toPartUpdatePayload(part: Part | PartUpdate): PartUpdate {
+    return {
+      ...toPartCreatePayload(part),
+      _id: part._id,
+      __v: '__v' in part ? part.__v : undefined,
+    };
+  }
+
+  async function add(part: Part | PartCreate) {
+    await axios.post<Part>('/parts', { data: toPartCreatePayload(part) }).then(({ data }) => {
       parts.value.push(data);
       refreshListIfLoaded();
     });
   }
 
-  async function update(part: Part) {
-    await axios.put<Part>('/parts', { data: part }).then(({ data }) => {
+  async function update(part: Part | PartUpdate) {
+    await axios.put<Part>('/parts', { data: toPartUpdatePayload(part) }).then(({ data }) => {
       const index = parts.value.findIndex((x) => x._id === data._id);
       if (index > -1) parts.value[index] = data;
       refreshListIfLoaded();
@@ -286,6 +326,22 @@ export const usePartStore = defineStore('parts', () => {
 
   socket.on('part', (part: Part) => {
     SOCKET_part(part);
+  });
+
+  socket.on('customer', (customer: Customer) => {
+    parts.value
+      .filter((part) => part.customer?._id === customer._id)
+      .forEach((part) => {
+        part.customer = customer;
+      });
+  });
+
+  socket.on('material', (material: Material) => {
+    parts.value
+      .filter((part) => part.material?._id === material._id)
+      .forEach((part) => {
+        part.material = material;
+      });
   });
 
   return {

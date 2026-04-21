@@ -412,7 +412,7 @@ const subComponentMaterialRows = computed(() => {
 const selectedMaterialLength = computed(() => {
   if (!props.part.material) return 0;
   if (typeof props.part.material !== 'string') return props.part.material.length || 0;
-  const material = materialsStore.materials.find((x) => x._id === props.part.material);
+  const material = materialsStore.materials.find((x) => x._id === props.part.material?._id);
   return material?.length || 0;
 });
 
@@ -514,7 +514,7 @@ const wasteDetails = computed(() => {
 
 function assignMaterial() {
   if (!props.part.material) return;
-  const material = materialsStore.materials.find((x) => x._id === props.part.material);
+  const material = materialsStore.materials.find((x) => x._id === props.part.material?._id);
   if (!material) return;
   props.part.material = material;
 }

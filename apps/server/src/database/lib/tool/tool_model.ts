@@ -5,6 +5,11 @@ type ToolDocumentFields = Omit<ToolFields, 'vendor' | 'supplier'> & {
   supplier?: Types.ObjectId;
 };
 
+type ToolPopulatedFields = Omit<ToolDocumentFields, 'vendor' | 'supplier'> & {
+  vendor?: Vendor | null;
+  supplier?: Supplier | null;
+};
+
 const schema = new Schema<ToolDocumentFields>({
   description: { type: String, required: true },
   vendor: { type: Types.ObjectId, ref: 'vendors' },
@@ -34,3 +39,4 @@ const schema = new Schema<ToolDocumentFields>({
 
 export default model<ToolDocumentFields>('tools', schema);
 export type ToolDoc = HydratedDocument<ToolDocumentFields>;
+export type ToolPopulatedDoc = HydratedDocument<ToolPopulatedFields>;

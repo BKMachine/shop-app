@@ -6,8 +6,133 @@ import {
 import { emit } from '../../../server/sockets.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Audit from '../audit/audit_service.js';
-import Material from '../material/material_model.js';
-import Part from './part_model.js';
+import MaterialModel from '../material/material_model.js';
+import Part, { type PartDoc } from './part_model.js';
+
+type PartMutation = Part | PartUpdate | PartDoc;
+
+function toPlainPart(part: unknown): Record<string, unknown> {
+  if (part && typeof part === 'object' && 'toObject' in part) {
+    const maybeDoc = part as { toObject?: () => unknown };
+    if (typeof maybeDoc.toObject === 'function') {
+      return maybeDoc.toObject() as Record<string, unknown>;
+    }
+  }
+
+  return part as unknown as Record<string, unknown>;
+}
+
+function getCustomerName(value: unknown): string {
+  if (!value || typeof value !== 'object') return '';
+  if ('name' in value) {
+    const name = (value as { name?: unknown }).name;
+    return typeof name === 'string' ? name : '';
+  }
+
+  return '';
+}
+
+function getEntityId(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && '_id' in value) {
+    return String((value as { _id: unknown })._id);
+  }
+  if (typeof value === 'object' && value !== null && 'toString' in value) {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function normalizeIdArray(values: unknown): string[] | undefined {
+  if (!Array.isArray(values)) return undefined;
+
+  return values
+    .map((value) => getEntityId(value))
+    .filter((value): value is string => Boolean(value));
+}
+
+async function resolveMaterial(material: unknown): Promise<Material | null> {
+  const materialId = getEntityId(material);
+  if (!materialId) return null;
+
+  if (material && typeof material === 'object' && 'costPerFoot' in material) {
+    return material as Material;
+  }
+
+  const loadedMaterial = await MaterialModel.findById(materialId).lean();
+  if (!loadedMaterial) return null;
+
+  return {
+    ...loadedMaterial,
+    _id: loadedMaterial._id.toString(),
+  } as unknown as Material;
+}
+
+async function buildDerivedPartCandidate(part: unknown): Promise<Part> {
+  const plainPart = toPlainPart(part) as Partial<Part>;
+
+  return {
+    ...(plainPart as Part),
+    _id: typeof plainPart._id === 'string' ? plainPart._id : String(plainPart._id ?? ''),
+    customer: (plainPart.customer as Customer) ?? ({} as Customer),
+    material: (await resolveMaterial(plainPart.material)) ?? undefined,
+    part: plainPart.part ?? '',
+    description: plainPart.description ?? '',
+    stock: Number(plainPart.stock) || 0,
+    materialCutType: plainPart.materialCutType === 'bars' ? 'bars' : 'blanks',
+    materialLength: Number(plainPart.materialLength) || 0,
+    barLength: Number(plainPart.barLength) || 0,
+    remnantLength: Number(plainPart.remnantLength) || 0,
+    createdAt:
+      plainPart.createdAt instanceof Date
+        ? plainPart.createdAt
+        : new Date(plainPart.createdAt ?? Date.now()),
+    cycleTimes: plainPart.cycleTimes ?? [],
+    additionalCosts: plainPart.additionalCosts ?? [],
+    price: Number(plainPart.price) || 0,
+    subComponentIds: normalizeSubComponentIds(plainPart.subComponentIds),
+    imageIds: normalizeIdArray(plainPart.imageIds),
+    documentIds: normalizeIdArray(plainPart.documentIds),
+  };
+}
+
+async function buildPersistencePayload(
+  part: unknown,
+  directParentCount: number,
+  preserveManagedMediaFields = false,
+  existingPart?: PartDoc | null,
+) {
+  const plainPart = toPlainPart(part) as Partial<Part>;
+  const derivedCandidate = await buildDerivedPartCandidate(part);
+  await calculateDerivedPartProperties(derivedCandidate);
+
+  return {
+    ...plainPart,
+    customer: getEntityId(plainPart.customer),
+    material: getEntityId(plainPart.material) ?? null,
+    createdAt:
+      plainPart.createdAt instanceof Date
+        ? plainPart.createdAt
+        : plainPart.createdAt
+          ? new Date(plainPart.createdAt)
+          : (existingPart?.createdAt ?? new Date()),
+    subComponentIds: derivedCandidate.subComponentIds,
+    derived: {
+      shopRate: Number(derivedCandidate.derived?.shopRate) || 0,
+      directSubComponentCount: Number(derivedCandidate.derived?.directSubComponentCount) || 0,
+      directParentCount,
+    },
+    img: preserveManagedMediaFields ? existingPart?.img : plainPart.img,
+    imageIds: preserveManagedMediaFields
+      ? existingPart?.imageIds
+      : normalizeIdArray(plainPart.imageIds),
+    documentIds: preserveManagedMediaFields
+      ? existingPart?.documentIds
+      : normalizeIdArray(plainPart.documentIds),
+  };
+}
 
 const validSortFields = new Set([
   'part',
@@ -32,10 +157,7 @@ function normalizeSubComponentIds(subComponentIds: unknown): PartSubComponent[] 
       };
     }
 
-    return {
-      partId: String(entry),
-      qty: 1,
-    };
+    return { partId: String(entry), qty: 1 };
   });
 
   return normalized.filter(
@@ -55,52 +177,14 @@ function normalizeSortField(field?: string): string {
   return field;
 }
 
-function getPartId(value: unknown): string {
-  return String(value);
-}
-
-function toPlainPart(part: Part): Part {
-  if (
-    part &&
-    typeof part === 'object' &&
-    'toObject' in part &&
-    typeof part.toObject === 'function'
-  ) {
-    return (part as unknown as { toObject(): Part }).toObject();
-  }
-
-  return part;
-}
-
-function getMaterialId(material: unknown): string | null {
-  if (!material) return null;
-  if (typeof material === 'string') return material;
-  if (typeof material === 'object' && '_id' in material && material._id) {
-    return String(material._id);
-  }
-
-  return null;
-}
-
-async function hydrateMaterial(material: Part['material']): Promise<Material | undefined> {
-  if (!material) return undefined;
-  if (typeof material === 'object' && 'costPerFoot' in material) return material as Material;
-
-  const materialId = getMaterialId(material);
-  if (!materialId) return undefined;
-
-  return ((await Material.findById(materialId).lean()) as Material | null) || undefined;
-}
-
 async function buildAssemblyPartGraph(rootPart: Part): Promise<Map<string, Part>> {
-  const plainRootPart = toPlainPart(rootPart);
+  const plainRootPart = rootPart;
   const normalizedSubComponentIds = normalizeSubComponentIds(plainRootPart.subComponentIds);
-  const rootId = getPartId(plainRootPart._id);
+  const rootId = plainRootPart._id;
   const graph = new Map<string, Part>();
   const hydratedRoot: Part = {
     ...plainRootPart,
     _id: rootId,
-    material: await hydrateMaterial(plainRootPart.material),
     subComponentIds: normalizedSubComponentIds,
   };
 
@@ -111,14 +195,16 @@ async function buildAssemblyPartGraph(rootPart: Part): Promise<Map<string, Part>
     const nextIds = [...new Set(frontierIds.filter((partId) => !graph.has(partId)))];
     if (!nextIds.length) break;
 
-    const loadedParts = (await Part.find({ _id: { $in: nextIds } })
+    const loadedParts = await Part.find({ _id: { $in: nextIds } })
       .populate('material')
-      .lean()) as Part[];
+      .lean();
     for (const loadedPart of loadedParts) {
-      const loadedPartId = getPartId(loadedPart._id);
+      const loadedPartId = loadedPart._id.toString();
       graph.set(loadedPartId, {
-        ...loadedPart,
+        ...(loadedPart as unknown as Part),
         _id: loadedPartId,
+        customer: {} as Customer,
+        material: (await resolveMaterial(loadedPart.material)) ?? undefined,
         subComponentIds: normalizeSubComponentIds(loadedPart.subComponentIds),
       });
     }
@@ -129,6 +215,35 @@ async function buildAssemblyPartGraph(rootPart: Part): Promise<Map<string, Part>
   }
 
   return graph;
+}
+
+async function assemblyDescendantsIncludePart(
+  startIds: string[],
+  targetId: string,
+): Promise<boolean> {
+  const visited = new Set<string>();
+  let frontierIds = [...new Set(startIds.filter(Boolean))];
+
+  while (frontierIds.length) {
+    const nextIds = frontierIds.filter((partId) => !visited.has(partId));
+    if (!nextIds.length) return false;
+    if (nextIds.includes(targetId)) return true;
+
+    nextIds.forEach((partId) => {
+      visited.add(partId);
+    });
+
+    const loadedParts = (await Part.find(
+      { _id: { $in: nextIds } },
+      { _id: 1, subComponentIds: 1 },
+    ).lean()) as unknown as Array<Pick<Part, '_id' | 'subComponentIds'>>;
+
+    frontierIds = loadedParts.flatMap((loadedPart) =>
+      normalizeSubComponentIds(loadedPart.subComponentIds).map((entry) => entry.partId),
+    );
+  }
+
+  return false;
 }
 
 export async function calculateDerivedPartProperties(part: Part): Promise<void> {
@@ -142,7 +257,7 @@ export async function calculateDerivedPartProperties(part: Part): Promise<void> 
 }
 
 const deriveShopRate = async (part: Part): Promise<number> => {
-  const rootId = getPartId(part._id);
+  const rootId = part._id;
   const partGraph = await buildAssemblyPartGraph(part);
   const rootPart = partGraph.get(rootId);
   if (!rootPart) return 0;
@@ -166,7 +281,7 @@ const deriveShopRate = async (part: Part): Promise<number> => {
 };
 
 function getSortValue(part: PartDoc, field: string): string | number {
-  if (field === 'customer.name') return part.customer.name;
+  if (field === 'customer.name') return getCustomerName(toPlainPart(part).customer);
   if (field === 'derived.shopRate') return Number(part.derived?.shopRate) || 0;
   const value = (part as unknown as Record<string, unknown>)[field];
   if (typeof value === 'number') return value;
@@ -196,33 +311,9 @@ async function validateSubComponentIds(subComponentIds: PartSubComponent[], part
   if (subComponentIds.some((entry) => entry.partId === partId))
     throw new Error('A part cannot include itself as a sub-component.');
 
-  const parts = await Part.find({}, { _id: 1, subComponentIds: 1 }).lean();
-  const dependencyMap = new Map(
-    parts.map((part) => [
-      String(part._id),
-      normalizeSubComponentIds(part.subComponentIds).map((entry) => entry.partId),
-    ]),
-  );
-
-  const dependsOn = (
-    candidateId: string,
-    targetId: string,
-    visited = new Set<string>(),
-  ): boolean => {
-    if (visited.has(candidateId)) return false;
-
-    const nextVisited = new Set(visited);
-    nextVisited.add(candidateId);
-
-    return (dependencyMap.get(candidateId) || []).some((subComponentId) => {
-      if (subComponentId === targetId) return true;
-      return dependsOn(subComponentId, targetId, nextVisited);
-    });
-  };
-
-  for (const subComponent of subComponentIds) {
-    if (dependsOn(subComponent.partId, partId))
-      throw new Error('Sub-components cannot create recursive assembly relationships.');
+  const subComponentPartIds = subComponentIds.map((entry) => entry.partId);
+  if (await assemblyDescendantsIncludePart(subComponentPartIds, partId)) {
+    throw new Error('Sub-components cannot create recursive assembly relationships.');
   }
 
   return subComponentIds;
@@ -350,24 +441,22 @@ async function list(filters: PartListFilters = {}): Promise<PartListResult> {
   };
 }
 
-async function findByScanCode(scanCode: string): Promise<PartDoc | null> {
-  return Part.findById(scanCode).populate('customer');
-}
-
 async function findById(id: string): Promise<PartDoc | null> {
   return Part.findById(id).populate('customer').populate('material');
 }
 
-async function create(data: PartDoc, deviceId: string): Promise<PartDoc> {
+async function create(data: PartCreate, deviceId: string): Promise<PartDoc> {
   const normalizedSubComponentIds = normalizeSubComponentIds(data.subComponentIds);
-  await validateSubComponentIds(normalizedSubComponentIds, data._id.toString());
 
-  const part = new Part({
-    ...data,
-    subComponentIds: normalizedSubComponentIds,
-  });
-
-  await calculateDerivedPartProperties(part);
+  const part = new Part(
+    await buildPersistencePayload(
+      {
+        ...data,
+        subComponentIds: normalizedSubComponentIds,
+      },
+      0,
+    ),
+  );
   await part.save();
   await updateDirectParentCounts(
     normalizedSubComponentIds.map((entry) => entry.partId),
@@ -383,21 +472,22 @@ async function create(data: PartDoc, deviceId: string): Promise<PartDoc> {
 }
 
 async function update(
-  newPart: PartDoc,
+  newPart: PartMutation,
   deviceId: string,
   options: UpdatePartOptions = {},
 ): Promise<PartDoc | null> {
-  const id = newPart._id;
-  const oldPart: PartDoc | null = await Part.findById(id);
+  const id = getEntityId(newPart._id);
+  if (!id) throw new Error('Missing part document id.');
+  const oldPart = await Part.findById(id);
   if (!oldPart) throw new Error(`Missing part document id: ${id}`);
 
   const normalizedSubComponentIds = normalizeSubComponentIds(newPart.subComponentIds);
-  await validateSubComponentIds(normalizedSubComponentIds, id.toString());
+  await validateSubComponentIds(normalizedSubComponentIds, id);
 
+  const nextSubComponentIds = normalizedSubComponentIds.map((entry) => entry.partId);
   const previousSubComponentIds = normalizeSubComponentIds(oldPart.subComponentIds).map(
     (entry) => entry.partId,
   );
-  const nextSubComponentIds = normalizedSubComponentIds.map((entry) => entry.partId);
   const addedChildIds = nextSubComponentIds.filter(
     (partId) => !previousSubComponentIds.includes(partId),
   );
@@ -405,28 +495,20 @@ async function update(
     (partId) => !nextSubComponentIds.includes(partId),
   );
 
-  const updatePayload = {
-    ...newPart,
-    subComponentIds: normalizedSubComponentIds,
-    derived: {
-      shopRate: Number(newPart.derived?.shopRate) || 0,
-      directSubComponentCount: Number(newPart.derived?.directSubComponentCount) || 0,
-      directParentCount: getDirectParentCount(oldPart),
+  const updatePayload = await buildPersistencePayload(
+    {
+      ...newPart,
+      subComponentIds: normalizedSubComponentIds,
     },
-  };
-
-  if (options.preserveManagedMediaFields) {
-    updatePayload.img = oldPart.img;
-    updatePayload.imageIds = oldPart.imageIds;
-    updatePayload.documentIds = oldPart.documentIds;
-  }
-
-  await calculateDerivedPartProperties(updatePayload);
+    getDirectParentCount(oldPart),
+    options.preserveManagedMediaFields,
+    oldPart,
+  );
   const updatedPart = await Part.findByIdAndUpdate(id, updatePayload, { returnDocument: 'after' });
   if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);
   await updateDirectParentCounts(addedChildIds, removedChildIds);
 
-  const refreshedPart = await findById(id.toString());
+  const refreshedPart = await findById(id);
   if (!refreshedPart) throw new Error(`Unable to load updated part document id: ${id}`);
   emit('part', refreshedPart);
   await Audit.addPartAudit(oldPart, refreshedPart, deviceId);
@@ -442,10 +524,10 @@ async function stock(
   if (!oldPart) return { status: 404, part: null };
   if (oldPart.stock + amount < 0) return { status: 400, part: null };
 
-  const newPart: PartDoc = oldPart.toObject();
-  newPart.stock += amount;
+  const updatedPayload = oldPart.toObject();
+  updatedPayload.stock += amount;
 
-  const updatedPart = await Part.findByIdAndUpdate(id, newPart, { returnDocument: 'after' })
+  const updatedPart = await Part.findByIdAndUpdate(id, updatedPayload, { returnDocument: 'after' })
     .populate('customer')
     .populate('material');
   if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);
@@ -454,11 +536,20 @@ async function stock(
   return { status: 200, part: updatedPart };
 }
 
+function getPartLocations(): Promise<string[]> {
+  return Part.distinct('location', { location: { $ne: null } });
+}
+
+function getPartPositions(location: string): Promise<string[]> {
+  return Part.distinct('position', { location, position: { $ne: null } });
+}
+
 export default {
   list,
-  findByScanCode,
   findById,
   create,
   update,
   stock,
+  getPartLocations,
+  getPartPositions,
 };

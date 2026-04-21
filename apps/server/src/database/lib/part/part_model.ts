@@ -1,6 +1,16 @@
-import { model, Schema, Types } from 'mongoose';
+import { type HydratedDocument, model, Schema, Types } from 'mongoose';
 
-const schema = new Schema<PartDoc>({
+type PartDocumentFields = Omit<PartFields, 'customer' | 'material'> & {
+  customer: Types.ObjectId;
+  material?: Types.ObjectId | null;
+  img?: string;
+  createdAt: Date;
+  imageIds?: Types.ObjectId[];
+  documentIds?: Types.ObjectId[];
+  derived?: PartDerived;
+};
+
+const schema = new Schema<PartDocumentFields>({
   part: { type: String, required: true },
   description: { type: String, required: true },
   customer: { type: Types.ObjectId, ref: 'customers', required: true },
@@ -38,4 +48,5 @@ const schema = new Schema<PartDoc>({
 
 schema.index({ 'subComponentIds.partId': 1 });
 
-export default model<PartDoc>('parts', schema);
+export default model<PartDocumentFields>('parts', schema);
+export type PartDoc = HydratedDocument<PartDocumentFields>;

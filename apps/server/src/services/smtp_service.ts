@@ -1,8 +1,19 @@
 import { CronJob } from 'cron';
 import nodemailer from 'nodemailer';
 import Reports from '../database/lib/report/report_service.js';
+import type { ToolPopulatedDoc } from '../database/lib/tool/tool_model.js';
 import Tool from '../database/lib/tool/tool_service.js';
 import logger from '../logger.js';
+
+type ReorderTool = ToolPopulatedDoc & {
+  vendor: Vendor;
+  supplier: Supplier;
+  item: string;
+};
+
+function isReorderTool(tool: ToolPopulatedDoc): tool is ReorderTool {
+  return Boolean(tool.vendor && tool.supplier && tool.item);
+}
 
 const transporter = nodemailer.createTransport({
   host: 'mail.bkmachine.net',
@@ -28,8 +39,8 @@ new CronJob(
 );
 
 async function reorders() {
-  const tools = (await Tool.getAutoReorders()) as ToolDocReorders[];
-  const filtered = tools.filter((x) => !x.onOrder && x.vendor);
+  const tools = await Tool.getAutoReorders();
+  const filtered = tools.filter((tool) => !tool.onOrder).filter(isReorderTool);
   const sorted = filtered.sort((a, b) => {
     if (a.supplier.name === b.supplier.name) {
       if (a.vendor.name === b.vendor.name) {

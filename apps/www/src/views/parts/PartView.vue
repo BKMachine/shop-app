@@ -365,12 +365,7 @@
               </v-text-field>
             </v-col>
             <v-col cols="4">
-              <v-combobox
-                v-model="part.location"
-                class="mx-2"
-                :items="partStore.locations"
-                label="Location"
-              />
+              <v-combobox v-model="part.location" class="mx-2" :items="[]" label="Location" />
             </v-col>
             <v-col cols="4">
               <v-text-field
@@ -609,7 +604,7 @@ onMounted(() => {
   void loadFolderHelperManifest();
 
   if (!partStore.parts.length && !partStore.loading) {
-    partStore.fetch();
+    // partStore.fetch();
   }
 
   if (routeName === 'createPart') {
