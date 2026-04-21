@@ -1,7 +1,7 @@
 import Audit from '../audit/audit_service.js';
-import StoredDocument from './document_model.js';
+import StoredDocument, { type StoredDocumentDoc } from './document_model.js';
 
-async function create(data: unknown, _deviceId: string): Promise<StoredDocumentDoc> {
+async function create(data: StoredDocumentCreate, _deviceId: string): Promise<StoredDocumentDoc> {
   const doc = new StoredDocument(data);
   await doc.save();
   await Audit.addDocumentAudit(null, doc, _deviceId);

@@ -1,7 +1,12 @@
 import Audit from '../audit/audit_service.js';
-import PartNote from './part_note_model.js';
+import PartNote, { type PartNoteDoc } from './part_note_model.js';
 
-async function create(data: unknown, deviceId: string): Promise<PartNoteDoc> {
+type PartNotePersistenceUpdate = Pick<
+  PartNoteFields,
+  'text' | 'priority' | 'updatedByDeviceId' | 'updatedByDisplayName'
+>;
+
+async function create(data: PartNoteFields, deviceId: string): Promise<PartNoteDoc> {
   const doc = new PartNote(data);
   await doc.save();
   await Audit.addPartNoteAudit(null, doc, deviceId);
@@ -16,15 +21,19 @@ async function listByPart(partId: string): Promise<PartNoteDoc[]> {
   return PartNote.find({ partId }).sort({ updatedAt: -1, createdAt: -1 });
 }
 
-async function update(note: PartNoteDoc, deviceId: string): Promise<PartNoteDoc | null> {
-  const oldNote = await PartNote.findById(note._id);
-  if (!oldNote) throw new Error(`Missing part note document id: ${note._id}`);
+async function update(
+  id: string,
+  data: PartNotePersistenceUpdate,
+  deviceId: string,
+): Promise<PartNoteDoc | null> {
+  const oldNote = await PartNote.findById(id);
+  if (!oldNote) throw new Error(`Missing part note document id: ${id}`);
   const updated = await PartNote.findByIdAndUpdate(
-    note._id,
-    { ...note, updatedAt: new Date() },
+    id,
+    { ...data, updatedAt: new Date() },
     { returnDocument: 'after' },
   );
-  if (!updated) throw new Error(`Unable to update part note document id: ${note._id}`);
+  if (!updated) throw new Error(`Unable to update part note document id: ${id}`);
   await Audit.addPartNoteAudit(oldNote, updated, deviceId);
   return updated;
 }

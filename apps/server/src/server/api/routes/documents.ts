@@ -3,33 +3,104 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
-import { isValidId } from '../../../database/index.js';
+import * as z from 'zod';
 import DocumentService from '../../../database/lib/document/document_service.js';
 import PartService from '../../../database/lib/part/part_service.js';
 import { documentDir } from '../../../directories.js';
+import logger from '../../../logger.js';
+import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-function mutateDocumentResponse(document: StoredDocumentDoc): MyDocumentData {
-  const { _id, relPath, ...rest } = document.toObject();
+const PartDocumentEntityParams = z.strictObject({
+  entityId: mongoObjectId,
+});
+
+const PartDocumentParams = z.strictObject({
+  entityId: mongoObjectId,
+  documentId: mongoObjectId,
+});
+
+type PartDocumentUpdate = Omit<Part, 'customer' | 'material' | 'imageIds' | 'documentIds'> & {
+  customer: string;
+  material?: string | null;
+  imageIds?: string[];
+  documentIds?: string[];
+};
+
+function toPlainEntity(entity: unknown): Record<string, unknown> {
+  if (entity && typeof entity === 'object' && 'toObject' in entity) {
+    const maybeDoc = entity as { toObject?: () => unknown };
+    if (typeof maybeDoc.toObject === 'function') {
+      return maybeDoc.toObject() as Record<string, unknown>;
+    }
+  }
+
+  return entity as Record<string, unknown>;
+}
+
+function getEntityId(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && '_id' in value) {
+    return String((value as { _id: unknown })._id);
+  }
+  if (typeof value === 'object' && value !== null && 'toString' in value) {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function normalizeIdArray(values: unknown): string[] | undefined {
+  if (!Array.isArray(values)) return undefined;
+
+  return values
+    .map((value) => getEntityId(value))
+    .filter((value): value is string => Boolean(value));
+}
+
+function normalizePartDocumentUpdate(part: unknown): PartDocumentUpdate {
+  const plainPart = toPlainEntity(part);
 
   return {
-    ...rest,
-    id: _id.toString(),
-    url: `/documents/${document.relPath}`,
+    ...(plainPart as unknown as Part),
+    _id: String(plainPart._id ?? ''),
+    customer: getEntityId(plainPart.customer) ?? '',
+    material: getEntityId(plainPart.material) ?? null,
+    imageIds: normalizeIdArray(plainPart.imageIds),
+    documentIds: normalizeIdArray(plainPart.documentIds),
+  };
+}
+
+function mutateDocumentResponse(document: unknown): MyDocumentData {
+  const plainDocument =
+    document && typeof document === 'object' && 'toObject' in document
+      ? ((document as { toObject(): unknown }).toObject() as Record<string, unknown>)
+      : (document as Record<string, unknown>);
+  const { _id, relPath, ...rest } = plainDocument;
+
+  return {
+    ...(rest as Omit<MyDocumentData, 'id' | 'url'>),
+    id: String(_id),
+    url: `/documents/${String(relPath)}`,
   };
 }
 
 router.get('/entities/part/:entityId/documents', async (req, res, next) => {
-  const { entityId } = req.params;
-  if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
+  const { success, data, error } = PartDocumentEntityParams.safeParse(req.params);
+  if (!success) {
+    logger.error('Invalid document params provided:', error.message);
+    return next(new HttpError(400, 'Invalid part id'));
+  }
+  const { entityId } = data;
 
   try {
     const documents = await DocumentService.listByEntity('part', entityId);
-    res.status(200).json(documents.map(mutateDocumentResponse));
+    res.status(200).json(documents.map((document) => mutateDocumentResponse(document)));
   } catch (err) {
     next(new HttpError(500, 'Failed to load documents', { cause: err }));
   }
@@ -41,8 +112,12 @@ router.post(
   upload.single('document'),
   async (req, res, next) => {
     assertKnownDevice(req);
-    const { entityId } = req.params;
-    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
+    const { success, data, error } = PartDocumentEntityParams.safeParse(req.params);
+    if (!success) {
+      logger.error('Invalid document params provided:', error.message);
+      return next(new HttpError(400, 'Invalid part id'));
+    }
+    const { entityId } = data;
     if (!req.file) return next(new HttpError(400, 'No document uploaded'));
 
     try {
@@ -74,11 +149,13 @@ router.post(
         req.deviceId,
       );
 
-      if (!part.documentIds) part.documentIds = [];
       const documentId = document._id.toString();
-      part.documentIds = part.documentIds.filter((id) => id.toString() !== documentId);
-      part.documentIds.unshift(documentId);
-      await PartService.update(part, req.deviceId);
+      const partUpdate = normalizePartDocumentUpdate(part);
+      partUpdate.documentIds = [
+        documentId,
+        ...(partUpdate.documentIds ?? []).filter((id) => id !== documentId),
+      ];
+      await PartService.update(partUpdate, req.deviceId);
 
       res.status(200).json(mutateDocumentResponse(document));
     } catch (err) {
@@ -92,9 +169,12 @@ router.delete(
   requireKnownDevice,
   async (req, res, next) => {
     assertKnownDevice(req);
-    const { entityId, documentId } = req.params;
-    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid part id'));
-    if (!isValidId(documentId)) return next(new HttpError(400, 'Invalid document id'));
+    const { success, data, error } = PartDocumentParams.safeParse(req.params);
+    if (!success) {
+      logger.error('Invalid document params provided:', error.message);
+      return next(new HttpError(400, 'Invalid document request.'));
+    }
+    const { entityId, documentId } = data;
 
     try {
       const document = await DocumentService.findById(documentId);
@@ -114,10 +194,9 @@ router.delete(
 
       await DocumentService.remove(documentId, req.deviceId);
 
-      if (part.documentIds) {
-        part.documentIds = part.documentIds.filter((id) => id.toString() !== documentId);
-        await PartService.update(part, req.deviceId);
-      }
+      const partUpdate = normalizePartDocumentUpdate(part);
+      partUpdate.documentIds = (partUpdate.documentIds ?? []).filter((id) => id !== documentId);
+      await PartService.update(partUpdate, req.deviceId);
 
       res.sendStatus(204);
     } catch (err) {
