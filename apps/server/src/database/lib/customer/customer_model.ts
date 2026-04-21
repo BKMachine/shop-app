@@ -1,4 +1,4 @@
-import { model, Schema } from 'mongoose';
+import { type HydratedDocument, model, Schema } from 'mongoose';
 
 const schema = new Schema<CustomerFields>({
   name: { type: String, unique: true, required: true },
@@ -7,3 +7,4 @@ const schema = new Schema<CustomerFields>({
 });
 
 export default model<CustomerFields>('customers', schema);
+export type CustomerDoc = HydratedDocument<CustomerFields>;

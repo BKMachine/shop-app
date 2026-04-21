@@ -1,6 +1,6 @@
-import { model, Schema, type Types } from 'mongoose';
+import { type HydratedDocument, model, Schema, type Types } from 'mongoose';
 
-export type MaterialDocumentFields = Omit<MaterialFields, 'supplier'> & {
+type MaterialDocumentFields = Omit<MaterialFields, 'supplier'> & {
   supplier: Types.ObjectId;
 };
 
@@ -18,3 +18,4 @@ const schema = new Schema<MaterialDocumentFields>({
 });
 
 export default model<MaterialDocumentFields>('materials', schema);
+export type MaterialDoc = HydratedDocument<MaterialDocumentFields>;

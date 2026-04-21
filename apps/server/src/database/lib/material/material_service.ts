@@ -1,11 +1,7 @@
 import { normalizeDimensions } from '@repo/utilities/materials';
-import type { HydratedDocument } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import Audit from '../audit/audit_service.js';
-import type { MaterialDocumentFields } from './material_model.js';
-import Material from './material_model.js';
-
-type MaterialDoc = HydratedDocument<MaterialDocumentFields>;
+import Material, { type MaterialDoc } from './material_model.js';
 
 async function list(): Promise<MaterialDoc[]> {
   return await Material.find({}).populate('supplier');

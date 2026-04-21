@@ -1,7 +1,4 @@
-import type { HydratedDocument } from 'mongoose';
-import Device from './device_model.js';
-
-type DeviceDoc = HydratedDocument<DeviceFields>;
+import Device, { type DeviceDoc } from './device_model.js';
 
 async function findDeviceById(deviceId: string): Promise<DeviceDoc | null> {
   return Device.findOne({ deviceId }).exec();

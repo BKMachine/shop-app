@@ -1,8 +1,5 @@
-import type { HydratedDocument } from 'mongoose';
 import Audit from '../audit/audit_service.js';
-import Report from './report_model.js';
-
-type EmailReportDoc = HydratedDocument<EmailReportFields>;
+import Report, { type EmailReportDoc } from './report_model.js';
 
 async function list(): Promise<EmailReportDoc[]> {
   return Report.find().sort({ email: 1 });

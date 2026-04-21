@@ -1,4 +1,4 @@
-import { model, Schema, type Types } from 'mongoose';
+import { type HydratedDocument, model, Schema, type Types } from 'mongoose';
 
 type ImageDocumentFields = Omit<ImageFields, 'entityId'> & {
   entityId: Types.ObjectId | null;
@@ -38,3 +38,4 @@ const schema = new Schema<ImageDocumentFields>(
 );
 
 export default model<ImageDocumentFields>('images', schema);
+export type ImageDoc = HydratedDocument<ImageDocumentFields>;

@@ -1,4 +1,4 @@
-import { model, Schema, type Types } from 'mongoose';
+import { type HydratedDocument, model, Schema, type Types } from 'mongoose';
 
 type PartNoteDocumentFields = Omit<PartNoteFields, 'partId'> & {
   partId: Types.ObjectId;
@@ -30,3 +30,4 @@ const schema = new Schema<PartNoteDocumentFields>(
 );
 
 export default model<PartNoteDocumentFields>('part_notes', schema);
+export type PartNoteDoc = HydratedDocument<PartNoteDocumentFields>;

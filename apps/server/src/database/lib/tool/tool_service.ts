@@ -1,10 +1,7 @@
-import type { HydratedDocument } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Audit from '../audit/audit_service.js';
-import Tool from './tool_model.js';
-
-type ToolDoc = HydratedDocument<ToolFields & { vendor?: unknown; supplier?: unknown }>;
+import Tool, { type ToolDoc } from './tool_model.js';
 
 const validSortFields = new Set([
   'description',

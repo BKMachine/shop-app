@@ -1,9 +1,6 @@
-import type { HydratedDocument } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import AuditService from '../audit/audit_service.js';
-import Customer from './customer_model.js';
-
-type CustomerDoc = HydratedDocument<CustomerFields>;
+import Customer, { type CustomerDoc } from './customer_model.js';
 
 async function list(): Promise<CustomerDoc[]> {
   return Customer.find({});

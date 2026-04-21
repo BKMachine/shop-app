@@ -1,4 +1,4 @@
-import { model, Schema, Types } from 'mongoose';
+import { type HydratedDocument, model, Schema, Types } from 'mongoose';
 
 type ToolDocumentFields = Omit<ToolFields, 'vendor' | 'supplier'> & {
   vendor?: Types.ObjectId;
@@ -33,3 +33,4 @@ const schema = new Schema<ToolDocumentFields>({
 });
 
 export default model<ToolDocumentFields>('tools', schema);
+export type ToolDoc = HydratedDocument<ToolDocumentFields>;

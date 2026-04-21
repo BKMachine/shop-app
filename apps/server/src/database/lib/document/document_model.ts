@@ -1,4 +1,4 @@
-import { model, Schema, type Types } from 'mongoose';
+import { type HydratedDocument, model, Schema, type Types } from 'mongoose';
 
 type StoredDocumentRecord = Omit<StoredDocumentFields, 'entityId'> & {
   entityId: Types.ObjectId | null;
@@ -30,3 +30,4 @@ const schema = new Schema<StoredDocumentRecord>(
 );
 
 export default model<StoredDocumentRecord>('documents', schema);
+export type StoredDocumentDoc = HydratedDocument<StoredDocumentRecord>;

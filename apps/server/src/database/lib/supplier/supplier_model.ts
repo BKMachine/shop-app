@@ -1,4 +1,4 @@
-import { model, Schema } from 'mongoose';
+import { type HydratedDocument, model, Schema } from 'mongoose';
 
 const schema = new Schema<SupplierFields>({
   name: { type: String, unique: true, required: true },
@@ -7,3 +7,4 @@ const schema = new Schema<SupplierFields>({
 });
 
 export default model<SupplierFields>('suppliers', schema);
+export type SupplierDoc = HydratedDocument<SupplierFields>;

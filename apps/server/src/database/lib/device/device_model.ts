@@ -1,4 +1,4 @@
-import { model, Schema } from 'mongoose';
+import { type HydratedDocument, model, Schema } from 'mongoose';
 
 const deviceSchema = new Schema<DeviceFields>(
   {
@@ -21,3 +21,4 @@ const deviceSchema = new Schema<DeviceFields>(
 );
 
 export default model<DeviceFields>('devices', deviceSchema);
+export type DeviceDoc = HydratedDocument<DeviceFields>;

@@ -1,4 +1,4 @@
-import { model, Schema } from 'mongoose';
+import { type HydratedDocument, model, Schema } from 'mongoose';
 
 const schema = new Schema<VendorFields>({
   name: { type: String, unique: true, required: true },
@@ -8,3 +8,4 @@ const schema = new Schema<VendorFields>({
 });
 
 export default model<VendorFields>('vendors', schema);
+export type VendorDoc = HydratedDocument<VendorFields>;

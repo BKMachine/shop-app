@@ -1,4 +1,4 @@
-import { model, Schema } from 'mongoose';
+import { type HydratedDocument, model, Schema } from 'mongoose';
 
 const groupsSchema = new Schema<ToolCategoryGroups>(
   {
@@ -29,3 +29,4 @@ export default model<ToolCategorySettings>(
   schema,
   'tool_category_settings',
 );
+export type ToolCategorySettingsDoc = HydratedDocument<ToolCategorySettings>;
