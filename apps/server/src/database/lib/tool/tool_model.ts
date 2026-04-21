@@ -1,6 +1,6 @@
 import { model, Schema, Types } from 'mongoose';
 
-type ToolDocumentFields = ToolFields & {
+type ToolDocumentFields = Omit<ToolFields, 'vendor' | 'supplier'> & {
   vendor?: Types.ObjectId;
   supplier?: Types.ObjectId;
 };

@@ -1,6 +1,10 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, type Types } from 'mongoose';
 
-const schema = new Schema<ImageDoc>(
+type ImageDocumentFields = Omit<ImageFields, 'entityId'> & {
+  entityId: Types.ObjectId | null;
+};
+
+const schema = new Schema<ImageDocumentFields>(
   {
     filename: { type: String, required: true },
     relPath: { type: String, required: true },
@@ -33,4 +37,4 @@ const schema = new Schema<ImageDoc>(
   },
 );
 
-export default model<ImageDoc>('images', schema);
+export default model<ImageDocumentFields>('images', schema);

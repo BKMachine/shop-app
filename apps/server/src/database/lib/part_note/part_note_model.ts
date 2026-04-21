@@ -1,6 +1,10 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, type Types } from 'mongoose';
 
-const schema = new Schema<PartNoteDoc>(
+type PartNoteDocumentFields = Omit<PartNoteFields, 'partId'> & {
+  partId: Types.ObjectId;
+};
+
+const schema = new Schema<PartNoteDocumentFields>(
   {
     partId: {
       type: Schema.Types.ObjectId,
@@ -25,4 +29,4 @@ const schema = new Schema<PartNoteDoc>(
   },
 );
 
-export default model<PartNoteDoc>('part_notes', schema);
+export default model<PartNoteDocumentFields>('part_notes', schema);

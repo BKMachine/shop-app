@@ -1,6 +1,10 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, type Types } from 'mongoose';
 
-const schema = new Schema<StoredDocumentDoc>(
+type StoredDocumentRecord = Omit<StoredDocumentFields, 'entityId'> & {
+  entityId: Types.ObjectId | null;
+};
+
+const schema = new Schema<StoredDocumentRecord>(
   {
     filename: { type: String, required: true },
     originalName: { type: String, required: true },
@@ -25,4 +29,4 @@ const schema = new Schema<StoredDocumentDoc>(
   },
 );
 
-export default model<StoredDocumentDoc>('documents', schema);
+export default model<StoredDocumentRecord>('documents', schema);

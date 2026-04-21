@@ -1,6 +1,6 @@
 import { model, Schema, type Types } from 'mongoose';
 
-export type MaterialDocumentFields = MaterialFields & {
+export type MaterialDocumentFields = Omit<MaterialFields, 'supplier'> & {
   supplier: Types.ObjectId;
 };
 

@@ -116,27 +116,34 @@ declare global {
 
   /* IMAGE */
 
-  interface Image {
-    _id: string;
+  interface ImageFields {
     filename: string;
     relPath: string;
     mimeType?: string;
     status: 'temp' | 'attached';
     entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor' | null;
     entityId: string | null;
-    expiresAt: Date | null;
+    expiresAt?: Date | null;
+  }
+
+  interface Image extends ImageFields {
+    _id: string;
     createdAt: Date;
     updatedAt: Date;
   }
 
-  interface ImageDoc extends Omit<Image, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface ImageCreate extends ImageFields {}
+
+  interface ImageUpdate extends ImageFields {
+    _id: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+    __v?: number;
   }
 
   /* STORED DOCUMENT */
 
-  interface StoredDocument {
-    _id: string;
+  interface StoredDocumentFields {
     filename: string;
     originalName: string;
     relPath: string;
@@ -145,31 +152,49 @@ declare global {
     size: number;
     entityType: 'part' | null;
     entityId: string | null;
+  }
+
+  interface StoredDocument extends StoredDocumentFields {
+    _id: string;
     createdAt: Date;
     updatedAt: Date;
   }
 
-  interface StoredDocumentDoc extends Omit<StoredDocument, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface StoredDocumentCreate extends StoredDocumentFields {}
+
+  interface StoredDocumentUpdate extends StoredDocumentFields {
+    _id: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+    __v?: number;
   }
 
   /* PART NOTE */
 
-  interface PartNote {
-    _id: string;
-    partId: Part | string;
+  interface PartNoteFields {
+    partId: string;
     text: string;
     priority: 'critical' | 'default';
-    createdAt: Date;
-    updatedAt: Date;
     createdByDeviceId: string;
     createdByDisplayName: string;
     updatedByDeviceId: string;
     updatedByDisplayName: string;
   }
 
-  interface PartNoteDoc extends Omit<PartNote, '_id'>, Document<Types.ObjectId> {
-    _id: Types.ObjectId;
+  interface PartNote extends PartNoteFields {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+
+  interface PartNoteCreate {
+    text: string;
+    priority: 'critical' | 'default';
+  }
+
+  interface PartNoteUpdate extends PartNoteCreate {
+    _id: string;
+    __v?: number;
   }
 
   /* DEVICE */
