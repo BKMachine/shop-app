@@ -2,11 +2,16 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { SERVER_DEVICE_ID } from '@repo/utilities/constants';
 import { connect, disconnect } from '../src/database/index.js';
+import type { CustomerDoc } from '../src/database/lib/customer/customer_model.js';
 import CustomerService from '../src/database/lib/customer/customer_service.js';
+import type { ImageDoc } from '../src/database/lib/image/image_model.js';
 import ImageService from '../src/database/lib/image/image_service.js';
 import PartService from '../src/database/lib/part/part_service.js';
+import type { SupplierDoc } from '../src/database/lib/supplier/supplier_model.js';
 import SupplierService from '../src/database/lib/supplier/supplier_service.js';
+import type { ToolDoc } from '../src/database/lib/tool/tool_model.js';
 import ToolService from '../src/database/lib/tool/tool_service.js';
+import type { VendorDoc } from '../src/database/lib/vendor/vendor_model.js';
 import VendorService from '../src/database/lib/vendor/vendor_service.js';
 import { imageDir } from '../src/directories.js';
 import logger from '../src/logger.js';
@@ -53,6 +58,80 @@ interface PartRepairStats {
   partsUpdated: number;
   skippedAmbiguousRepoint: number;
   errors: number;
+}
+
+function toPlainEntity<T>(doc: T): T {
+  if (doc && typeof doc === 'object' && 'toObject' in (doc as object)) {
+    const maybeDoc = doc as { toObject?: () => unknown };
+    if (typeof maybeDoc.toObject === 'function') {
+      return maybeDoc.toObject() as T;
+    }
+  }
+
+  return doc;
+}
+
+function getNestedEntityId(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && '_id' in value) {
+    return String((value as { _id: unknown })._id);
+  }
+  if (typeof value === 'object' && value !== null && 'toString' in value) {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function toToolUpdatePayload(doc: ToolDoc): ToolUpdate {
+  const plainDoc = toPlainEntity(doc) as ToolDoc & {
+    vendor?: Vendor | string | null;
+    supplier?: Supplier | string | null;
+  };
+
+  return {
+    ...plainDoc,
+    _id: getEntityId(doc),
+    vendor: getNestedEntityId(plainDoc.vendor),
+    supplier: getNestedEntityId(plainDoc.supplier),
+  } as ToolUpdate;
+}
+
+function toCustomerUpdatePayload(doc: CustomerDoc): CustomerUpdate {
+  const plainDoc = toPlainEntity(doc) as CustomerDoc;
+
+  return {
+    ...plainDoc,
+    _id: getEntityId(doc),
+  } as CustomerUpdate;
+}
+
+function toSupplierUpdatePayload(doc: SupplierDoc): SupplierUpdate {
+  const plainDoc = toPlainEntity(doc) as SupplierDoc;
+
+  return {
+    ...plainDoc,
+    _id: getEntityId(doc),
+  } as SupplierUpdate;
+}
+
+function toVendorUpdatePayload(doc: VendorDoc): VendorUpdate {
+  const plainDoc = toPlainEntity(doc) as VendorDoc;
+
+  return {
+    ...plainDoc,
+    _id: getEntityId(doc),
+  } as VendorUpdate;
+}
+
+function toPartRepairUpdatePayload(part: PartListItem) {
+  const plainPart = toPlainEntity(part) as PartListItem;
+
+  return {
+    ...plainPart,
+    _id: getEntityId(part),
+  };
 }
 
 interface EntityConfig<TDoc extends RepairableEntity> {
@@ -110,7 +189,7 @@ const entityConfigs: EntityConfig<RepairableEntity>[] = [
     type: 'tool',
     folderName: 'tools',
     list: () => listAllTools(),
-    update: (doc) => ToolService.update(doc as ToolDoc, SERVER_DEVICE_ID),
+    update: (doc) => ToolService.update(toToolUpdatePayload(doc as ToolDoc), SERVER_DEVICE_ID),
     getImageUrl: (doc) => doc.img?.trim() ?? '',
     setImageUrl: (doc, value) => {
       doc.img = value;
@@ -121,7 +200,8 @@ const entityConfigs: EntityConfig<RepairableEntity>[] = [
     type: 'customer',
     folderName: 'customers',
     list: () => CustomerService.list() as Promise<RepairableEntity[]>,
-    update: (doc) => CustomerService.update(doc as CustomerDoc, SERVER_DEVICE_ID),
+    update: (doc) =>
+      CustomerService.update(toCustomerUpdatePayload(doc as CustomerDoc), SERVER_DEVICE_ID),
     getImageUrl: (doc) => doc.logo?.trim() ?? '',
     setImageUrl: (doc, value) => {
       doc.logo = value;
@@ -132,7 +212,8 @@ const entityConfigs: EntityConfig<RepairableEntity>[] = [
     type: 'supplier',
     folderName: 'suppliers',
     list: () => SupplierService.list() as Promise<RepairableEntity[]>,
-    update: (doc) => SupplierService.update(doc as SupplierDoc, SERVER_DEVICE_ID),
+    update: (doc) =>
+      SupplierService.update(toSupplierUpdatePayload(doc as SupplierDoc), SERVER_DEVICE_ID),
     getImageUrl: (doc) => doc.logo?.trim() ?? '',
     setImageUrl: (doc, value) => {
       doc.logo = value;
@@ -143,7 +224,8 @@ const entityConfigs: EntityConfig<RepairableEntity>[] = [
     type: 'vendor',
     folderName: 'vendors',
     list: () => VendorService.list() as Promise<RepairableEntity[]>,
-    update: (doc) => VendorService.update(doc as VendorDoc, SERVER_DEVICE_ID),
+    update: (doc) =>
+      VendorService.update(toVendorUpdatePayload(doc as VendorDoc), SERVER_DEVICE_ID),
     getImageUrl: (doc) => doc.logo?.trim() ?? '',
     setImageUrl: (doc, value) => {
       doc.logo = value;
@@ -379,7 +461,7 @@ async function repairPartImages(options: CliOptions, stats: PartRepairStats): Pr
         if (options.apply) {
           part.imageIds = partResult.nextImageIds;
           part.img = partResult.nextMainImageUrl;
-          await PartService.update(part as PartDoc, SERVER_DEVICE_ID);
+          await PartService.update(toPartRepairUpdatePayload(part), SERVER_DEVICE_ID);
         }
       }
     } catch (error) {
