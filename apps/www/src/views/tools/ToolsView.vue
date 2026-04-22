@@ -4,6 +4,7 @@
       v-model="tab"
       align-tabs="center"
       bg-color="primary"
+      class="tools-view__tabs"
       grow
       @update:model-value="onTabChange"
     >
@@ -290,6 +291,10 @@ const otherHeaders = [
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.tools-view__tabs {
+  flex: 0 0 auto;
 }
 
 .tools-view__table {

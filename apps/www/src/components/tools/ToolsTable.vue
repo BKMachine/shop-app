@@ -10,7 +10,7 @@
     </v-card-title>
     <v-card-text class="tool-table-card-text">
       <v-card class="tools-table-card__inner" flat>
-        <template #text>
+        <div class="tools-table-card__filters">
           <div v-if="category === 'milling'">
             <v-row>
               <v-col cols="5">
@@ -65,7 +65,6 @@
                 </v-row>
               </v-col>
             </v-row>
-            <v-row />
           </div>
           <div v-else-if="category !== 'all'">
             <v-row>
@@ -118,7 +117,7 @@
               </template>
             </v-text-field>
           </div>
-        </template>
+        </div>
 
         <InfiniteScrollDataTable
           ref="tableRef"
@@ -319,6 +318,10 @@ function location(tool: Tool): string {
   flex: 1;
   min-height: 0;
   flex-direction: column;
+}
+
+.tools-table-card__filters {
+  flex: 0 0 auto;
 }
 
 .header {
