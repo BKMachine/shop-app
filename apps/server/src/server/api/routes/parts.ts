@@ -81,6 +81,8 @@ router.get('/parts', async (req, res, next) => {
     const data = await Parts.list({
       search: normalizeQueryValue(req.query.search),
       customer: normalizeQueryValue(req.query.customer),
+      location: normalizeQueryValue(req.query.location),
+      position: normalizeQueryValue(req.query.position),
       includeSubcomponents: normalizeBooleanQueryValue(req.query.includeSubcomponents),
       sort: normalizeQueryValue(req.query.sort),
       order: normalizeQueryValue(req.query.order) === 'desc' ? 'desc' : 'asc',
