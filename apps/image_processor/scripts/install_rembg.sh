@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-VENV_DIR="${APP_DIR}/.venv-rembg"
+VENV_DIR="${REMBG_VENV_DIR:-${APP_DIR}/.venv-rembg}"
 PYTHON_BIN="${VENV_DIR}/bin/python"
 
 if ! command -v python3 >/dev/null 2>&1; then

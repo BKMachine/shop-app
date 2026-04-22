@@ -10,7 +10,9 @@ COPY pnpm-lock.yaml pnpm-lock.yaml
 COPY pnpm-workspace.yaml pnpm-workspace.yaml
 COPY turbo.json turbo.json
 COPY biome.json biome.json
-COPY packages packages
+COPY packages/types/package.json packages/types/package.json
+COPY packages/typescript-config/package.json packages/typescript-config/package.json
+COPY packages/utilities/package.json packages/utilities/package.json
 
 FROM base AS image-processor-prune
 COPY apps/image_processor/package.json apps/image_processor/package.json
@@ -20,6 +22,7 @@ FROM image-processor-prune AS image-processor-installer
 COPY --from=image-processor-prune /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=image-processor-prune /app/out/full/ .
+COPY packages packages	
 
 FROM image-processor-installer AS image-processor-builder
 COPY apps/image_processor apps/image_processor
@@ -34,13 +37,11 @@ RUN pnpm deploy --filter=image_processor --prod /app/deploy/image_processor
 FROM node:22-slim AS runner
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv && rm -rf /var/lib/apt/lists/*
-RUN python3 -m venv /app/apps/image_processor/.venv-rembg \
-	&& /app/apps/image_processor/.venv-rembg/bin/pip install --upgrade pip \
-	&& /app/apps/image_processor/.venv-rembg/bin/pip install "rembg[cpu,cli]"
 COPY --from=image-processor-deploy /app/deploy/image_processor/node_modules /app/apps/image_processor/node_modules
 COPY --from=image-processor-builder /app/apps/image_processor/dist /app/apps/image_processor/dist
 COPY --from=image-processor-builder /app/apps/image_processor/assets /app/apps/image_processor/assets
 COPY --from=image-processor-builder /app/apps/image_processor/scripts /app/apps/image_processor/scripts
 ENV NODE_ENV=production
 EXPOSE 3000
+ENTRYPOINT ["bash", "/app/apps/image_processor/scripts/bootstrap_rembg.sh"]
 CMD ["node", "/app/apps/image_processor/dist/index.js"]

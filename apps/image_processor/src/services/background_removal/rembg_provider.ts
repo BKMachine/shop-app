@@ -18,14 +18,23 @@ import {
 
 const execFileAsync = promisify(execFile);
 const serviceDir = path.dirname(fileURLToPath(import.meta.url));
-const rembgVenvPythonPath = path.resolve(serviceDir, '../../../.venv-rembg/bin/python');
 const rembgModelCacheDir = getImageProcessorModelCacheDir('rembg');
 const rembgScriptPath = path.resolve(serviceDir, '../../../scripts/remove_background_rembg.py');
+
+function getDefaultRembgVenvDir() {
+  return path.resolve(serviceDir, '../../../.venv-rembg');
+}
+
+function getRembgVenvPythonPath() {
+  const venvDir = process.env.REMBG_VENV_DIR?.trim() || getDefaultRembgVenvDir();
+  return path.join(venvDir, 'bin/python');
+}
 
 function getRembgPythonBin() {
   const configured = process.env.REMBG_PYTHON_BIN?.trim();
   if (configured) return configured;
-  if (fs.existsSync(rembgVenvPythonPath)) return rembgVenvPythonPath;
+  const venvPythonPath = getRembgVenvPythonPath();
+  if (fs.existsSync(venvPythonPath)) return venvPythonPath;
   return 'python3';
 }
 
