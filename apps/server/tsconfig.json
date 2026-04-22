@@ -1,8 +1,11 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
     "outDir": "dist",
     "rootDirs": ["./src", "./scripts"],
+    "sourceMap": false,
     "types": ["@types/shop-app", "jest", "node"]
   },
   "include": ["src", "scripts"],
