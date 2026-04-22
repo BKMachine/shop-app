@@ -163,42 +163,30 @@
 
               <v-row>
                 <v-col>
-                  <v-text-field
+                  <CurrencyInput
+                    v-model="costPerPoundInput"
                     :disabled="!weight"
                     hide-details
                     label="Cost per Pound (lbs)"
-                    :model-value="formatCost(costPerPound)"
-                    prefix="$"
                     :rules="[requiredRule, numberRequiredRule]"
-                    type="number"
-                    @input="onCostInputField($event, 'costPerPound')"
-                    @keydown="onlyAllowNumeric($event)"
                   />
                 </v-col>
                 <v-col>
-                  <v-text-field
+                  <CurrencyInput
+                    v-model="costPerFootInput"
                     :disabled="!weight"
                     hide-details
                     label="Cost per Foot (ft)"
-                    :model-value="formatCost(selectedMaterial.costPerFoot)"
-                    prefix="$"
                     :rules="[requiredRule, numberRequiredRule]"
-                    type="number"
-                    @input="onCostInputField($event, 'costPerFoot')"
-                    @keydown="onlyAllowNumeric($event)"
                   />
                 </v-col>
                 <v-col>
-                  <v-text-field
+                  <CurrencyInput
+                    v-model="costPerBarInput"
                     :disabled="!weight"
                     hide-details
                     label="Cost per Bar (ea)"
-                    :model-value="formatCost(costPerBar)"
-                    prefix="$"
                     :rules="[requiredRule, numberRequiredRule]"
-                    type="number"
-                    @input="onCostInputField($event, 'costPerBar')"
-                    @keydown="onlyAllowNumeric($event)"
                   />
                 </v-col>
                 <v-col>
@@ -267,6 +255,7 @@
 import { calculateMaterialWeight, normalizeDimensions } from '@repo/utilities/materials';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref } from 'vue';
+import CurrencyInput from '@/components/CurrencyInput.vue';
 import MaterialPdfReview from '@/components/materials/MaterialPdfReview.vue';
 import MaterialSelection from '@/components/materials/MaterialSelection.vue';
 import MaterialSketch from '@/components/materials/MaterialSketch.vue';
@@ -274,7 +263,6 @@ import MaterialsList from '@/components/materials/MaterialsList.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import {
   buildMaterialDescription,
-  formatCost,
   formatCrossSectionDimension,
   formatWeight,
   onlyAllowNumeric,
@@ -501,20 +489,39 @@ const costPerBar = computed(() => {
     : 0;
 });
 
-function onCostInputField(event: Event, field: 'costPerPound' | 'costPerFoot' | 'costPerBar') {
-  const value = parseFloat((event.target as HTMLInputElement).value);
-  if (Number.isNaN(value)) return;
+const costPerPoundInput = computed<number | null>({
+  get: () => (weight.value ? costPerPound.value : null),
+  set: (value) => {
+    const lengthInFeet = (selectedMaterial.value.length || 0) / 12;
+    if (value == null || !weight.value || !lengthInFeet) {
+      selectedMaterial.value.costPerFoot = 0;
+      return;
+    }
+    selectedMaterial.value.costPerFoot = (value * weight.value) / lengthInFeet;
+  },
+});
 
-  if (field === 'costPerFoot') {
-    selectedMaterial.value.costPerFoot = value;
-  } else if (field === 'costPerPound') {
+const costPerFootInput = computed<number | null>({
+  get: () => selectedMaterial.value.costPerFoot,
+  set: (value) => {
+    selectedMaterial.value.costPerFoot = value ?? 0;
+  },
+});
+
+const costPerBarInput = computed<number | null>({
+  get: () => {
+    if (!weight.value) return null;
+    return costPerBar.value;
+  },
+  set: (value) => {
     const lengthInFeet = (selectedMaterial.value.length || 0) / 12;
-    selectedMaterial.value.costPerFoot = lengthInFeet ? (value * weight.value) / lengthInFeet : 0;
-  } else if (field === 'costPerBar') {
-    const lengthInFeet = (selectedMaterial.value.length || 0) / 12;
-    selectedMaterial.value.costPerFoot = lengthInFeet ? value / lengthInFeet : 0;
-  }
-}
+    if (value == null || !lengthInFeet) {
+      selectedMaterial.value.costPerFoot = 0;
+      return;
+    }
+    selectedMaterial.value.costPerFoot = value / lengthInFeet;
+  },
+});
 
 const requiredRule = (v: unknown) => (v !== null && v !== undefined && v !== '') || 'Required';
 

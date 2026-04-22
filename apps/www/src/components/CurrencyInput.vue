@@ -2,8 +2,12 @@
   <v-text-field
     ref="inputRef"
     v-model="formattedValue"
+    v-bind="$attrs"
+    :disabled="props.disabled"
+    :hide-details="props.hideDetails"
     :label="props.label"
-    prepend-inner-icon="mdi-currency-usd"
+    prefix="$"
+    :rules="props.rules"
   />
 </template>
 
@@ -11,19 +15,18 @@
 import { watch } from 'vue';
 import { type CurrencyDisplay, useCurrencyInput } from 'vue-currency-input';
 
+defineOptions({ inheritAttrs: false });
+
 const props = defineProps<{
   label: string;
-  modelValue?: number;
+  disabled?: boolean;
+  hideDetails?: boolean | 'auto';
+  rules?: readonly any[];
 }>();
 
-watch(
-  () => props.modelValue,
-  (value) => {
-    if (value) setValue(value);
-  },
-);
+const modelValue = defineModel<number | null>();
 
-const { inputRef, formattedValue, setValue } = useCurrencyInput({
+const { inputRef, formattedValue, numberValue, setValue } = useCurrencyInput({
   currency: 'USD',
   hideCurrencySymbolOnFocus: false,
   hideGroupingSeparatorOnFocus: false,
@@ -31,6 +34,18 @@ const { inputRef, formattedValue, setValue } = useCurrencyInput({
   valueRange: { min: 0 },
   currencyDisplay: 'hidden' as CurrencyDisplay,
 });
+
+watch(numberValue, (value) => {
+  modelValue.value = value == null ? null : Number(value);
+});
+
+watch(
+  modelValue,
+  (value) => {
+    setValue(value ?? null);
+  },
+  { immediate: true },
+);
 </script>
 
 <style scoped></style>

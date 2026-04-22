@@ -1,6 +1,6 @@
+import { calculateMaterialLengthFromWeight } from '@repo/utilities/materials';
 import { extractDimensionHighlightToken, extractPdfDate } from '../parser_utils.js';
 
-const GRANDIS_ASSUMED_LENGTH_INCHES = 144;
 const GRANDIS_SUPPLIER_ID = '69c2d236b0d4b0faf02ef132';
 const MILLIMETERS_PER_INCH = 25.4;
 const grandisTitaniumGradeRegex =
@@ -59,11 +59,24 @@ export async function GrandisParser(text: string[]): Promise<ParserResults[]> {
     const materialType = extractGrandisMaterialType(header);
     if (!materialType) continue;
 
-    const length = GRANDIS_ASSUMED_LENGTH_INCHES;
+    const weight = totalWeight / pieces;
+    const length = calculateMaterialLengthFromWeight(
+      {
+        materialType,
+        type: 'Round',
+        height: null,
+        width: null,
+        diameter,
+        wallThickness: null,
+        length: 1,
+      },
+      weight,
+    );
+    if (!length) continue;
+
     const feet = length / 12;
     if (!Number.isFinite(feet) || feet <= 0) continue;
 
-    const weight = totalWeight / pieces;
     const costPerFoot = (weight * rate) / feet;
 
     const material: {

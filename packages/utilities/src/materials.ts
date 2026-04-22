@@ -57,6 +57,19 @@ export function calculateMaterialWeight<T extends MaterialWeightInput>(material:
   return volume * density;
 }
 
+export function calculateMaterialLengthFromWeight<T extends MaterialWeightInput>(
+  material: T,
+  weight: number,
+): number | null {
+  if (!Number.isFinite(weight) || weight <= 0) return null;
+
+  const weightPerInch = calculateMaterialWeight({ ...material, length: 1 });
+  if (!weightPerInch || !Number.isFinite(weightPerInch) || weightPerInch <= 0) return null;
+
+  const length = weight / weightPerInch;
+  return Number.isFinite(length) && length > 0 ? length : null;
+}
+
 // Use full-precision density constants (lb/in^3); do not limit decimal places.
 export const materials: MaterialList = {
   '6061': { density: 0.097544, category: 'aluminum' },
