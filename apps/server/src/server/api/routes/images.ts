@@ -609,7 +609,8 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
       entityType: data.entityType,
       entityId: data.entityId,
     };
-    await ImageService.update(imageUpdate, req.deviceId);
+    const updatedImage = await ImageService.update(imageUpdate, req.deviceId);
+    if (!updatedImage) return next(new HttpError(500, 'Failed to persist attached image'));
 
     // Update part's imageIds array if entity is a part
     if (data.entityType === 'part') {
@@ -648,7 +649,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
         );
 
         for (const priorImage of priorImages) {
-          if (priorImage._id.toString() === image._id.toString()) continue;
+          if (priorImage._id.toString() === updatedImage._id.toString()) continue;
           await deleteImageFileIfPresent(priorImage.relPath);
           await ImageService.remove(priorImage._id.toString(), req.deviceId);
         }
@@ -656,14 +657,14 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
         await updateSingleImageEntity(
           data.entityType as SingleImageEntityType,
           singleImageEntity,
-          `/images/${image.relPath}`,
+          `/images/${newRelPath}`,
           req.deviceId,
         );
       }
     }
 
     const response = serializeImage(
-      image,
+      updatedImage,
       singleImageEntityTypes.includes(data.entityType as SingleImageEntityType) ||
         Boolean(data.setAsMain),
     );
