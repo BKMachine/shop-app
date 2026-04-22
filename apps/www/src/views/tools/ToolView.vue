@@ -610,7 +610,46 @@ function openLink(link: string | undefined) {
 
 /* FORM VALIDATION */
 
-const toolIsAltered = computed<boolean>(() => !isEqual(tool.value, toolOriginal.value));
+function normalizeComparableString(value: string | undefined | null) {
+  if (value == null) return undefined;
+  return value.trim() === '' ? undefined : value;
+}
+
+function normalizeComparableNumber(value: number | undefined | null) {
+  if (value == null || Number.isNaN(value)) return undefined;
+  return value;
+}
+
+function normalizeComparableEntity(value: { _id: string } | string | undefined | null) {
+  if (!value) return undefined;
+  return typeof value === 'string' ? value : value._id;
+}
+
+function toComparableTool(toolValue: Tool) {
+  return {
+    ...toolValue,
+    description: normalizeComparableString(toolValue.description),
+    item: normalizeComparableString(toolValue.item),
+    barcode: normalizeComparableString(toolValue.barcode),
+    coating: normalizeComparableString(toolValue.coating),
+    toolType: normalizeComparableString(toolValue.toolType),
+    productLink: normalizeComparableString(toolValue.productLink),
+    techDataLink: normalizeComparableString(toolValue.techDataLink),
+    orderLink: normalizeComparableString(toolValue.orderLink),
+    orderedOn: normalizeComparableString(toolValue.orderedOn),
+    location: normalizeComparableString(toolValue.location),
+    position: normalizeComparableString(toolValue.position),
+    flutes: normalizeComparableNumber(toolValue.flutes),
+    cuttingDia: normalizeComparableNumber(toolValue.cuttingDia),
+    fluteLength: normalizeComparableNumber(toolValue.fluteLength),
+    vendor: normalizeComparableEntity(toolValue.vendor),
+    supplier: normalizeComparableEntity(toolValue.supplier),
+  };
+}
+
+const toolIsAltered = computed<boolean>(() => {
+  return !isEqual(toComparableTool(tool.value), toComparableTool(toolOriginal.value));
+});
 const hasRequiredToolFields = computed<boolean>(() => {
   return Boolean(tool.value.description?.trim() && tool.value.item?.trim() && tool.value.vendor);
 });
