@@ -118,12 +118,13 @@ async function getReportRecipients(): Promise<{ to: string[]; cc: string[] }> {
     cc: [...cc],
   };
 }
--function formatCurrency(value: number) {
+
+function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
   }).format(value);
-};
+}
 
 export default {
   reorders,
