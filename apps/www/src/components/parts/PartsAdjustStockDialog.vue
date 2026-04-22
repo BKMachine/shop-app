@@ -146,7 +146,10 @@ const partStore = usePartStore();
 const props = defineProps<{
   part: Part;
 }>();
-const emit = defineEmits(['closeDialog']);
+const emit = defineEmits<{
+  closeDialog: [];
+  partUpdated: [part: Part];
+}>();
 const saveFlag = ref(false);
 
 const adjustment = ref(0);
@@ -169,8 +172,8 @@ async function save() {
   clone.stock = newStock.value;
   await partStore
     .update(clone)
-    .then(() => {
-      props.part.stock = clone.stock;
+    .then((updatedPart) => {
+      emit('partUpdated', updatedPart);
       toastSuccess('Part updated successfully');
       emit('closeDialog');
     })

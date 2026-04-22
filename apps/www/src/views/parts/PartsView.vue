@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="infinite-scroll-view-card">
     <v-card-title class="header my-4">
       <div>Parts - {{ partStore.total }}</div>
       <div class="header-actions">
@@ -17,7 +17,7 @@
         </v-btn>
       </div>
     </v-card-title>
-    <v-card-text>
+    <v-card-text class="infinite-scroll-view-card__body">
       <v-row no-gutters>
         <v-col cols="8">
           <v-text-field
@@ -138,6 +138,7 @@ import CustomerSelect from '@/components/CustomerSelect.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
+import { useDocumentScrollLock } from '@/lib/useDocumentScrollLock';
 import { getToneForRate } from '@/plugins/rates_theme';
 import router from '@/router';
 import { usePartStore } from '@/stores/parts_store';
@@ -151,6 +152,8 @@ type PartsListRow = Part & {
 
 const partStore = usePartStore();
 const route = useRoute();
+
+useDocumentScrollLock();
 
 const listPageSize = 30;
 const sortBy = ref<Array<{ key: string; order: 'asc' | 'desc' }>>([{ key: 'part', order: 'asc' }]);
@@ -392,6 +395,19 @@ function areFilterQueriesEqual(
 </script>
 
 <style scoped>
+.infinite-scroll-view-card {
+  height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.infinite-scroll-view-card__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .header {
   display: flex;
   width: 100%;

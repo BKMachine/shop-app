@@ -34,7 +34,7 @@ const PartFieldsSchema = z.strictObject({
   part: z.string(),
   description: z.string(),
   stock: z.number(),
-  location: z.string().optional(),
+  location: z.string().nullish(),
   position: z.string().optional(),
   productLink: z.string().optional(),
   partFilesPath: z.string().optional(),

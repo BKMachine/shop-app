@@ -350,7 +350,6 @@ import {
   calculatePartMaterialCost,
   calculatePartsPerBar,
   formatCost,
-  formatDimension,
   onlyAllowNumeric,
 } from '@/plugins/utils';
 import router from '@/router';
@@ -370,10 +369,28 @@ const props = defineProps<Props>();
 const emit = defineEmits<(e: 'update:partMaterialCost', value: number) => void>();
 const materialsStore = useMaterialsStore();
 const partStore = usePartStore();
+
+function formatDimension(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return '';
+  return parseFloat(Number(value).toFixed(2)).toString();
+}
+
 const hasSubComponents = computed(() => (props.subComponents || []).length > 0);
 const subComponentById = computed(() => {
   return new Map(partStore.parts.map((component) => [component._id, component]));
 });
+
+function shouldSeedLatheDefaults() {
+  const barLength = Number(props.part.barLength) || 0;
+  const remnantLength = Number(props.part.remnantLength) || 0;
+  return barLength === 0 && remnantLength === 0;
+}
+
+function applyInitialBarsDefaults() {
+  if (props.part.materialCutType !== 'bars') return;
+  if (!shouldSeedLatheDefaults()) return;
+  setMaterialDefaults('lathe');
+}
 
 function resolveMaterial(material: Part['material']) {
   if (!material) return null;
@@ -410,10 +427,7 @@ const subComponentMaterialRows = computed(() => {
 });
 
 const selectedMaterialLength = computed(() => {
-  if (!props.part.material) return 0;
-  if (typeof props.part.material !== 'string') return props.part.material.length || 0;
-  const material = materialsStore.materials.find((x) => x._id === props.part.material?._id);
-  return material?.length || 0;
+  return resolveMaterial(props.part.material)?.length || 0;
 });
 
 const partsPerBarDetails = computed(() => {
@@ -513,17 +527,17 @@ const wasteDetails = computed(() => {
 });
 
 function assignMaterial() {
-  if (!props.part.material) return;
-  const material = materialsStore.materials.find((x) => x._id === props.part.material?._id);
+  const material = resolveMaterial(props.part.material);
   if (!material) return;
   props.part.material = material;
+  applyInitialBarsDefaults();
 }
 
 const materialCost = computed(() => {
-  if (!props.part.material) return 0;
-  if (typeof props.part.material === 'string') return 0;
-  const feet = (props.part.material.length || 0) / 12;
-  return feet * (props.part.material.costPerFoot || 0);
+  const material = resolveMaterial(props.part.material);
+  if (!material) return 0;
+  const feet = (material.length || 0) / 12;
+  return feet * (material.costPerFoot || 0);
 });
 
 const billableMaterialCost = computed(() => {
@@ -538,6 +552,14 @@ watch(
   partMaterialCost,
   (value) => {
     emit('update:partMaterialCost', value);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => props.part.materialCutType,
+  () => {
+    applyInitialBarsDefaults();
   },
   { immediate: true },
 );
@@ -577,7 +599,7 @@ function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
     props.part.barLength = 36;
     props.part.remnantLength = 2;
   } else if (type === 'swiss') {
-    props.part.barLength = props.part.material?.length || 0;
+    props.part.barLength = resolveMaterial(props.part.material)?.length || 0;
     props.part.remnantLength = 12;
   } else if (type === '2from1') {
     props.part.barLength = ((props.part.materialLength || 0) + 0.1) * 2 + 0.15;

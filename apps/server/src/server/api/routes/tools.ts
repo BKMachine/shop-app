@@ -31,7 +31,7 @@ const ToolFieldsSchema = z.strictObject({
   cost: z.number(),
   onOrder: z.boolean(),
   orderedOn: z.string().optional(),
-  location: z.string().optional(),
+  location: z.string().nullish(),
   position: z.string().optional(),
   cuttingDia: z.number().optional(),
   fluteLength: z.number().optional(),

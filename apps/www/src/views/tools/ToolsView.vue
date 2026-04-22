@@ -1,47 +1,50 @@
 <template>
-  <v-tabs
-    v-model="tab"
-    align-tabs="center"
-    bg-color="primary"
-    grow
-    @update:model-value="onTabChange"
-  >
-    <v-tab class="milling" value="milling"> Mill </v-tab>
-    <v-tab class="turning" value="turning"> Lathe </v-tab>
-    <v-tab class="swiss" value="swiss"> Swiss </v-tab>
-    <v-tab class="other" value="other"> Misc </v-tab>
-    <v-tab class="all" value="all"> All </v-tab>
-  </v-tabs>
+  <div class="tools-view">
+    <v-tabs
+      v-model="tab"
+      align-tabs="center"
+      bg-color="primary"
+      grow
+      @update:model-value="onTabChange"
+    >
+      <v-tab class="milling" value="milling"> Mill </v-tab>
+      <v-tab class="turning" value="turning"> Lathe </v-tab>
+      <v-tab class="swiss" value="swiss"> Swiss </v-tab>
+      <v-tab class="other" value="other"> Misc </v-tab>
+      <v-tab class="all" value="all"> All </v-tab>
+    </v-tabs>
 
-  <ToolsTable
-    :category="tab"
-    class="mt-3"
-    :cutting-dia="cuttingDia"
-    :has-more="toolStore.hasMore"
-    :headers="currentHeaders"
-    :items="toolStore.tools"
-    :loading-more="toolStore.loadingMore"
-    :min-flute-length="minFluteLength"
-    :order="order"
-    :search="search"
-    :sort-by="sortBy"
-    :title="currentTitle"
-    :tool-type="toolType"
-    :total-items="toolStore.total"
-    @clear-all-filters="clearAllFilters"
-    @load-more="toolStore.fetchNextPage"
-    @update-cutting-dia="updateCuttingDia"
-    @update-min-flute-length="updateMinFluteLength"
-    @update-search="updateSearch"
-    @update-search-by="updateSearchBy"
-    @update-tool-type="updateToolType"
-  />
+    <ToolsTable
+      :category="tab"
+      class="tools-view__table mt-3"
+      :cutting-dia="cuttingDia"
+      :has-more="toolStore.hasMore"
+      :headers="currentHeaders"
+      :items="toolStore.tools"
+      :loading-more="toolStore.loadingMore"
+      :min-flute-length="minFluteLength"
+      :order="order"
+      :search="search"
+      :sort-by="sortBy"
+      :title="currentTitle"
+      :tool-type="toolType"
+      :total-items="toolStore.total"
+      @clear-all-filters="clearAllFilters"
+      @load-more="toolStore.fetchNextPage"
+      @update-cutting-dia="updateCuttingDia"
+      @update-min-flute-length="updateMinFluteLength"
+      @update-search="updateSearch"
+      @update-search-by="updateSearchBy"
+      @update-tool-type="updateToolType"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ToolsTable from '@/components/tools/ToolsTable.vue';
+import { useDocumentScrollLock } from '@/lib/useDocumentScrollLock';
 import { isToolFilterCategory } from '@/plugins/toolCategories';
 import { normalizeQueryValue } from '@/plugins/utils';
 import router from '@/router';
@@ -49,6 +52,8 @@ import { useToolStore } from '@/stores/tool_store';
 
 const toolStore = useToolStore();
 const route = useRoute();
+
+useDocumentScrollLock();
 
 const tab = ref<ToolFilterCategory>('milling');
 const search = ref<string>('');
@@ -279,4 +284,16 @@ const otherHeaders = [
 ];
 </script>
 
-<style scoped></style>
+<style scoped>
+.tools-view {
+  height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tools-view__table {
+  flex: 1;
+  min-height: 0;
+}
+</style>

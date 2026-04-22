@@ -56,7 +56,7 @@
         <div v-else class="notes-list">
           <v-card
             v-for="note in filteredNotes"
-            :key="note.id"
+            :key="note._id"
             class="note-card"
             :class="`note-card--${note.priority}`"
             variant="outlined"
@@ -88,7 +88,7 @@
                 <v-btn
                   color="error"
                   icon="mdi-delete"
-                  :loading="deletingId === note.id"
+                  :loading="deletingId === note._id"
                   size="small"
                   variant="text"
                   @click="confirmDeleteNote(note)"
@@ -189,7 +189,7 @@
     <ConfirmDialog
       v-model="deleteConfirmVisible"
       confirm-text="Delete"
-      :loading="Boolean(deleteTarget && deletingId === deleteTarget.id)"
+      :loading="Boolean(deleteTarget && deletingId === deleteTarget._id)"
       title="Delete Note?"
       @confirm="deleteConfirmedNote"
     >
@@ -335,7 +335,7 @@ async function saveNote() {
 
   try {
     if (editingNote.value) {
-      await partStore.updatePartNote(props.part._id, editingNote.value.id, {
+      await partStore.updatePartNote(props.part._id, editingNote.value._id, {
         text: editorText.value,
         priority: editorPriority.value,
       });
@@ -371,11 +371,11 @@ function confirmDeleteNote(note: MyPartNoteData) {
 async function deleteConfirmedNote() {
   if (!deleteTarget.value || !props.part._id) return;
 
-  deletingId.value = deleteTarget.value.id;
+  deletingId.value = deleteTarget.value._id;
   error.value = '';
 
   try {
-    await partStore.deletePartNote(props.part._id, deleteTarget.value.id);
+    await partStore.deletePartNote(props.part._id, deleteTarget.value._id);
     toastSuccess('Note deleted successfully');
     deleteConfirmVisible.value = false;
     deleteTarget.value = null;

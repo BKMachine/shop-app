@@ -147,8 +147,15 @@ export const usePartStore = defineStore('parts', () => {
       materialLength: part.materialLength,
       barLength: part.barLength,
       remnantLength: part.remnantLength,
-      cycleTimes: part.cycleTimes,
-      additionalCosts: part.additionalCosts,
+      cycleTimes: (part.cycleTimes || []).map((cycle) => ({
+        operation: cycle.operation,
+        time: Number(cycle.time) || 0,
+      })),
+      additionalCosts: (part.additionalCosts || []).map((cost) => ({
+        name: cost.name,
+        cost: Math.max(0, Number(cost.cost) || 0),
+        url: cost.url,
+      })),
       price: part.price,
       subComponentIds: (part.subComponentIds || []).map((subComponent) => ({
         partId: String(subComponent.partId),
@@ -173,10 +180,11 @@ export const usePartStore = defineStore('parts', () => {
   }
 
   async function update(part: Part | PartUpdate) {
-    await axios.put<Part>('/parts', { data: toPartUpdatePayload(part) }).then(({ data }) => {
+    return axios.put<Part>('/parts', { data: toPartUpdatePayload(part) }).then(({ data }) => {
       const index = parts.value.findIndex((x) => x._id === data._id);
       if (index > -1) parts.value[index] = data;
       refreshListIfLoaded();
+      return data;
     });
   }
 

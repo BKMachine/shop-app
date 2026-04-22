@@ -20,7 +20,7 @@ declare global {
     cost: number;
     onOrder: boolean;
     orderedOn?: string;
-    location?: string;
+    location?: string | null;
     position?: string;
     cuttingDia?: number;
     fluteLength?: number;

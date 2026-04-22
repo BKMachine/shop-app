@@ -346,6 +346,7 @@
                         <PartsAdjustStockDialog
                           :part="part"
                           @close-dialog="isActive.value = false"
+                          @part-updated="applyFetchedPart"
                         />
                       </v-card>
                     </template>
@@ -364,9 +365,7 @@
                 </template>
               </v-text-field>
             </v-col>
-            <v-col cols="4">
-              <v-combobox v-model="part.location" class="mx-2" :items="[]" label="Location" />
-            </v-col>
+            <v-col cols="4"> <PartLocationSelect v-model="part.location" /> </v-col>
             <v-col cols="4">
               <v-text-field
                 v-model="part.position"
@@ -420,6 +419,7 @@ import PartCostDetails from '@/components/parts/PartCostDetails.vue';
 import PartDocumentsDetails from '@/components/parts/PartDocumentsDetails.vue';
 import PartFilesFolderCard from '@/components/parts/PartFilesFolderCard.vue';
 import PartImagesDetails from '@/components/parts/PartImagesDetails.vue';
+import PartLocationSelect from '@/components/parts/PartLocationSelect.vue';
 import PartMaterialDetails from '@/components/parts/PartMaterialDetails.vue';
 import PartNotesDetails from '@/components/parts/PartNotesDetails.vue';
 import PartStockGraph from '@/components/parts/PartStockGraph.vue';
@@ -441,12 +441,28 @@ const showAdd = computed(() => {
   return false;
 });
 
-const defaultPartValues = {
+const defaultPartValues: Pick<
+  PartFields,
+  | 'stock'
+  | 'materialLength'
+  | 'barLength'
+  | 'remnantLength'
+  | 'cycleTimes'
+  | 'additionalCosts'
+  | 'price'
+  | 'customerSuppliedMaterial'
+  | 'materialCutType'
+> = {
+  stock: 0,
+  materialLength: 0,
   barLength: 0,
   remnantLength: 0,
+  cycleTimes: [],
+  additionalCosts: [],
+  price: 0,
   customerSuppliedMaterial: false,
   materialCutType: 'blanks',
-} as const;
+};
 
 const part = ref<Part>({} as Part);
 const partOriginal = ref<Part>({} as Part);
@@ -608,8 +624,8 @@ onMounted(() => {
   }
 
   if (routeName === 'createPart') {
-    part.value = { ...part.value, ...defaultPartValues };
-    partOriginal.value = { ...partOriginal.value, ...defaultPartValues };
+    part.value = cloneDeep({ ...part.value, ...defaultPartValues });
+    partOriginal.value = cloneDeep({ ...partOriginal.value, ...defaultPartValues });
   }
 
   // Fetch the part from the DB if we are viewing a part and not creating a new part
@@ -857,11 +873,24 @@ function addNew() {
   }
 }
 
+function syncPersistedPartImages() {
+  const partId = part.value._id;
+  if (!partId) return;
+
+  const imageIds = partStore.getPartImages(partId).map((image) => image.id);
+  part.value.imageIds = imageIds;
+  partOriginal.value.imageIds = [...imageIds];
+}
+
 function onPartImageSelected(payload: { imageId: string; url: string; isMain?: boolean }) {
   if (!payload.isMain) return;
 
   part.value.img = payload.url;
-  if (part.value._id) partStore.updatePartImage(part.value._id, payload.url);
+  partOriginal.value.img = payload.url;
+  if (part.value._id) {
+    partStore.updatePartImage(part.value._id, payload.url);
+    syncPersistedPartImages();
+  }
 }
 
 const expandedImage = ref({

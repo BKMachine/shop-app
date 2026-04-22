@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="tools-table-card">
     <v-card-title class="header">
       <div>{{ resultsTitle }}</div>
       <div v-if="category !== 'all'">
@@ -9,7 +9,7 @@
       </div>
     </v-card-title>
     <v-card-text class="tool-table-card-text">
-      <v-card flat>
+      <v-card class="tools-table-card__inner" flat>
         <template #text>
           <div v-if="category === 'milling'">
             <v-row>
@@ -307,6 +307,20 @@ function location(tool: Tool): string {
 </script>
 
 <style scoped>
+.tools-table-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tools-table-card__inner {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
 .header {
   display: flex;
   width: 100%;
@@ -319,6 +333,9 @@ function location(tool: Tool): string {
 }
 
 .v-card-text.tool-table-card-text {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   padding-bottom: 0;
   margin-bottom: 0;
   overflow: hidden;

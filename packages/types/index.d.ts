@@ -64,7 +64,7 @@ declare global {
   }
 
   interface MyPartNoteData {
-    id: string;
+    _id: string;
     text: string;
     priority: 'critical' | 'default';
     createdAt: string;

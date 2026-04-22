@@ -1,6 +1,6 @@
 <template>
   <v-combobox
-    class="mr-2"
+    class="mx-2"
     clearable
     :items="locations"
     label="Location"
@@ -23,25 +23,21 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | null];
 }>();
 
-const locations = ref(<string[]>[]);
+const locations = ref<string[]>([]);
 
 onMounted(() => {
-  getToolLocations();
+  api
+    .get<string[]>('/parts/locations')
+    .then(({ data }) => {
+      locations.value = data.sort((left, right) => left.localeCompare(right));
+    })
+    .catch(() => {
+      toastError('Failed to fetch part locations.');
+    });
 });
 
 function updateLocation(value: unknown) {
   emit('update:modelValue', typeof value === 'string' ? value : null);
-}
-
-function getToolLocations() {
-  api
-    .get<string[]>('/tools/locations')
-    .then(({ data }) => {
-      locations.value = data.sort((a, b) => a.localeCompare(b));
-    })
-    .catch((e) => {
-      toastError('Failed to fetch tool locations.');
-    });
 }
 </script>
 

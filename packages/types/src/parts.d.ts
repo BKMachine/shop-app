@@ -4,7 +4,7 @@ declare global {
     part: string;
     description: string;
     stock: number;
-    location?: string;
+    location?: string | null;
     position?: string;
     productLink?: string;
     partFilesPath?: string;

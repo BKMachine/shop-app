@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="infinite-scroll-view-card">
     <v-card-title class="header my-4 d-flex">
       Stock by Location
       <div v-if="toolStore.total && location">
@@ -7,7 +7,7 @@
       </div>
       <v-spacer />
     </v-card-title>
-    <v-card-text class="tool-table-card-text">
+    <v-card-text class="tool-table-card-text infinite-scroll-view-card__body">
       <v-card flat>
         <template #text>
           <v-row>
@@ -57,6 +57,7 @@
 import { nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
+import { useDocumentScrollLock } from '@/lib/useDocumentScrollLock';
 import api from '@/plugins/axios';
 import { normalizeQueryValue } from '@/plugins/utils';
 import router from '@/router';
@@ -64,6 +65,8 @@ import { useToolStore } from '@/stores/tool_store';
 
 const route = useRoute();
 const toolStore = useToolStore();
+
+useDocumentScrollLock();
 
 const location = ref('');
 const position = ref('');
@@ -211,6 +214,19 @@ function openTool(event: unknown, { item }: { item: Tool }) {
 </script>
 
 <style scoped>
+.infinite-scroll-view-card {
+  height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.infinite-scroll-view-card__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .v-card-text.tool-table-card-text {
   padding-bottom: 0;
   margin-bottom: 0;

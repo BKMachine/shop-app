@@ -127,9 +127,7 @@
             </v-col>
           </v-row>
           <v-row no-gutters>
-            <v-col cols="6">
-              <VendorSelect v-model="tool.vendor" class="mr-2" :rules="[rules.required]" />
-            </v-col>
+            <v-col cols="6"> <VendorSelect v-model="tool.vendor" class="mr-2" /> </v-col>
             <v-col cols="6">
               <v-select
                 v-model="tool.coating"
@@ -651,7 +649,7 @@ const toolIsAltered = computed<boolean>(() => {
   return !isEqual(toComparableTool(tool.value), toComparableTool(toolOriginal.value));
 });
 const hasRequiredToolFields = computed<boolean>(() => {
-  return Boolean(tool.value.description?.trim() && tool.value.item?.trim() && tool.value.vendor);
+  return Boolean(tool.value.description?.trim() && tool.value.item?.trim());
 });
 const hasUniqueFieldErrors = computed<boolean>(() => {
   return Boolean(itemUniqueError.value || barcodeUniqueError.value);

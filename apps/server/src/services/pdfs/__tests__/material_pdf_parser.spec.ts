@@ -385,18 +385,21 @@ Pieces: 7 P/N Delivery Date 02/12/2026
 test('GrandisParser should parse 6AL-4V invoice rows and key Round from Dia', async () => {
   const text = await readTextFixture(grandisTextFixturePath);
   const results = await GrandisParser(cleanLines(text));
+  const expectedLength = 140.01784501348922;
 
   expect(results).toHaveLength(2);
   expect(results[0]).toEqual(
     expect.objectContaining({
       unitType: 'lb',
       rate: 21.75,
+      weight: 17.6,
+      feet: expectedLength / 12,
       material: expect.objectContaining({
         materialType: '6Al-4V',
         type: 'Round',
         isMetric: false,
         diameter: 1,
-        length: 144,
+        length: expectedLength,
         supplier: '69c2d236b0d4b0faf02ef132',
       }),
     }),
@@ -427,18 +430,21 @@ test('GrandisParser should accept mm diameters and normalize to inches', async (
   `);
 
   const results = await GrandisParser(text);
+  const expectedLength = 140.01784501348922;
 
   expect(results).toHaveLength(1);
   expect(results[0]).toEqual(
     expect.objectContaining({
       unitType: 'lb',
       rate: 21.75,
+      weight: 17.6,
+      feet: expectedLength / 12,
       material: expect.objectContaining({
         materialType: '6Al-4V',
         type: 'Round',
         isMetric: true,
         diameter: 1,
-        length: 144,
+        length: expectedLength,
         supplier: '69c2d236b0d4b0faf02ef132',
       }),
     }),
@@ -496,17 +502,21 @@ test('GrandisParser should map Titanium 6-7 headers to 6Al-7Nb', async () => {
   `);
 
   const results = await GrandisParser(text);
+  const expectedLength = 117.73885305596681;
 
   expect(results).toHaveLength(1);
   expect(results[0]).toEqual(
     expect.objectContaining({
       unitType: 'lb',
       rate: 12.5,
+      weight: 91 / 27,
+      feet: expectedLength / 12,
       material: expect.objectContaining({
         materialType: '6Al-7Nb',
         type: 'Round',
         isMetric: true,
         diameter: 12 / 25.4,
+        length: expectedLength,
       }),
     }),
   );
