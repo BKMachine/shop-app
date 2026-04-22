@@ -73,7 +73,7 @@
           class="mr-2"
           color="green"
           density="comfortable"
-          :disabled="!toolIsAltered || !valid"
+          :disabled="!canSaveTool"
           prepend-icon="mdi-content-save-outline"
           variant="elevated"
           @click="saveTool"
@@ -97,8 +97,11 @@
               <v-text-field
                 v-model="tool.item"
                 class="mr-2"
+                :error-messages="itemUniqueError ? [itemUniqueError] : []"
                 label="Product Number"
-                :rules="[rules.uniqueItem]"
+                :loading="checkingItemUnique"
+                :rules="[rules.required, rules.uniqueItem]"
+                @blur="checkItemUnique"
               >
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
@@ -110,8 +113,11 @@
               <v-text-field
                 v-model="tool.barcode"
                 class="ml-2"
+                :error-messages="barcodeUniqueError ? [barcodeUniqueError] : []"
                 label="Barcode"
+                :loading="checkingBarcodeUnique"
                 :rules="[rules.barcode, rules.uniqueBarcode]"
+                @blur="checkBarcodeUnique"
               >
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
@@ -121,7 +127,9 @@
             </v-col>
           </v-row>
           <v-row no-gutters>
-            <v-col cols="6"> <VendorSelect v-model="tool.vendor" class="mr-2" /> </v-col>
+            <v-col cols="6">
+              <VendorSelect v-model="tool.vendor" class="mr-2" :rules="[rules.required]" />
+            </v-col>
             <v-col cols="6">
               <v-select
                 v-model="tool.coating"
@@ -335,19 +343,27 @@
             <v-col cols="3">
               <v-text-field
                 v-if="showMillingOpts"
-                v-model.number="tool.cuttingDia"
+                v-model="cuttingDiaInput"
+                inputmode="decimal"
                 label="Cutting Dia"
                 min="0"
+                type="text"
+                @blur="normalizeDecimalField('cuttingDia')"
                 @keydown="isNumber($event)"
+                @update:model-value="updateDecimalField('cuttingDia', $event)"
               />
             </v-col>
             <v-col cols="3">
               <v-text-field
                 v-if="showMillingOpts"
-                v-model.number="tool.fluteLength"
+                v-model="fluteLengthInput"
+                inputmode="decimal"
                 label="Flute Length"
                 min="0"
+                type="text"
+                @blur="normalizeDecimalField('fluteLength')"
                 @keydown="isNumber($event)"
+                @update:model-value="updateDecimalField('fluteLength', $event)"
               />
             </v-col>
           </v-row>
@@ -399,7 +415,7 @@ const toolCategoryStore = useToolCategoryStore();
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
-const tool = ref<Tool>({
+const defaultToolValues: Partial<Tool> = {
   stock: 0,
   reorderThreshold: 0,
   reorderQty: 0,
@@ -407,8 +423,10 @@ const tool = ref<Tool>({
   onOrder: false,
   flutes: 0,
   cost: 0,
-} as Tool);
-const toolOriginal = ref<Tool>({} as Tool);
+};
+
+const tool = ref<Tool>({ ...defaultToolValues } as Tool);
+const toolOriginal = ref<Tool>({ ...defaultToolValues } as Tool);
 
 const category = ref<ToolCategory>('milling');
 const tab = ref<'general' | 'stock' | 'tech'>(import.meta.env.PROD ? 'general' : 'stock');
@@ -419,6 +437,14 @@ const saveFlag = ref(false);
 const imageManagerVisible = ref(false);
 const deleteImageConfirmVisible = ref(false);
 const removingImage = ref(false);
+const itemUniqueError = ref('');
+const barcodeUniqueError = ref('');
+const checkingItemUnique = ref(false);
+const checkingBarcodeUnique = ref(false);
+const cuttingDiaInput = ref('');
+const fluteLengthInput = ref('');
+
+type DecimalFieldKey = 'cuttingDia' | 'fluteLength';
 
 function setTabFromQuery() {
   const routeTab = router.currentRoute.value.query.tab;
@@ -441,6 +467,12 @@ onMounted(() => {
   const routeParams = router.currentRoute.value.params;
 
   setTabFromQuery();
+
+  if (routeName === 'createTool') {
+    tool.value = { ...defaultToolValues, category: category.value } as Tool;
+    toolOriginal.value = { ...tool.value };
+    syncDecimalInputs();
+  }
 
   // Fetch the tool from the DB if we are viewing a tool and not creating a new tool
   if (routeName === 'viewTool') fetchTool();
@@ -477,6 +509,20 @@ watch(tab, (newTab) => {
   });
 });
 
+watch(
+  () => tool.value.item,
+  () => {
+    itemUniqueError.value = '';
+  },
+);
+
+watch(
+  () => tool.value.barcode,
+  () => {
+    barcodeUniqueError.value = '';
+  },
+);
+
 onBeforeUnmount(() => {
   // Store the tool we were viewing to slightly highlight the row in the tool list
   toolStore.setLastId(tool.value._id);
@@ -490,6 +536,7 @@ function fetchTool(showSpinner: boolean = true) {
     .then(({ data }: { data: Tool }) => {
       tool.value = { ...data };
       toolOriginal.value = { ...data };
+      syncDecimalInputs();
     })
     .catch(() => {
       alert('Tool not found.');
@@ -500,7 +547,10 @@ function fetchTool(showSpinner: boolean = true) {
 }
 
 async function saveTool() {
+  if (!canSaveTool.value) return;
+
   const routeName = router.currentRoute.value.name;
+
   saveFlag.value = true;
   if (routeName === 'createTool') {
     await toolStore
@@ -561,22 +611,163 @@ function openLink(link: string | undefined) {
 /* FORM VALIDATION */
 
 const toolIsAltered = computed<boolean>(() => !isEqual(tool.value, toolOriginal.value));
+const hasRequiredToolFields = computed<boolean>(() => {
+  return Boolean(tool.value.description?.trim() && tool.value.item?.trim() && tool.value.vendor);
+});
+const hasUniqueFieldErrors = computed<boolean>(() => {
+  return Boolean(itemUniqueError.value || barcodeUniqueError.value);
+});
+const isCheckingUniqueFields = computed<boolean>(() => {
+  return checkingItemUnique.value || checkingBarcodeUnique.value;
+});
+const canSaveTool = computed<boolean>(() => {
+  return (
+    toolIsAltered.value &&
+    valid.value &&
+    hasRequiredToolFields.value &&
+    !hasUniqueFieldErrors.value &&
+    !isCheckingUniqueFields.value
+  );
+});
 
 const rules = {
-  required: (val) => !!val || 'Required',
+  required: (val) => {
+    if (typeof val === 'string') {
+      return val.trim().length > 0 || 'Required';
+    }
+    return !!val || 'Required';
+  },
   barcode: (val) => {
     if (!tool.value.item) return true;
     return val !== tool.value.item || 'Not needed if the same as Product Number';
   },
   uniqueItem: (val) => {
     if (!tool.value.item) return true;
-    return true;
+    return !itemUniqueError.value || itemUniqueError.value;
   },
   uniqueBarcode: (val) => {
     if (!tool.value.barcode) return true;
-    return true;
+    return !barcodeUniqueError.value || barcodeUniqueError.value;
   },
 } satisfies Rules;
+
+function normalizeScanCode(value: string | undefined) {
+  return value?.trim() || '';
+}
+
+function formatDecimalInput(value: number | undefined) {
+  return value === undefined ? '' : String(value);
+}
+
+function getDecimalInputRef(field: DecimalFieldKey) {
+  return field === 'cuttingDia' ? cuttingDiaInput : fluteLengthInput;
+}
+
+function syncDecimalInputs() {
+  cuttingDiaInput.value = formatDecimalInput(tool.value.cuttingDia);
+  fluteLengthInput.value = formatDecimalInput(tool.value.fluteLength);
+}
+
+function updateDecimalField(field: DecimalFieldKey, value: string | null) {
+  const nextValue = value ?? '';
+  const inputRef = getDecimalInputRef(field);
+  inputRef.value = nextValue;
+
+  if (nextValue.trim() === '') {
+    tool.value[field] = undefined;
+    return;
+  }
+
+  const parsedValue = Number(nextValue);
+  if (Number.isNaN(parsedValue)) {
+    return;
+  }
+
+  tool.value[field] = parsedValue;
+}
+
+function normalizeDecimalField(field: DecimalFieldKey) {
+  const inputRef = getDecimalInputRef(field);
+  const normalizedValue = inputRef.value.trim();
+
+  if (!normalizedValue) {
+    inputRef.value = '';
+    tool.value[field] = undefined;
+    return;
+  }
+
+  const parsedValue = Number(normalizedValue);
+  if (Number.isNaN(parsedValue)) {
+    inputRef.value = formatDecimalInput(tool.value[field]);
+    return;
+  }
+
+  tool.value[field] = parsedValue;
+  inputRef.value = String(parsedValue);
+}
+
+function matchesCurrentTool(candidate: Tool) {
+  return Boolean(tool.value._id && candidate._id === tool.value._id);
+}
+
+async function validateUniqueScanCode(
+  scanCode: string | undefined,
+  setChecking: { value: boolean },
+  setError: { value: string },
+  duplicateMessage: string,
+) {
+  const normalizedScanCode = normalizeScanCode(scanCode);
+  setError.value = '';
+
+  if (!normalizedScanCode) return;
+
+  setChecking.value = true;
+  try {
+    const { data } = await axios.get<Tool>(`/tools/info/${encodeURIComponent(normalizedScanCode)}`);
+    if (!matchesCurrentTool(data)) {
+      setError.value = duplicateMessage;
+    }
+  } catch (error) {
+    const status =
+      error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { status?: number } }).response?.status
+        : undefined;
+    if (status !== 404) {
+      setError.value = 'Unable to verify uniqueness';
+    }
+  } finally {
+    setChecking.value = false;
+  }
+}
+
+async function checkItemUnique() {
+  await validateUniqueScanCode(
+    tool.value.item,
+    checkingItemUnique,
+    itemUniqueError,
+    'Product Number already exists',
+  );
+}
+
+async function checkBarcodeUnique() {
+  const normalizedBarcode = normalizeScanCode(tool.value.barcode);
+  if (!normalizedBarcode) {
+    barcodeUniqueError.value = '';
+    return;
+  }
+
+  if (normalizedBarcode === normalizeScanCode(tool.value.item)) {
+    barcodeUniqueError.value = '';
+    return;
+  }
+
+  await validateUniqueScanCode(
+    normalizedBarcode,
+    checkingBarcodeUnique,
+    barcodeUniqueError,
+    'Barcode already exists',
+  );
+}
 /* GENERAL TAB LOGIC */
 
 const coatings = computed(() => {

@@ -3,6 +3,8 @@ import { ref } from 'vue';
 import axios from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 
+const UNKNOWN_SUPPLIER_ID = '69e831ef362f135a3e00c527';
+
 export const useToolStore = defineStore('tools', () => {
   const tools = ref<Tool[]>([]);
   const total = ref(0);
@@ -95,11 +97,16 @@ export const useToolStore = defineStore('tools', () => {
     lastId.value = id;
   }
 
+  function toEntityId(value?: string | { _id: string } | null) {
+    if (!value) return undefined;
+    return typeof value === 'string' ? value : value._id;
+  }
+
   async function add(tool: Tool) {
     const payload: ToolCreate = {
       ...tool,
-      vendor: tool.vendor?._id,
-      supplier: tool.supplier?._id,
+      vendor: toEntityId(tool.vendor),
+      supplier: toEntityId(tool.supplier) ?? UNKNOWN_SUPPLIER_ID,
     };
 
     await axios.post<Tool>('/tools', { tool: payload }).then(({ data }) => {
@@ -110,8 +117,8 @@ export const useToolStore = defineStore('tools', () => {
   async function update(tool: Tool) {
     const payload: ToolUpdate = {
       ...tool,
-      vendor: tool.vendor?._id,
-      supplier: tool.supplier?._id,
+      vendor: toEntityId(tool.vendor),
+      supplier: toEntityId(tool.supplier) ?? UNKNOWN_SUPPLIER_ID,
     };
 
     await axios.put<Tool>('/tools', { tool: payload }).then(({ data }) => {
