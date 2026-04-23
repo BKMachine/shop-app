@@ -10,6 +10,14 @@
       title="Remove Sub-Component?"
       @confirm="confirmRemoveSubComponent"
     />
+    <LeaveUnsavedChangesDialog
+      v-model="leaveDialogVisible"
+      :changes="changedPartFields"
+      :confirm-disabled="!canSavePart"
+      :loading="saveFlag"
+      @confirm="saveAndContinue"
+      @discard="leaveWithoutSaving"
+    />
     <div class="title text-center">
       <h1>{{ part.part }}</h1>
       <h3>{{ part.description }}</h3>
@@ -411,9 +419,11 @@
 import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
+import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
 import PartDocumentsDetails from '@/components/parts/PartDocumentsDetails.vue';
@@ -427,12 +437,21 @@ import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vu
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { getToneForRate } from '@/plugins/rates_theme';
-import { calculateAssemblyCycleMinutes, calculatePartShopRate, isNumber } from '@/plugins/utils';
+import {
+  calculateAssemblyCycleMinutes,
+  calculatePartShopRate,
+  formatCost,
+  isNumber,
+} from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { useFolderHelperState } from '@/state/folderHelper';
+import { useCustomerStore } from '@/stores/customer_store';
+import { useMaterialsStore } from '@/stores/materials_store';
 import { usePartStore } from '@/stores/parts_store';
 
+const customerStore = useCustomerStore();
+const materialsStore = useMaterialsStore();
 const partStore = usePartStore();
 const { helperStatus, loadFolderHelperManifest, normalizeFolderPath, openFolderWithHelper } =
   useFolderHelperState();
@@ -478,6 +497,9 @@ const partMaterialCost = ref(0);
 const imageManagerVisible = ref(false);
 const criticalNotesCount = ref(0);
 const showStockValue = ref(false);
+const leaveDialogVisible = ref(false);
+const pendingNavigationTarget = ref<string | null>(null);
+const skipUnsavedChangesGuard = ref(false);
 const subComponentRemovalDialog = ref({
   visible: false,
   partId: '',
@@ -728,6 +750,14 @@ function applyFetchedPart(source: Part) {
 }
 
 async function savePart() {
+  const saved = await persistPart();
+  if (!saved) return;
+
+  skipUnsavedChangesGuard.value = true;
+  router.back();
+}
+
+async function persistPart() {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
   part.value.subComponentIds = (part.value.subComponentIds || []).filter(
@@ -747,6 +777,7 @@ async function savePart() {
     await partStore
       .add(part.value)
       .then(() => {
+        partOriginal.value = cloneDeep(part.value);
         toastSuccess('Part added successfully');
       })
       .catch(() => {
@@ -756,6 +787,7 @@ async function savePart() {
     await partStore
       .update(part.value)
       .then(() => {
+        partOriginal.value = cloneDeep(part.value);
         toastSuccess('Part updated successfully');
       })
       .catch(() => {
@@ -763,7 +795,30 @@ async function savePart() {
       });
   }
   saveFlag.value = false;
-  router.back();
+  return true;
+}
+
+async function saveAndContinue() {
+  const target = pendingNavigationTarget.value;
+  if (!target) return;
+
+  const saved = await persistPart();
+  if (!saved) return;
+
+  leaveDialogVisible.value = false;
+  pendingNavigationTarget.value = null;
+  skipUnsavedChangesGuard.value = true;
+  await router.push(target);
+}
+
+async function leaveWithoutSaving() {
+  const target = pendingNavigationTarget.value;
+  if (!target) return;
+
+  leaveDialogVisible.value = false;
+  pendingNavigationTarget.value = null;
+  skipUnsavedChangesGuard.value = true;
+  await router.push(target);
 }
 
 function openLink(link: string | undefined) {
@@ -804,11 +859,133 @@ function toComparablePart(value: Part) {
   };
 }
 
+const comparableFieldLabels = {
+  part: 'Part Number',
+  revision: 'Revision',
+  customer: 'Customer',
+  description: 'Description',
+  productLink: 'Web URL',
+  material: 'Material',
+  customerSuppliedMaterial: 'Customer Supplied Material',
+  materialCutType: 'Cut Type',
+  materialLength: 'Material Length',
+  barLength: 'Bar Length',
+  remnantLength: 'Remnant Length',
+  cycleTimes: 'Cycle Times',
+  additionalCosts: 'Additional Costs',
+  price: 'Price',
+  stock: 'Stock Qty',
+  location: 'Location',
+  position: 'Position',
+  subComponentIds: 'Sub-Components',
+} satisfies Partial<Record<keyof ReturnType<typeof toComparablePart>, string>>;
+
+const comparablePart = computed(() => toComparablePart(part.value));
+const comparableOriginalPart = computed(() => toComparablePart(partOriginal.value));
+
 const partIsAltered = computed<boolean>(() => {
-  return !isEqual(toComparablePart(part.value), toComparablePart(partOriginal.value));
+  return !isEqual(comparablePart.value, comparableOriginalPart.value);
 });
 
-const requiredRule = (val: string) => !!val || 'Required';
+const REQUIRED_MESSAGE = 'Required';
+
+function formatComparableEntityName(
+  value:
+    | { _id: string; name?: string; description?: string; customer?: string }
+    | string
+    | undefined,
+) {
+  if (!value) return 'Empty';
+  if (typeof value === 'string') {
+    const customer = customerStore.customers.find((candidate) => candidate._id === value);
+    if (customer) return customer.name;
+
+    const material = materialsStore.materials.find((candidate) => candidate._id === value);
+    if (material) return material.description;
+
+    return value;
+  }
+  return value.name || value.description || value.customer || value._id;
+}
+
+function formatChangedPartFieldValue(
+  key: keyof ReturnType<typeof toComparablePart>,
+  value: unknown,
+  rawValue: unknown,
+) {
+  if (value == null || value === '') return 'Empty';
+  if (key === 'customer' || key === 'material') {
+    return formatComparableEntityName(
+      rawValue as
+        | { _id: string; name?: string; description?: string; customer?: string }
+        | string
+        | undefined,
+    );
+  }
+  if (key === 'price') {
+    return `$${formatCost(typeof value === 'number' ? value : Number(value))}`;
+  }
+  if (key === 'subComponentIds') {
+    const subComponents = rawValue as PartSubComponent[] | undefined;
+    const labels = (subComponents || [])
+      .map((subComponent) => resolvePart(String(subComponent.partId))?.part)
+      .filter((label): label is string => Boolean(label));
+
+    if (!labels.length) return `${subComponents?.length || 0} selected`;
+
+    return labels.slice(0, 3).join(', ') + (labels.length > 3 ? ` +${labels.length - 3} more` : '');
+  }
+  if (key === 'cycleTimes') {
+    const cycleTimes = rawValue as unknown[] | undefined;
+    return `${cycleTimes?.length || 0} entries`;
+  }
+  if (key === 'additionalCosts') {
+    const additionalCosts = rawValue as unknown[] | undefined;
+    return `${additionalCosts?.length || 0} entries`;
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+}
+
+function getPartFieldsBlockingSave() {
+  const blocked = new Map<keyof ReturnType<typeof toComparablePart>, string>();
+
+  if (!part.value.part?.trim()) blocked.set('part', REQUIRED_MESSAGE);
+  if (!part.value.description?.trim()) blocked.set('description', REQUIRED_MESSAGE);
+  if (!part.value.customer) blocked.set('customer', REQUIRED_MESSAGE);
+
+  return blocked;
+}
+
+function getChangedPartFields() {
+  const blockedFields = getPartFieldsBlockingSave();
+
+  return Object.entries(comparableFieldLabels)
+    .filter(([key]) => {
+      const fieldKey = key as keyof ReturnType<typeof toComparablePart>;
+      return !isEqual(comparablePart.value[fieldKey], comparableOriginalPart.value[fieldKey]);
+    })
+    .map(([key, label]) => {
+      const fieldKey = key as keyof ReturnType<typeof toComparablePart>;
+      return {
+        label,
+        blockReason: blockedFields.get(fieldKey),
+        value: formatChangedPartFieldValue(
+          fieldKey,
+          comparablePart.value[fieldKey],
+          part.value[fieldKey],
+        ),
+      };
+    });
+}
+
+const changedPartFields = computed<Array<{ label: string; value: string; blockReason?: string }>>(
+  () => getChangedPartFields(),
+);
+
+const canSavePart = computed<boolean>(() => partIsAltered.value && valid.value);
+
+const requiredRule = (val: string) => !!val || REQUIRED_MESSAGE;
 
 function gotoLocation() {
   if (!part.value.location || !part.value.position) return;
@@ -872,6 +1049,40 @@ function addNew() {
     // No action needed here as the component has its own buttons
   }
 }
+
+function shouldBlockNavigation(to: { name?: unknown; params: Record<string, unknown> }) {
+  if (skipUnsavedChangesGuard.value) {
+    skipUnsavedChangesGuard.value = false;
+    return false;
+  }
+
+  if (!partIsAltered.value) return false;
+
+  const currentRoute = router.currentRoute.value;
+  const currentId = String(currentRoute.params.id ?? '');
+  const nextId = String(to.params.id ?? '');
+
+  return to.name !== currentRoute.name || nextId !== currentId;
+}
+
+function queuePendingNavigation(target: string) {
+  pendingNavigationTarget.value = target;
+  leaveDialogVisible.value = true;
+}
+
+onBeforeRouteLeave((to) => {
+  if (!shouldBlockNavigation(to)) return true;
+
+  queuePendingNavigation(to.fullPath);
+  return false;
+});
+
+onBeforeRouteUpdate((to) => {
+  if (!shouldBlockNavigation(to)) return true;
+
+  queuePendingNavigation(to.fullPath);
+  return false;
+});
 
 function syncPersistedPartImages() {
   const partId = part.value._id;

@@ -65,6 +65,7 @@
                     v-model="selectedMaterial.isMetric"
                     class="metric-switch"
                     color="primary"
+                    :disabled="!isNewMaterial"
                     hide-details
                     inset
                     label="Size (mm)"
@@ -245,6 +246,14 @@
               </v-card-text>
             </v-card>
           </v-dialog>
+          <LeaveUnsavedChangesDialog
+            v-model="leaveDialogVisible"
+            :changes="changedMaterialFields"
+            :confirm-disabled="!canSaveMaterial"
+            :loading="savingMaterial"
+            @confirm="saveAndContinue"
+            @discard="leaveWithoutSaving"
+          />
         </v-form>
       </v-col>
     </v-row>
@@ -256,6 +265,7 @@ import { calculateMaterialWeight, normalizeDimensions } from '@repo/utilities/ma
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref } from 'vue';
 import CurrencyInput from '@/components/CurrencyInput.vue';
+import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
 import MaterialPdfReview from '@/components/materials/MaterialPdfReview.vue';
 import MaterialSelection from '@/components/materials/MaterialSelection.vue';
 import MaterialSketch from '@/components/materials/MaterialSketch.vue';
@@ -263,14 +273,19 @@ import MaterialsList from '@/components/materials/MaterialsList.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import {
   buildMaterialDescription,
+  formatCost,
   formatCrossSectionDimension,
   formatWeight,
   onlyAllowNumeric,
 } from '@/plugins/utils';
+import router from '@/router';
+import { onBeforeRouteLeave } from 'vue-router';
+import { useSupplierStore } from '@/stores/supplier_store';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useMaterialsStore } from '@/stores/materials_store';
 
 const materialsStore = useMaterialsStore();
+const supplierStore = useSupplierStore();
 const materials = computed(() => materialsStore.materials);
 
 type EditableMaterial = MaterialFields & {
@@ -278,6 +293,10 @@ type EditableMaterial = MaterialFields & {
   supplier: Supplier | string | null;
   __v?: number;
 };
+
+const REQUIRED_MESSAGE = 'Required';
+const VALID_NUMBER_MESSAGE = 'Must be a valid number';
+const DUPLICATE_MATERIAL_MESSAGE = 'This material already exists.';
 
 const defaultMaterial: EditableMaterial = {
   description: '',
@@ -299,6 +318,10 @@ const form = ref();
 const pdfReviewDialog = ref(false);
 const pdfReviewHasPreview = ref(false);
 const pdfReviewDialogMaxWidth = computed(() => (pdfReviewHasPreview.value ? 1400 : 720));
+const leaveDialogVisible = ref(false);
+const savingMaterial = ref(false);
+const skipUnsavedChangesGuard = ref(false);
+const pendingAction = ref<null | (() => void | Promise<void>)>(null);
 
 onMounted(() => {
   materialsStore.fetch();
@@ -320,12 +343,136 @@ function toComparableMaterial(material: EditableMaterial | Material) {
   };
 }
 
-const isMaterialChanged = computed<boolean>(() => {
-  const material = selectedMaterial.value;
-  const original = materials.value.find((m) => m._id === material._id);
-  if (!original) return true;
-  return !isEqual(toComparableMaterial(material), toComparableMaterial(original));
+const comparableFieldLabels = {
+  materialType: 'Material Type',
+  type: 'Type',
+  isMetric: 'Size (mm)',
+  height: 'Height',
+  width: 'Width',
+  diameter: 'Diameter',
+  wallThickness: 'Wall Thickness',
+  length: 'Length',
+  supplier: 'Supplier',
+  costPerFoot: 'Cost per Foot',
+} satisfies Partial<Record<keyof ReturnType<typeof toComparableMaterial>, string>>;
+
+const comparableSelectedMaterial = computed(() => toComparableMaterial(selectedMaterial.value));
+const originalSelectedMaterial = computed<EditableMaterial | Material>(() => {
+  return (
+    materials.value.find((material) => material._id === selectedMaterial.value._id) ??
+    defaultMaterial
+  );
 });
+const comparableOriginalMaterial = computed(() =>
+  toComparableMaterial(originalSelectedMaterial.value),
+);
+
+const isMaterialChanged = computed<boolean>(() => {
+  return !isEqual(comparableSelectedMaterial.value, comparableOriginalMaterial.value);
+});
+
+function formatComparableSupplierName(supplier: EditableMaterial['supplier']) {
+  if (!supplier) return 'Empty';
+  if (typeof supplier !== 'string') return supplier.name;
+  return supplierStore.suppliers.find((candidate) => candidate._id === supplier)?.name ?? supplier;
+}
+
+function formatChangedMaterialFieldValue(
+  key: keyof ReturnType<typeof toComparableMaterial>,
+  value: unknown,
+  rawValue: unknown,
+) {
+  if (value == null || value === '') return 'Empty';
+  if (key === 'costPerFoot') {
+    return `$${formatCost(typeof value === 'number' ? value : Number(value))}`;
+  }
+  if (key === 'supplier') {
+    return formatComparableSupplierName(rawValue as EditableMaterial['supplier']);
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+}
+
+function isMissingNumber(value: unknown) {
+  return value === null || value === undefined || value === '' || Number.isNaN(value);
+}
+
+function getMaterialFieldsBlockingSave() {
+  const blocked = new Map<keyof ReturnType<typeof toComparableMaterial>, string>();
+
+  if (!selectedMaterial.value.materialType) blocked.set('materialType', REQUIRED_MESSAGE);
+  if (!selectedMaterial.value.type) blocked.set('type', REQUIRED_MESSAGE);
+  if (!selectedMaterial.value.supplier) blocked.set('supplier', REQUIRED_MESSAGE);
+  if (isMissingNumber(selectedMaterial.value.length)) blocked.set('length', REQUIRED_MESSAGE);
+
+  if (selectedMaterial.value.type === 'Flat') {
+    if (isMissingNumber(selectedMaterial.value.height)) blocked.set('height', REQUIRED_MESSAGE);
+    if (isMissingNumber(selectedMaterial.value.width)) blocked.set('width', REQUIRED_MESSAGE);
+  }
+
+  if (selectedMaterial.value.type === 'Round' && isMissingNumber(selectedMaterial.value.diameter)) {
+    blocked.set('diameter', REQUIRED_MESSAGE);
+  }
+
+  if (
+    selectedMaterial.value.wallThickness !== null &&
+    selectedMaterial.value.wallThickness !== undefined &&
+    (Number.isNaN(selectedMaterial.value.wallThickness) ||
+      Number(selectedMaterial.value.wallThickness) < 0)
+  ) {
+    blocked.set('wallThickness', VALID_NUMBER_MESSAGE);
+  }
+
+  if (existsInStore.value && isNewMaterial.value) {
+    blocked.set('materialType', DUPLICATE_MATERIAL_MESSAGE);
+    blocked.set('type', DUPLICATE_MATERIAL_MESSAGE);
+    blocked.set('isMetric', DUPLICATE_MATERIAL_MESSAGE);
+    if (selectedMaterial.value.type === 'Flat') {
+      blocked.set('height', DUPLICATE_MATERIAL_MESSAGE);
+      blocked.set('width', DUPLICATE_MATERIAL_MESSAGE);
+      if (selectedMaterial.value.wallThickness != null) {
+        blocked.set('wallThickness', DUPLICATE_MATERIAL_MESSAGE);
+      }
+    }
+    if (selectedMaterial.value.type === 'Round') {
+      blocked.set('diameter', DUPLICATE_MATERIAL_MESSAGE);
+      if (selectedMaterial.value.wallThickness != null) {
+        blocked.set('wallThickness', DUPLICATE_MATERIAL_MESSAGE);
+      }
+    }
+  }
+
+  return blocked;
+}
+
+function getChangedMaterialFields() {
+  const blockedFields = getMaterialFieldsBlockingSave();
+
+  return Object.entries(comparableFieldLabels)
+    .filter(([key]) => {
+      const fieldKey = key as keyof ReturnType<typeof toComparableMaterial>;
+      return !isEqual(
+        comparableSelectedMaterial.value[fieldKey],
+        comparableOriginalMaterial.value[fieldKey],
+      );
+    })
+    .map(([key, label]) => {
+      const fieldKey = key as keyof ReturnType<typeof toComparableMaterial>;
+      return {
+        label,
+        blockReason: blockedFields.get(fieldKey),
+        value: formatChangedMaterialFieldValue(
+          fieldKey,
+          comparableSelectedMaterial.value[fieldKey],
+          selectedMaterial.value[fieldKey],
+        ),
+      };
+    });
+}
+
+const changedMaterialFields = computed<
+  Array<{ label: string; value: string; blockReason?: string }>
+>(() => getChangedMaterialFields());
 
 const existsInStore = computed<boolean>(() => {
   // Check via material type, type, and dimensions excluding length
@@ -357,21 +504,39 @@ const existsInStore = computed<boolean>(() => {
 });
 
 function selectMaterial(material: Material) {
+  void guardMaterialNavigation(() => {
+    selectMaterialInternal(material);
+  });
+}
+
+function selectMaterialInternal(material: Material) {
   selectedMaterial.value = { ...material, isMetric: material.isMetric ?? false };
 }
 
 function addNewMaterial() {
+  void guardMaterialNavigation(() => {
+    addNewMaterialInternal();
+  });
+}
+
+function addNewMaterialInternal() {
   form.value?.resetValidation();
   selectedMaterial.value = { ...defaultMaterial };
 }
 
-function saveMaterial() {
+const canSaveMaterial = computed<boolean>(() => {
+  return (
+    formValid.value && !(existsInStore.value && isNewMaterial.value) && isMaterialChanged.value
+  );
+});
+
+async function persistMaterial() {
   normalizeDimensions(selectedMaterial.value);
   form.value.validate();
-  if (!formValid.value || (existsInStore.value && isNewMaterial.value)) return;
+  if (!canSaveMaterial.value) return false;
 
   const supplierId = getSupplierId(selectedMaterial.value.supplier);
-  if (!supplierId) return;
+  if (!supplierId) return false;
 
   const basePayload: MaterialCreate = {
     description: selectedMaterial.value.description,
@@ -387,11 +552,15 @@ function saveMaterial() {
     costPerFoot: selectedMaterial.value.costPerFoot,
   };
 
+  savingMaterial.value = true;
+  let saved = false;
+
   if (isNewMaterial.value) {
-    materialsStore
+    await materialsStore
       .add(basePayload)
       .then(() => {
-        addNewMaterial();
+        saved = true;
+        addNewMaterialInternal();
         toastSuccess('Material added successfully');
       })
       .catch(() => {
@@ -407,16 +576,76 @@ function saveMaterial() {
       __v: selectedMaterial.value.__v,
     };
 
-    materialsStore
+    await materialsStore
       .update(payload)
       .then(() => {
+        saved = true;
         toastSuccess('Material updated successfully');
       })
       .catch(() => {
         toastError('Failed to update material');
       });
   }
+
+  savingMaterial.value = false;
+  return saved;
 }
+
+async function saveMaterial() {
+  await persistMaterial();
+}
+
+function shouldBlockNavigation() {
+  if (skipUnsavedChangesGuard.value) {
+    skipUnsavedChangesGuard.value = false;
+    return false;
+  }
+
+  return isMaterialChanged.value;
+}
+
+async function guardMaterialNavigation(action: () => void | Promise<void>) {
+  if (!shouldBlockNavigation()) {
+    await action();
+    return;
+  }
+
+  pendingAction.value = action;
+  leaveDialogVisible.value = true;
+}
+
+async function saveAndContinue() {
+  const action = pendingAction.value;
+  if (!action) return;
+
+  const saved = await persistMaterial();
+  if (!saved) return;
+
+  leaveDialogVisible.value = false;
+  pendingAction.value = null;
+  skipUnsavedChangesGuard.value = true;
+  await action();
+}
+
+async function leaveWithoutSaving() {
+  const action = pendingAction.value;
+  if (!action) return;
+
+  leaveDialogVisible.value = false;
+  pendingAction.value = null;
+  skipUnsavedChangesGuard.value = true;
+  await action();
+}
+
+onBeforeRouteLeave((to) => {
+  if (!shouldBlockNavigation()) return true;
+
+  pendingAction.value = async () => {
+    await router.push(to.fullPath);
+  };
+  leaveDialogVisible.value = true;
+  return false;
+});
 
 const description = computed(() => {
   const description = buildMaterialDescription(selectedMaterial.value);
@@ -523,17 +752,18 @@ const costPerBarInput = computed<number | null>({
   },
 });
 
-const requiredRule = (v: unknown) => (v !== null && v !== undefined && v !== '') || 'Required';
+const requiredRule = (v: unknown) =>
+  (v !== null && v !== undefined && v !== '') || REQUIRED_MESSAGE;
 
 const numberRequiredRule = (v: unknown) =>
-  (v !== null && v !== undefined && !Number.isNaN(v) && v !== '') || 'Must be a valid number';
+  (v !== null && v !== undefined && !Number.isNaN(v) && v !== '') || VALID_NUMBER_MESSAGE;
 
 const numberOptionalRule = (v: unknown) =>
   v === null ||
   v === undefined ||
   v === '' ||
   (!Number.isNaN(v) && Number(v) >= 0) ||
-  'Must be a valid number';
+  VALID_NUMBER_MESSAGE;
 </script>
 
 <style scoped>

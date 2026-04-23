@@ -8,11 +8,13 @@
     :label="props.label"
     prefix="$"
     :rules="props.rules"
+    @blur="handleBlur"
+    @focus="handleFocus"
   />
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 import { type CurrencyDisplay, useCurrencyInput } from 'vue-currency-input';
 
 defineOptions({ inheritAttrs: false });
@@ -25,6 +27,7 @@ const props = defineProps<{
 }>();
 
 const modelValue = defineModel<number | null>();
+const isFocused = ref(false);
 
 const { inputRef, formattedValue, numberValue, setValue } = useCurrencyInput({
   currency: 'USD',
@@ -42,10 +45,20 @@ watch(numberValue, (value) => {
 watch(
   modelValue,
   (value) => {
+    if (isFocused.value) return;
     setValue(value ?? null);
   },
   { immediate: true },
 );
+
+function handleFocus() {
+  isFocused.value = true;
+}
+
+function handleBlur() {
+  isFocused.value = false;
+  setValue(modelValue.value ?? null);
+}
 </script>
 
 <style scoped></style>

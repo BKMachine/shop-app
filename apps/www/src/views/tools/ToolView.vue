@@ -82,7 +82,7 @@
         </v-btn>
       </div>
     </v-tabs>
-    <v-form v-model="valid">
+    <v-form ref="form" v-model="valid">
       <v-window v-model="tab" class="tab-window">
         <v-window-item value="general">
           <v-row no-gutters>
@@ -384,6 +384,14 @@
       title="Remove Tool Image?"
       @confirm="removeConfirmedToolImage"
     />
+    <LeaveUnsavedChangesDialog
+      v-model="leaveDialogVisible"
+      :changes="changedToolFields"
+      :confirm-disabled="!canSaveTool"
+      :loading="saveFlag"
+      @confirm="saveAndContinue"
+      @discard="leaveWithoutSaving"
+    />
   </v-container>
 </template>
 
@@ -391,9 +399,11 @@
 import isEqual from 'lodash/isEqual';
 import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CurrencyInput from '@/components/CurrencyInput.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
+import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import ToolStockGraph from '@/components/ToolStockGraph.vue';
@@ -402,14 +412,16 @@ import VendorSelect from '@/components/VendorSelect.vue';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { isToolCategory } from '@/plugins/toolCategories';
-import { isNumber } from '@/plugins/utils';
+import { formatCost, isNumber } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
+import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const toolCategoryStore = useToolCategoryStore();
+const supplierStore = useSupplierStore();
 const toolStore = useToolStore();
 const vendorStore = useVendorStore();
 
@@ -441,6 +453,9 @@ const checkingItemUnique = ref(false);
 const checkingBarcodeUnique = ref(false);
 const cuttingDiaInput = ref('');
 const fluteLengthInput = ref('');
+const leaveDialogVisible = ref(false);
+const pendingNavigationTarget = ref<string | null>(null);
+const skipUnsavedChangesGuard = ref(false);
 
 type DecimalFieldKey = 'cuttingDia' | 'fluteLength';
 
@@ -544,16 +559,18 @@ function fetchTool(showSpinner: boolean = true) {
     });
 }
 
-async function saveTool() {
-  if (!canSaveTool.value) return;
+async function persistTool() {
+  if (!canSaveTool.value) return false;
 
   const routeName = router.currentRoute.value.name;
 
   saveFlag.value = true;
+  let saved = false;
   if (routeName === 'createTool') {
     await toolStore
       .add({ ...tool.value, category: category.value })
       .then(() => {
+        saved = true;
         toastSuccess('Tool added successfully');
       })
       .catch(() => {
@@ -563,6 +580,7 @@ async function saveTool() {
     await toolStore
       .update(tool.value)
       .then(() => {
+        saved = true;
         toastSuccess('Tool updated successfully');
       })
       .catch(() => {
@@ -570,7 +588,44 @@ async function saveTool() {
       });
   }
   saveFlag.value = false;
+
+  if (saved) {
+    toolOriginal.value = { ...tool.value };
+    syncDecimalInputs();
+  }
+
+  return saved;
+}
+
+async function saveTool() {
+  const saved = await persistTool();
+  if (!saved) return;
+
+  skipUnsavedChangesGuard.value = true;
   router.back();
+}
+
+async function saveAndContinue() {
+  const target = pendingNavigationTarget.value;
+  if (!target) return;
+
+  const saved = await persistTool();
+  if (!saved) return;
+
+  leaveDialogVisible.value = false;
+  pendingNavigationTarget.value = null;
+  skipUnsavedChangesGuard.value = true;
+  await router.push(target);
+}
+
+async function leaveWithoutSaving() {
+  const target = pendingNavigationTarget.value;
+  if (!target) return;
+
+  leaveDialogVisible.value = false;
+  pendingNavigationTarget.value = null;
+  skipUnsavedChangesGuard.value = true;
+  await router.push(target);
 }
 
 function onToolImageSelected(payload: { imageId: string; url: string; isMain?: boolean }) {
@@ -623,6 +678,17 @@ function normalizeComparableEntity(value: { _id: string } | string | undefined |
   return typeof value === 'string' ? value : value._id;
 }
 
+function formatComparableEntityName(
+  value: { _id: string; name?: string } | string | undefined | null,
+  entities: Array<{ _id: string; name: string }>,
+) {
+  if (!value) return 'Empty';
+  if (typeof value === 'object' && value.name) return value.name;
+
+  const id = typeof value === 'string' ? value : value._id;
+  return entities.find((entity) => entity._id === id)?.name ?? id;
+}
+
 function toComparableTool(toolValue: Tool) {
   return {
     ...toolValue,
@@ -645,9 +711,99 @@ function toComparableTool(toolValue: Tool) {
   };
 }
 
+const comparableTool = computed(() => toComparableTool(tool.value));
+const comparableOriginalTool = computed(() => toComparableTool(toolOriginal.value));
+
+const REQUIRED_MESSAGE = 'Required';
+
+const comparableFieldLabels = {
+  description: 'Description',
+  item: 'Product Number',
+  barcode: 'Barcode',
+  vendor: 'Vendor',
+  coating: 'Coating',
+  productLink: 'Product Page Link',
+  techDataLink: 'Speed & Feeds Link',
+  autoReorder: 'Auto Reorder',
+  onOrder: 'On Order',
+  orderedOn: 'Ordered On',
+  stock: 'Stock Qty',
+  supplier: 'Supplier',
+  orderLink: 'Order Link',
+  location: 'Location',
+  position: 'Position',
+  cost: 'Cost',
+  reorderQty: 'Reorder Qty',
+  reorderThreshold: 'Min Stock Qty',
+  toolType: 'Tool Type',
+  flutes: 'Flutes',
+  cuttingDia: 'Cutting Dia',
+  fluteLength: 'Flute Length',
+} satisfies Partial<Record<keyof ReturnType<typeof toComparableTool>, string>>;
+
+function formatChangedFieldValue(
+  key: keyof ReturnType<typeof toComparableTool>,
+  value: unknown,
+  rawValue: unknown,
+) {
+  if (value == null || value === '') return 'Empty';
+  if (key === 'cost') {
+    return `$${formatCost(typeof value === 'number' ? value : Number(value))}`;
+  }
+  if (key === 'vendor') {
+    return formatComparableEntityName(
+      rawValue as { _id: string; name?: string } | string | undefined | null,
+      vendorStore.vendors,
+    );
+  }
+  if (key === 'supplier') {
+    return formatComparableEntityName(
+      rawValue as { _id: string; name?: string } | string | undefined | null,
+      supplierStore.suppliers,
+    );
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+}
+
+function getToolFieldsBlockingSave() {
+  const blocked = new Map<keyof ReturnType<typeof toComparableTool>, string>();
+
+  if (!tool.value.description?.trim()) blocked.set('description', REQUIRED_MESSAGE);
+  if (!tool.value.item?.trim()) blocked.set('item', REQUIRED_MESSAGE);
+  if (tool.value.item && tool.value.barcode === tool.value.item) {
+    blocked.set('barcode', 'Not needed if the same as Product Number');
+  }
+  if (itemUniqueError.value) blocked.set('item', itemUniqueError.value);
+  if (barcodeUniqueError.value) blocked.set('barcode', barcodeUniqueError.value);
+
+  return blocked;
+}
+
+function getChangedToolFields() {
+  const blockedFields = getToolFieldsBlockingSave();
+
+  return Object.entries(comparableFieldLabels)
+    .filter(([key]) => {
+      const fieldKey = key as keyof ReturnType<typeof toComparableTool>;
+      return !isEqual(comparableTool.value[fieldKey], comparableOriginalTool.value[fieldKey]);
+    })
+    .map(([key, label]) => {
+      const fieldKey = key as keyof ReturnType<typeof toComparableTool>;
+      return {
+        label,
+        blockReason: blockedFields.get(fieldKey),
+        value: formatChangedFieldValue(fieldKey, comparableTool.value[fieldKey], tool.value[fieldKey]),
+      };
+    });
+}
+
 const toolIsAltered = computed<boolean>(() => {
-  return !isEqual(toComparableTool(tool.value), toComparableTool(toolOriginal.value));
+  return !isEqual(comparableTool.value, comparableOriginalTool.value);
 });
+const changedToolFields = computed<Array<{ label: string; value: string; blockReason?: string }>>(() =>
+  getChangedToolFields(),
+);
 const hasRequiredToolFields = computed<boolean>(() => {
   return Boolean(tool.value.description?.trim() && tool.value.item?.trim());
 });
@@ -667,12 +823,46 @@ const canSaveTool = computed<boolean>(() => {
   );
 });
 
+function shouldBlockNavigation(to: { name?: unknown; params: Record<string, unknown> }) {
+  if (skipUnsavedChangesGuard.value) {
+    skipUnsavedChangesGuard.value = false;
+    return false;
+  }
+
+  if (!toolIsAltered.value) return false;
+
+  const currentRoute = router.currentRoute.value;
+  const currentId = String(currentRoute.params.id ?? '');
+  const nextId = String(to.params.id ?? '');
+
+  return to.name !== currentRoute.name || nextId !== currentId;
+}
+
+function queuePendingNavigation(target: string) {
+  pendingNavigationTarget.value = target;
+  leaveDialogVisible.value = true;
+}
+
+onBeforeRouteLeave((to) => {
+  if (!shouldBlockNavigation(to)) return true;
+
+  queuePendingNavigation(to.fullPath);
+  return false;
+});
+
+onBeforeRouteUpdate((to) => {
+  if (!shouldBlockNavigation(to)) return true;
+
+  queuePendingNavigation(to.fullPath);
+  return false;
+});
+
 const rules = {
   required: (val) => {
     if (typeof val === 'string') {
-      return val.trim().length > 0 || 'Required';
+      return val.trim().length > 0 || REQUIRED_MESSAGE;
     }
-    return !!val || 'Required';
+    return !!val || REQUIRED_MESSAGE;
   },
   barcode: (val) => {
     if (!tool.value.item) return true;
