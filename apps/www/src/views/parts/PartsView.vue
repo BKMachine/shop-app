@@ -3,12 +3,24 @@
     <v-card-title class="header mt-4">
       <div>Parts - {{ partStore.total }}</div>
       <div class="header-actions">
+        <v-checkbox
+          v-model="showSubComponents"
+          class="parts-sub-toggle mr-2"
+          color="primary"
+          density="compact"
+          hide-details
+          label="Show Subcomponents"
+          @update:model-value="syncFiltersToQuery"
+        />
         <v-menu :close-on-content-click="false" location="bottom end">
           <template #activator="{ props: activatorProps }">
             <v-icon
               v-bind="activatorProps"
               aria-label="Show Columns"
+              class="mr-2"
+              color="grey-darken-2"
               icon="mdi-view-column-outline"
+              size="24"
             />
           </template>
 
@@ -26,15 +38,6 @@
           </v-list>
         </v-menu>
 
-        <v-checkbox
-          v-model="showSubComponents"
-          class="parts-sub-toggle"
-          color="primary"
-          density="compact"
-          hide-details
-          label="Show Subcomponents"
-          @update:model-value="syncFiltersToQuery"
-        />
         <v-btn color="secondary" link prepend-icon="mdi-plus" :to="{ name: 'createPart' }">
           Create New Part
         </v-btn>
@@ -510,7 +513,7 @@ function areFilterQueriesEqual(
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  /* gap: 1rem; */
 }
 
 .search-details {

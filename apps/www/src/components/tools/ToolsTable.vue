@@ -9,7 +9,9 @@
               v-bind="activatorProps"
               aria-label="Show Columns"
               class="mr-2"
+              color="grey-darken-2"
               icon="mdi-view-column-outline"
+              size="24"
             />
           </template>
 
