@@ -143,7 +143,7 @@ async function fetchTools() {
   await toolStore.fetch({
     category: tab.value === 'all' ? undefined : tab.value,
     search: search.value || undefined,
-    toolType: tab.value !== 'all' ? toolType.value || undefined : undefined,
+    toolType: toolType.value || undefined,
     cuttingDia: tab.value === 'milling' ? cuttingDia.value || undefined : undefined,
     minFluteLength: tab.value === 'milling' ? minFluteLength.value || undefined : undefined,
     limit: 20,
@@ -163,7 +163,7 @@ function syncFiltersToQuery() {
       ...baseQuery,
       tab: tab.value,
       ...(search.value ? { search: search.value } : {}),
-      ...(toolType.value && tab.value !== 'all' ? { toolType: toolType.value } : {}),
+      ...(toolType.value ? { toolType: toolType.value } : {}),
       ...(cuttingDia.value && tab.value === 'milling' ? { cuttingDia: cuttingDia.value } : {}),
       ...(minFluteLength.value && tab.value === 'milling'
         ? { minFluteLength: minFluteLength.value }

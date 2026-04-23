@@ -134,7 +134,16 @@ export const useToolCategoryStore = defineStore('tool-categories', () => {
   }
 
   function getTypes(category: ToolFilterCategory): readonly string[] {
-    if (category === 'all') return [];
+    if (category === 'all') {
+      return Array.from(
+        new Set([
+          ...settings.value.groups.milling,
+          ...settings.value.groups.turning,
+          ...settings.value.groups.swiss,
+          ...settings.value.groups.other,
+        ]),
+      ).sort((left, right) => left.localeCompare(right));
+    }
     return settings.value.groups[category];
   }
 

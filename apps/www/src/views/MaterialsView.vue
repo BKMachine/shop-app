@@ -264,6 +264,7 @@
 import { calculateMaterialWeight, normalizeDimensions } from '@repo/utilities/materials';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 import CurrencyInput from '@/components/CurrencyInput.vue';
 import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
 import MaterialPdfReview from '@/components/materials/MaterialPdfReview.vue';
@@ -278,11 +279,10 @@ import {
   formatWeight,
   onlyAllowNumeric,
 } from '@/plugins/utils';
-import router from '@/router';
-import { onBeforeRouteLeave } from 'vue-router';
-import { useSupplierStore } from '@/stores/supplier_store';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+import router from '@/router';
 import { useMaterialsStore } from '@/stores/materials_store';
+import { useSupplierStore } from '@/stores/supplier_store';
 
 const materialsStore = useMaterialsStore();
 const supplierStore = useSupplierStore();

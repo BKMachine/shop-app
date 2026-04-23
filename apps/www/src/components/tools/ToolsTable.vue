@@ -69,7 +69,7 @@
               <v-col cols="7">
                 <v-row>
                   <v-col cols="6">
-                    <v-select
+                    <v-autocomplete
                       v-model="selectedToolType"
                       clearable
                       :items="types"
@@ -121,31 +121,48 @@
                 </v-text-field>
               </v-col>
               <v-col cols="6">
-                <v-select v-model="selectedToolType" clearable :items="types" label="Tool Type" />
+                <v-autocomplete
+                  v-model="selectedToolType"
+                  clearable
+                  :items="types"
+                  label="Tool Type"
+                />
               </v-col>
             </v-row>
           </div>
           <div v-else>
-            <v-text-field
-              v-model="searchText"
-              clearable
-              label="Search"
-              prepend-inner-icon="mdi-magnify"
-              single-line
-              variant="outlined"
-            >
-              <template #details>
-                <div class="search-details">
-                  <button
-                    class="clear-filters-hint"
-                    type="button"
-                    @click="emits('clearAllFilters')"
-                  >
-                    Clear all filters
-                  </button>
-                </div>
-              </template>
-            </v-text-field>
+            <v-row>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="searchText"
+                  clearable
+                  label="Search"
+                  prepend-inner-icon="mdi-magnify"
+                  single-line
+                  variant="outlined"
+                >
+                  <template #details>
+                    <div class="search-details">
+                      <button
+                        class="clear-filters-hint"
+                        type="button"
+                        @click="emits('clearAllFilters')"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  </template>
+                </v-text-field>
+              </v-col>
+              <v-col cols="6">
+                <v-autocomplete
+                  v-model="selectedToolType"
+                  clearable
+                  :items="types"
+                  label="Tool Type"
+                />
+              </v-col>
+            </v-row>
           </div>
         </div>
 

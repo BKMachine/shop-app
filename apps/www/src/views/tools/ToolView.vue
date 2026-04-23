@@ -327,7 +327,12 @@
         <v-window-item value="tech">
           <v-row>
             <v-col col="3">
-              <v-select v-model="tool.toolType" clearable :items="types" label="Tool Type" />
+              <v-autocomplete
+                v-model="tool.toolType"
+                clearable
+                :items="types"
+                label="Tool Type"
+              />
             </v-col>
             <v-col cols="3">
               <v-text-field
