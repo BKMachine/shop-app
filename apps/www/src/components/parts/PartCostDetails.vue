@@ -70,47 +70,62 @@
         </v-card>
       </template>
       <template v-else>
-        <v-row
-          v-for="entry in cycleEntries"
-          :key="entry.rowId"
-          class="mb-2 align-center"
-          no-gutters
+        <draggable
+          v-if="cycleEntries.length"
+          v-model="cycleEntries"
+          class="cycle-times-list"
+          drag-class="cycle-time-row--dragging"
+          ghost-class="cycle-time-row--ghost"
+          handle=".cycle-time-drag-handle"
+          item-key="rowId"
         >
-          <v-col cols="11">
-            <v-row class="mb-2" no-gutters>
-              <v-col cols="6">
-                <v-text-field
-                  v-model="entry.cycle.operation"
-                  class="mr-1"
-                  dense
-                  hide-details
-                  label="Operation"
-                />
+          <template #item="{ element, index }">
+            <v-row class="mb-2 align-center cycle-time-row" no-gutters>
+              <v-col cols="11">
+                <v-row class="mb-2" no-gutters>
+                  <v-col cols="8">
+                    <div class="cycle-operation-field mr-1">
+                      <span
+                        v-if="element.cycle.operation"
+                        class="cycle-time-drag-handle cycle-operation-field__handle"
+                      >
+                        <v-icon icon="mdi-drag" size="small" />
+                      </span>
+                      <v-text-field
+                        v-model="element.cycle.operation"
+                        class="cycle-operation-field__input"
+                        dense
+                        hide-details
+                        label="Operation"
+                      />
+                    </div>
+                  </v-col>
+                  <v-col cols="4">
+                    <v-text-field
+                      class="ml-2"
+                      dense
+                      hide-details
+                      label="Cycle Time (mm:ss)"
+                      :model-value="getCycleInputValue(element.rowId, element.cycle.time)"
+                      @blur="onCycleBlur(element.rowId, index)"
+                      @focus="onCycleFocus(element.rowId, element.cycle.time)"
+                      @update:model-value="onCycleInput(element.rowId, $event)"
+                    />
+                  </v-col>
+                </v-row>
               </v-col>
-              <v-col cols="6">
-                <v-text-field
-                  class="ml-2"
-                  dense
-                  hide-details
-                  label="Cycle Time (mm:ss)"
-                  :model-value="getCycleInputValue(entry.rowId, entry.cycle.time)"
-                  @blur="onCycleBlur(entry.rowId, entry.idx)"
-                  @focus="onCycleFocus(entry.rowId, entry.cycle.time)"
-                  @update:model-value="onCycleInput(entry.rowId, $event)"
+              <v-col cols="1">
+                <v-icon
+                  class="ml-4"
+                  color="red"
+                  icon="mdi-delete-circle"
+                  size="x-large"
+                  @click="removeCycleTime(element.rowId, index)"
                 />
               </v-col>
             </v-row>
-          </v-col>
-          <v-col cols="1">
-            <v-icon
-              class="ml-4"
-              color="red"
-              icon="mdi-delete-circle"
-              size="x-large"
-              @click="removeCycleTime(entry.rowId, entry.idx)"
-            />
-          </v-col>
-        </v-row>
+          </template>
+        </draggable>
         <v-btn color="primary" variant="outlined" @click="addCycleTime">
           <v-icon left> mdi-plus </v-icon>Add Cycle Time
         </v-btn>
@@ -330,6 +345,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import draggable from 'vuedraggable';
 import {
   buildRateThresholdGradient,
   getToneForRate,
@@ -360,18 +376,29 @@ const partStore = usePartStore();
 
 // Cycle Times
 
+type CycleEntry = {
+  cycle: Part['cycleTimes'][number];
+  idx: number;
+  rowId: string;
+};
+
 const cycleTimeInputs = ref<Record<string, string>>({});
 const editingCycleInputs = ref<Record<string, boolean>>({});
 const cycleRowIds = ref<string[]>([]);
 let nextCycleRowId = 0;
 
-const cycleEntries = computed(() =>
-  (part.cycleTimes || []).map((cycle, idx) => ({
-    cycle,
-    idx,
-    rowId: cycleRowIds.value[idx] ?? `cycle-missing-${idx}`,
-  })),
-);
+const cycleEntries = computed<CycleEntry[]>({
+  get: () =>
+    (part.cycleTimes || []).map((cycle, idx) => ({
+      cycle,
+      idx,
+      rowId: cycleRowIds.value[idx] ?? `cycle-missing-${idx}`,
+    })),
+  set: (entries) => {
+    part.cycleTimes = entries.map((entry) => entry.cycle);
+    cycleRowIds.value = entries.map((entry) => entry.rowId);
+  },
+});
 
 const totalCycleTime = computed(() =>
   cycleEntries.value.reduce((total, entry) => {
@@ -715,6 +742,33 @@ function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
 
 .sub-component-description {
   font-size: 0.7rem;
+}
+
+.cycle-operation-field {
+  position: relative;
+}
+
+.cycle-time-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+}
+
+.cycle-operation-field__handle {
+  position: absolute;
+  top: 38px;
+  left: 12px;
+  transform: translateY(-50%);
+  z-index: 1;
+  color: rgba(var(--v-theme-on-surface), 0.65);
+}
+
+.cycle-operation-field__input .v-field__input {
+  padding-inline-start: 32px;
+}
+
+.cycle-time-drag-handle:active {
+  cursor: grabbing;
 }
 
 .target-slider .v-slider-track {
