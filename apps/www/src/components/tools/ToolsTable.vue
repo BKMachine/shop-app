@@ -2,8 +2,38 @@
   <v-card class="tools-table-card">
     <v-card-title class="header">
       <div>{{ resultsTitle }}</div>
-      <div v-if="category !== 'all'">
-        <v-btn color="primary" link prepend-icon="mdi-plus" :to="{ name: 'createTool' }">
+      <div class="tools-table-card__actions mb-4">
+        <v-menu :close-on-content-click="false" location="bottom end">
+          <template #activator="{ props: activatorProps }">
+            <v-icon
+              v-bind="activatorProps"
+              aria-label="Show Columns"
+              class="mr-2"
+              icon="mdi-view-column-outline"
+            />
+          </template>
+
+          <v-list density="compact">
+            <v-list-subheader>Visible Columns</v-list-subheader>
+            <v-list-item v-for="column in toggleableHeaders" :key="column.key" density="compact">
+              <template #prepend>
+                <v-checkbox-btn
+                  :model-value="visibleHeaderKeys.includes(column.key)"
+                  @update:model-value="toggleHeader(column.key, $event)"
+                />
+              </template>
+              <v-list-item-title>{{ column.title }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
+        <v-btn
+          v-if="category !== 'all'"
+          color="primary"
+          link
+          prepend-icon="mdi-plus"
+          :to="{ name: 'createTool' }"
+        >
           Create New Tool
         </v-btn>
       </div>
@@ -123,7 +153,7 @@
           ref="tableRef"
           :custom-key-sort="customKeySort"
           :has-more="hasMore"
-          :headers="headers"
+          :headers="visibleHeaders"
           :items="items"
           :loading="toolStore.loading"
           :loading-more="loadingMore"
@@ -157,7 +187,7 @@ import { useToolStore } from '@/stores/tool_store';
 
 const props = defineProps<{
   title: string;
-  headers: { key: string; title?: string }[];
+  headers: { key: string; title?: string; defaultVisible?: boolean }[];
   items: Tool[];
   totalItems: number;
   hasMore: boolean;
@@ -188,18 +218,71 @@ const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
 const selectedToolType = ref<string | null>(props.toolType);
 const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
+const visibleHeaderKeys = ref<string[]>([]);
+const visibleColumnsStorageKey = computed(() => `tools-table-visible-columns:${props.category}`);
 const tableSortBy = computed(() => {
   return props.sortBy ? [{ key: props.sortBy, order: props.order }] : [];
 });
 
+const toggleableHeaders = computed(() => {
+  return props.headers.filter((header) => header.title && header.key !== 'img');
+});
+
+const visibleHeaders = computed(() => {
+  return props.headers.filter((header) => {
+    if (header.key === 'img') return true;
+    return visibleHeaderKeys.value.includes(header.key);
+  });
+});
+
 const customKeySort = computed(() => {
   return Object.fromEntries(
-    props.headers
+    visibleHeaders.value
       .map(({ key }) => key)
       .filter((key): key is string => Boolean(key))
       .map((key) => [key, () => 0]),
   );
 });
+
+function syncVisibleHeaders() {
+  const availableHeaders = props.headers.filter((header) => header.key !== 'img');
+  const candidateKeys = visibleHeaderKeys.value.length
+    ? visibleHeaderKeys.value
+    : getStoredVisibleHeaderKeys();
+
+  visibleHeaderKeys.value = candidateKeys.length
+    ? availableHeaders
+        .filter((header) => candidateKeys.includes(header.key))
+        .map((header) => header.key)
+    : availableHeaders
+        .filter((header) => header.defaultVisible !== false)
+        .map((header) => header.key);
+}
+
+function getStoredVisibleHeaderKeys() {
+  if (typeof window === 'undefined') return [];
+
+  const storedValue = window.localStorage.getItem(visibleColumnsStorageKey.value);
+  if (!storedValue) return [];
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter((value): value is string => typeof value === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistVisibleHeaderKeys() {
+  if (typeof window === 'undefined') return;
+
+  window.localStorage.setItem(
+    visibleColumnsStorageKey.value,
+    JSON.stringify(visibleHeaderKeys.value),
+  );
+}
 
 const resultsTitle = computed(() => {
   let title = props.title;
@@ -235,6 +318,19 @@ watch(
     if (searchText.value !== value) searchText.value = value;
   },
 );
+
+watch(
+  [() => props.headers, visibleColumnsStorageKey],
+  () => {
+    visibleHeaderKeys.value = getStoredVisibleHeaderKeys();
+    syncVisibleHeaders();
+  },
+  { immediate: true },
+);
+
+watch(visibleHeaderKeys, () => {
+  persistVisibleHeaderKeys();
+});
 
 watch(
   () => props.toolType,
@@ -303,6 +399,17 @@ function location(tool: Tool): string {
   if (tool.position) text += ' - ' + tool.position;
   return text;
 }
+
+function toggleHeader(key: string, enabled: boolean) {
+  if (enabled) {
+    if (!visibleHeaderKeys.value.includes(key)) {
+      visibleHeaderKeys.value = [...visibleHeaderKeys.value, key];
+    }
+    return;
+  }
+
+  visibleHeaderKeys.value = visibleHeaderKeys.value.filter((headerKey) => headerKey !== key);
+}
 </script>
 
 <style scoped>
@@ -328,6 +435,11 @@ function location(tool: Tool): string {
   display: flex;
   width: 100%;
   justify-content: space-between;
+}
+
+.tools-table-card__actions {
+  display: flex;
+  align-items: center;
 }
 
 .search-details {

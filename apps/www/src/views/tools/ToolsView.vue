@@ -218,6 +218,11 @@ const millingHeaders = [
     key: 'coating',
   },
   {
+    title: 'Tool Type',
+    key: 'toolType',
+    defaultVisible: false,
+  },
+  {
     title: 'Location',
     key: 'location',
   },
@@ -255,6 +260,11 @@ const turningHeaders = [
     key: 'flutes',
   },
   {
+    title: 'Tool Type',
+    key: 'toolType',
+    defaultVisible: false,
+  },
+  {
     title: 'Location',
     key: 'location',
   },
@@ -277,6 +287,11 @@ const otherHeaders = [
   {
     title: 'Item',
     key: 'item',
+  },
+  {
+    title: 'Tool Type',
+    key: 'toolType',
+    defaultVisible: false,
   },
   {
     title: 'Location',

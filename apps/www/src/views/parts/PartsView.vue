@@ -1,8 +1,31 @@
 <template>
   <v-card class="infinite-scroll-view-card">
-    <v-card-title class="header my-4">
+    <v-card-title class="header mt-4">
       <div>Parts - {{ partStore.total }}</div>
       <div class="header-actions">
+        <v-menu :close-on-content-click="false" location="bottom end">
+          <template #activator="{ props: activatorProps }">
+            <v-icon
+              v-bind="activatorProps"
+              aria-label="Show Columns"
+              icon="mdi-view-column-outline"
+            />
+          </template>
+
+          <v-list density="compact">
+            <v-list-subheader>Visible Columns</v-list-subheader>
+            <v-list-item v-for="column in toggleableHeaders" :key="column.key" density="compact">
+              <template #prepend>
+                <v-checkbox-btn
+                  :model-value="visibleHeaderKeys.includes(column.key)"
+                  @update:model-value="toggleHeader(column.key, $event)"
+                />
+              </template>
+              <v-list-item-title>{{ column.title }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
         <v-checkbox
           v-model="showSubComponents"
           class="parts-sub-toggle"
@@ -55,7 +78,7 @@
         ref="tableRef"
         :custom-key-sort="customKeySort"
         :has-more="partStore.listHasMore"
-        :headers="headers"
+        :headers="visibleHeaders"
         :items="partStore.listParts"
         :loading="partStore.listLoading"
         :loading-more="partStore.listLoadingMore"
@@ -156,11 +179,13 @@ const route = useRoute();
 useDocumentScrollLock();
 
 const listPageSize = 30;
+const VISIBLE_COLUMNS_STORAGE_KEY = 'parts-table-visible-columns';
 const sortBy = ref<Array<{ key: string; order: 'asc' | 'desc' }>>([{ key: 'part', order: 'asc' }]);
 const search = ref('');
 const selectedCustomerId = ref<string | null>(null);
 const showSubComponents = ref(false);
 const missingImageIds = ref<Record<string, boolean>>({});
+const visibleHeaderKeys = ref<string[]>([]);
 const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const FILTER_QUERY_KEYS = ['search', 'customer', 'subcomponents', 'sort', 'order'] as const;
 const isFilterQueryKey = (key: string): key is (typeof FILTER_QUERY_KEYS)[number] =>
@@ -200,9 +225,66 @@ const headers = [
   },
 ];
 
-const customKeySort = computed(() => {
-  return Object.fromEntries(headers.map(({ key }) => [key, () => 0]));
+const toggleableHeaders = computed(() => {
+  return headers.filter((header) => header.title && header.key !== 'img');
 });
+
+const visibleHeaders = computed(() => {
+  return headers.filter((header) => {
+    if (header.key === 'img') return true;
+    return visibleHeaderKeys.value.includes(header.key);
+  });
+});
+
+const customKeySort = computed(() => {
+  return Object.fromEntries(visibleHeaders.value.map(({ key }) => [key, () => 0]));
+});
+
+function syncVisibleHeaders() {
+  const availableHeaders = headers.filter((header) => header.key !== 'img');
+  const candidateKeys = visibleHeaderKeys.value.length
+    ? visibleHeaderKeys.value
+    : getStoredVisibleHeaderKeys();
+
+  visibleHeaderKeys.value = candidateKeys.length
+    ? availableHeaders
+        .filter((header) => candidateKeys.includes(header.key))
+        .map((header) => header.key)
+    : availableHeaders.map((header) => header.key);
+}
+
+function toggleHeader(key: string, enabled: boolean | null) {
+  if (enabled) {
+    if (!visibleHeaderKeys.value.includes(key)) {
+      visibleHeaderKeys.value = [...visibleHeaderKeys.value, key];
+    }
+    return;
+  }
+
+  visibleHeaderKeys.value = visibleHeaderKeys.value.filter((headerKey) => headerKey !== key);
+}
+
+function getStoredVisibleHeaderKeys() {
+  if (typeof window === 'undefined') return [];
+
+  const storedValue = window.localStorage.getItem(VISIBLE_COLUMNS_STORAGE_KEY);
+  if (!storedValue) return [];
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter((value): value is string => typeof value === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistVisibleHeaderKeys() {
+  if (typeof window === 'undefined') return;
+
+  window.localStorage.setItem(VISIBLE_COLUMNS_STORAGE_KEY, JSON.stringify(visibleHeaderKeys.value));
+}
 
 watch(
   () => route.query,
@@ -237,6 +319,17 @@ watch(
     await tableRef.value?.refreshLayout();
   },
 );
+
+watch(visibleHeaders, async () => {
+  await tableRef.value?.refreshLayout();
+});
+
+watch(visibleHeaderKeys, () => {
+  persistVisibleHeaderKeys();
+});
+
+visibleHeaderKeys.value = getStoredVisibleHeaderKeys();
+syncVisibleHeaders();
 
 async function fetchParts() {
   partStore.resetList();
