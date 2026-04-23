@@ -33,6 +33,7 @@
       @clear-all-filters="clearAllFilters"
       @load-more="toolStore.fetchNextPage"
       @update-cutting-dia="updateCuttingDia"
+      @update-hidden-tool-types="updateHiddenToolTypes"
       @update-min-flute-length="updateMinFluteLength"
       @update-search="updateSearch"
       @update-search-by="updateSearchBy"
@@ -59,6 +60,7 @@ useDocumentScrollLock();
 const tab = ref<ToolFilterCategory>('milling');
 const search = ref<string>('');
 const toolType = ref<string | null>(null);
+const hiddenToolTypes = ref<string[]>([]);
 const cuttingDia = ref<string>('');
 const minFluteLength = ref<string>('');
 const sortBy = ref<string>('');
@@ -81,6 +83,11 @@ function updateSearch(text: string) {
 function updateToolType(value: string | null) {
   toolType.value = value;
   syncFiltersToQuery();
+}
+
+function updateHiddenToolTypes(value: string[]) {
+  hiddenToolTypes.value = value;
+  void fetchTools();
 }
 
 function updateCuttingDia(value: string) {
@@ -143,6 +150,7 @@ async function fetchTools() {
   await toolStore.fetch({
     category: tab.value === 'all' ? undefined : tab.value,
     search: search.value || undefined,
+    hiddenToolTypes: hiddenToolTypes.value.length ? hiddenToolTypes.value : undefined,
     toolType: toolType.value || undefined,
     cuttingDia: tab.value === 'milling' ? cuttingDia.value || undefined : undefined,
     minFluteLength: tab.value === 'milling' ? minFluteLength.value || undefined : undefined,

@@ -25,6 +25,23 @@ export const useToolStore = defineStore('tools', () => {
     ) as ToolListFilters;
   }
 
+  function serializeQuery(query: ToolListFilters): string {
+    const params = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(query)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          params.append(key, String(item));
+        }
+        continue;
+      }
+
+      params.append(key, String(value));
+    }
+
+    return params.toString();
+  }
+
   async function fetch(query: ToolListFilters = {}, append = false) {
     const requestId = ++activeRequestId.value;
     const nextQuery = normalizeQuery(query);
@@ -48,6 +65,9 @@ export const useToolStore = defineStore('tools', () => {
     try {
       const { data } = await axios.get<ToolListResponse>('/tools', {
         params: requestQuery,
+        paramsSerializer: {
+          serialize: serializeQuery,
+        },
       });
 
       if (requestId !== activeRequestId.value) {

@@ -18,17 +18,31 @@ const validSortFields = new Set([
 function buildToolQuery(filters: ToolListFilters) {
   const query: Record<string, unknown> = {};
   const exprConditions: Record<string, unknown>[] = [];
+  const selectedToolType = filters.toolType?.trim();
+  const hiddenToolTypePatterns = (filters.hiddenToolTypes ?? [])
+    .map((toolType) => toolType.trim())
+    .filter(Boolean)
+    .map((toolType) => new RegExp(`^${escapeRegExp(toolType)}$`, 'i'));
 
   if (filters.category && filters.category !== 'all') query.category = filters.category;
   if (filters.location?.trim()) query.location = filters.location.trim();
   if (filters.position?.trim()) query.position = filters.position.trim();
 
+  if (
+    hiddenToolTypePatterns.length &&
+    !hiddenToolTypePatterns.some((pattern) => pattern.test(selectedToolType ?? ''))
+  ) {
+    query.toolType = { $nin: hiddenToolTypePatterns };
+  }
+
+  if (selectedToolType) {
+    query.toolType = new RegExp(`^${escapeRegExp(selectedToolType)}$`, 'i');
+  }
+
   if (filters.search?.trim()) {
     const regex = new RegExp(escapeRegExp(filters.search.trim()), 'i');
     query.$or = [{ description: regex }, { item: regex }, { barcode: regex }, { coating: regex }];
   }
-
-  if (filters.toolType?.trim()) query.toolType = filters.toolType.trim();
 
   if (filters.cuttingDia?.trim()) {
     const cuttingDia = Number.parseFloat(filters.cuttingDia.trim());
@@ -105,6 +119,8 @@ async function list(filters: ToolListFilters = {}): Promise<ToolListDocs> {
   const query = buildToolQuery(filters);
   const sortField = getSortField(filters);
   const direction = getSortDirection(filters);
+
+  console.log(filters.hiddenToolTypes);
 
   if (sortField === 'vendor.name') {
     const items = (await Tool.find(query)

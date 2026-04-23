@@ -68,6 +68,7 @@ declare global {
     category?: ToolFilterCategory;
     search?: string;
     toolType?: string;
+    hiddenToolTypes?: string[];
     location?: string;
     position?: string;
     cuttingDia?: string;

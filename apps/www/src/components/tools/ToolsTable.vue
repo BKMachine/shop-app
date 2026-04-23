@@ -5,6 +5,42 @@
       <div class="tools-table-card__actions mb-4">
         <v-menu :close-on-content-click="false" location="bottom end">
           <template #activator="{ props: activatorProps }">
+            <v-badge
+              class="mr-2"
+              color="primary"
+              dot
+              location="top end"
+              :model-value="hiddenToolTypeKeys.length > 0"
+              offset-x="-3"
+              offset-y="1"
+              size="xs-small"
+            >
+              <v-icon
+                v-bind="activatorProps"
+                aria-label="Hidden Tool Types"
+                color="grey-darken-2"
+                icon="mdi-filter-cog-outline"
+                size="24"
+              />
+            </v-badge>
+          </template>
+
+          <v-list density="compact">
+            <v-list-subheader>Hidden By Default</v-list-subheader>
+            <v-list-item v-for="toolTypeOption in types" :key="toolTypeOption" density="compact">
+              <template #prepend>
+                <v-checkbox-btn
+                  :model-value="hiddenToolTypeKeys.includes(toolTypeOption)"
+                  @update:model-value="toggleHiddenToolType(toolTypeOption, $event)"
+                />
+              </template>
+              <v-list-item-title>{{ toolTypeOption }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
+        <v-menu :close-on-content-click="false" location="bottom end">
+          <template #activator="{ props: activatorProps }">
             <v-icon
               v-bind="activatorProps"
               aria-label="Show Columns"
@@ -223,6 +259,7 @@ const props = defineProps<{
 const emits = defineEmits([
   'updateSearch',
   'updateToolType',
+  'updateHiddenToolTypes',
   'updateCuttingDia',
   'updateMinFluteLength',
   'updateSearchBy',
@@ -238,7 +275,9 @@ const minFluteLengthFilter = ref<string>(props.minFluteLength);
 const selectedToolType = ref<string | null>(props.toolType);
 const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const visibleHeaderKeys = ref<string[]>([]);
+const hiddenToolTypeKeys = ref<string[]>([]);
 const visibleColumnsStorageKey = computed(() => `tools-table-visible-columns:${props.category}`);
+const hiddenToolTypesStorageKey = computed(() => `tools-table-hidden-tool-types:${props.category}`);
 const tableSortBy = computed(() => {
   return props.sortBy ? [{ key: props.sortBy, order: props.order }] : [];
 });
@@ -303,6 +342,50 @@ function persistVisibleHeaderKeys() {
   );
 }
 
+function syncHiddenToolTypes() {
+  const availableTypes = new Set(types.value);
+  const candidateKeys = hiddenToolTypeKeys.value.length
+    ? hiddenToolTypeKeys.value
+    : getStoredHiddenToolTypes();
+
+  if (candidateKeys.length) {
+    hiddenToolTypeKeys.value = candidateKeys.filter((toolTypeOption) =>
+      availableTypes.has(toolTypeOption),
+    );
+    return;
+  }
+
+  hiddenToolTypeKeys.value =
+    props.category === 'turning' && availableTypes.has('Hardware Tool Category')
+      ? ['Hardware Tool Category']
+      : [];
+}
+
+function getStoredHiddenToolTypes() {
+  if (typeof window === 'undefined') return [];
+
+  const storedValue = window.localStorage.getItem(hiddenToolTypesStorageKey.value);
+  if (!storedValue) return [];
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter((value): value is string => typeof value === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistHiddenToolTypes() {
+  if (typeof window === 'undefined') return;
+
+  window.localStorage.setItem(
+    hiddenToolTypesStorageKey.value,
+    JSON.stringify(hiddenToolTypeKeys.value),
+  );
+}
+
 const resultsTitle = computed(() => {
   let title = props.title;
   if (props.totalItems > 0) {
@@ -321,6 +404,11 @@ watch(searchText, () => {
 
 watch(selectedToolType, () => {
   emits('updateToolType', selectedToolType.value);
+});
+
+watch(hiddenToolTypeKeys, () => {
+  emits('updateHiddenToolTypes', [...hiddenToolTypeKeys.value]);
+  persistHiddenToolTypes();
 });
 
 watch(cuttingDiaFilter, () => {
@@ -350,6 +438,15 @@ watch(
 watch(visibleHeaderKeys, () => {
   persistVisibleHeaderKeys();
 });
+
+watch(
+  [() => props.category, types, hiddenToolTypesStorageKey],
+  () => {
+    hiddenToolTypeKeys.value = getStoredHiddenToolTypes();
+    syncHiddenToolTypes();
+  },
+  { immediate: true },
+);
 
 watch(
   () => props.toolType,
@@ -428,6 +525,19 @@ function toggleHeader(key: string, enabled: boolean) {
   }
 
   visibleHeaderKeys.value = visibleHeaderKeys.value.filter((headerKey) => headerKey !== key);
+}
+
+function toggleHiddenToolType(toolTypeOption: string, enabled: boolean) {
+  if (enabled) {
+    if (!hiddenToolTypeKeys.value.includes(toolTypeOption)) {
+      hiddenToolTypeKeys.value = [...hiddenToolTypeKeys.value, toolTypeOption];
+    }
+    return;
+  }
+
+  hiddenToolTypeKeys.value = hiddenToolTypeKeys.value.filter(
+    (hiddenToolType) => hiddenToolType !== toolTypeOption,
+  );
 }
 </script>
 

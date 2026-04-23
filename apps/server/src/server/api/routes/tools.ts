@@ -48,12 +48,26 @@ const UpdateToolRequest = z.strictObject({
   }),
 });
 
+function normalizeQueryValues(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    const normalized = normalizeQueryValue(value);
+    return normalized ? [normalized] : undefined;
+  }
+
+  const normalized = value
+    .map((entry) => normalizeQueryValue(entry))
+    .filter((entry): entry is string => Boolean(entry));
+
+  return normalized.length ? normalized : undefined;
+}
+
 // Pagination, filtering, and sorting for the tools table. All query parameters are optional.
 router.get('/tools', async (req, res, next) => {
   try {
     const data = await Tools.list({
       category: normalizeQueryValue(req.query.category) as ToolFilterCategory | undefined,
       search: normalizeQueryValue(req.query.search),
+      hiddenToolTypes: normalizeQueryValues(req.query.hiddenToolTypes),
       toolType: normalizeQueryValue(req.query.toolType),
       location: normalizeQueryValue(req.query.location),
       position: normalizeQueryValue(req.query.position),
