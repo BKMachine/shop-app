@@ -103,6 +103,7 @@ function updateMinFluteLength(value: string) {
 function onTabChange(value: ToolFilterCategory) {
   if (tab.value !== value) {
     toolType.value = null;
+    hiddenToolTypes.value = [];
     if (value !== 'milling') {
       cuttingDia.value = '';
       minFluteLength.value = '';
@@ -150,7 +151,8 @@ async function fetchTools() {
   await toolStore.fetch({
     category: tab.value === 'all' ? undefined : tab.value,
     search: search.value || undefined,
-    hiddenToolTypes: hiddenToolTypes.value.length ? hiddenToolTypes.value : undefined,
+    hiddenToolTypes:
+      tab.value === 'all' || !hiddenToolTypes.value.length ? undefined : hiddenToolTypes.value,
     toolType: toolType.value || undefined,
     cuttingDia: tab.value === 'milling' ? cuttingDia.value || undefined : undefined,
     minFluteLength: tab.value === 'milling' ? minFluteLength.value || undefined : undefined,

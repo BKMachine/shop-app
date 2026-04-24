@@ -3,7 +3,7 @@
     <v-card-title class="header">
       <div>{{ resultsTitle }}</div>
       <div class="tools-table-card__actions mb-4">
-        <v-menu :close-on-content-click="false" location="bottom end">
+        <v-menu v-if="category !== 'all'" :close-on-content-click="false" location="bottom end">
           <template #activator="{ props: activatorProps }">
             <v-badge
               class="mr-2"
@@ -343,6 +343,11 @@ function persistVisibleHeaderKeys() {
 }
 
 function syncHiddenToolTypes() {
+  if (props.category === 'all') {
+    hiddenToolTypeKeys.value = [];
+    return;
+  }
+
   const availableTypes = new Set(types.value);
   const candidateKeys = hiddenToolTypeKeys.value.length
     ? hiddenToolTypeKeys.value
@@ -407,7 +412,7 @@ watch(selectedToolType, () => {
 });
 
 watch(hiddenToolTypeKeys, () => {
-  emits('updateHiddenToolTypes', [...hiddenToolTypeKeys.value]);
+  emits('updateHiddenToolTypes', props.category === 'all' ? [] : [...hiddenToolTypeKeys.value]);
   persistHiddenToolTypes();
 });
 
