@@ -665,6 +665,7 @@ const subComponentOptions = computed(() => {
   return subComponentSearchResults.value
     .filter((candidate) => !disallowedSubComponentIds.value.has(candidate._id))
     .filter((candidate) => !selectedIds.has(candidate._id))
+    .filter((candidate) => candidate._id !== part.value._id)
     .slice()
     .sort((a, b) => a.part.localeCompare(b.part))
     .map((candidate) => ({
@@ -672,6 +673,7 @@ const subComponentOptions = computed(() => {
       value: candidate._id,
     }));
 });
+
 const effectiveTotalCycleMinutes = computed(() => {
   if (resolvedSubComponentItems.value.length) {
     return resolvedSubComponentItems.value.reduce((total, subComponent) => {
