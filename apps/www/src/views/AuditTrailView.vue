@@ -547,6 +547,22 @@ function humanizeKey(key: string) {
 }
 
 function describeFieldChange(key: string, oldValue: unknown, newValue: unknown) {
+  if (key === 'img') {
+    if (isEmptyValue(oldValue) && !isEmptyValue(newValue)) {
+      return 'Added the Main image';
+    }
+
+    if (!isEmptyValue(oldValue) && isEmptyValue(newValue)) {
+      return 'Removed the Main image';
+    }
+
+    return 'Updated the Main image';
+  }
+
+  if (key === 'onOrder' && typeof newValue === 'boolean') {
+    return newValue ? 'Flagged for reorder' : 'Restocked';
+  }
+
   if (isImageField(key)) {
     if (isEmptyValue(oldValue) && !isEmptyValue(newValue)) {
       return 'Added an image';
@@ -556,7 +572,7 @@ function describeFieldChange(key: string, oldValue: unknown, newValue: unknown) 
       return 'Removed an image';
     }
 
-    return 'Updated the image';
+    return 'Updated an image';
   }
 
   if (typeof oldValue === 'number' && typeof newValue === 'number') {
