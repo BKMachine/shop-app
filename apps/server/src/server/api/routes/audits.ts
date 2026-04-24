@@ -61,11 +61,8 @@ router.post('/audits', requireKnownDevice, async (req, res, next) => {
   try {
     const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
     const safeOffset = Math.max(Number(offset) || 0, 0);
-    const audits = await Audit.getAllAudits(types, safeLimit, safeOffset);
-    res.status(200).json({
-      items: audits,
-      hasMore: audits.length === safeLimit,
-    });
+    const auditPage = await Audit.getAllAudits(types, safeLimit, safeOffset);
+    res.status(200).json(auditPage);
   } catch (e) {
     next(e);
   }

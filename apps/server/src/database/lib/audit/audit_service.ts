@@ -13,18 +13,89 @@ import type { VendorDoc } from '../vendor/vendor_model.js';
 import Audit from './audit_model.js';
 
 const hiddenAuditTypes = new Set<Audit['type']>(['image', 'document']);
+const auditBucketMs = 5 * 60 * 1000;
+
+type ActivityAudit = Pick<Audit, '_id' | 'type' | 'timestamp' | 'device' | 'old' | 'new'> & {
+  mergedCount?: number;
+};
+type OpenAuditBucket = {
+  startTimeMs: number;
+  audit: ActivityAudit;
+};
+type ActivityAuditPage = {
+  items: ActivityAudit[];
+  hasMore: boolean;
+};
 
 function normalizeAuditPayload(doc: unknown): unknown | null {
   if (!doc) return null;
 
   if (typeof doc === 'object' && doc !== null && 'toObject' in doc) {
-    const maybeDoc = doc as { toObject?: () => unknown };
+    const maybeDoc = doc as {
+      toObject?: (options?: { depopulate?: boolean }) => unknown;
+    };
     if (typeof maybeDoc.toObject === 'function') {
-      return maybeDoc.toObject();
+      return maybeDoc.toObject({ depopulate: true });
     }
   }
 
   return doc;
+}
+
+function getAuditDeviceId(device: Audit['device'] | string | null | undefined): string {
+  if (!device) return 'unknown-device';
+  if (typeof device === 'string') return device;
+  return device._id || 'unknown-device';
+}
+
+function getAuditItemId(audit: Pick<Audit, 'old' | 'new'>): string | null {
+  const itemId = audit.new?._id ?? audit.old?._id;
+  if (!itemId) return null;
+  return String(itemId);
+}
+
+function mergeActivityAudits(audits: ActivityAudit[]): ActivityAudit[] {
+  const openBuckets = new Map<string, OpenAuditBucket>();
+  const mergedAudits: ActivityAudit[] = [];
+
+  for (const audit of [...audits].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  )) {
+    const itemId = getAuditItemId(audit);
+    if (!itemId) {
+      mergedAudits.push(audit);
+      continue;
+    }
+
+    const key = `${audit.type}:${itemId}:${getAuditDeviceId(audit.device)}`;
+    const existing = openBuckets.get(key);
+    const auditTimeMs = new Date(audit.timestamp).getTime();
+
+    if (!existing || auditTimeMs - existing.startTimeMs > auditBucketMs) {
+      if (existing) mergedAudits.push(existing.audit);
+      openBuckets.set(key, {
+        startTimeMs: auditTimeMs,
+        audit: { ...audit, mergedCount: 1 },
+      });
+      continue;
+    }
+
+    existing.audit = {
+      ...existing.audit,
+      _id: audit._id,
+      timestamp: audit.timestamp,
+      new: audit.new,
+      mergedCount: (existing.audit.mergedCount ?? 1) + 1,
+    };
+  }
+
+  for (const bucket of openBuckets.values()) {
+    mergedAudits.push(bucket.audit);
+  }
+
+  return mergedAudits.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
 }
 
 async function addAudit(
@@ -44,7 +115,11 @@ async function addAudit(
   emit('audit');
 }
 
-async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Promise<AuditDoc[]> {
+async function getAllAudits(
+  types?: Audit['type'][],
+  limit = 20,
+  offset = 0,
+): Promise<ActivityAuditPage> {
   const query: {
     type?: { $in?: Audit['type'][]; $nin?: Audit['type'][] };
   } = {};
@@ -55,11 +130,17 @@ async function getAllAudits(types?: Audit['type'][], limit = 20, offset = 0): Pr
     query.type = { $nin: Array.from(hiddenAuditTypes) };
   }
 
-  return Audit.find(query, 'type timestamp device old new')
-    .sort({ timestamp: -1 })
-    .skip(offset)
-    .limit(limit)
-    .populate('device', 'displayName deviceType');
+  const audits = await Audit.find(query, 'type timestamp device old new')
+    .sort({ timestamp: 1, _id: 1 })
+    .populate('device', 'displayName deviceType')
+    .lean<ActivityAudit[]>();
+
+  const mergedAudits = mergeActivityAudits(audits);
+
+  return {
+    items: mergedAudits.slice(offset, offset + limit),
+    hasMore: offset + limit < mergedAudits.length,
+  };
 }
 
 async function addToolAudit(
@@ -97,16 +178,21 @@ async function getToolAudits(id: string, from: string, to: string): Promise<Audi
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
-async function getAllToolAudits(from: string, to: string): Promise<AuditDoc[]> {
+async function getAllToolAudits(from: string, to: string): Promise<ActivityAudit[]> {
   const projection = 'timestamp device new old.stock';
 
-  return Audit.find(
+  const audits = await Audit.find(
     {
       type: 'tool',
       timestamp: { $gte: from, $lte: to },
     },
     projection,
-  ).populate('device', 'displayName deviceType');
+  )
+    .sort({ timestamp: 1, _id: 1 })
+    .populate('device', 'displayName deviceType')
+    .lean<ActivityAudit[]>();
+
+  return mergeActivityAudits(audits);
 }
 
 async function addPartAudit(
@@ -158,16 +244,21 @@ async function getPartAudits(id: string, from: string, to: string): Promise<Audi
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
-async function getAllPartAudits(from: string, to: string): Promise<AuditDoc[]> {
+async function getAllPartAudits(from: string, to: string): Promise<ActivityAudit[]> {
   const projection = 'timestamp device new old.stock';
 
-  return Audit.find(
+  const audits = await Audit.find(
     {
       type: 'part',
       timestamp: { $gte: from, $lte: to },
     },
     projection,
-  ).populate('device', 'displayName deviceType');
+  )
+    .sort({ timestamp: 1, _id: 1 })
+    .populate('device', 'displayName deviceType')
+    .lean<ActivityAudit[]>();
+
+  return mergeActivityAudits(audits);
 }
 
 async function addMaterialAudit(

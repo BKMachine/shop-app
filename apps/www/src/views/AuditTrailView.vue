@@ -15,148 +15,193 @@
         No recent audited changes.
       </div>
 
-      <v-infinite-scroll
-        v-else
-        class="audit-scroll"
-        :height="700"
-        :items="audits"
-        mode="intersect"
-        @load="loadMore"
-      >
-        <div class="audit-list">
-          <template v-for="audit in audits" :key="audit._id">
-            <v-card
-              class="audit-card"
-              :class="[getEntityThemeClass(audit.type), `audit-card-${getAction(audit)}`]"
-              variant="outlined"
-            >
-              <v-card-text class="audit-card__content">
-                <div class="audit-card__header">
-                  <div class="audit-card__identity">
-                    <div class="audit-icon" :class="getEntityThemeClass(audit.type)">
-                      <v-icon :icon="getEntityIcon(audit.type)" size="18" />
+      <div v-else class="audit-layout">
+        <v-infinite-scroll
+          class="audit-scroll"
+          :height="700"
+          :items="audits"
+          mode="intersect"
+          @load="loadMore"
+        >
+          <div class="audit-list">
+            <template v-for="audit in audits" :key="audit._id">
+              <v-card
+                class="audit-card"
+                :class="[
+                  getEntityThemeClass(audit.type),
+                  `audit-card-${getAction(audit)}`,
+                  { 'audit-card-selected': selectedAudit?._id === audit._id },
+                ]"
+                variant="outlined"
+                @click="selectAudit(audit._id)"
+              >
+                <v-card-text class="audit-card__content">
+                  <div class="audit-card__header">
+                    <div class="audit-card__identity">
+                      <div class="audit-icon" :class="getEntityThemeClass(audit.type)">
+                        <v-icon :icon="getEntityIcon(audit.type)" size="18" />
+                      </div>
+                      <v-img
+                        v-if="getAuditImageUrl(audit)"
+                        class="audit-preview"
+                        contain
+                        :src="getAuditImageUrl(audit)"
+                      />
+                      <div class="audit-title-block">
+                        <div class="audit-headline-row">
+                          <div class="audit-headline">{{ getHeadline(audit) }}</div>
+                          <v-btn
+                            v-if="getAuditRoute(audit)"
+                            class="audit-link-btn"
+                            icon
+                            size="x-small"
+                            title="Open item"
+                            :to="getAuditRoute(audit)"
+                            variant="text"
+                            @click.stop
+                          >
+                            <v-icon icon="mdi-open-in-new" size="16" />
+                          </v-btn>
+                        </div>
+                      </div>
                     </div>
-                    <v-img
-                      v-if="getAuditImageUrl(audit)"
-                      class="audit-preview"
-                      contain
-                      :src="getAuditImageUrl(audit)"
-                    />
-                    <div class="audit-title-block">
-                      <div class="audit-headline-row">
-                        <div class="audit-headline">{{ getHeadline(audit) }}</div>
-                        <v-btn
-                          v-if="getAuditRoute(audit)"
-                          class="audit-link-btn"
-                          icon
-                          size="x-small"
-                          title="Open item"
-                          :to="getAuditRoute(audit)"
-                          variant="text"
+
+                    <div class="audit-card__meta">
+                      <div class="audit-meta-line">
+                        <span
+                          v-if="getDeviceIcon(audit.device)"
+                          :class="['device-indicator', `device-indicator-${getDeviceType(audit.device)}`]"
                         >
-                          <v-icon icon="mdi-open-in-new" size="16" />
-                        </v-btn>
+                          <v-icon :icon="getDeviceIcon(audit.device)" size="14" />
+                          <v-tooltip activator="parent" location="top" open-delay="250">
+                            {{ getDeviceName(audit.device) }}
+                          </v-tooltip>
+                        </span>
+                        <span>{{ getDeviceName(audit.device) }}</span>
+                      </div>
+                      <div class="audit-meta-line">
+                        <span :title="formatFullTimestamp(audit.timestamp)">
+                          {{ formatTimestamp(audit.timestamp) }}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div class="audit-card__meta">
-                    <div class="audit-meta-line">
-                      <span
-                        v-if="getDeviceIcon(audit.device)"
-                        :class="['device-indicator', `device-indicator-${getDeviceType(audit.device)}`]"
-                      >
-                        <v-icon :icon="getDeviceIcon(audit.device)" size="14" />
-                        <v-tooltip activator="parent" location="top" open-delay="250">
-                          {{ getDeviceName(audit.device) }}
-                        </v-tooltip>
-                      </span>
-                      <span>{{ getDeviceName(audit.device) }}</span>
-                    </div>
-                    <div class="audit-meta-line">
-                      <span :title="formatFullTimestamp(audit.timestamp)">
-                        {{ formatTimestamp(audit.timestamp) }}
-                      </span>
-                    </div>
+                  <div class="audit-summary">
+                    <v-chip
+                      v-if="audit.mergedCount && audit.mergedCount > 1"
+                      class="audit-change audit-change-merged"
+                      density="comfortable"
+                      size="small"
+                      variant="tonal"
+                    >
+                      {{ audit.mergedCount }}
+                      audits merged
+                    </v-chip>
+                    <v-chip
+                      v-for="change in summarizeAudit(audit)"
+                      :key="change.key"
+                      class="audit-change"
+                      density="comfortable"
+                      size="small"
+                      variant="tonal"
+                    >
+                      {{ change.label }}
+                    </v-chip>
                   </div>
-                </div>
 
-                <div class="audit-summary">
-                  <v-chip
-                    v-for="change in summarizeAudit(audit)"
-                    :key="change.key"
-                    class="audit-change"
-                    size="small"
-                    variant="tonal"
-                  >
-                    {{ change.label }}
-                  </v-chip>
-                </div>
+                  <div v-if="summarizeAudit(audit).length === 0" class="audit-empty-summary">
+                    Structural change recorded.
+                  </div>
+                </v-card-text>
+              </v-card>
+            </template>
+          </div>
 
-                <div v-if="summarizeAudit(audit).length === 0" class="audit-empty-summary">
-                  Structural change recorded. Open details to inspect the full before/after payload.
-                </div>
+          <template #empty> <div class="audit-scroll-state">All caught up.</div> </template>
 
-                <v-expansion-panels class="audit-details" variant="accordion">
-                  <v-expansion-panel>
-                    <v-expansion-panel-title>Details</v-expansion-panel-title>
-                    <v-expansion-panel-text>
-                      <div class="audit-detail-grid">
-                        <div>
-                          <div class="audit-detail-title">Changed Fields</div>
-                          <div class="audit-detail-list">
-                            <div
-                              v-for="change in describeAudit(audit)"
-                              :key="change.key"
-                              class="audit-detail-item"
-                            >
-                              <div class="audit-detail-key">{{ change.key }}</div>
-                              <div class="audit-detail-value">{{ change.label }}</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div class="audit-json-grid">
-                          <div>
-                            <div class="audit-detail-title">Before</div>
-                            <div class="audit-json">
-                              <div
-                                v-for="(line, index) in getJsonLines(audit, 'before')"
-                                :key="`before-${audit._id}-${index}`"
-                                class="audit-json-line"
-                                :class="getJsonLineClass(line)"
-                              >
-                                {{ line.text }}
-                              </div>
-                            </div>
-                          </div>
-                          <div>
-                            <div class="audit-detail-title">After</div>
-                            <div class="audit-json">
-                              <div
-                                v-for="(line, index) in getJsonLines(audit, 'after')"
-                                :key="`after-${audit._id}-${index}`"
-                                class="audit-json-line"
-                                :class="getJsonLineClass(line)"
-                              >
-                                {{ line.text }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </v-expansion-panel-text>
-                  </v-expansion-panel>
-                </v-expansion-panels>
-              </v-card-text>
-            </v-card>
+          <template #loading>
+            <div class="audit-scroll-state">Loading more audits...</div>
           </template>
-        </div>
+        </v-infinite-scroll>
 
-        <template #empty> <div class="audit-scroll-state">All caught up.</div> </template>
+        <v-card v-if="selectedAudit" class="audit-detail-panel" variant="outlined">
+          <v-card-text class="audit-detail-panel__content">
+            <div class="audit-detail-panel__header">
+              <div>
+                <div class="audit-detail-panel__headline">{{ getHeadline(selectedAudit) }}</div>
+                <div class="audit-detail-panel__meta">
+                  <span>{{ getDeviceName(selectedAudit.device) }}</span>
+                  <span>{{ formatFullTimestamp(selectedAudit.timestamp) }}</span>
+                </div>
+              </div>
+              <v-btn
+                v-if="getAuditRoute(selectedAudit)"
+                class="audit-link-btn"
+                icon
+                size="small"
+                title="Open item"
+                :to="getAuditRoute(selectedAudit)"
+                variant="text"
+              >
+                <v-icon icon="mdi-open-in-new" size="18" />
+              </v-btn>
+            </div>
 
-        <template #loading> <div class="audit-scroll-state">Loading more audits...</div> </template>
-      </v-infinite-scroll>
+            <div class="audit-detail-summary">
+              <v-chip
+                v-if="selectedAudit.mergedCount && selectedAudit.mergedCount > 1"
+                class="audit-change audit-change-merged"
+                density="compact"
+                size="small"
+                variant="tonal"
+              >
+                {{ selectedAudit.mergedCount }}
+                audits merged
+              </v-chip>
+              <v-chip
+                v-for="change in summarizeAudit(selectedAudit)"
+                :key="change.key"
+                class="audit-change"
+                density="comfortable"
+                size="small"
+                variant="tonal"
+              >
+                {{ change.label }}
+              </v-chip>
+            </div>
+
+            <div class="audit-json-grid">
+              <div>
+                <div class="audit-detail-title">Before</div>
+                <div class="audit-json">
+                  <div
+                    v-for="(line, index) in getJsonLines(selectedAudit, 'before')"
+                    :key="`before-${selectedAudit._id}-${index}`"
+                    class="audit-json-line"
+                    :class="getJsonLineClass(line)"
+                  >
+                    {{ line.text }}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="audit-detail-title">After</div>
+                <div class="audit-json">
+                  <div
+                    v-for="(line, index) in getJsonLines(selectedAudit, 'after')"
+                    :key="`after-${selectedAudit._id}-${index}`"
+                    class="audit-json-line"
+                    :class="getJsonLineClass(line)"
+                  >
+                    {{ line.text }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </div>
     </div>
   </v-container>
 </template>
@@ -198,7 +243,11 @@ const audits = ref<Audit[]>([]);
 const loading = ref(false);
 const loadingMore = ref(false);
 const hasMore = ref(true);
+const selectedAuditId = ref<string | null>(null);
 const nowStore = useNowStore();
+const selectedAudit = computed(() =>
+  audits.value.find((audit) => audit._id === selectedAuditId.value),
+);
 
 onMounted(() => {
   refreshAudits();
@@ -218,6 +267,7 @@ async function refreshAudits() {
     });
     audits.value = response.data.items;
     hasMore.value = response.data.hasMore;
+    syncSelectedAudit();
   } finally {
     loading.value = false;
   }
@@ -246,11 +296,28 @@ async function loadMore({ done }: { done: (status: InfiniteScrollDoneStatus) => 
     }
 
     hasMore.value = response.data.hasMore;
+    syncSelectedAudit();
     done(response.data.hasMore ? 'ok' : 'empty');
   } catch {
     done('error');
   } finally {
     loadingMore.value = false;
+  }
+}
+
+function selectAudit(auditId: string) {
+  selectedAuditId.value = auditId;
+}
+
+function syncSelectedAudit() {
+  if (audits.value.length === 0) {
+    selectedAuditId.value = null;
+    return;
+  }
+
+  const hasSelection = audits.value.some((audit) => audit._id === selectedAuditId.value);
+  if (!hasSelection) {
+    selectedAuditId.value = audits.value[0]?._id ?? null;
   }
 }
 
@@ -632,17 +699,24 @@ function getJsonLineClass(line: AuditJsonLine) {
   background: linear-gradient(180deg, #fbfcfe 0%, #f5f8fc 100%);
 }
 
+.audit-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+
 .audit-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding-right: 8px;
   box-sizing: border-box;
 }
 
 .audit-scroll {
   width: 100%;
-  padding-right: 12px;
+  padding-right: 6px;
   box-sizing: border-box;
   scrollbar-gutter: stable;
 }
@@ -653,6 +727,21 @@ function getJsonLineClass(line: AuditJsonLine) {
   border: 1px solid #0f1720;
   overflow: hidden;
   background: white;
+  cursor: pointer;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.audit-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 32, 0.08);
+}
+
+.audit-card-selected {
+  border-color: var(--audit-theme-color, #45617c);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--audit-theme-color, #45617c) 20%, transparent);
 }
 
 .audit-card::before {
@@ -673,8 +762,8 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-card__content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 10px 12px;
 }
 
 .audit-card__header {
@@ -808,7 +897,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 }
 
 .audit-headline {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #243447;
   line-height: 1.25;
@@ -841,11 +930,16 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .audit-change {
   max-width: 100%;
+}
+
+.audit-change-merged {
+  background: rgba(41, 128, 185, 0.14);
+  color: #1f5f8d;
 }
 
 .audit-empty-summary {
@@ -853,15 +947,48 @@ function getJsonLineClass(line: AuditJsonLine) {
   color: #6e7f92;
 }
 
-.audit-details {
-  border-top: 1px solid #edf2f7;
-  padding-top: 2px;
+.audit-detail-panel {
+  position: sticky;
+  top: 0;
+  border-radius: 18px;
+  border: 1px solid #dce6f0;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
 }
 
-.audit-detail-grid {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.4fr);
-  gap: 16px;
+.audit-detail-panel__content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.audit-detail-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.audit-detail-panel__headline {
+  font-size: 16px;
+  font-weight: 700;
+  color: #243447;
+  line-height: 1.3;
+}
+
+.audit-detail-panel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 4px;
+  color: #66788b;
+  font-size: 12px;
+}
+
+.audit-detail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .audit-detail-title {
@@ -871,32 +998,6 @@ function getJsonLineClass(line: AuditJsonLine) {
   letter-spacing: 0.08em;
   color: #607285;
   margin-bottom: 8px;
-}
-
-.audit-detail-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.audit-detail-item {
-  background: #f7faff;
-  border: 1px solid #e3ebf5;
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-
-.audit-detail-key {
-  font-size: 12px;
-  font-weight: 700;
-  color: #45617c;
-  margin-bottom: 4px;
-}
-
-.audit-detail-value {
-  font-size: 13px;
-  color: #2e3f50;
-  word-break: break-word;
 }
 
 .audit-json-grid {
@@ -960,6 +1061,14 @@ function getJsonLineClass(line: AuditJsonLine) {
 }
 
 @media (max-width: 900px) {
+  .audit-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-detail-panel {
+    position: static;
+  }
+
   .audit-card__header {
     flex-direction: column;
   }
@@ -970,10 +1079,6 @@ function getJsonLineClass(line: AuditJsonLine) {
 
   .audit-meta-line {
     justify-content: flex-start;
-  }
-
-  .audit-detail-grid {
-    grid-template-columns: 1fr;
   }
 
   .audit-json-grid {

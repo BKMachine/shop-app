@@ -12,6 +12,7 @@ declare global {
 
   interface Audit {
     _id: string;
+    mergedCount?: number;
     type:
       | 'tool'
       | 'material'

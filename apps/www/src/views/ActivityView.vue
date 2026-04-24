@@ -50,6 +50,13 @@
                         {{ getDeviceName(activity.device) }}
                       </v-tooltip>
                     </span>
+                    <span
+                      v-if="activity.mergedCount && activity.mergedCount > 1"
+                      class="merge-badge"
+                    >
+                      {{ activity.mergedCount }}
+                      audits merged
+                    </span>
                   </div>
                   <div class="timestamp">{{ new Date(activity.timestamp).toLocaleString() }}</div>
                 </v-col>
@@ -104,6 +111,13 @@
                       <v-tooltip activator="parent" location="top" open-delay="250">
                         {{ getDeviceName(activity.device) }}
                       </v-tooltip>
+                    </span>
+                    <span
+                      v-if="activity.mergedCount && activity.mergedCount > 1"
+                      class="merge-badge"
+                    >
+                      {{ activity.mergedCount }}
+                      audits merged
                     </span>
                   </div>
                   <div class="timestamp">{{ new Date(activity.timestamp).toLocaleString() }}</div>
@@ -487,6 +501,18 @@ function open(item: Tool | Part, type: 'tool' | 'part') {
 
 .device-indicator:hover {
   color: #4e6d8f;
+}
+
+.merge-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #e8f1fb;
+  color: #315a7d;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .timestamp {
