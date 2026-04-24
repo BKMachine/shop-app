@@ -95,6 +95,20 @@ router.get('/parts', async (req, res, next) => {
   }
 });
 
+router.get('/parts/search', async (req, res, next) => {
+  const search = normalizeQueryValue(req.query.search);
+  if (!search || search.trim().length < 2) {
+    return res.status(200).json({ items: [] });
+  }
+
+  try {
+    const items = await Parts.searchSummaries(search, Number(normalizeQueryValue(req.query.limit)));
+    res.status(200).json({ items });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // Get distinct part locations for dropdowns and autocomplete
 router.get('/parts/locations', async (_req, res, next) => {
   try {
@@ -127,6 +141,42 @@ router.get(['/parts/:id', '/parts/info/:id'], async (req, res, next) => {
     const part = await Parts.findById(id);
     if (!part) return next(new HttpError(404, 'Part not found.'));
     res.status(200).json(part);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/parts/:id/sub-components', async (req, res, next) => {
+  const { id } = req.params;
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid part id'));
+
+  try {
+    const items = await Parts.listSubComponents(id);
+    res.status(200).json({ items });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/parts/:id/parents', async (req, res, next) => {
+  const { id } = req.params;
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid part id'));
+
+  try {
+    const items = await Parts.listParentAssemblies(id);
+    res.status(200).json({ items });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/parts/:id/relations', async (req, res, next) => {
+  const { id } = req.params;
+  if (!isValidId(id)) return next(new HttpError(400, 'Invalid part id'));
+
+  try {
+    const relations = await Parts.listRelations(id);
+    res.status(200).json(relations);
   } catch (e) {
     next(e);
   }

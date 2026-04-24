@@ -36,20 +36,11 @@
                       <span class="text-medium-emphasis">
                         @ {{ formatDimension(component.materialLength) }}"
                       </span>
+                      <span class="text-medium-emphasis">x</span>
+                      <v-chip class="sub-component-qty-text" density="compact" variant="tonal"
+                        >Qty {{ component.entry.qty }}</v-chip
+                      >
                     </span>
-                  </div>
-                </td>
-                <td class="qty-cell">
-                  <div class="qty-wrap my-2">
-                    <v-text-field
-                      v-model.number="component.entry.qty"
-                      density="compact"
-                      hide-details
-                      min="1"
-                      type="number"
-                      variant="outlined"
-                      @keydown="onlyAllowNumeric($event)"
-                    />
                   </div>
                 </td>
                 <td class="text-right">
@@ -618,11 +609,6 @@ function openSubComponent(partId: string) {
   justify-content: center;
 }
 
-.qty-cell {
-  width: 112px;
-  min-width: 112px;
-}
-
 .assembly-row-1 {
   width: 100%;
   padding-right: 1rem;
@@ -657,6 +643,7 @@ function openSubComponent(partId: string) {
 
 .sub-component-meta {
   margin-left: auto;
+  margin-right: 0%;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -667,9 +654,8 @@ function openSubComponent(partId: string) {
   color: rgba(0, 0, 0, 0.38);
 }
 
-.qty-wrap {
-  display: flex;
-  flex-direction: column;
+.sub-component-qty-text {
+  color: rgb(var(--v-theme-primary));
 }
 
 .cost-cell {

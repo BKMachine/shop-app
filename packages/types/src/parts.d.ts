@@ -88,6 +88,30 @@ declare global {
 
   interface PartListResponse extends PartListResult {}
 
+  interface PartSearchItem {
+    _id: string;
+    part: string;
+    description: string;
+  }
+
+  interface PartSearchResponse {
+    items: PartSearchItem[];
+  }
+
+  interface PartRelationItem {
+    part: Part;
+    qty: number;
+  }
+
+  interface PartRelationResponse {
+    items: PartRelationItem[];
+  }
+
+  interface PartRelationsResponse {
+    subComponents: PartRelationItem[];
+    parents: PartRelationItem[];
+  }
+
   interface UpdatePartOptions {
     preserveManagedMediaFields?: boolean;
   }

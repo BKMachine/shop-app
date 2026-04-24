@@ -373,6 +373,106 @@ function createListItem(part: PartDoc): PartListItem {
   };
 }
 
+function createDetailItem(part: PartDoc): Part {
+  const normalizedSubComponentIds = normalizeSubComponentIds(part.subComponentIds);
+  const directSubComponentCount =
+    Number(part.derived?.directSubComponentCount) || normalizedSubComponentIds.length;
+  const directParentCount = getDirectParentCount(part);
+  const serializedPart = (part as unknown as { toObject(): Part }).toObject();
+
+  return {
+    ...serializedPart,
+    subComponentIds: normalizedSubComponentIds,
+    derived: {
+      shopRate: Number(part.derived?.shopRate) || 0,
+      directSubComponentCount,
+      directParentCount,
+    },
+  };
+}
+
+async function searchSummaries(search: string, limit = 20): Promise<PartSearchItem[]> {
+  const trimmedSearch = search.trim();
+  if (!trimmedSearch) return [];
+
+  const items = await Part.find(
+    buildPartQuery({
+      search: trimmedSearch,
+      includeSubcomponents: true,
+    }),
+    { _id: 1, part: 1, description: 1 },
+  )
+    .sort({ part: 1 })
+    .limit(Math.min(Math.max(Number(limit) || 20, 1), 50))
+    .lean();
+
+  return items.map((item) => ({
+    _id: item._id.toString(),
+    part: item.part ?? '',
+    description: item.description ?? '',
+  }));
+}
+
+async function listSubComponents(id: string): Promise<PartRelationItem[]> {
+  const part = await Part.findById(id, { subComponentIds: 1 }).lean();
+  if (!part) return [];
+
+  const entries = normalizeSubComponentIds(part.subComponentIds);
+  if (!entries.length) return [];
+
+  const children = await Part.find({
+    _id: { $in: entries.map((entry) => entry.partId) },
+  })
+    .populate('customer')
+    .populate('material');
+  const childById = new Map(children.map((child) => [child._id.toString(), child]));
+
+  return entries
+    .map((entry) => {
+      const child = childById.get(entry.partId);
+      if (!child) return null;
+
+      return {
+        part: createDetailItem(child),
+        qty: Math.max(1, Number(entry.qty) || 1),
+      };
+    })
+    .filter((item): item is PartRelationItem => Boolean(item));
+}
+
+async function listParentAssemblies(id: string): Promise<PartRelationItem[]> {
+  const parents = await Part.find({ 'subComponentIds.partId': id })
+    .populate('customer')
+    .populate('material');
+
+  return parents
+    .map((parent) => {
+      const entry = normalizeSubComponentIds(parent.subComponentIds).find(
+        (candidate) => candidate.partId === id,
+      );
+      if (!entry) return null;
+
+      return {
+        part: createDetailItem(parent),
+        qty: Math.max(1, Number(entry.qty) || 1),
+      };
+    })
+    .filter((item): item is PartRelationItem => Boolean(item))
+    .sort((left, right) => left.part.part.localeCompare(right.part.part));
+}
+
+async function listRelations(id: string): Promise<PartRelationsResponse> {
+  const [subComponents, parents] = await Promise.all([
+    listSubComponents(id),
+    listParentAssemblies(id),
+  ]);
+
+  return {
+    subComponents,
+    parents,
+  };
+}
+
 async function updateDirectParentCounts(
   addedChildIds: string[],
   removedChildIds: string[],
@@ -546,7 +646,11 @@ function getPartPositions(location: string): Promise<string[]> {
 
 export default {
   list,
+  searchSummaries,
   findById,
+  listSubComponents,
+  listParentAssemblies,
+  listRelations,
   create,
   update,
   stock,

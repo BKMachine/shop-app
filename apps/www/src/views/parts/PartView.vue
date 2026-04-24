@@ -182,73 +182,97 @@
                 <v-expansion-panel-title>
                   <div class="d-flex align-center ga-2">
                     <span>Sub-Components</span>
-                    <v-chip v-if="resolvedSubComponentItems.length" size="small" variant="tonal">
+                    <span v-if="resolvedSubComponentItems.length" class="expansion-count-badge">
                       {{ resolvedSubComponentItems.length }}
-                    </v-chip>
+                    </span>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
                   <v-autocomplete
-                    v-model="selectedSubComponentIds"
-                    chips
+                    v-model="subComponentSearchSelection"
+                    v-model:search="subComponentSearchTerm"
+                    clearable
                     item-title="label"
                     item-value="value"
                     :items="subComponentOptions"
                     label="Search Parts"
-                    multiple
+                    :loading="subComponentSearchLoading"
+                    no-filter
+                    placeholder="Start typing to search..."
                     variant="outlined"
                   />
                   <div class="text-body-2 text-medium-emphasis mt-3">
                     Pick existing parts to treat as sub-components for this assembly.
                   </div>
-                  <v-list
-                    v-if="resolvedSubComponentItems.length"
+                  <draggable
+                    v-if="draggableSubComponentEntries.length"
+                    v-model="draggableSubComponentEntries"
                     class="parent-components-list mt-3"
-                    lines="two"
+                    drag-class="sub-component-row--dragging"
+                    ghost-class="sub-component-row--ghost"
+                    handle=".sub-component-drag-handle"
+                    item-key="partId"
+                    tag="div"
                   >
-                    <v-list-item
-                      v-for="subItem in resolvedSubComponentItems"
-                      :key="subItem.part._id"
-                      :subtitle="subItem.part.description"
-                      :title="subItem.part.part"
-                      :to="{ name: 'viewPart', params: { id: subItem.part._id } }"
-                    >
-                      <template #prepend>
-                        <div class="d-flex align-center ga-3">
-                          <v-avatar color="secondary" size="36" variant="tonal">
-                            {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
-                          </v-avatar>
-                          <div class="parent-component-image-wrap mr-2">
-                            <img
-                              v-if="subItem.part.img"
-                              alt=""
-                              class="parent-component-image"
-                              :src="subItem.part.img"
-                            />
-                            <MissingImage
-                              v-else
-                              class="parent-component-image parent-component-image--fallback"
-                            />
-                          </div>
-                        </div>
-                      </template>
-                      <template #append>
-                        <div class="d-flex align-center ga-2">
-                          <div class="text-body-2 text-medium-emphasis parent-component-qty">
-                            Qty {{ Math.max(1, Number(subItem.entry.qty) || 1) }}
-                          </div>
-                          <v-btn
-                            color="error"
-                            icon="mdi-delete"
-                            size="small"
-                            variant="text"
-                            @click.prevent.stop="removeSubComponent(subItem.part._id)"
-                          />
-                          <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
-                        </div>
-                      </template>
-                    </v-list-item>
-                  </v-list>
+                    <template #item="{ element }">
+                      <v-list
+                        v-if="resolveSubComponentItem(element)"
+                        class="sub-component-draggable-list"
+                        lines="two"
+                      >
+                        <v-list-item
+                          :subtitle="resolveSubComponentItem(element)?.part.description"
+                          :title="resolveSubComponentItem(element)?.part.part"
+                          :to="{ name: 'viewPart', params: { id: resolveSubComponentItem(element)?.part._id } }"
+                        >
+                          <template #prepend>
+                            <div class="d-flex align-center ga-3">
+                              <span class="sub-component-drag-handle">
+                                <v-icon icon="mdi-drag" size="small" />
+                              </span>
+                              <div class="parent-component-image-wrap mr-2">
+                                <img
+                                  v-if="resolveSubComponentItem(element)?.part.img"
+                                  alt=""
+                                  class="parent-component-image"
+                                  :src="resolveSubComponentItem(element)?.part.img"
+                                />
+                                <MissingImage
+                                  v-else
+                                  class="parent-component-image parent-component-image--fallback"
+                                />
+                              </div>
+                            </div>
+                          </template>
+                          <template #append>
+                            <div class="d-flex align-center ga-2">
+                              <div class="sub-component-qty-field" @click.stop>
+                                <v-text-field
+                                  v-model.number="element.qty"
+                                  density="compact"
+                                  hide-details
+                                  label="Qty"
+                                  min="1"
+                                  type="number"
+                                  variant="outlined"
+                                  @click.stop
+                                  @keydown="onlyAllowNumeric($event)"
+                                />
+                              </div>
+                              <v-btn
+                                color="error"
+                                icon="mdi-delete"
+                                size="small"
+                                variant="text"
+                                @click.prevent.stop="removeSubComponent(String(element.partId))"
+                              />
+                              <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
+                            </div>
+                          </template>
+                        </v-list-item>
+                      </v-list>
+                    </template>
+                  </draggable>
                   <div v-else class="text-body-2 text-medium-emphasis mt-3">
                     No sub-components added yet.
                   </div>
@@ -258,9 +282,9 @@
                 <v-expansion-panel-title>
                   <div class="d-flex align-center ga-2">
                     <span>Parent Assemblies</span>
-                    <v-chip v-if="parentComponentItems.length" size="small" variant="tonal">
+                    <span v-if="parentComponentItems.length" class="expansion-count-badge">
                       {{ parentComponentItems.length }}
-                    </v-chip>
+                    </span>
                   </div>
                 </v-expansion-panel-title>
                 <v-expansion-panel-text>
@@ -281,9 +305,6 @@
                     >
                       <template #prepend>
                         <div class="d-flex align-center ga-3">
-                          <v-avatar color="secondary" size="36" variant="tonal">
-                            {{ parentItem.qty }}
-                          </v-avatar>
                           <div class="parent-component-image-wrap mr-2">
                             <img
                               v-if="parentItem.part.img"
@@ -300,9 +321,14 @@
                       </template>
                       <template #append>
                         <div class="d-flex align-center ga-2">
-                          <div class="text-body-2 text-medium-emphasis parent-component-qty">
-                            Qty {{ parentItem.qty }}
-                          </div>
+                          <v-chip
+                            class="parent-component-qty"
+                            color="primary"
+                            size="small"
+                            variant="tonal"
+                          >
+                            Uses {{ parentItem.qty }}
+                          </v-chip>
                           <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
                         </div>
                       </template>
@@ -420,6 +446,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
+import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
@@ -442,6 +469,7 @@ import {
   calculatePartShopRate,
   formatCost,
   isNumber,
+  onlyAllowNumeric,
 } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
@@ -485,6 +513,9 @@ const defaultPartValues: Pick<
 
 const part = ref<Part>({} as Part);
 const partOriginal = ref<Part>({} as Part);
+const searchedPartDetails = ref<Part[]>([]);
+const relatedSubComponents = ref<PartRelationItem[]>([]);
+const relatedParentAssemblies = ref<PartRelationItem[]>([]);
 
 const tab = ref<'general' | 'material' | 'cost' | 'stock' | 'docs' | 'notes' | 'images'>(
   import.meta.env.PROD ? 'general' : 'general',
@@ -500,6 +531,12 @@ const showStockValue = ref(false);
 const leaveDialogVisible = ref(false);
 const pendingNavigationTarget = ref<string | null>(null);
 const skipUnsavedChangesGuard = ref(false);
+const subComponentSearchSelection = ref<string | null>(null);
+const subComponentSearchTerm = ref('');
+const subComponentSearchLoading = ref(false);
+const subComponentSearchResults = ref<PartSearchItem[]>([]);
+const subComponentSearchRequestId = ref(0);
+let subComponentSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 const subComponentRemovalDialog = ref({
   visible: false,
   partId: '',
@@ -526,10 +563,46 @@ const selectedSubComponentIds = computed<string[]>({
     }));
   },
 });
+const draggableSubComponentEntries = computed<PartSubComponent[]>({
+  get() {
+    return part.value.subComponentIds || [];
+  },
+  set(entries) {
+    part.value.subComponentIds = entries.map((entry) => ({
+      partId: String(entry.partId),
+      qty: Math.max(1, Number(entry.qty) || 1),
+    }));
+  },
+});
+const searchedPartsById = computed(() => {
+  return new Map(
+    subComponentSearchResults.value.map((item) => [
+      item._id,
+      {
+        _id: item._id,
+        part: item.part,
+        description: item.description,
+      },
+    ]),
+  );
+});
+const searchableParts = computed(() => {
+  return [
+    ...partStore.parts,
+    ...searchedPartDetails.value,
+    ...relatedSubComponents.value.map((item) => item.part),
+    ...relatedParentAssemblies.value.map((item) => item.part),
+  ];
+});
 const partById = computed(() => {
-  return new Map(partStore.parts.map((candidate) => [candidate._id, candidate]));
+  const entries: Part[] = [...searchableParts.value];
+
+  if (part.value._id) entries.push(part.value);
+
+  return new Map(entries.map((candidate) => [candidate._id, candidate]));
 });
 const resolvePart = (partId: string) => partById.value.get(partId);
+const resolveSearchPart = (partId: string) => searchedPartsById.value.get(partId);
 const partDependsOnCurrent = (candidateId: string, visited = new Set<string>()): boolean => {
   if (!part.value._id || visited.has(candidateId)) return false;
   const candidate = resolvePart(candidateId);
@@ -545,7 +618,7 @@ const partDependsOnCurrent = (candidateId: string, visited = new Set<string>()):
 };
 const disallowedSubComponentIds = computed(() => {
   return new Set(
-    partStore.parts
+    searchableParts.value
       .filter(
         (candidate) => candidate._id === part.value._id || partDependsOnCurrent(candidate._id),
       )
@@ -565,27 +638,33 @@ const resolvedSubComponentItems = computed(() => {
     })
     .filter((item): item is { key: string; entry: PartSubComponent; part: Part } => Boolean(item));
 });
+function resolveSubComponentItem(entry: PartSubComponent) {
+  const subPart = resolvePart(String(entry.partId));
+  if (!subPart || subPart._id === part.value._id) return null;
+
+  return {
+    key: String(entry.partId),
+    entry,
+    part: subPart,
+  };
+}
 const parentComponentItems = computed(() => {
   if (!part.value._id) return [];
 
-  return partStore.parts
-    .map((candidate) => {
-      const parentEntry = (candidate.subComponentIds || []).find(
-        (entry) => String(entry.partId) === part.value._id,
-      );
-      if (!parentEntry || candidate._id === part.value._id) return null;
-
-      return {
-        part: candidate,
-        qty: Math.max(1, Number(parentEntry.qty) || 1),
-      };
-    })
-    .filter((item): item is { part: Part; qty: number } => Boolean(item))
+  return relatedParentAssemblies.value
+    .filter((item) => item.part._id !== part.value._id)
+    .map((item) => ({
+      part: item.part,
+      qty: Math.max(1, Number(item.qty) || 1),
+    }))
     .sort((a, b) => a.part.part.localeCompare(b.part.part));
 });
 const subComponentOptions = computed(() => {
-  return partStore.parts
+  const selectedIds = new Set(selectedSubComponentIds.value);
+
+  return subComponentSearchResults.value
     .filter((candidate) => !disallowedSubComponentIds.value.has(candidate._id))
+    .filter((candidate) => !selectedIds.has(candidate._id))
     .slice()
     .sort((a, b) => a.part.localeCompare(b.part))
     .map((candidate) => ({
@@ -688,8 +767,34 @@ watch(tab, (newTab) => {
   });
 });
 
+watch(subComponentSearchSelection, async (partId) => {
+  if (!partId) return;
+  await ensureSearchedPartDetailLoaded(partId);
+  if (!selectedSubComponentIds.value.includes(partId)) {
+    selectedSubComponentIds.value = [...selectedSubComponentIds.value, partId];
+  }
+  subComponentSearchSelection.value = null;
+  subComponentSearchTerm.value = '';
+});
+
+watch(subComponentSearchTerm, (value) => {
+  if (subComponentSearchTimeout) clearTimeout(subComponentSearchTimeout);
+
+  const trimmedValue = value.trim();
+  if (trimmedValue.length < 3) {
+    subComponentSearchLoading.value = false;
+    subComponentSearchResults.value = [];
+    return;
+  }
+
+  subComponentSearchTimeout = setTimeout(() => {
+    void loadSubComponentSearchResults(trimmedValue);
+  }, 200);
+});
+
 onBeforeUnmount(() => {
   // Store the part we were viewing to slightly highlight the row in the part list
+  if (subComponentSearchTimeout) clearTimeout(subComponentSearchTimeout);
   partStore.setLastId(part.value._id);
 });
 
@@ -699,24 +804,23 @@ watch(
     if (router.currentRoute.value.name !== 'viewPart') return;
     if (!partId || partId !== router.currentRoute.value.params.id) return;
 
-    const match = partStore.parts.find((candidate) => candidate._id === partId);
-    if (!match) return;
-
     if (partIsAltered.value && saveFlag.value === false) {
       alert('Part was updated. Local changes will be lost.');
     }
 
-    applyFetchedPart(match);
+    fetchPart(false);
   },
 );
 
 function fetchPart(showSpinner: boolean = true) {
   const { id } = router.currentRoute.value.params;
   if (showSpinner) loading.value = true;
-  axios
-    .get<Part>(`/parts/${id}`)
-    .then(({ data }) => {
-      applyFetchedPart(data);
+  Promise.all([
+    axios.get<Part>(`/parts/${id}`),
+    axios.get<PartRelationsResponse>(`/parts/${id}/relations`),
+  ])
+    .then(([partResponse, relationsResponse]) => {
+      applyFetchedPart(partResponse.data, relationsResponse.data);
     })
     .catch(() => {
       alert('Part not found.');
@@ -726,7 +830,7 @@ function fetchPart(showSpinner: boolean = true) {
     });
 }
 
-function applyFetchedPart(source: Part) {
+function applyFetchedPart(source: Part, relations?: PartRelationsResponse) {
   const mergedPart = { ...defaultPartValues, ...source };
   mergedPart.subComponentIds = (mergedPart.subComponentIds || [])
     .map((entry) => {
@@ -744,9 +848,45 @@ function applyFetchedPart(source: Part) {
         array.findIndex((candidate) => candidate.partId === entry.partId) === index &&
         entry.partId !== mergedPart._id,
     );
+  relatedSubComponents.value = relations?.subComponents || [];
+  relatedParentAssemblies.value = relations?.parents || [];
   part.value = cloneDeep(mergedPart);
   partOriginal.value = cloneDeep(mergedPart);
   void loadCriticalNotesCount();
+}
+
+async function loadSubComponentSearchResults(search: string) {
+  const requestId = ++subComponentSearchRequestId.value;
+  subComponentSearchLoading.value = true;
+
+  try {
+    const { data } = await axios.get<PartSearchResponse>('/parts/search', {
+      params: {
+        search,
+        limit: 20,
+      },
+    });
+
+    if (requestId !== subComponentSearchRequestId.value) return;
+    subComponentSearchResults.value = data.items;
+  } catch {
+    if (requestId !== subComponentSearchRequestId.value) return;
+    subComponentSearchResults.value = [];
+  } finally {
+    if (requestId === subComponentSearchRequestId.value) {
+      subComponentSearchLoading.value = false;
+    }
+  }
+}
+
+async function ensureSearchedPartDetailLoaded(partId: string) {
+  if (resolvePart(partId)) return;
+
+  const { data } = await axios.get<Part>(`/parts/${partId}`);
+  searchedPartDetails.value = [
+    ...searchedPartDetails.value.filter((candidate) => candidate._id !== data._id),
+    data,
+  ];
 }
 
 async function savePart() {
@@ -850,12 +990,10 @@ function toComparablePart(value: Part) {
     ...value,
     customer: getCustomerId(value.customer),
     material: getMaterialId(value.material),
-    subComponentIds: (value.subComponentIds || [])
-      .map((subComponent) => ({
-        partId: String(subComponent.partId),
-        qty: Math.max(1, Number(subComponent.qty) || 1),
-      }))
-      .sort((a, b) => a.partId.localeCompare(b.partId)),
+    subComponentIds: (value.subComponentIds || []).map((subComponent) => ({
+      partId: String(subComponent.partId),
+      qty: Math.max(1, Number(subComponent.qty) || 1),
+    })),
   };
 }
 
@@ -1193,6 +1331,20 @@ async function loadCriticalNotesCount() {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+.expansion-count-badge {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, rgb(var(--v-theme-success)) 22%, white);
+  color: rgb(var(--v-theme-success));
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
 .stock {
   font-weight: bolder;
   font-size: 3em;
@@ -1237,6 +1389,31 @@ async function loadCriticalNotesCount() {
 
 .parent-components-list {
   padding: 0;
+}
+
+.sub-component-draggable-list {
+  padding: 0;
+}
+
+.sub-component-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: rgb(var(--v-theme-on-surface));
+  opacity: 0.55;
+}
+
+.sub-component-row--dragging {
+  opacity: 0.9;
+}
+
+.sub-component-row--ghost {
+  opacity: 0.45;
+}
+
+.sub-component-qty-field {
+  width: 88px;
 }
 
 .parent-component-qty {
