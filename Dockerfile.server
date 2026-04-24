@@ -14,34 +14,16 @@ COPY packages/types/package.json packages/types/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
 COPY packages/utilities/package.json packages/utilities/package.json
 
+# SERVER
+
 FROM base AS server-prune
 COPY apps/server/package.json apps/server/package.json
 RUN turbo prune server --docker
-
-FROM base AS www-prune
-COPY apps/www/package.json apps/www/package.json
-RUN turbo prune www --docker
-
-FROM base AS folder-helper-prune
-COPY apps/folder_helper/package.json apps/folder_helper/package.json
-RUN turbo prune folder_helper --docker
 
 FROM server-prune AS server-installer
 COPY --from=server-prune /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=server-prune /app/out/full/ .
-COPY packages packages  
-
-FROM www-prune AS www-installer
-COPY --from=www-prune /app/out/json/ .
-RUN pnpm install --frozen-lockfile
-COPY --from=www-prune /app/out/full/ .
-COPY packages packages  
-
-FROM base AS folder-helper-installer
-COPY --from=folder-helper-prune /app/out/json/ .
-RUN pnpm install --no-frozen-lockfile
-COPY --from=folder-helper-prune /app/out/full/ .
 COPY packages packages  
 
 FROM server-installer AS server-builder
@@ -55,11 +37,35 @@ FROM server-installer AS server-deploy
 RUN pnpm run build --filter=@repo/utilities
 RUN pnpm deploy --filter=server --prod /app/deploy/server
 
+# WWW
+
+FROM base AS www-prune
+COPY apps/www/package.json apps/www/package.json
+RUN turbo prune www --docker
+
+FROM www-prune AS www-installer
+COPY --from=www-prune /app/out/json/ .
+RUN pnpm install --frozen-lockfile
+COPY --from=www-prune /app/out/full/ .
+COPY packages packages  
+
 FROM www-installer AS www-builder
 COPY apps/www apps/www
 RUN pnpm run format --filter=www
 RUN pnpm run ci --filter=www 
 RUN pnpm run build --filter=www
+
+# FOLDER HELPER
+
+FROM base AS folder-helper-prune
+COPY apps/folder_helper/package.json apps/folder_helper/package.json
+RUN turbo prune folder_helper --docker
+
+FROM folder-helper-prune AS folder-helper-installer
+COPY --from=folder-helper-prune /app/out/json/ .
+RUN pnpm install --no-frozen-lockfile
+COPY --from=folder-helper-prune /app/out/full/ .
+COPY packages packages  
 
 FROM folder-helper-installer AS folder-helper-builder
 RUN apt-get update && apt-get install -y --no-install-recommends nsis && rm -rf /var/lib/apt/lists/*
@@ -67,13 +73,14 @@ COPY apps/folder_helper apps/folder_helper
 RUN pnpm --filter folder_helper run build:installer
 RUN pnpm --filter folder_helper run stage:server
 
+# FINAL IMAGE
+
 FROM node:22-slim AS runner
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends cups-client && rm -rf /var/lib/apt/lists/*
+COPY --from=folder-helper-builder /app/apps/server/public/downloads /app/apps/server/public/downloads
 COPY --from=server-deploy /app/deploy/server/node_modules /app/apps/server/node_modules 
 COPY --from=server-builder /app/apps/server/dist /app/apps/server/dist
-COPY --from=server-builder /app/apps/server/public /app/apps/server/public
-COPY --from=folder-helper-builder /app/apps/server/public/downloads /app/apps/server/public/downloads
 COPY --from=www-builder /app/apps/www/dist /app/apps/www/dist
 ENV NODE_ENV=production
 EXPOSE 3000
