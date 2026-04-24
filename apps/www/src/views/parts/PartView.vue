@@ -673,14 +673,31 @@ const subComponentOptions = computed(() => {
     }));
 });
 const effectiveTotalCycleMinutes = computed(() => {
+  if (resolvedSubComponentItems.value.length) {
+    return resolvedSubComponentItems.value.reduce((total, subComponent) => {
+      return (
+        total +
+        calculateAssemblyCycleMinutes(subComponent.part, resolvePart) *
+          Math.max(1, Number(subComponent.entry.qty) || 1)
+      );
+    }, 0);
+  }
+
   return calculateAssemblyCycleMinutes(part.value, resolvePart);
+});
+
+const totalAdditionalCost = computed(() => {
+  return (part.value.additionalCosts || []).reduce(
+    (sum, item) => sum + (Number(item.cost) || 0),
+    0,
+  );
 });
 
 const currentRate = computed(() => {
   if (hasNoProductPrice.value) return 0;
   const rate = calculatePartShopRate(
     part.value.price,
-    partMaterialCost.value,
+    partMaterialCost.value + totalAdditionalCost.value,
     effectiveTotalCycleMinutes.value,
   );
   return Number.isFinite(rate) ? rate : 0;

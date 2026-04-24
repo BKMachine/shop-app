@@ -430,6 +430,13 @@ const subComponentCycleRows = computed(() => {
   }));
 });
 const effectiveTotalCycleTime = computed(() => {
+  if (hasSubComponents.value) {
+    return subComponentCycleRows.value.reduce(
+      (total, component) => total + component.totalCycleTime,
+      0,
+    );
+  }
+
   return calculateAssemblyCycleMinutes(part, resolvePart);
 });
 
