@@ -13,6 +13,7 @@ const validSortFields = new Set([
   'stock',
   'toolType',
   'flutes',
+  'cost',
 ]);
 
 function buildToolQuery(filters: ToolListFilters) {

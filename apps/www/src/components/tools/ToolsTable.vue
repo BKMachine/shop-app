@@ -221,6 +221,9 @@
             <v-img v-if="item.img" :id="item._id" class="tool-img" :src="item.img" />
             <MissingImage v-else :id="item._id" class="tool-img tool-img-fallback" />
           </template>
+          <template #['item.cost']="{ item }">
+            <span class="stock">${{ formatCost(item.cost) }}</span>
+          </template>
           <template #['item.location']="{ item }"> {{ location(item) }} </template>
           <template #['item.stock']="{ item }">
             <span class="stock">{{ item.stock }}</span>
@@ -235,7 +238,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
-import { isNumber } from '@/plugins/utils';
+import { formatCost, isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
 import { useToolStore } from '@/stores/tool_store';

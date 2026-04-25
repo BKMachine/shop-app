@@ -233,6 +233,10 @@ const millingHeaders = [
     defaultVisible: false,
   },
   {
+    title: 'Cost',
+    key: 'cost',
+  },
+  {
     title: 'Location',
     key: 'location',
   },
@@ -254,10 +258,6 @@ const turningHeaders = [
     key: 'description',
   },
   {
-    title: 'Coating',
-    key: 'coating',
-  },
-  {
     title: 'Vendor',
     key: 'vendor.name',
   },
@@ -266,8 +266,8 @@ const turningHeaders = [
     key: 'item',
   },
   {
-    title: 'Cutting Edges',
-    key: 'flutes',
+    title: 'Coating',
+    key: 'coating',
   },
   {
     title: 'Tool Type',
@@ -275,8 +275,17 @@ const turningHeaders = [
     defaultVisible: false,
   },
   {
+    title: 'Cost',
+    key: 'cost',
+  },
+  {
     title: 'Location',
     key: 'location',
+  },
+  {
+    title: 'Stock',
+    key: 'stock',
+    align: 'center',
   },
 ];
 
@@ -304,9 +313,14 @@ const otherHeaders = [
     defaultVisible: false,
   },
   {
+    title: 'Cost',
+    key: 'cost',
+  },
+  {
     title: 'Location',
     key: 'location',
   },
+  { title: 'Stock', key: 'stock', align: 'center' },
 ];
 </script>
 
