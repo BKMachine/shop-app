@@ -421,7 +421,6 @@ import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
-import { partial } from 'lodash';
 
 const toolCategoryStore = useToolCategoryStore();
 const supplierStore = useSupplierStore();
