@@ -106,6 +106,7 @@
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
                   <v-icon class="ml-2" icon="mdi-printer-outline" @click="printItem" />
+                  <v-icon class="ml-2" icon="mdi-content-copy" @click="copyItem(tool.item)" />
                 </template>
               </v-text-field>
             </v-col>
@@ -122,6 +123,7 @@
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
                   <v-icon class="ml-2" icon="mdi-printer-outline" @click="printBarcode" />
+                  <v-icon class="ml-2" icon="mdi-content-copy" @click="copyItem(tool.barcode)" />
                 </template>
               </v-text-field>
             </v-col>
@@ -327,12 +329,7 @@
         <v-window-item value="tech">
           <v-row>
             <v-col col="3">
-              <v-autocomplete
-                v-model="tool.toolType"
-                clearable
-                :items="types"
-                label="Tool Type"
-              />
+              <v-autocomplete v-model="tool.toolType" clearable :items="types" label="Tool Type" />
             </v-col>
             <v-col cols="3">
               <v-text-field
@@ -424,6 +421,7 @@ import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
 import { useToolStore } from '@/stores/tool_store';
 import { useVendorStore } from '@/stores/vendor_store';
+import { partial } from 'lodash';
 
 const toolCategoryStore = useToolCategoryStore();
 const supplierStore = useSupplierStore();
@@ -798,7 +796,11 @@ function getChangedToolFields() {
       return {
         label,
         blockReason: blockedFields.get(fieldKey),
-        value: formatChangedFieldValue(fieldKey, comparableTool.value[fieldKey], tool.value[fieldKey]),
+        value: formatChangedFieldValue(
+          fieldKey,
+          comparableTool.value[fieldKey],
+          tool.value[fieldKey],
+        ),
       };
     });
 }
@@ -806,8 +808,8 @@ function getChangedToolFields() {
 const toolIsAltered = computed<boolean>(() => {
   return !isEqual(comparableTool.value, comparableOriginalTool.value);
 });
-const changedToolFields = computed<Array<{ label: string; value: string; blockReason?: string }>>(() =>
-  getChangedToolFields(),
+const changedToolFields = computed<Array<{ label: string; value: string; blockReason?: string }>>(
+  () => getChangedToolFields(),
 );
 const hasRequiredToolFields = computed<boolean>(() => {
   return Boolean(tool.value.description?.trim() && tool.value.item?.trim());
@@ -1018,6 +1020,18 @@ function printItem() {
   if (!item || !description || !vendor) return;
   const brand = typeof vendor === 'string' ? vendor : vendor.name;
   printer.printAddress({ item, description, brand });
+}
+
+async function copyItem(item: string | undefined) {
+  const normalizedItem = normalizeScanCode(item);
+  if (!normalizedItem) return;
+
+  try {
+    await navigator.clipboard.writeText(normalizedItem);
+    toastSuccess('Copied to clipboard');
+  } catch {
+    toastError('Unable to copy to clipboard');
+  }
 }
 
 function printBarcode() {
