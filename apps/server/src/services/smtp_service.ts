@@ -56,7 +56,7 @@ async function reorders() {
     0,
   );
 
-  let html = `<p style="color: #c62828; font-size: 18px; font-weight: 700; margin: 0;">Estimated Total: ${formatCurrency(totalCost)}</p><br><br>`;
+  let html = `<p style="color: #c62828; font-size: 18px; font-weight: 700; margin: 0;">Estimated Total: ${formatCurrency(totalCost)}</p><br>`;
   let supplier: string;
   let vendor: string;
   sorted.forEach((x) => {
