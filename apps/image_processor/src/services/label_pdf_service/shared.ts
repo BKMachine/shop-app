@@ -62,8 +62,8 @@ export async function buildQrCodeWithCenteredLogoBuffer(value: string, size: num
     type: 'png',
   });
 
-  const logoSize = Math.max(1, Math.round(size * 0.28));
-  const plateSize = Math.max(logoSize + 14, Math.round(size * 0.34));
+  const logoSize = Math.max(1, Math.round(size * 0.22));
+  const plateSize = Math.max(logoSize + 12, Math.round(size * 0.29));
   const plateOffset = Math.round((size - plateSize) / 2);
   const logoOffset = Math.round((size - logoSize) / 2);
   const cornerRadius = Math.max(6, Math.round(plateSize * 0.18));

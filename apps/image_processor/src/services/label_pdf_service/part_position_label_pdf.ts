@@ -17,9 +17,20 @@ const PART_POSITION_LAYOUT = {
   paddingX: 0.2,
   paddingY: 0.04,
   columnGap: 0.08,
-  xShift: -0.02,
-  yShift: -0.02,
-  qrSize: 0.56,
+  xShift: 0.15,
+  yShift: -0.04,
+  printableArea: {
+    extraRightMargin: 0.16,
+  },
+  border: {
+    visible: false,
+    inset: 0.04,
+    width: 1,
+  },
+  qrSize: 0.64,
+  image: {
+    maxWidth: 0.62,
+  },
   description: {
     topInset: 0.06,
     height: 0.4,
@@ -36,19 +47,23 @@ const PART_POSITION_LAYOUT = {
   },
   qrCaption: {
     gap: 0.03,
-    height: 0.12,
+    height: 0.24,
+    maxWidth: 1,
     fontSize: 8,
     minFontSize: 6,
+    lineGap: 1,
+    positionFontSize: 10,
+    positionMinFontSize: 8,
   },
-};
-
-const PART_POSITION_TEXT_HEIGHTS = {
-  part: 0.24,
 };
 
 const ROTATED_ADDRESS_LABEL = {
   width: ADDRESS_LABEL.height,
   height: ADDRESS_LABEL.width,
+};
+
+const PART_POSITION_TEXT_HEIGHTS = {
+  part: 0.24,
 };
 
 function getCenteredTextPlacement(
@@ -114,41 +129,47 @@ function splitTokenToFit(font: PDFFont, token: string, fontSize: number, maxWidt
 }
 
 function wrapText(font: PDFFont, text: string, fontSize: number, maxWidth: number) {
-  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  const paragraphs = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  if (!words.length) {
+  if (!paragraphs.length) {
     return [''];
   }
 
-  const lines: string[] = [];
-  let currentLine = '';
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    let currentLine = '';
 
-  for (const word of words) {
-    const candidate = currentLine ? `${currentLine} ${word}` : word;
-    if (!currentLine || font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
-      currentLine = candidate;
-      continue;
-    }
-
-    if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
-      if (currentLine) {
-        lines.push(currentLine);
-        currentLine = '';
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (!currentLine || font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+        currentLine = candidate;
+        continue;
       }
 
-      const segments = splitTokenToFit(font, word, fontSize, maxWidth);
-      const tail = segments.pop() || '';
-      lines.push(...segments);
-      currentLine = tail;
-      continue;
+      if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = '';
+        }
+
+        const segments = splitTokenToFit(font, word, fontSize, maxWidth);
+        const tail = segments.pop() || '';
+        lines.push(...segments);
+        currentLine = tail;
+        continue;
+      }
+
+      lines.push(currentLine);
+      currentLine = word;
     }
 
-    lines.push(currentLine);
-    currentLine = word;
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
+    if (currentLine) {
+      lines.push(currentLine);
+    }
   }
 
   return lines;
@@ -250,19 +271,111 @@ function getWrappedTextPlacement(
   });
 }
 
+function getStackedCenteredTextPlacements(
+  font: PDFFont,
+  lines: string[],
+  layout: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fontSize: number;
+    minFontSize: number;
+    lineGap: number;
+    lastLineFontSize?: number;
+    lastLineMinFontSize?: number;
+  },
+) {
+  const visibleLines = lines.map((line) => line.trim()).filter(Boolean);
+  const boxWidth = inches(layout.width);
+  const boxHeight = inches(layout.height);
+  const baselineAdjust = 1;
+
+  if (!visibleLines.length) {
+    return [];
+  }
+
+  const getFontSizes = (baseFontSize: number) => {
+    const lastLineTarget = layout.lastLineFontSize ?? baseFontSize;
+    const lastLineMin = layout.lastLineMinFontSize ?? layout.minFontSize;
+    const lastLineFontSize = Math.max(lastLineMin, Math.min(lastLineTarget, baseFontSize + 2));
+
+    return visibleLines.map((_, index) =>
+      index === visibleLines.length - 1 ? lastLineFontSize : baseFontSize,
+    );
+  };
+
+  for (let fontSize = layout.fontSize; fontSize >= layout.minFontSize; fontSize -= 0.5) {
+    const fontSizes = getFontSizes(fontSize);
+    const widestLine = Math.max(
+      ...visibleLines.map((line, index) =>
+        font.widthOfTextAtSize(line, fontSizes[index] ?? fontSize),
+      ),
+    );
+    const lineHeights = fontSizes.map((size) => font.heightAtSize(size));
+    const totalHeight =
+      lineHeights.reduce((sum, height) => sum + height, 0) +
+      (visibleLines.length - 1) * layout.lineGap;
+
+    if (widestLine > boxWidth || totalHeight > boxHeight) {
+      continue;
+    }
+
+    const blockBottom =
+      toPdfY(ADDRESS_LABEL.height, layout.y, layout.height) + (boxHeight - totalHeight) / 2;
+
+    return visibleLines.map((line, index) => {
+      const currentFontSize = fontSizes[index] ?? fontSize;
+      const textWidth = font.widthOfTextAtSize(line, currentFontSize);
+      const yOffset =
+        lineHeights.slice(index + 1).reduce((sum, height) => sum + height, 0) +
+        (visibleLines.length - index - 1) * layout.lineGap;
+
+      return {
+        text: line,
+        fontSize: currentFontSize,
+        x: inches(layout.x) + Math.max(0, (boxWidth - textWidth) / 2),
+        y: blockBottom + yOffset + baselineAdjust,
+      };
+    });
+  }
+
+  const fallbackFontSize = layout.minFontSize;
+  const fallbackFontSizes = getFontSizes(fallbackFontSize);
+  const lineHeights = fallbackFontSizes.map((size) => font.heightAtSize(size));
+  const totalHeight =
+    lineHeights.reduce((sum, height) => sum + height, 0) +
+    (visibleLines.length - 1) * layout.lineGap;
+  const blockBottom =
+    toPdfY(ADDRESS_LABEL.height, layout.y, layout.height) + (boxHeight - totalHeight) / 2;
+
+  return visibleLines.map((line, index) => {
+    let visibleLine = line;
+    const currentFontSize = fallbackFontSizes[index] ?? fallbackFontSize;
+    while (visibleLine && font.widthOfTextAtSize(visibleLine, currentFontSize) > boxWidth) {
+      visibleLine = visibleLine.slice(0, -1).trimEnd();
+    }
+
+    const text = visibleLine === line ? line : `${visibleLine}...`;
+    const textWidth = font.widthOfTextAtSize(text, currentFontSize);
+    const yOffset =
+      lineHeights.slice(index + 1).reduce((sum, height) => sum + height, 0) +
+      (visibleLines.length - index - 1) * layout.lineGap;
+
+    return {
+      text,
+      fontSize: currentFontSize,
+      x: inches(layout.x) + Math.max(0, (boxWidth - textWidth) / 2),
+      y: blockBottom + yOffset + baselineAdjust,
+    };
+  });
+}
+
 function rotateClockwisePoint(x: number, y: number) {
   return {
-    x: y,
-    y: ADDRESS_LABEL.width - x,
+    x: y + inches(PART_POSITION_LAYOUT.yShift),
+    y: ADDRESS_LABEL.width - x + inches(PART_POSITION_LAYOUT.xShift),
   };
-}
-
-function applyXShift(x: number) {
-  return x + PART_POSITION_LAYOUT.xShift;
-}
-
-function applyYShift(y: number) {
-  return y + PART_POSITION_LAYOUT.yShift;
 }
 
 export async function buildPartPositionLabel(data: PartPositionLabelData) {
@@ -270,26 +383,82 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
   pdf.registerFontkit(fontkit);
   const page = pdf.addPage([ROTATED_ADDRESS_LABEL.width, ROTATED_ADDRESS_LABEL.height]);
   const sans = await pdf.embedFont(fs.readFileSync(segoeUiRegularPath));
+  const rightMargin =
+    PART_POSITION_LAYOUT.paddingX + PART_POSITION_LAYOUT.printableArea.extraRightMargin;
+
+  const borderLeft = PART_POSITION_LAYOUT.paddingX - PART_POSITION_LAYOUT.border.inset;
+  const borderRight = ADDRESS_LABEL.width / 72 - rightMargin + PART_POSITION_LAYOUT.border.inset;
+  const borderTop = PART_POSITION_LAYOUT.paddingY - PART_POSITION_LAYOUT.border.inset;
+  const borderBottom =
+    ADDRESS_LABEL.height / 72 - PART_POSITION_LAYOUT.paddingY + PART_POSITION_LAYOUT.border.inset;
+
+  const topLeft = rotateClockwisePoint(inches(borderLeft), toPdfY(ADDRESS_LABEL.height, borderTop));
+  const topRight = rotateClockwisePoint(
+    inches(borderRight),
+    toPdfY(ADDRESS_LABEL.height, borderTop),
+  );
+  const bottomRight = rotateClockwisePoint(
+    inches(borderRight),
+    toPdfY(ADDRESS_LABEL.height, borderBottom),
+  );
+  const bottomLeft = rotateClockwisePoint(
+    inches(borderLeft),
+    toPdfY(ADDRESS_LABEL.height, borderBottom),
+  );
+
+  if (PART_POSITION_LAYOUT.border.visible) {
+    page.drawLine({
+      start: topLeft,
+      end: topRight,
+      thickness: PART_POSITION_LAYOUT.border.width,
+      color: rgb(0, 0, 0),
+    });
+    page.drawLine({
+      start: topRight,
+      end: bottomRight,
+      thickness: PART_POSITION_LAYOUT.border.width,
+      color: rgb(0, 0, 0),
+    });
+    page.drawLine({
+      start: bottomRight,
+      end: bottomLeft,
+      thickness: PART_POSITION_LAYOUT.border.width,
+      color: rgb(0, 0, 0),
+    });
+    page.drawLine({
+      start: bottomLeft,
+      end: topLeft,
+      thickness: PART_POSITION_LAYOUT.border.width,
+      color: rgb(0, 0, 0),
+    });
+  }
+
+  const contentLeft = borderLeft + PART_POSITION_LAYOUT.border.inset;
+  const contentRight = borderRight - PART_POSITION_LAYOUT.border.inset;
+  const contentTop = borderTop + PART_POSITION_LAYOUT.border.inset;
+  const contentBottom = borderBottom - PART_POSITION_LAYOUT.border.inset;
+  const contentWidth = Math.max(0, contentRight - contentLeft);
+  const contentHeight = Math.max(0, contentBottom - contentTop);
 
   const description = sanitize(data.description);
   const part = sanitize(data.part);
-  const location = `${sanitize(data.loc)} | ${sanitize(data.pos)}`;
+  const locationLines = [sanitize(data.loc), sanitize(data.pos)].filter(Boolean);
   const qrValue = `bk-part:${sanitize(data.partId)}`;
 
-  const visualHeight = ADDRESS_LABEL.height / 72 - PART_POSITION_LAYOUT.paddingY * 2;
-  const visualY = applyYShift(PART_POSITION_LAYOUT.paddingY);
-  const imageSize = visualHeight;
-  const imageX = applyXShift(PART_POSITION_LAYOUT.paddingX);
+  const visualHeight = contentHeight;
+  const visualY = contentTop;
+  const imageWidthInches = Math.min(visualHeight, PART_POSITION_LAYOUT.image.maxWidth);
+  const imageHeightInches = visualHeight;
+  const imageX = contentLeft;
+  const codeRegionRight = contentRight;
+  const textRegionWidth = Math.max(
+    0,
+    contentWidth - imageWidthInches - PART_POSITION_LAYOUT.columnGap,
+  );
 
-  const contentX = imageX + imageSize + PART_POSITION_LAYOUT.columnGap;
-  const contentWidth =
-    ADDRESS_LABEL.width / 72 -
-    PART_POSITION_LAYOUT.paddingX * 2 -
-    imageSize -
-    PART_POSITION_LAYOUT.columnGap;
-
-  const codeSize = Math.min(PART_POSITION_LAYOUT.qrSize, contentWidth - 0.4, visualHeight);
-  const codeX = applyXShift(ADDRESS_LABEL.width / 72 - PART_POSITION_LAYOUT.paddingX - codeSize);
+  const contentX = imageX + imageWidthInches + PART_POSITION_LAYOUT.columnGap;
+  const codeSize = Math.min(PART_POSITION_LAYOUT.qrSize, textRegionWidth - 0.4, visualHeight);
+  const codeX = codeRegionRight - codeSize;
   const qrBlockHeight =
     codeSize + PART_POSITION_LAYOUT.qrCaption.gap + PART_POSITION_LAYOUT.qrCaption.height;
   const qrBlockY = visualY + (visualHeight - qrBlockHeight) / 2;
@@ -300,9 +469,11 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
   const descriptionHeight = PART_POSITION_LAYOUT.description.height;
   const textTopY = codeY;
   const partY = textTopY + descriptionHeight + PART_POSITION_LAYOUT.detail.gap;
+  const captionWidth = Math.min(contentWidth, PART_POSITION_LAYOUT.qrCaption.maxWidth);
+  const captionX = codeX + (codeSize - captionWidth) / 2;
 
-  const imageWidth = inches(imageSize);
-  const imageHeight = inches(imageSize);
+  const imageWidth = inches(imageWidthInches);
+  const imageHeight = inches(imageHeightInches);
   const codeWidth = inches(codeSize);
   const codeHeight = inches(codeSize);
 
@@ -340,7 +511,7 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
   const logoImage = await pdf.embedPng(logoBuffer);
   const logoPlacement = rotateClockwisePoint(
     inches(imageX),
-    toPdfY(ADDRESS_LABEL.height, visualY, imageSize),
+    toPdfY(ADDRESS_LABEL.height, visualY, imageHeightInches),
   );
   page.drawImage(logoImage, {
     x: logoPlacement.x,
@@ -368,7 +539,7 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
     rotate: degrees(-90),
   });
 
-  const codeImage = await pdf.embedPng(await buildQrCodeWithCenteredLogoBuffer(qrValue, 512));
+  const codeImage = await pdf.embedPng(await buildQrCodeWithCenteredLogoBuffer(qrValue, 1024));
   const codePlacement = rotateClockwisePoint(
     inches(codeX),
     toPdfY(ADDRESS_LABEL.height, codeY, codeSize),
@@ -381,22 +552,28 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
     rotate: degrees(-90),
   });
 
-  const captionPlacement = getCenteredTextPlacement(sans, location, {
-    ...PART_POSITION_LAYOUT.qrCaption,
-    x: codeX,
+  const captionPlacements = getStackedCenteredTextPlacements(sans, locationLines, {
+    x: captionX,
     y: captionY,
-    width: codeSize,
+    width: captionWidth,
     height: PART_POSITION_LAYOUT.qrCaption.height,
+    fontSize: PART_POSITION_LAYOUT.qrCaption.fontSize,
+    minFontSize: PART_POSITION_LAYOUT.qrCaption.minFontSize,
+    lineGap: PART_POSITION_LAYOUT.qrCaption.lineGap,
+    lastLineFontSize: PART_POSITION_LAYOUT.qrCaption.positionFontSize,
+    lastLineMinFontSize: PART_POSITION_LAYOUT.qrCaption.positionMinFontSize,
   });
-  const rotatedCaptionPlacement = rotateClockwisePoint(captionPlacement.x, captionPlacement.y);
-  page.drawText(location, {
-    x: rotatedCaptionPlacement.x,
-    y: rotatedCaptionPlacement.y,
-    size: captionPlacement.fontSize,
-    font: sans,
-    color: rgb(0, 0, 0),
-    rotate: degrees(-90),
-  });
+  for (const captionPlacement of captionPlacements) {
+    const rotatedCaptionPlacement = rotateClockwisePoint(captionPlacement.x, captionPlacement.y);
+    page.drawText(captionPlacement.text, {
+      x: rotatedCaptionPlacement.x,
+      y: rotatedCaptionPlacement.y,
+      size: captionPlacement.fontSize,
+      font: sans,
+      color: rgb(0, 0, 0),
+      rotate: degrees(-90),
+    });
+  }
 
   return Buffer.from(await pdf.save());
 }
