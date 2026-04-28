@@ -18,7 +18,6 @@
     "build:server": "docker build -f ./Dockerfile.server -t bkmachine/shop-app .",
     "build:status": "docker build -f ./Dockerfile.status -t bkmachine/cnc-status .",
     "build:all": "pnpm run build:haas_serial && pnpm run build:image_processor && pnpm run build:server && pnpm run build:status",
-
     "publish:haas_serial": "pnpm run build:haas_serial && docker push bkmachine/haas-serial",
     "publish:image_processor": "pnpm run build:image_processor && docker push bkmachine/image-processor",
     "publish:server": "pnpm run build:server && docker push bkmachine/shop-app",
@@ -26,9 +25,9 @@
     "publish:all": "pnpm run publish:haas_serial && pnpm run publish:image_processor && pnpm run publish:server && pnpm run publish:status"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
+    "@biomejs/biome": "^2.4.13",
     "npm-check": "^6.0.1",
-    "turbo": "^2.8.15"
+    "turbo": "^2.9.6"
   },
   "packageManager": "pnpm@10.32.0",
   "engines": {
