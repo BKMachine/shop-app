@@ -11,21 +11,21 @@
       <v-list-item v-bind="props" title="">
         <template #prepend>
           <div class="vendor-logo-frame vendor-logo-frame--menu vendor-logo-frame--with-gap">
-            <img v-if="hasLogoUrl(item.raw.logo)" alt="" class="vendor-logo" :src="item.raw.logo" />
+            <img v-if="hasLogoUrl(item.logo)" alt="" class="vendor-logo" :src="item.logo" />
             <v-icon v-else class="vendor-logo-fallback" icon="mdi-image-off-outline" size="16" />
           </div>
         </template>
-        {{ item.raw.name }}
+        {{ item.name }}
       </v-list-item>
     </template>
 
     <template #selection="{ item }">
       <div class="vendor-selection">
         <div class="vendor-logo-frame vendor-logo-frame--selection">
-          <img v-if="hasLogoUrl(item.raw.logo)" alt="" class="vendor-logo" :src="item.raw.logo" />
+          <img v-if="hasLogoUrl(item.logo)" alt="" class="vendor-logo" :src="item.logo" />
           <v-icon v-else class="vendor-logo-fallback" icon="mdi-image-off-outline" size="14" />
         </div>
-        <span class="vendor-selection__text">{{ item.raw.name }}</span>
+        <span class="vendor-selection__text">{{ item.name }}</span>
       </div>
     </template>
   </v-select>

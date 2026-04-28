@@ -4,6 +4,35 @@ import { defineConfig } from 'vite';
 import vueDevTools from 'vite-plugin-vue-devtools';
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 
+function getManualChunk(moduleId: string) {
+  if (
+    moduleId.includes('/node_modules/vue/') ||
+    moduleId.includes('/node_modules/vue-router/') ||
+    moduleId.includes('/node_modules/pinia/')
+  ) {
+    return 'vue-core';
+  }
+
+  if (moduleId.includes('/node_modules/vuetify/')) {
+    return 'vuetify';
+  }
+
+  if (
+    moduleId.includes('/node_modules/chart.js/') ||
+    moduleId.includes('/node_modules/vue-chartjs/') ||
+    moduleId.includes('/node_modules/chartjs-adapter-luxon/') ||
+    moduleId.includes('/node_modules/chartjs-plugin-annotation/')
+  ) {
+    return 'charts';
+  }
+
+  if (moduleId.includes('/node_modules/socket.io-client/')) {
+    return 'socket';
+  }
+
+  return undefined;
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -21,12 +50,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vue-core': ['vue', 'vue-router', 'pinia'],
-          vuetify: ['vuetify'],
-          charts: ['chart.js', 'vue-chartjs', 'chartjs-adapter-luxon', 'chartjs-plugin-annotation'],
-          socket: ['socket.io-client'],
-        },
+        manualChunks: getManualChunk,
       },
     },
     assetsInlineLimit: 0,

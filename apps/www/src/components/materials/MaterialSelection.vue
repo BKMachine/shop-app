@@ -13,7 +13,11 @@
     <template #item="data">
       <v-list-item v-if="data.props.header"> {{ data.props.header }} </v-list-item>
       <v-divider v-else-if="data.props.divider" />
-      <v-list-subheader v-else v-bind="data.props" class="material-select-item">
+      <v-list-subheader
+        v-else-if="'value' in data.item"
+        v-bind="data.props"
+        class="material-select-item"
+      >
         {{ data.item.value }}
       </v-list-subheader>
     </template>
