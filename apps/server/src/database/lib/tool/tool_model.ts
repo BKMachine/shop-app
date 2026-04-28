@@ -39,4 +39,4 @@ const schema = new Schema<ToolDocumentFields>({
 
 export default model<ToolDocumentFields>('tools', schema);
 export type ToolDoc = HydratedDocument<ToolDocumentFields>;
-export type ToolPopulatedDoc = HydratedDocument<ToolPopulatedFields>;
+export type ToolPopulatedDoc = Omit<ToolDoc, 'vendor' | 'supplier'> & ToolPopulatedFields;

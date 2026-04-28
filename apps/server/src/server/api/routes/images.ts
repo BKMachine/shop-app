@@ -372,7 +372,13 @@ router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
 
   try {
     const resp = await axios.get(data.url, { responseType: 'arraybuffer' });
-    const contentType = resp.headers['content-type'] || 'application/octet-stream';
+    const rawContentType = resp.headers['content-type'];
+    const contentType =
+      typeof rawContentType === 'string'
+        ? rawContentType
+        : Array.isArray(rawContentType)
+          ? (rawContentType[0] ?? 'application/octet-stream')
+          : 'application/octet-stream';
 
     const fileUuid = randomUUID();
     const filename = fileUuid + getExtensionForDownload(contentType, data.url);
