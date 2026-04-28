@@ -2,6 +2,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { jest } from '@jest/globals';
 import { cleanLines, extractPdfText } from '../material_pdf_parser.js';
 import { extractPdfDate } from '../parser_utils.js';
 import {
@@ -26,7 +27,7 @@ async function readTextFixture(filePath: string): Promise<string> {
 
 async function parseMaterialPdfFromText(text: string) {
   jest.resetModules();
-  jest.doMock('pdf-parse', () => ({
+  jest.unstable_mockModule('pdf-parse', () => ({
     PDFParse: class {
       async getText(): Promise<{ text: string }> {
         return { text };
@@ -40,7 +41,7 @@ async function parseMaterialPdfFromText(text: string) {
     const module = await import('../material_pdf_parser.js');
     return module.default(Buffer.from('fixture'));
   } finally {
-    jest.dontMock('pdf-parse');
+    jest.unstable_unmockModule('pdf-parse');
     jest.resetModules();
   }
 }
