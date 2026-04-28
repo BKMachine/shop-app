@@ -8,6 +8,13 @@
         </v-avatar>
         BK Machine
       </v-app-bar-title>
+      <v-btn
+        :aria-label="themeToggleLabel"
+        :icon="themeToggleIcon"
+        :title="themeToggleLabel"
+        variant="text"
+        @click="toggleTheme"
+      />
     </v-app-bar>
     <v-navigation-drawer v-model="drawer">
       <v-list>
@@ -66,7 +73,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount, ref } from 'vue';
+import { computed, onBeforeMount, ref, watch } from 'vue';
+import { useTheme } from 'vuetify';
 import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
@@ -86,6 +94,9 @@ const scannerStore = useScannerStore();
 const supplierStore = useSupplierStore();
 const toolCategoryStore = useToolCategoryStore();
 const vendorStore = useVendorStore();
+const theme = useTheme();
+
+const THEME_STORAGE_KEY = 'shop-app-theme';
 
 // onscan.js by default ignores chars other than alphanumeric
 // mappedCodes are chars we do want included in scans
@@ -120,6 +131,20 @@ document.addEventListener('scan', (e) => {
 
 const drawer = ref(true);
 
+const isDarkTheme = computed(() => theme.global.name.value === 'dark');
+
+const themeToggleIcon = computed(() => {
+  return isDarkTheme.value ? 'mdi-weather-sunny' : 'mdi-weather-night';
+});
+
+const themeToggleLabel = computed(() => {
+  return isDarkTheme.value ? 'Switch to light mode' : 'Switch to dark mode';
+});
+
+function toggleTheme() {
+  theme.change(isDarkTheme.value ? 'light' : 'dark');
+}
+
 onBeforeMount(() => {
   void customerStore.fetch();
   void materialsStore.fetch();
@@ -127,7 +152,20 @@ onBeforeMount(() => {
   void toolCategoryStore.fetch();
   void vendorStore.fetch();
   void fetchCurrentDevice();
+
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (storedTheme === 'light' || storedTheme === 'dark') {
+    theme.change(storedTheme);
+  }
 });
+
+watch(
+  () => theme.global.name.value,
+  (value) => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, value);
+  },
+  { immediate: true },
+);
 
 const showDev = computed<boolean>(() => {
   return location.host.includes('localhost') || location.host.includes('127.0.0.1');
