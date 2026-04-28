@@ -33,6 +33,7 @@ const PartFieldsSchema = z.strictObject({
   customer: mongoObjectId,
   part: z.string(),
   description: z.string(),
+  needsReview: z.boolean(),
   stock: z.number(),
   location: z.string().nullish(),
   position: z.string().optional(),

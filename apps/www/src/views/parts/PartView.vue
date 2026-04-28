@@ -90,6 +90,15 @@
       <v-tab value="notes"> Notes </v-tab>
       <v-spacer />
       <div class="d-flex align-center">
+        <v-checkbox
+          v-if="showNeedsReviewControl"
+          v-model="part.needsReview"
+          class="mr-2"
+          color="warning"
+          density="comfortable"
+          hide-details
+          label="Needs Review"
+        />
         <v-btn
           v-if="canOpenPartFiles"
           class="mr-2"
@@ -473,6 +482,7 @@ import {
 } from '@/plugins/utils';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import router from '@/router';
+import { deviceState } from '@/state/device';
 import { useFolderHelperState } from '@/state/folderHelper';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
@@ -488,6 +498,8 @@ const showAdd = computed(() => {
   return false;
 });
 
+const showNeedsReviewControl = computed(() => Boolean(deviceState.current?.isAdmin));
+
 const defaultPartValues: Pick<
   PartFields,
   | 'stock'
@@ -497,6 +509,7 @@ const defaultPartValues: Pick<
   | 'cycleTimes'
   | 'additionalCosts'
   | 'price'
+  | 'needsReview'
   | 'customerSuppliedMaterial'
   | 'materialCutType'
 > = {
@@ -507,6 +520,7 @@ const defaultPartValues: Pick<
   cycleTimes: [],
   additionalCosts: [],
   price: 0,
+  needsReview: true,
   customerSuppliedMaterial: false,
   materialCutType: 'blanks',
 };

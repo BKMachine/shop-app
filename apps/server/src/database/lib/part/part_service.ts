@@ -139,6 +139,7 @@ const validSortFields = new Set([
   'description',
   'customer.name',
   'shopRate',
+  'needsReview',
   'location',
   'position',
   'stock',
@@ -283,6 +284,7 @@ const deriveShopRate = async (part: Part): Promise<number> => {
 function getSortValue(part: PartDoc, field: string): string | number {
   if (field === 'customer.name') return getCustomerName(toPlainPart(part).customer);
   if (field === 'derived.shopRate') return Number(part.derived?.shopRate) || 0;
+  if (field === 'needsReview') return part.needsReview ? 1 : 0;
   const value = (part as unknown as Record<string, unknown>)[field];
   if (typeof value === 'number') return value;
   if (typeof value === 'string') return value;

@@ -44,6 +44,7 @@ const schema = new Schema<PartDocumentFields>({
     directSubComponentCount: { type: Number, default: 0 },
     directParentCount: { type: Number, default: 0 },
   },
+  needsReview: { type: Boolean, default: true },
 });
 
 schema.index({ 'subComponentIds.partId': 1 });

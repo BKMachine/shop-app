@@ -161,6 +161,7 @@ export const usePartStore = defineStore('parts', () => {
         partId: String(subComponent.partId),
         qty: Math.max(1, Number(subComponent.qty) || 1),
       })),
+      needsReview: part.needsReview,
     };
   }
 

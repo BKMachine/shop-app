@@ -38,7 +38,7 @@
           </v-list>
         </v-menu>
 
-        <v-btn color="secondary" link prepend-icon="mdi-plus" :to="{ name: 'createPart' }">
+        <v-btn color="primary" link prepend-icon="mdi-plus" :to="{ name: 'createPart' }">
           Create New Part
         </v-btn>
       </div>
@@ -167,6 +167,7 @@ import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vu
 import { useDocumentScrollLock } from '@/lib/useDocumentScrollLock';
 import { getToneForRate } from '@/plugins/rates_theme';
 import router from '@/router';
+import { deviceState } from '@/state/device';
 import { usePartStore } from '@/stores/parts_store';
 
 type PartsListRow = Part & {
@@ -193,6 +194,7 @@ const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const FILTER_QUERY_KEYS = ['search', 'customer', 'subcomponents', 'sort', 'order'] as const;
 const isFilterQueryKey = (key: string): key is (typeof FILTER_QUERY_KEYS)[number] =>
   FILTER_QUERY_KEYS.includes(key as (typeof FILTER_QUERY_KEYS)[number]);
+const showNeedsReviewColumn = computed(() => Boolean(deviceState.current?.isAdmin));
 
 const headers = [
   {
@@ -219,6 +221,10 @@ const headers = [
     width: 80,
   },
   {
+    title: 'Needs Review',
+    key: 'needsReview',
+  },
+  {
     title: 'Location',
     key: 'location',
   },
@@ -229,12 +235,17 @@ const headers = [
 ];
 
 const toggleableHeaders = computed(() => {
-  return headers.filter((header) => header.title && header.key !== 'img');
+  return headers.filter((header) => {
+    if (!header.title || header.key === 'img') return false;
+    if (header.key === 'needsReview' && !showNeedsReviewColumn.value) return false;
+    return true;
+  });
 });
 
 const visibleHeaders = computed(() => {
   return headers.filter((header) => {
     if (header.key === 'img') return true;
+    if (header.key === 'needsReview' && !showNeedsReviewColumn.value) return false;
     return visibleHeaderKeys.value.includes(header.key);
   });
 });
@@ -244,7 +255,11 @@ const customKeySort = computed(() => {
 });
 
 function syncVisibleHeaders() {
-  const availableHeaders = headers.filter((header) => header.key !== 'img');
+  const availableHeaders = headers.filter((header) => {
+    if (header.key === 'img') return false;
+    if (header.key === 'needsReview' && !showNeedsReviewColumn.value) return false;
+    return true;
+  });
   const candidateKeys = visibleHeaderKeys.value.length
     ? visibleHeaderKeys.value
     : getStoredVisibleHeaderKeys();
@@ -329,6 +344,14 @@ watch(visibleHeaders, async () => {
 
 watch(visibleHeaderKeys, () => {
   persistVisibleHeaderKeys();
+});
+
+watch(showNeedsReviewColumn, (isAdmin) => {
+  syncVisibleHeaders();
+  if (!isAdmin && sortBy.value[0]?.key === 'needsReview') {
+    sortBy.value = [{ key: 'part', order: 'asc' }];
+    syncFiltersToQuery();
+  }
 });
 
 visibleHeaderKeys.value = getStoredVisibleHeaderKeys();
@@ -425,7 +448,9 @@ function applyRouteFilters() {
   search.value = firstQueryValue(route.query.search) ?? '';
   selectedCustomerId.value = firstQueryValue(route.query.customer) ?? null;
   showSubComponents.value = firstQueryValue(route.query.subcomponents) === 'true';
-  const sortKey = firstQueryValue(route.query.sort) ?? 'part';
+  const requestedSortKey = firstQueryValue(route.query.sort) ?? 'part';
+  const sortKey =
+    requestedSortKey === 'needsReview' && !showNeedsReviewColumn.value ? 'part' : requestedSortKey;
   const sortOrder = firstQueryValue(route.query.order) === 'desc' ? 'desc' : 'asc';
   sortBy.value = [{ key: sortKey, order: sortOrder }];
 }

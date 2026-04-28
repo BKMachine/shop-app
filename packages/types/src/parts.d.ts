@@ -3,6 +3,7 @@ declare global {
     customer: string;
     part: string;
     description: string;
+    needsReview: boolean;
     stock: number;
     location?: string | null;
     position?: string;
