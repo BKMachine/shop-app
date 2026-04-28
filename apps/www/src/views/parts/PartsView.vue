@@ -1,7 +1,10 @@
 <template>
   <v-card class="infinite-scroll-view-card">
     <v-card-title class="header mt-4">
-      <div>Parts - {{ partStore.total }}</div>
+      <div class="d-flex flex-column">
+        <span>Parts</span>
+        <span class="text-title-small text-medium-emphasis">{{ partStore.total }} Results</span>
+      </div>
       <div class="header-actions">
         <v-checkbox
           v-model="showSubComponents"

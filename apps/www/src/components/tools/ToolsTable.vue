@@ -1,7 +1,12 @@
 <template>
   <v-card class="tools-table-card">
     <v-card-title class="header">
-      <div>{{ resultsTitle }}</div>
+      <div class="d-flex flex-column">
+        <span>{{ headerTitle }}</span>
+        <span v-if="resultsSubtitle" class="text-title-small text-medium-emphasis">
+          {{ resultsSubtitle }}
+        </span>
+      </div>
       <div class="tools-table-card__actions mb-4">
         <v-menu v-if="category !== 'all'" :close-on-content-click="false" location="bottom end">
           <template #activator="{ props: activatorProps }">
@@ -394,12 +399,11 @@ function persistHiddenToolTypes() {
   );
 }
 
-const resultsTitle = computed(() => {
-  let title = props.title;
-  if (props.totalItems > 0) {
-    title += ` - ${props.totalItems} result${props.totalItems === 1 ? '' : 's'}`;
-  }
-  return `${title}`;
+const headerTitle = computed(() => props.title);
+
+const resultsSubtitle = computed(() => {
+  if (props.totalItems <= 0) return '';
+  return `${props.totalItems} result${props.totalItems === 1 ? '' : 's'}`;
 });
 
 const types = computed<readonly string[]>(() => {
