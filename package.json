@@ -18,6 +18,7 @@
     "build:server": "docker build -f ./Dockerfile.server -t bkmachine/shop-app .",
     "build:status": "docker build -f ./Dockerfile.status -t bkmachine/cnc-status .",
     "build:all": "pnpm run build:haas_serial && pnpm run build:image_processor && pnpm run build:server && pnpm run build:status",
+
     "publish:haas_serial": "pnpm run build:haas_serial && docker push bkmachine/haas-serial",
     "publish:image_processor": "pnpm run build:image_processor && docker push bkmachine/image-processor",
     "publish:server": "pnpm run build:server && docker push bkmachine/shop-app",

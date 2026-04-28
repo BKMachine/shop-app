@@ -7,6 +7,6 @@
     "format": "biome format --write"
   },
   "devDependencies": {
-    "mongoose": "^9.2.4"
+    "mongoose": "^9.6.0"
   }
 }
