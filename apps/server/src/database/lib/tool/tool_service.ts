@@ -121,8 +121,6 @@ async function list(filters: ToolListFilters = {}): Promise<ToolListDocs> {
   const sortField = getSortField(filters);
   const direction = getSortDirection(filters);
 
-  console.log(filters.hiddenToolTypes);
-
   if (sortField === 'vendor.name') {
     const items = (await Tool.find(query)
       .populate<{ vendor?: Vendor | null }>('vendor')
