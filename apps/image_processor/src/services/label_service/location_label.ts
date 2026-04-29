@@ -1,10 +1,12 @@
+// DYMO 30333 Label (1.0in x 1.0in) 2-up layout
+
 import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
 import { degrees, PDFDocument, type PDFFont, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
 import {
   dataUrlToBuffer,
-  fitText,
+  fitTextToBox,
   inches,
   POINTS_PER_INCH,
   sanitize,
@@ -72,7 +74,7 @@ export function getDefaultLocationLabelLayout() {
 function getLocationTextPlacement(font: PDFFont, position: string, layout: LocationLabelLayout) {
   const textWidth = inches(layout.text.width);
   const textHeight = inches(layout.text.height);
-  const fontSize = fitText(font, position, textWidth, layout.text.fontSize, 8);
+  const fontSize = fitTextToBox(font, position, textHeight, textWidth, layout.text.fontSize, 8);
   const textX = inches(layout.text.x);
   const textHeightAtSize = font.heightAtSize(fontSize);
   const textBaselineAdjust = 3.1;
