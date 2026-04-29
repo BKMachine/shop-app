@@ -21,29 +21,20 @@ async function printLocation(data: PrintLocationBody) {
   return response;
 }
 
-async function printAddress(data: PrintItemBody) {
-  if (!data.item || !data.description) return;
-  const response = await axios.post('/print/address', data, { responseType: 'blob' });
-  openPdfPreview(response.data);
-  return response;
-}
-
-async function printPartPosition(data: PrintPartPositionBody) {
-  if (!data.partId || !data.part || !data.description || !data.loc || !data.pos) return;
+async function printItem(data: PrintItemBody) {
   await axios
-    .post('/print/part-position', data, { responseType: 'blob' })
+    .post('/print/item', data, { responseType: 'blob' })
     .then((response) => {
       if (import.meta.env.DEV) openPdfPreview(response.data);
       toastSuccess('Sent to printer!');
     })
     .catch((error) => {
-      console.error('Error printing part position label:', error);
-      toastError('Failed to print part position label.');
+      console.error('Error printing item label:', error);
+      toastError('Failed to print item label.');
     });
 }
 
 export default {
   printLocation,
-  printAddress,
-  printPartPosition,
+  printItem,
 };

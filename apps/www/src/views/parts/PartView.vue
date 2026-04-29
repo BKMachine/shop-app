@@ -10,6 +10,14 @@
       title="Remove Sub-Component?"
       @confirm="confirmRemoveSubComponent"
     />
+    <ConfirmDialog
+      v-model="printWithoutImageDialog.visible"
+      cancel-text="No"
+      confirm-text="Yes"
+      :message="printWithoutImageDialog.message"
+      title="Print Without Image?"
+      @confirm="confirmPrintWithoutImage"
+    />
     <LeaveUnsavedChangesDialog
       v-model="leaveDialogVisible"
       :changes="changedPartFields"
@@ -418,7 +426,7 @@
               >
                 <template #append-inner>
                   <v-icon icon="mdi-map-marker-outline" @click="gotoLocation" />
-                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printPartPosition" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="requestPrintItem" />
                 </template>
               </v-text-field>
             </v-col>
@@ -554,6 +562,10 @@ let subComponentSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 const subComponentRemovalDialog = ref({
   visible: false,
   partId: '',
+  message: '',
+});
+const printWithoutImageDialog = ref({
+  visible: false,
   message: '',
 });
 const hasNoProductPrice = computed(() => {
@@ -1193,25 +1205,74 @@ function printLocation() {
   printer.printLocation({ loc, pos });
 }
 
-function printPartPosition() {
+function buildPrintItemPayload() {
   const partId = part.value._id;
-  const labelPart = part.value.part;
+  const identifier = part.value.part;
   const description = part.value.description;
+  const entity = typeof part.value.customer === 'string' ? '' : part.value.customer?.name;
   const loc = part.value.location;
   const pos = part.value.position;
   const imageUrl = part.value.img?.trim()
     ? new URL(part.value.img, window.location.origin).toString()
     : undefined;
 
-  if (!partId || !labelPart || !description || !loc || !pos) return;
-  printer.printPartPosition({
-    partId,
-    part: labelPart,
-    description,
-    loc,
-    pos,
-    partImageUrl: imageUrl,
-  });
+  const missingFields = [
+    !partId ? 'part id' : '',
+    !identifier ? 'part number' : '',
+    !description ? 'description' : '',
+    !entity ? 'customer' : '',
+    !loc ? 'location' : '',
+    !pos ? 'position' : '',
+  ].filter(Boolean);
+
+  if (missingFields.length) {
+    toastError(`Cannot print item label.\nMissing: ${missingFields.join(', ')}.`);
+    return null;
+  }
+
+  const normalizedPartId = String(partId);
+  const normalizedIdentifier = String(identifier);
+  const normalizedDescription = String(description);
+  const normalizedEntity = String(entity);
+  const normalizedLoc = String(loc);
+  const normalizedPos = String(pos);
+
+  return {
+    identifier: normalizedIdentifier,
+    description: normalizedDescription,
+    entity: normalizedEntity,
+    loc: normalizedLoc,
+    pos: normalizedPos,
+    qrText: `bk-part:${normalizedPartId}`,
+    imageUrl,
+  };
+}
+
+function printItem() {
+  const payload = buildPrintItemPayload();
+  if (!payload) return;
+
+  printer.printItem(payload);
+}
+
+function requestPrintItem() {
+  const payload = buildPrintItemPayload();
+  if (!payload) return;
+
+  if (payload.imageUrl) {
+    printItem();
+    return;
+  }
+
+  printWithoutImageDialog.value = {
+    visible: true,
+    message: `Print ${payload.identifier} without an image?`,
+  };
+}
+
+function confirmPrintWithoutImage() {
+  printWithoutImageDialog.value.visible = false;
+  printItem();
 }
 
 function addNew() {

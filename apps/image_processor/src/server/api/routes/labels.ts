@@ -1,5 +1,5 @@
-import { type NextFunction, type Request, type Response, Router } from 'express';
-import LabelPdfService from '../../../services/label_pdf_service.js';
+import { Router } from 'express';
+import LabelPdfService from '../../../services/label_service/index.js';
 import HttpError from '../../middleware/httpError.js';
 
 const router: Router = Router();
@@ -17,38 +17,23 @@ router.post('/location', async (req, res, next) => {
   }
 });
 
-async function sendAddressLabel(req: Request, res: Response, next: NextFunction) {
-  const { item, description, brand, barcode } = req.body as PrintItemBody & {
-    barcode?: string;
-  };
-  if (!item || !description) return next(new HttpError(400, 'item and description are required.'));
-
-  try {
-    const pdf = await LabelPdfService.buildAddressLabel({ item, description, brand, barcode });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.status(200).send(pdf);
-  } catch (error) {
-    next(error);
-  }
-}
-
-router.post('/address', sendAddressLabel);
-router.post('/item', sendAddressLabel);
-
-router.post('/part-position', async (req, res, next) => {
-  const { partId, part, description, loc, pos, partImageUrl }: PrintPartPositionBody = req.body;
-  if (!partId || !part || !description || !loc || !pos) {
-    return next(new HttpError(400, 'partId, part, description, loc, and pos are required.'));
+router.post('/item', async (req, res, next) => {
+  const { identifier, description, entity, loc, pos, qrText, imageUrl }: PrintItemBody = req.body;
+  if (!identifier || !description || !entity || !loc || !pos || !qrText) {
+    return next(
+      new HttpError(400, 'identifier, description, entity, loc, pos, and qrText are required.'),
+    );
   }
 
   try {
-    const pdf = await LabelPdfService.buildPartPositionLabel({
-      partId,
-      part,
+    const pdf = await LabelPdfService.buildItemLabel({
+      identifier,
       description,
+      entity,
       loc,
       pos,
-      partImageUrl,
+      qrText,
+      imageUrl,
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.status(200).send(pdf);

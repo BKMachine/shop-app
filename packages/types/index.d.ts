@@ -20,18 +20,13 @@ declare global {
   }
 
   interface PrintItemBody {
-    item: string;
     description: string;
-    brand: string;
-  }
-
-  interface PrintPartPositionBody {
-    partId: string;
-    part: string;
-    description: string;
+    identifier: string;
+    entity: string;
     loc: string;
     pos: string;
-    partImageUrl?: string;
+    qrText: string;
+    imageUrl?: string;
   }
 
   interface PrintRequest {

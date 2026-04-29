@@ -105,7 +105,7 @@
               >
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
-                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printItem" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="requestPrintItem" />
                   <v-icon class="ml-2" icon="mdi-content-copy" @click="copyItem(tool.item)" />
                 </template>
               </v-text-field>
@@ -122,7 +122,7 @@
               >
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
-                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="printBarcode" />
+                  <v-icon class="ml-2" icon="mdi-printer-outline" @click="requestPrintItem" />
                   <v-icon class="ml-2" icon="mdi-content-copy" @click="copyItem(tool.barcode)" />
                 </template>
               </v-text-field>
@@ -386,6 +386,14 @@
       title="Remove Tool Image?"
       @confirm="removeConfirmedToolImage"
     />
+    <ConfirmDialog
+      v-model="printWithoutImageDialog.visible"
+      cancel-text="No"
+      confirm-text="Yes"
+      :message="printWithoutImageDialog.message"
+      title="Print Without Image?"
+      @confirm="confirmPrintWithoutImage"
+    />
     <LeaveUnsavedChangesDialog
       v-model="leaveDialogVisible"
       :changes="changedToolFields"
@@ -448,6 +456,10 @@ const loading = ref(false);
 const saveFlag = ref(false);
 const imageManagerVisible = ref(false);
 const deleteImageConfirmVisible = ref(false);
+const printWithoutImageDialog = ref({
+  visible: false,
+  message: '',
+});
 const removingImage = ref(false);
 const itemUniqueError = ref('');
 const barcodeUniqueError = ref('');
@@ -1011,14 +1023,71 @@ const coatings = computed(() => {
   return vendor.coatings;
 });
 
-function printItem() {
-  const item = tool.value.item;
+function buildPrintItemBody() {
+  const identifier = tool.value.barcode || tool.value.item;
   const description = tool.value.description;
-  const vendor = tool.value.vendor;
+  const entity = typeof tool.value.vendor === 'string' ? '' : tool.value.vendor?.name || 'Unknown';
+  const loc = tool.value.location;
+  const pos = tool.value.position;
+  const imageUrl = tool.value.img?.trim()
+    ? new URL(tool.value.img, window.location.origin).toString()
+    : undefined;
 
-  if (!item || !description || !vendor) return;
-  const brand = typeof vendor === 'string' ? vendor : vendor.name;
-  printer.printAddress({ item, description, brand });
+  const missingFields = [
+    !identifier ? 'product number or barcode' : '',
+    !description ? 'description' : '',
+    !entity ? 'vendor' : '',
+    !loc ? 'location' : '',
+    !pos ? 'position' : '',
+  ].filter(Boolean);
+
+  if (missingFields.length) {
+    toastError(`Cannot print item label.\nMissing: ${missingFields.join(', ')}.`);
+    return null;
+  }
+
+  const normalizedIdentifier = String(identifier);
+  const normalizedDescription = String(description);
+  const normalizedEntity = String(entity);
+  const normalizedLoc = String(loc);
+  const normalizedPos = String(pos);
+
+  return {
+    identifier: normalizedIdentifier,
+    description: normalizedDescription,
+    entity: normalizedEntity,
+    loc: normalizedLoc,
+    pos: normalizedPos,
+    qrText: normalizedIdentifier,
+    imageUrl,
+  } satisfies PrintItemBody;
+}
+
+function printItem() {
+  const body = buildPrintItemBody();
+  if (!body) return;
+
+  printer.printItem(body);
+}
+
+function requestPrintItem() {
+  const body = buildPrintItemBody();
+  if (!body) return;
+
+  if (body.imageUrl) {
+    printItem();
+    return;
+  }
+
+  printWithoutImageDialog.value = {
+    visible: true,
+    message: `Print ${body.identifier} without an image?`,
+  };
+}
+
+function confirmPrintWithoutImage() {
+  printWithoutImageDialog.value.visible = false;
+  printItem();
 }
 
 async function copyItem(item: string | undefined) {
@@ -1031,16 +1100,6 @@ async function copyItem(item: string | undefined) {
   } catch {
     toastError('Unable to copy to clipboard');
   }
-}
-
-function printBarcode() {
-  const item = tool.value.barcode;
-  const description = tool.value.description;
-  const vendor = tool.value.vendor;
-
-  if (!item || !description || !vendor) return;
-  const brand = typeof vendor === 'string' ? vendor : vendor.name;
-  printer.printAddress({ item, description, brand });
 }
 
 /* STOCK TAB LOGIC */

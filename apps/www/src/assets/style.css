@@ -78,3 +78,7 @@ body,
   );
   background-color: transparent;
 }
+
+.v-toast__text {
+  white-space: pre-line;
+}

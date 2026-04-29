@@ -1,3 +1,5 @@
+// DYMO Address label size 30252 (2-1/4" x 1-1/4")
+
 import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
 import { degrees, PDFDocument, type PDFFont, rgb } from 'pdf-lib';
@@ -7,7 +9,6 @@ import {
   buildQrCodeWithCenteredLogoBuffer,
   fitTextToBox,
   inches,
-  type PartPositionLabelData,
   sanitize,
   segoeUiRegularPath,
   toPdfY,
@@ -34,15 +35,21 @@ const PART_POSITION_LAYOUT = {
   description: {
     topInset: 0.06,
     height: 0.4,
-    fontSize: 14,
-    minFontSize: 6,
-    lineGap: 2,
+    maxHeight: 0.5,
+    fontSize: 20,
+    minFontSize: 8,
+    lineGap: 0.5,
   },
   detail: {
     gap: 0.03,
+    bottomInset: 0.08,
   },
   part: {
-    fontSize: 15,
+    fontSize: 20,
+    minFontSize: 10,
+  },
+  entity: {
+    fontSize: 16,
     minFontSize: 8,
   },
   qrCaption: {
@@ -63,7 +70,8 @@ const ROTATED_ADDRESS_LABEL = {
 };
 
 const PART_POSITION_TEXT_HEIGHTS = {
-  part: 0.24,
+  part: 0.16,
+  entity: 0.1,
 };
 
 function getCenteredTextPlacement(
@@ -378,7 +386,7 @@ function rotateClockwisePoint(x: number, y: number) {
   };
 }
 
-export async function buildPartPositionLabel(data: PartPositionLabelData) {
+export async function buildItemLabel(data: PrintItemBody) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const page = pdf.addPage([ROTATED_ADDRESS_LABEL.width, ROTATED_ADDRESS_LABEL.height]);
@@ -441,9 +449,10 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
   const contentHeight = Math.max(0, contentBottom - contentTop);
 
   const description = sanitize(data.description);
-  const part = sanitize(data.part);
+  const part = sanitize(data.identifier);
+  const entity = sanitize(data.entity);
   const locationLines = [sanitize(data.loc), sanitize(data.pos)].filter(Boolean);
-  const qrValue = `bk-part:${sanitize(data.partId)}`;
+  const qrValue = sanitize(data.qrText);
 
   const visualHeight = contentHeight;
   const visualY = contentTop;
@@ -466,9 +475,17 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
   const captionY = codeY + codeSize + PART_POSITION_LAYOUT.qrCaption.gap;
   const textX = contentX;
   const textWidth = Math.max(0.4, codeX - contentX - PART_POSITION_LAYOUT.columnGap);
-  const descriptionHeight = PART_POSITION_LAYOUT.description.height;
-  const textTopY = codeY;
-  const partY = textTopY + descriptionHeight + PART_POSITION_LAYOUT.detail.gap;
+  const textTopY = visualY + PART_POSITION_LAYOUT.description.topInset;
+  const partY =
+    contentBottom - PART_POSITION_TEXT_HEIGHTS.part - PART_POSITION_LAYOUT.detail.bottomInset;
+  const entityY = partY - PART_POSITION_TEXT_HEIGHTS.entity;
+  const descriptionHeight = Math.min(
+    PART_POSITION_LAYOUT.description.maxHeight,
+    Math.max(
+      PART_POSITION_LAYOUT.description.height,
+      entityY - textTopY - PART_POSITION_LAYOUT.detail.gap,
+    ),
+  );
   const captionWidth = Math.min(contentWidth, PART_POSITION_LAYOUT.qrCaption.maxWidth);
   const captionX = codeX + (codeSize - captionWidth) / 2;
 
@@ -503,11 +520,7 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
     });
   }
 
-  const logoBuffer = await buildPartImageOrFallbackBuffer(
-    data.partImageUrl,
-    imageWidth,
-    imageHeight,
-  );
+  const logoBuffer = await buildPartImageOrFallbackBuffer(data.imageUrl, imageWidth, imageHeight);
   const logoImage = await pdf.embedPng(logoBuffer);
   const logoPlacement = rotateClockwisePoint(
     inches(imageX),
@@ -518,6 +531,24 @@ export async function buildPartPositionLabel(data: PartPositionLabelData) {
     y: logoPlacement.y,
     width: imageWidth,
     height: imageHeight,
+    rotate: degrees(-90),
+  });
+
+  const entityPlacement = getCenteredTextPlacement(sans, entity, {
+    ...PART_POSITION_LAYOUT.entity,
+    x: textX,
+    y: entityY,
+    width: textWidth,
+    height: PART_POSITION_TEXT_HEIGHTS.entity,
+    align: 'center',
+  });
+  const rotatedEntityPlacement = rotateClockwisePoint(entityPlacement.x, entityPlacement.y);
+  page.drawText(entity, {
+    x: rotatedEntityPlacement.x,
+    y: rotatedEntityPlacement.y,
+    size: entityPlacement.fontSize,
+    font: sans,
+    color: rgb(0, 0, 0),
     rotate: degrees(-90),
   });
 

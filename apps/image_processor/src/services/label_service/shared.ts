@@ -17,7 +17,6 @@ export const ADDRESS_LABEL = {
 };
 
 export type AddressLabelData = PrintItemBody & { barcode?: string };
-export type PartPositionLabelData = PrintPartPositionBody;
 
 export function resolveAssetPath(...segments: string[]) {
   const candidates = [
@@ -106,6 +105,22 @@ function buildMissingImageSvg(width: number, height: number) {
   );
 }
 
+function enhancePartLabelImage(image: sharp.Sharp, targetWidth: number, targetHeight: number) {
+  return image
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .grayscale()
+    .normalise()
+    .linear(0.82, 18)
+    .resize(targetWidth, targetHeight, {
+      fit: 'contain',
+      withoutEnlargement: true,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    })
+    .sharpen({ sigma: 1.1, m1: 0.5, m2: 2 })
+    .png()
+    .toBuffer();
+}
+
 export async function buildPartImageOrFallbackBuffer(
   imageUrl: string | undefined,
   width: number,
@@ -113,6 +128,13 @@ export async function buildPartImageOrFallbackBuffer(
 ) {
   const targetWidth = Math.max(1, Math.round(width * 4));
   const targetHeight = Math.max(1, Math.round(height * 4));
+
+  const getContainScale = (
+    sourceWidth: number,
+    sourceHeight: number,
+    boxWidth: number,
+    boxHeight: number,
+  ) => Math.min(boxWidth / sourceWidth, boxHeight / sourceHeight);
 
   if (imageUrl) {
     let parsedUrl: URL | null = null;
@@ -127,15 +149,21 @@ export async function buildPartImageOrFallbackBuffer(
       const response = await fetch(imageUrl);
       if (response.ok) {
         const imageBuffer = Buffer.from(await response.arrayBuffer());
-        return sharp(imageBuffer)
-          .grayscale()
-          .resize(targetWidth, targetHeight, {
-            fit: 'contain',
-            withoutEnlargement: true,
-            background: { r: 255, g: 255, b: 255, alpha: 0 },
-          })
-          .png()
-          .toBuffer();
+        const image = sharp(imageBuffer, { failOn: 'none' }).rotate().grayscale();
+        const metadata = await image.metadata();
+        const sourceWidth = metadata.width ?? 0;
+        const sourceHeight = metadata.height ?? 0;
+        const shouldRotateToFit =
+          sourceWidth > 0 &&
+          sourceHeight > 0 &&
+          getContainScale(sourceHeight, sourceWidth, targetWidth, targetHeight) >
+            getContainScale(sourceWidth, sourceHeight, targetWidth, targetHeight);
+
+        return enhancePartLabelImage(
+          image.rotate(shouldRotateToFit ? 90 : 0),
+          targetWidth,
+          targetHeight,
+        );
       }
 
       logger.error(

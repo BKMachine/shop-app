@@ -88,7 +88,10 @@ function getLocationTextPlacement(font: PDFFont, position: string, layout: Locat
   };
 }
 
-async function buildLocationLabelImage(data: PrintLocationBody, layout: LocationLabelLayout) {
+export async function buildLocationLabel(
+  data: PrintLocationBody,
+  layout = DEFAULT_LOCATION_LABEL_LAYOUT,
+) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const page = pdf.addPage([LOCATION_LABEL.width, LOCATION_LABEL.height]);
@@ -138,11 +141,4 @@ async function buildLocationLabelImage(data: PrintLocationBody, layout: Location
   }
 
   return Buffer.from(await pdf.save());
-}
-
-export async function buildLocationLabel(
-  data: PrintLocationBody,
-  layout: LocationLabelLayout = DEFAULT_LOCATION_LABEL_LAYOUT,
-) {
-  return buildLocationLabelImage(data, layout);
 }

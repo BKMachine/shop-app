@@ -179,14 +179,10 @@ export async function processImageStack(
   });
 }
 
-export async function buildLocationLabelPdf(data: PrintLocationBody) {
+export async function buildLocationLabel(data: PrintLocationBody) {
   return callImageProcessorJson('labels/location', data);
 }
 
-export async function buildAddressLabelPdf(data: PrintItemBody & { barcode?: string }) {
-  return callImageProcessorJson('labels/address', data);
-}
-
-export async function buildPartPositionLabelPdf(data: PrintPartPositionBody) {
-  return callImageProcessorJson('labels/part-position', data);
+export async function buildItemLabel(data: PrintItemBody) {
+  return callImageProcessorJson('labels/item', data);
 }
