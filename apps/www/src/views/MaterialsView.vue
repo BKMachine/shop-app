@@ -17,10 +17,18 @@
             <v-card-title class="d-flex align-center">
               Material Details
               <v-spacer />
-              <v-btn color="primary" @click="addNewMaterial"> Add New </v-btn>
               <v-btn
-                class="ml-2"
+                class="materials-header-action"
                 color="primary"
+                style="font-size: 0.875rem; line-height: 1.25rem"
+                @click="addNewMaterial"
+              >
+                Add New
+              </v-btn>
+              <v-btn
+                class="ml-2 materials-header-action"
+                color="primary"
+                style="font-size: 0.875rem; line-height: 1.25rem"
                 variant="outlined"
                 @click="pdfReviewDialog = true"
               >
