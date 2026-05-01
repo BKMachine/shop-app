@@ -8,6 +8,7 @@ import DocumentService from '../../../database/lib/document/document_service.js'
 import PartService from '../../../database/lib/part/part_service.js';
 import { documentDir } from '../../../directories.js';
 import logger from '../../../logger.js';
+import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
@@ -30,38 +31,6 @@ type PartDocumentUpdate = Omit<Part, 'customer' | 'material' | 'imageIds' | 'doc
   imageIds?: string[];
   documentIds?: string[];
 };
-
-function toPlainEntity(entity: unknown): Record<string, unknown> {
-  if (entity && typeof entity === 'object' && 'toObject' in entity) {
-    const maybeDoc = entity as { toObject?: () => unknown };
-    if (typeof maybeDoc.toObject === 'function') {
-      return maybeDoc.toObject() as Record<string, unknown>;
-    }
-  }
-
-  return entity as Record<string, unknown>;
-}
-
-function getEntityId(value: unknown): string | undefined {
-  if (!value) return undefined;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object' && value !== null && '_id' in value) {
-    return String((value as { _id: unknown })._id);
-  }
-  if (typeof value === 'object' && value !== null && 'toString' in value) {
-    return String(value);
-  }
-
-  return undefined;
-}
-
-function normalizeIdArray(values: unknown): string[] | undefined {
-  if (!Array.isArray(values)) return undefined;
-
-  return values
-    .map((value) => getEntityId(value))
-    .filter((value): value is string => Boolean(value));
-}
 
 function normalizePartDocumentUpdate(part: unknown): PartDocumentUpdate {
   const plainPart = toPlainEntity(part);

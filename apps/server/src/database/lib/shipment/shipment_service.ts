@@ -1,5 +1,6 @@
-import { Types } from 'mongoose';
+import { isValidObjectId } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
+import { getEntityIdOrNull, normalizeObjectIdArray } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Customer from '../customer/customer_model.js';
 import Shipper from '../shipper/shipper_model.js';
@@ -14,35 +15,21 @@ type ShipmentListQuery = {
   offset?: number;
 };
 
-function getRelatedEntityId(value: unknown) {
-  if (!value) return null;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object' && value !== null && '_id' in value) {
-    return String((value as { _id: unknown })._id);
-  }
-  return String(value);
-}
-
 function normalizeText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function normalizeImageIds(values: unknown): string[] {
-  if (!Array.isArray(values)) return [];
-  return values.map((value) => String(value)).filter((value) => Types.ObjectId.isValid(value));
 }
 
 function toPayload(data: ShipmentCreate | ShipmentUpdate) {
   return {
     shippedAt: new Date(data.shippedAt),
     title: normalizeText(data.title),
-    customer: getRelatedEntityId(data.customer) || null,
-    shipper: getRelatedEntityId(data.shipper) || null,
+    customer: getEntityIdOrNull(data.customer),
+    shipper: getEntityIdOrNull(data.shipper),
     orderNumber: normalizeText(data.orderNumber),
     trackingNumber: normalizeText(data.trackingNumber),
     carrier: normalizeText(data.carrier),
     notes: normalizeText(data.notes),
-    imageIds: normalizeImageIds(data.imageIds),
+    imageIds: normalizeObjectIdArray(data.imageIds),
   };
 }
 
@@ -54,7 +41,7 @@ async function list(query: ShipmentListQuery = {}): Promise<ShipmentListResponse
   if (query.to) shippedAt.$lte = new Date(query.to);
   if (Object.keys(shippedAt).length) filter.shippedAt = shippedAt;
 
-  if (query.customer && Types.ObjectId.isValid(query.customer)) {
+  if (query.customer && isValidObjectId(query.customer)) {
     filter.customer = query.customer;
   }
 
@@ -131,7 +118,7 @@ async function addImage(id: string, imageId: string, deviceId: string): Promise<
   const shipment = await findById(id);
   if (!shipment) throw new Error(`Missing shipment document id: ${id}`);
 
-  const nextIds = normalizeImageIds(shipment.imageIds).filter(
+  const nextIds = normalizeObjectIdArray(shipment.imageIds).filter(
     (existingId) => existingId !== imageId,
   );
   nextIds.push(imageId);
@@ -140,7 +127,7 @@ async function addImage(id: string, imageId: string, deviceId: string): Promise<
     {
       ...(shipment.toObject() as unknown as ShipmentUpdate),
       _id: id,
-      customer: getRelatedEntityId(shipment.customer),
+      customer: getEntityIdOrNull(shipment.customer),
       imageIds: nextIds,
     },
     deviceId,
@@ -155,8 +142,10 @@ async function removeImage(id: string, imageId: string, deviceId: string): Promi
     {
       ...(shipment.toObject() as unknown as ShipmentUpdate),
       _id: id,
-      customer: getRelatedEntityId(shipment.customer),
-      imageIds: normalizeImageIds(shipment.imageIds).filter((existingId) => existingId !== imageId),
+      customer: getEntityIdOrNull(shipment.customer),
+      imageIds: normalizeObjectIdArray(shipment.imageIds).filter(
+        (existingId) => existingId !== imageId,
+      ),
     },
     deviceId,
   );

@@ -4,23 +4,13 @@ import {
   calculatePartShopRate,
 } from '@repo/utilities/parts';
 import { emit } from '../../../server/sockets.js';
+import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Audit from '../audit/audit_service.js';
 import MaterialModel from '../material/material_model.js';
 import Part, { type PartDoc } from './part_model.js';
 
 type PartMutation = Part | PartUpdate | PartDoc;
-
-function toPlainPart(part: unknown): Record<string, unknown> {
-  if (part && typeof part === 'object' && 'toObject' in part) {
-    const maybeDoc = part as { toObject?: () => unknown };
-    if (typeof maybeDoc.toObject === 'function') {
-      return maybeDoc.toObject() as Record<string, unknown>;
-    }
-  }
-
-  return part as unknown as Record<string, unknown>;
-}
 
 function getCustomerName(value: unknown): string {
   if (!value || typeof value !== 'object') return '';
@@ -30,27 +20,6 @@ function getCustomerName(value: unknown): string {
   }
 
   return '';
-}
-
-function getEntityId(value: unknown): string | undefined {
-  if (!value) return undefined;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object' && value !== null && '_id' in value) {
-    return String((value as { _id: unknown })._id);
-  }
-  if (typeof value === 'object' && value !== null && 'toString' in value) {
-    return String(value);
-  }
-
-  return undefined;
-}
-
-function normalizeIdArray(values: unknown): string[] | undefined {
-  if (!Array.isArray(values)) return undefined;
-
-  return values
-    .map((value) => getEntityId(value))
-    .filter((value): value is string => Boolean(value));
 }
 
 async function resolveMaterial(material: unknown): Promise<Material | null> {
@@ -71,7 +40,7 @@ async function resolveMaterial(material: unknown): Promise<Material | null> {
 }
 
 async function buildDerivedPartCandidate(part: unknown): Promise<Part> {
-  const plainPart = toPlainPart(part) as Partial<Part>;
+  const plainPart = toPlainEntity(part) as Partial<Part>;
 
   return {
     ...(plainPart as Part),
@@ -104,7 +73,7 @@ async function buildPersistencePayload(
   preserveManagedMediaFields = false,
   existingPart?: PartDoc | null,
 ) {
-  const plainPart = toPlainPart(part) as Partial<Part>;
+  const plainPart = toPlainEntity(part) as Partial<Part>;
   const derivedCandidate = await buildDerivedPartCandidate(part);
   await calculateDerivedPartProperties(derivedCandidate);
 
@@ -282,7 +251,7 @@ const deriveShopRate = async (part: Part): Promise<number> => {
 };
 
 function getSortValue(part: PartDoc, field: string): string | number {
-  if (field === 'customer.name') return getCustomerName(toPlainPart(part).customer);
+  if (field === 'customer.name') return getCustomerName(toPlainEntity(part).customer);
   if (field === 'derived.shopRate') return Number(part.derived?.shopRate) || 0;
   if (field === 'needsReview') return part.needsReview ? 1 : 0;
   const value = (part as unknown as Record<string, unknown>)[field];
