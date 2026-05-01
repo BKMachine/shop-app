@@ -11,6 +11,7 @@ const schema = new Schema<AuditDoc>({
       'document',
       'customer',
       'supplier',
+      'shipper',
       'vendor',
       'report',
       'part_note',

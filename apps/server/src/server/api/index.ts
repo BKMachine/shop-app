@@ -11,6 +11,8 @@ import PartNoteRoutes from './routes/part_notes.js';
 import PartRoutes from './routes/parts.js';
 import PrintRoutes from './routes/print.js';
 import ReportRoutes from './routes/reports.js';
+import ShipmentRoutes from './routes/shipments.js';
+import ShipperRoutes from './routes/shippers.js';
 import SupplierRoutes from './routes/suppliers.js';
 import ToolCategoryRoutes from './routes/tool_categories.js';
 import ToolRoutes from './routes/tools.js';
@@ -41,6 +43,8 @@ router.use(PrintRoutes);
 router.use(PartRoutes);
 router.use(PartNoteRoutes);
 router.use(MaterialRoutes);
+router.use(ShipmentRoutes);
+router.use(ShipperRoutes);
 router.use(DeviceRoutes);
 router.use(ReportRoutes);
 

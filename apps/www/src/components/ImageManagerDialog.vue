@@ -276,7 +276,10 @@
                           90 CW
                         </v-btn>
                       </div>
-                      <div class="image-card__processing-row image-card__indented-action">
+                      <div
+                        v-if="showProcessingActions"
+                        class="image-card__processing-row image-card__indented-action"
+                      >
                         <button
                           class="image-card__stack-button"
                           :class="{ 'image-card__stack-button--busy': stackProcessingId === img.id }"
@@ -551,7 +554,15 @@ type ApiErrorPayload = {
 
 const props = defineProps<{
   modelValue: boolean;
-  entityType?: 'part' | 'tool' | 'customer' | 'supplier' | 'vendor' | 'setup';
+  entityType?:
+    | 'part'
+    | 'tool'
+    | 'customer'
+    | 'supplier'
+    | 'shipper'
+    | 'vendor'
+    | 'shipment'
+    | 'setup';
   entityId?: string;
   title?: string;
   hasImage?: boolean;
@@ -752,7 +763,10 @@ const deleteConfirmVisible = ref(false);
 const deleteTargetId = ref('');
 const deleteAllConfirmVisible = ref(false);
 const deleteAllLoading = ref(false);
-const canSelectMultiple = computed(() => props.entityType === 'part');
+const canSelectMultiple = computed(
+  () => props.entityType === 'part' || props.entityType === 'shipment',
+);
+const showProcessingActions = computed(() => props.entityType !== 'shipment');
 const isGalleryBusy = computed(() => {
   return Boolean(
     deleteAllLoading.value ||

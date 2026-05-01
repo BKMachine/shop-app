@@ -10,6 +10,8 @@ import CustomerService from '../../../database/lib/customer/customer_service.js'
 import type { ImageDoc } from '../../../database/lib/image/image_model.js';
 import ImageService from '../../../database/lib/image/image_service.js';
 import PartService from '../../../database/lib/part/part_service.js';
+import ShipmentService from '../../../database/lib/shipment/shipment_service.js';
+import ShipperService from '../../../database/lib/shipper/shipper_service.js';
 import SupplierService from '../../../database/lib/supplier/supplier_service.js';
 import ToolService from '../../../database/lib/tool/tool_service.js';
 import VendorService from '../../../database/lib/vendor/vendor_service.js';
@@ -93,7 +95,7 @@ async function getPartEntity(entityType: string, entityId: string) {
   return PartService.findById(entityId);
 }
 
-const singleImageEntityTypes = ['tool', 'customer', 'supplier', 'vendor'] as const;
+const singleImageEntityTypes = ['tool', 'customer', 'supplier', 'shipper', 'vendor'] as const;
 type SingleImageEntityType = (typeof singleImageEntityTypes)[number];
 
 const backgroundRemovalModelSchema = z.enum(['small', 'medium', 'large']);
@@ -119,7 +121,7 @@ const RotateImageRequest = z.strictObject({
 });
 
 const AttachImageRequest = z.strictObject({
-  entityType: z.enum(['tool', 'part', 'customer', 'supplier', 'vendor']),
+  entityType: z.enum(['tool', 'part', 'customer', 'supplier', 'shipper', 'vendor', 'shipment']),
   entityId: mongoObjectId,
   setAsMain: z.boolean().optional(),
 });
@@ -165,6 +167,8 @@ type PartMediaUpdate = Omit<Part, 'customer' | 'material' | 'imageIds' | 'docume
   imageIds?: string[];
   documentIds?: string[];
 };
+
+type MultiImageEntityType = 'part' | 'shipment';
 
 function normalizeIdArray(values: unknown): string[] | undefined {
   if (!Array.isArray(values)) return undefined;
@@ -212,7 +216,13 @@ async function getSingleImageEntity(entityType: SingleImageEntityType, entityId:
   if (entityType === 'tool') return ToolService.findById(entityId);
   if (entityType === 'customer') return CustomerService.findById(entityId);
   if (entityType === 'supplier') return SupplierService.findById(entityId);
+  if (entityType === 'shipper') return ShipperService.findById(entityId);
   return VendorService.findById(entityId);
+}
+
+async function getMultiImageEntity(entityType: MultiImageEntityType, entityId: string) {
+  if (entityType === 'part') return getPartEntity(entityType, entityId);
+  return ShipmentService.findById(entityId);
 }
 
 async function updateSingleImageEntity(
@@ -252,6 +262,16 @@ async function updateSingleImageEntity(
       logo: imageUrl,
     } as SupplierUpdate;
     await SupplierService.update(supplierUpdate, deviceId);
+    return;
+  }
+
+  if (entityType === 'shipper') {
+    const shipperUpdate = {
+      ...plainEntity,
+      _id: String(plainEntity._id ?? ''),
+      logo: imageUrl,
+    } as ShipperUpdate;
+    await ShipperService.update(shipperUpdate, deviceId);
     return;
   }
 
@@ -642,6 +662,10 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
       }
     }
 
+    if (data.entityType === 'shipment') {
+      await ShipmentService.addImage(data.entityId, id, req.deviceId);
+    }
+
     if (singleImageEntityTypes.includes(data.entityType as SingleImageEntityType)) {
       const singleImageEntity = await getSingleImageEntity(
         data.entityType as SingleImageEntityType,
@@ -727,23 +751,23 @@ router.get('/entities/:entityType/:entityId/images', async (req, res, next) => {
   const { entityType, entityId } = req.params;
   if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
   if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
-  if (entityType !== 'part' && entityType !== 'tool') {
-    return next(new HttpError(400, 'Image listing is only for parts and tools'));
+  if (entityType !== 'part' && entityType !== 'tool' && entityType !== 'shipment') {
+    return next(new HttpError(400, 'Image listing is only for parts, tools, and shipments'));
   }
 
   try {
     let response: MyImageData[] = [];
 
-    if (entityType === 'part') {
-      const part = await getPartEntity(entityType, entityId);
-      if (!part) return next(new HttpError(404, 'Part not found'));
+    if (entityType === 'part' || entityType === 'shipment') {
+      const entity = await getMultiImageEntity(entityType, entityId);
+      if (!entity) return next(new HttpError(404, `${entityType} not found`));
 
-      if (!part.imageIds || part.imageIds.length === 0) {
+      if (!entity.imageIds || entity.imageIds.length === 0) {
         res.status(200).json([]);
         return;
       }
 
-      const orderedImageIds = part.imageIds.map((imageId: unknown) => String(imageId));
+      const orderedImageIds = entity.imageIds.map((imageId: unknown) => String(imageId));
       const mainImageId = orderedImageIds[0] || '';
       const images = await ImageService.listByIds(orderedImageIds);
 
@@ -783,14 +807,16 @@ router.post(
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
     if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
-    if (entityType !== 'part' && entityType !== 'tool') {
-      return next(new HttpError(400, 'Copy to temp is only supported for parts and tools'));
+    if (entityType !== 'part' && entityType !== 'tool' && entityType !== 'shipment') {
+      return next(
+        new HttpError(400, 'Copy to temp is only supported for parts, tools, and shipments'),
+      );
     }
 
     try {
-      if (entityType === 'part') {
-        const part = await getPartEntity(entityType, entityId);
-        if (!part) return next(new HttpError(404, 'Part not found'));
+      if (entityType === 'part' || entityType === 'shipment') {
+        const entity = await getMultiImageEntity(entityType, entityId);
+        if (!entity) return next(new HttpError(404, `${entityType} not found`));
       }
 
       const image = await ImageService.findById(imageId);
@@ -933,35 +959,45 @@ router.delete(
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
     if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
-    if (entityType !== 'part') return next(new HttpError(400, 'Image delete is only for parts'));
+    if (entityType !== 'part' && entityType !== 'shipment') {
+      return next(new HttpError(400, 'Image delete is only for parts and shipments'));
+    }
 
     try {
-      const part = await getPartEntity(entityType, entityId);
-      if (!part) return next(new HttpError(404, 'Part not found'));
+      const entity = await getMultiImageEntity(entityType, entityId);
+      if (!entity) return next(new HttpError(404, `${entityType} not found`));
 
-      const partUpdate = normalizePartMediaUpdate(part);
-      if (!partUpdate.imageIds) partUpdate.imageIds = [];
+      const imageIds = normalizeIdArray(entity.imageIds) ?? [];
 
       const image = await ImageService.findById(imageId);
       if (!image) return next(new HttpError(404, 'Image not found'));
 
-      const imageIdSet = new Set(partUpdate.imageIds);
+      const imageIdSet = new Set(imageIds);
       if (!imageIdSet.has(imageId))
-        return next(new HttpError(404, 'Image is not attached to this part'));
+        return next(new HttpError(404, `Image is not attached to this ${entityType}`));
 
-      const remainingImageIds = partUpdate.imageIds.filter((id) => id !== imageId);
+      let nextMainImageId = '';
+      let nextMainImageUrl = '';
 
-      partUpdate.imageIds = remainingImageIds;
+      if (entityType === 'part') {
+        const partUpdate = normalizePartMediaUpdate(entity);
+        const remainingImageIds = imageIds.filter((id) => id !== imageId);
+        partUpdate.imageIds = remainingImageIds;
 
-      const nextMainImageId = remainingImageIds[0];
-      if (nextMainImageId) {
-        const nextMainImage = await ImageService.findById(nextMainImageId);
-        partUpdate.img = nextMainImage ? `/images/${nextMainImage.relPath}` : '';
+        nextMainImageId = remainingImageIds[0] ?? '';
+        if (nextMainImageId) {
+          const nextMainImage = await ImageService.findById(nextMainImageId);
+          nextMainImageUrl = nextMainImage ? `/images/${nextMainImage.relPath}` : '';
+          partUpdate.img = nextMainImageUrl;
+        } else {
+          partUpdate.img = '';
+        }
+
+        await PartService.update(partUpdate, req.deviceId);
       } else {
-        partUpdate.img = '';
+        const updatedShipment = await ShipmentService.removeImage(entityId, imageId, req.deviceId);
+        nextMainImageId = normalizeIdArray(updatedShipment.imageIds)?.[0] ?? '';
       }
-
-      await PartService.update(partUpdate, req.deviceId);
 
       const filePath = path.join(imageDir, image.relPath);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -973,8 +1009,8 @@ router.delete(
         id: imageId,
         entityType,
         entityId,
-        nextMainImageId: nextMainImageId || '',
-        nextMainImageUrl: partUpdate.img || '',
+        nextMainImageId,
+        nextMainImageUrl,
       });
     } catch (err) {
       next(new HttpError(500, 'Failed to delete entity image', { cause: err }));

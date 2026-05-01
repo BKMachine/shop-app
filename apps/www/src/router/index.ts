@@ -7,6 +7,7 @@ import MaterialsView from '@/views/MaterialsView.vue';
 import PartsView from '@/views/parts/PartsView.vue';
 import PartView from '@/views/parts/PartView.vue';
 import SettingsView from '@/views/SettingsView.vue';
+import ShipmentArchiveView from '@/views/ShipmentArchiveView.vue';
 import StatusView from '@/views/StatusView.vue';
 import TestView from '@/views/TestView.vue';
 import ToolReportView from '@/views/tools/ToolReportView.vue';
@@ -70,6 +71,11 @@ const router = createRouter({
       path: '/materials',
       name: 'materials',
       component: MaterialsView,
+    },
+    {
+      path: '/shipments',
+      name: 'shipments',
+      component: ShipmentArchiveView,
     },
     {
       path: '/status',

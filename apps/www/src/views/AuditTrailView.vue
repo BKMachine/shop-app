@@ -336,6 +336,7 @@ function getEntityLabel(type: Audit['type']) {
     document: 'Document',
     customer: 'Customer',
     supplier: 'Supplier',
+    shipper: 'Shipper',
     vendor: 'Vendor',
     report: 'Email Report',
     part_note: 'Part Note',
@@ -353,6 +354,7 @@ function getEntityIcon(type: Audit['type']) {
     document: 'mdi-file-document-outline',
     customer: 'mdi-account-multiple-outline',
     supplier: 'mdi-truck-delivery-outline',
+    shipper: 'mdi-truck-fast-outline',
     vendor: 'mdi-package-variant-closed',
     report: 'mdi-email-open-outline',
     part_note: 'mdi-note-text-outline',
@@ -870,6 +872,11 @@ function getJsonLineClass(line: AuditJsonLine) {
   --audit-theme-soft: rgba(67, 160, 71, 0.12);
 }
 
+.audit-theme-shipper {
+  --audit-theme-color: #00897b;
+  --audit-theme-soft: rgba(0, 137, 123, 0.12);
+}
+
 .audit-theme-vendor {
   --audit-theme-color: #8e24aa;
   --audit-theme-soft: rgba(142, 36, 170, 0.12);
@@ -892,6 +899,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-card.audit-theme-material,
 .audit-card.audit-theme-customer,
 .audit-card.audit-theme-supplier,
+.audit-card.audit-theme-shipper,
 .audit-card.audit-theme-vendor,
 .audit-card.audit-theme-report,
 .audit-card.audit-theme-part_note {
@@ -905,6 +913,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-icon.audit-theme-material,
 .audit-icon.audit-theme-customer,
 .audit-icon.audit-theme-supplier,
+.audit-icon.audit-theme-shipper,
 .audit-icon.audit-theme-vendor,
 .audit-icon.audit-theme-report,
 .audit-icon.audit-theme-part_note {

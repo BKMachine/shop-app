@@ -28,6 +28,9 @@
         <v-list-item link prepend-icon="mdi-cube-scan" :to="{ name: 'materials' }">
           Materials
         </v-list-item>
+        <v-list-item link prepend-icon="mdi-truck-check-outline" :to="{ name: 'shipments' }">
+          Shipments
+        </v-list-item>
         <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
       </v-list>
       <template #append>
@@ -84,6 +87,7 @@ import { deviceState, fetchCurrentDevice } from '@/state/device';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
 import { useScannerStore } from '@/stores/scanner_store';
+import { useShipperStore } from '@/stores/shipper_store';
 import { useSupplierStore } from '@/stores/supplier_store';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
 import { useVendorStore } from '@/stores/vendor_store';
@@ -91,6 +95,7 @@ import { useVendorStore } from '@/stores/vendor_store';
 const customerStore = useCustomerStore();
 const materialsStore = useMaterialsStore();
 const scannerStore = useScannerStore();
+const shipperStore = useShipperStore();
 const supplierStore = useSupplierStore();
 const toolCategoryStore = useToolCategoryStore();
 const vendorStore = useVendorStore();
@@ -148,6 +153,7 @@ function toggleTheme() {
 onBeforeMount(() => {
   void customerStore.fetch();
   void materialsStore.fetch();
+  void shipperStore.fetch();
   void supplierStore.fetch();
   void toolCategoryStore.fetch();
   void vendorStore.fetch();

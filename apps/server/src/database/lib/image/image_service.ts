@@ -61,14 +61,14 @@ async function listByIds(ids: string[]): Promise<ImageDoc[]> {
 }
 
 async function listByEntity(
-  entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor',
+  entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'shipper' | 'vendor' | 'shipment',
   entityId: string,
 ): Promise<ImageDoc[]> {
   return Image.find({ entityType, entityId, status: 'attached' }).sort({ createdAt: -1 });
 }
 
 async function findLatestByEntity(
-  entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor',
+  entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'shipper' | 'vendor' | 'shipment',
   entityId: string,
 ): Promise<ImageDoc | null> {
   return Image.findOne({ entityType, entityId, status: 'attached' }).sort({ createdAt: -1 });

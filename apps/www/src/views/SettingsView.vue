@@ -72,6 +72,14 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
+          <v-icon class="mr-2" icon="mdi-truck-fast-outline" />
+          Shippers
+        </v-expansion-panel-title>
+        <v-expansion-panel-text> <ShipperSettings /> </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title>
           <v-icon class="mr-2" icon="mdi-tag-multiple-outline" />
           Tool Categories
         </v-expansion-panel-title>
@@ -94,6 +102,7 @@
 import { onMounted } from 'vue';
 import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
 import SettingsReport from '@/components/settings/SettingsReport.vue';
+import ShipperSettings from '@/components/settings/SettingsShipper.vue';
 import SupplierSettings from '@/components/settings/SettingsSupplier.vue';
 import ToolCategorySettings from '@/components/settings/SettingsToolCategories.vue';
 import VendorSettings from '@/components/settings/SettingsVendor.vue';

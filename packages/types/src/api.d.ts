@@ -21,6 +21,7 @@ declare global {
       | 'document'
       | 'customer'
       | 'supplier'
+      | 'shipper'
       | 'vendor'
       | 'report'
       | 'part_note';
@@ -95,6 +96,25 @@ declare global {
     __v?: number;
   }
 
+  /* SHIPPER */
+
+  interface ShipperFields {
+    name: string;
+    logo?: string;
+    homepage?: string;
+  }
+
+  interface Shipper extends ShipperFields {
+    _id: string;
+  }
+
+  interface ShipperCreate extends ShipperFields {}
+
+  interface ShipperUpdate extends ShipperFields {
+    _id: string;
+    __v?: number;
+  }
+
   /* VENDOR */
 
   interface VendorFields {
@@ -122,9 +142,52 @@ declare global {
     relPath: string;
     mimeType?: string;
     status: 'temp' | 'attached';
-    entityType: 'tool' | 'part' | 'customer' | 'supplier' | 'vendor' | null;
+    entityType:
+      | 'tool'
+      | 'part'
+      | 'customer'
+      | 'supplier'
+      | 'shipper'
+      | 'vendor'
+      | 'shipment'
+      | null;
     entityId: string | null;
     expiresAt?: Date | null;
+  }
+
+  /* SHIPMENT */
+
+  interface ShipmentFields {
+    shippedAt: string | Date;
+    title?: string;
+    customer?: string | Customer | null;
+    shipper?: string | Shipper | null;
+    orderNumber?: string;
+    trackingNumber?: string;
+    carrier?: string;
+    notes?: string;
+    imageIds?: string[];
+  }
+
+  interface Shipment extends ShipmentFields {
+    _id: string;
+    createdAt: string | Date;
+    updatedAt: string | Date;
+  }
+
+  interface ShipmentCreate extends ShipmentFields {}
+
+  interface ShipmentUpdate extends ShipmentFields {
+    _id: string;
+    __v?: number;
+  }
+
+  interface ShipmentListResponse {
+    items: Shipment[];
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
   }
 
   interface Image extends ImageFields {

@@ -19,7 +19,7 @@ const schema = new Schema<ImageDocumentFields>(
     },
     entityType: {
       type: String,
-      enum: ['tool', 'part', 'customer', 'supplier', 'vendor', null],
+      enum: ['tool', 'part', 'customer', 'supplier', 'shipper', 'vendor', 'shipment', null],
       default: null,
       index: true,
     },
