@@ -54,7 +54,7 @@
         type="info"
         variant="tonal"
       >
-        No shipment photos archived yet.
+        No shipments archived yet.
       </v-alert>
 
       <div v-else class="shipment-batches">
@@ -75,6 +75,16 @@
               type="button"
               @click="openDetails(shipment)"
             >
+              <div class="shipment-row__carrier" :title="shipperName(shipment) || 'Carrier'">
+                <img
+                  v-if="shipperLogoUrl(shipment)"
+                  alt=""
+                  class="shipment-row__carrier-logo"
+                  :src="shipperLogoUrl(shipment)"
+                />
+                <v-icon v-else :icon="uiIcons.shipper" size="18" />
+              </div>
+
               <div class="shipment-row__thumbs">
                 <template v-if="previewImages(shipment).length">
                   <img
@@ -95,7 +105,6 @@
                 <div class="shipment-row__meta">
                   <span>{{ formatShipmentTime(shipment.shippedAt) }}</span>
                   <span v-if="customerName(shipment)">{{ customerName(shipment) }}</span>
-                  <span v-if="shipperName(shipment)">{{ shipperName(shipment) }}</span>
                   <span
                     v-for="trackingNumber in trackingNumbersForShipment(shipment)"
                     :key="`${shipment._id}-${trackingNumber}`"
@@ -199,7 +208,7 @@
             <v-progress-circular indeterminate />
           </div>
           <v-alert v-else-if="!tempImages.length" type="info" variant="tonal">
-            No temp images available. Upload from Android first, then refresh this dialog.
+            No temp images available. Upload first, then refresh this dialog.
           </v-alert>
           <v-row v-else dense>
             <v-col v-for="image in tempImages" :key="image.id" cols="6" lg="2" md="3" sm="4">
@@ -249,6 +258,7 @@
             @click="addImagesDialog = true"
           />
           <v-btn
+            v-if="showDeleteShipmentControl"
             :disabled="isSelectedShipmentOcrBusy"
             icon="mdi-delete-outline"
             title="Delete Shipment"
@@ -511,8 +521,11 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import ShipperSelect from '@/components/ShipperSelect.vue';
+import { uiIcons } from '@/lib/uiIcons';
 import api from '@/plugins/axios';
+import { hasLogoUrl } from '@/plugins/utils';
 import { toastError } from '@/plugins/vue-toast-notification';
+import { deviceState } from '@/state/device';
 import { useShipmentsStore } from '@/stores/shipments_store';
 import { useShipperStore } from '@/stores/shipper_store';
 
@@ -527,6 +540,7 @@ type ShipmentDraft = ReturnType<typeof createEmptyDraft>;
 const shipmentStore = useShipmentsStore();
 const shipperStore = useShipperStore();
 const todayFilterValue = new Date().toLocaleDateString('en-CA');
+const showDeleteShipmentControl = computed(() => Boolean(deviceState.current?.isAdmin));
 
 function createDefaultFilters() {
   return {
@@ -1032,6 +1046,8 @@ function confirmDeleteImage(image: MyImageData) {
 }
 
 function confirmDeleteShipment() {
+  if (!showDeleteShipmentControl.value) return;
+
   if (isSelectedShipmentOcrBusy.value) {
     toastError('Wait for queued OCR to finish before deleting this shipment');
     return;
@@ -1092,7 +1108,7 @@ async function openImageOcrDebug(imageId: string) {
 }
 
 async function deleteSelectedShipment() {
-  if (!selectedShipment.value) return;
+  if (!selectedShipment.value || !showDeleteShipmentControl.value) return;
   if (isSelectedShipmentOcrBusy.value) {
     toastError('Wait for queued OCR to finish before deleting this shipment');
     return;
@@ -1151,6 +1167,11 @@ function customerName(shipment: Shipment) {
 function shipperName(shipment: Shipment) {
   if (typeof shipment.shipper === 'object' && shipment.shipper) return shipment.shipper.name;
   return shipment.carrier || '';
+}
+
+function shipperLogoUrl(shipment: Shipment) {
+  if (typeof shipment.shipper !== 'object' || !shipment.shipper) return '';
+  return hasLogoUrl(shipment.shipper.logo) ? shipment.shipper.logo : '';
 }
 
 function shipperNameForDraft(draftValue: ShipmentDraft) {
@@ -1559,6 +1580,23 @@ function endOfDayIso(value: string) {
   min-width: 62px;
   justify-content: flex-end;
   color: rgba(var(--v-theme-on-surface), 0.68);
+}
+
+.shipment-row__carrier {
+  width: 72px;
+  min-width: 72px;
+  height: 72px;
+  border-radius: 4px;
+  align-items: center;
+  justify-content: center;
+  color: rgba(var(--v-theme-on-surface), 0.68);
+}
+
+.shipment-row__carrier-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 4px;
+  object-fit: contain;
 }
 
 .shipment-tracking-link {

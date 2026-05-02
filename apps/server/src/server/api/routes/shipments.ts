@@ -104,6 +104,10 @@ router.put('/shipments', requireKnownDevice, async (req, res, next) => {
 
 router.delete('/shipments/:id', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
+  if (!req.device.isAdmin) {
+    return next(new HttpError(403, 'Forbidden: admin access required.'));
+  }
+
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid shipment id'));
 
