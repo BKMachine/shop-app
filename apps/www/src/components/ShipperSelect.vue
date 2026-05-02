@@ -12,7 +12,7 @@
         <template #prepend>
           <div class="shipper-logo-frame shipper-logo-frame--menu shipper-logo-frame--with-gap">
             <img v-if="hasLogoUrl(item.logo)" alt="" class="shipper-logo" :src="item.logo" />
-            <v-icon v-else class="shipper-logo-fallback" icon="mdi-truck-fast-outline" size="16" />
+            <v-icon v-else class="shipper-logo-fallback" :icon="uiIcons.shipper" size="16" />
           </div>
         </template>
         {{ item.name }}
@@ -23,7 +23,7 @@
       <div class="shipper-selection">
         <div class="shipper-logo-frame shipper-logo-frame--selection">
           <img v-if="hasLogoUrl(item.logo)" alt="" class="shipper-logo" :src="item.logo" />
-          <v-icon v-else class="shipper-logo-fallback" icon="mdi-truck-fast-outline" size="14" />
+          <v-icon v-else class="shipper-logo-fallback" :icon="uiIcons.shipper" size="14" />
         </div>
         <span class="shipper-selection__text">{{ item.name }}</span>
       </div>
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { uiIcons } from '@/lib/uiIcons';
 import { hasLogoUrl } from '@/plugins/utils';
 import { useShipperStore } from '@/stores/shipper_store';
 

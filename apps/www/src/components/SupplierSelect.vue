@@ -12,7 +12,7 @@
         <template #prepend>
           <div class="supplier-logo-frame supplier-logo-frame--menu supplier-logo-frame--with-gap">
             <img v-if="hasLogoUrl(item.logo)" alt="" class="supplier-logo" :src="item.logo" />
-            <v-icon v-else class="supplier-logo-fallback" icon="mdi-warehouse" size="16" />
+            <v-icon v-else class="supplier-logo-fallback" :icon="uiIcons.supplier" size="16" />
           </div>
         </template>
         {{ item.name }}
@@ -23,7 +23,7 @@
       <div class="supplier-selection">
         <div class="supplier-logo-frame supplier-logo-frame--selection">
           <img v-if="hasLogoUrl(item.logo)" alt="" class="supplier-logo" :src="item.logo" />
-          <v-icon v-else class="supplier-logo-fallback" icon="mdi-warehouse" size="14" />
+          <v-icon v-else class="supplier-logo-fallback" :icon="uiIcons.supplier" size="14" />
         </div>
         <span class="supplier-selection__text">{{ item.name }}</span>
       </div>
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { uiIcons } from '@/lib/uiIcons';
 import { hasLogoUrl } from '@/plugins/utils';
 import { useSupplierStore } from '@/stores/supplier_store';
 

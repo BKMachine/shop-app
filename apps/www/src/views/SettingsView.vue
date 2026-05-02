@@ -3,7 +3,7 @@
     <v-expansion-panels>
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-account-multiple-outline" />
+          <v-icon class="mr-2" :icon="uiIcons.customer" />
           Customers
         </v-expansion-panel-title>
         <v-expansion-panel-text> <CustomerSettings /> </v-expansion-panel-text>
@@ -11,7 +11,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-email-open-outline" />
+          <v-icon class="mr-2" :icon="uiIcons.report" />
           Email Reports
         </v-expansion-panel-title>
         <v-expansion-panel-text> <SettingsReport /> </v-expansion-panel-text>
@@ -64,7 +64,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-warehouse" />
+          <v-icon class="mr-2" :icon="uiIcons.supplier" />
           Suppliers
         </v-expansion-panel-title>
         <v-expansion-panel-text> <SupplierSettings /> </v-expansion-panel-text>
@@ -72,7 +72,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-truck-fast-outline" />
+          <v-icon class="mr-2" :icon="uiIcons.shipper" />
           Shippers
         </v-expansion-panel-title>
         <v-expansion-panel-text> <ShipperSettings /> </v-expansion-panel-text>
@@ -88,7 +88,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-storefront-outline" />
+          <v-icon class="mr-2" :icon="uiIcons.vendor" />
           Vendors
         </v-expansion-panel-title>
 
@@ -100,6 +100,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
+import { uiIcons } from '@/lib/uiIcons';
 import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
 import SettingsReport from '@/components/settings/SettingsReport.vue';
 import ShipperSettings from '@/components/settings/SettingsShipper.vue';

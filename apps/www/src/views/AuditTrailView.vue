@@ -210,6 +210,7 @@
 import { DateTime } from 'luxon';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
+import { uiIcons } from '@/lib/uiIcons';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import useNowStore from '@/stores/now';
@@ -346,21 +347,7 @@ function getEntityLabel(type: Audit['type']) {
 }
 
 function getEntityIcon(type: Audit['type']) {
-  const icons: Record<Audit['type'], string> = {
-    tool: 'mdi-tools',
-    material: 'mdi-cube-scan',
-    part: 'mdi-shape',
-    image: 'mdi-image-outline',
-    document: 'mdi-file-document-outline',
-    customer: 'mdi-account-multiple-outline',
-    supplier: 'mdi-warehouse',
-    shipper: 'mdi-truck-fast-outline',
-    vendor: 'mdi-storefront-outline',
-    report: 'mdi-email-open-outline',
-    part_note: 'mdi-note-text-outline',
-  };
-
-  return icons[type] ?? 'mdi-database-edit-outline';
+  return uiIcons[type] ?? 'mdi-database-edit-outline';
 }
 
 function getEntityThemeClass(type: Audit['type']) {

@@ -19,25 +19,19 @@
     <v-navigation-drawer v-model="drawer">
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
-        <v-list-item link prepend-icon="mdi-shape" :to="{ name: 'parts' }">
-          Parts
-        </v-list-item>
+        <v-list-item link :prepend-icon="uiIcons.part" :to="{ name: 'parts' }"> Parts </v-list-item>
 
-        <v-list-item link prepend-icon="mdi-tools" :to="{ name: 'tools' }">
-          Tools
-        </v-list-item>
+        <v-list-item link :prepend-icon="uiIcons.tool" :to="{ name: 'tools' }"> Tools </v-list-item>
         <v-list-item link prepend-icon="mdi-map-marker" :to="{ name: 'locations' }">
           Locations
         </v-list-item>
-        <v-list-item link prepend-icon="mdi-cube-scan" :to="{ name: 'materials' }">
+        <v-list-item link :prepend-icon="uiIcons.material" :to="{ name: 'materials' }">
           Materials
         </v-list-item>
         <v-list-item link prepend-icon="mdi-truck-check-outline" :to="{ name: 'shipments' }">
           Shipments
         </v-list-item>
-        <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }">
-          Status
-        </v-list-item>
+        <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
       </v-list>
       <template #append>
         <v-list-item v-if="showDev" link prepend-icon="mdi-test-tube" :to="{name: 'test'}">
@@ -57,7 +51,7 @@
         >
           Activity
         </v-list-item>
-        <v-list-item link prepend-icon="mdi-file-document-outline" :to="{ name: 'toolReport' }">
+        <v-list-item link :prepend-icon="uiIcons.document" :to="{ name: 'toolReport' }">
           Report
         </v-list-item>
         <v-divider />
@@ -87,6 +81,7 @@ import { useTheme } from 'vuetify';
 import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
+import { uiIcons } from '@/lib/uiIcons';
 import onScan from '@/lib/onscan';
 import router from '@/router';
 import { deviceState, fetchCurrentDevice } from '@/state/device';

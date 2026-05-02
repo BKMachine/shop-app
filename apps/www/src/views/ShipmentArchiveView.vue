@@ -39,18 +39,8 @@
           type="date"
           variant="outlined"
         />
-        <v-text-field
-          v-model="filters.to"
-          hide-details
-          label="To"
-          type="date"
-          variant="outlined"
-        />
-        <CustomerSelect
-          v-model="filters.customer"
-          label="Customer"
-          variant="outlined"
-        />
+        <v-text-field v-model="filters.to" hide-details label="To" type="date" variant="outlined" />
+        <CustomerSelect v-model="filters.customer" label="Customer" variant="outlined" />
       </div>
 
       <div v-if="shipmentStore.loading && !shipmentStore.shipments.length" class="loading-block">
@@ -149,20 +139,10 @@
         <v-card-text>
           <v-row class="create-shipment-fields" no-gutters>
             <v-col cols="12" md="4">
-              <v-text-field
-                v-model="draftShippedDate"
-                label="Shipment Date"
-                required
-                type="date"
-              />
+              <v-text-field v-model="draftShippedDate" label="Shipment Date" required type="date" />
             </v-col>
             <v-col cols="12" md="2">
-              <v-text-field
-                v-model="draftShippedTime"
-                label="Time"
-                required
-                type="time"
-              />
+              <v-text-field v-model="draftShippedTime" label="Time" required type="time" />
             </v-col>
             <v-col cols="12" md="6">
               <CustomerSelect v-model="draft.customer" label="Customer" />
@@ -284,14 +264,11 @@
               <v-text-field
                 v-model="detailDraft.shippedAt"
                 label="Shipment Date"
-                readonly  
+                readonly
                 type="datetime-local"
               />
               <CustomerSelect v-model="detailDraft.customer" label="Customer" />
-              <v-text-field
-                v-model="detailDraft.orderNumber"
-                label="Order Number"
-              />
+              <v-text-field v-model="detailDraft.orderNumber" label="Order Number" />
               <ShipperSelect
                 v-model="detailDraft.shipper"
                 :error="detailCarrierBlurred && Boolean(detailCarrierValidationMessage)"
@@ -355,7 +332,7 @@
                       :src="image.url"
                     />
                   </button>
-                  
+
                   <div class="details-image-card__footer">
                     <div class="details-image-card__actions mt-2">
                       <v-btn
@@ -654,7 +631,9 @@ const draftCarrierValidationMessage = computed(() => carrierValidationMessageFor
 const detailCarrierValidationMessage = computed(() =>
   carrierValidationMessageForDraft(detailDraft.value),
 );
-const draftTrackingValidationMessage = computed(() => trackingValidationMessageForDraft(draft.value));
+const draftTrackingValidationMessage = computed(() =>
+  trackingValidationMessageForDraft(draft.value),
+);
 const detailTrackingValidationMessage = computed(() =>
   trackingValidationMessageForDraft(detailDraft.value),
 );

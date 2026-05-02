@@ -3,7 +3,14 @@
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/dist/**/*", "!**/.venv-*", "!**/.venv-*/**/*"]
+    "includes": [
+      "**",
+      "!**/dist/**/*",
+      "!**/.venv-*",
+      "!**/.venv-*/**/*",
+      "!**/models/**/*",
+      "!**/__pycache__/**/*"
+    ]
   },
   "formatter": {
     "enabled": true,
