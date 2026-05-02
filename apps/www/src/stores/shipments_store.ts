@@ -128,8 +128,7 @@ export const useShipmentsStore = defineStore('shipments', () => {
   async function remove(shipmentId: string) {
     try {
       await api.delete(`/shipments/${shipmentId}`);
-      _shipments.value = _shipments.value.filter((shipment) => shipment._id !== shipmentId);
-      delete imagesByShipmentId.value[shipmentId];
+      removeLocalShipment(shipmentId);
       toastSuccess('Shipment removed');
     } catch (err) {
       toastError('Failed to remove shipment');
@@ -202,6 +201,15 @@ export const useShipmentsStore = defineStore('shipments', () => {
     if (shipment) shipment.imageIds = imageIds;
   }
 
+  function removeLocalShipment(shipmentId: string) {
+    const nextShipments = _shipments.value.filter((shipment) => shipment._id !== shipmentId);
+    if (nextShipments.length === _shipments.value.length) return;
+
+    _shipments.value = nextShipments;
+    total.value = Math.max(total.value - 1, 0);
+    delete imagesByShipmentId.value[shipmentId];
+  }
+
   function upsertShipment(shipment: Shipment) {
     const index = _shipments.value.findIndex((candidate) => candidate._id === shipment._id);
     if (index > -1) _shipments.value[index] = shipment;
@@ -213,8 +221,7 @@ export const useShipmentsStore = defineStore('shipments', () => {
   });
 
   socket.on('shipmentDeleted', (data: { id: string }) => {
-    _shipments.value = _shipments.value.filter((shipment) => shipment._id !== data.id);
-    delete imagesByShipmentId.value[data.id];
+    removeLocalShipment(data.id);
   });
 
   return {
