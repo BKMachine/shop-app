@@ -31,7 +31,7 @@
       <v-col cols="12" md="7">
         <v-card style="height: 100%;" variant="outlined">
           <v-card-title class="d-flex align-center py-2 text-body-1">
-            <v-icon class="mr-2" size="20">mdi-file-pdf-box</v-icon>
+            <v-icon class="mr-2" icon="mdi-file-pdf-box" size="20" />
             {{ fileName }}
             <v-spacer />
             <v-btn
@@ -186,7 +186,7 @@
                   {{ formatMoney(displayCurrentCost(entry.result, entry.index)) }}
                 </div>
               </div>
-              <v-icon size="small">mdi-arrow-right</v-icon>
+              <v-icon icon="mdi-arrow-right" size="small" />
               <div>
                 <div class="text-caption text-medium-emphasis">{{ toCostLabel(entry.index) }}</div>
                 <div class="text-body-2 font-weight-bold">

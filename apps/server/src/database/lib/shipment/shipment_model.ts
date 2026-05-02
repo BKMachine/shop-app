@@ -12,7 +12,6 @@ type ShipmentDocumentFields = Omit<ShipmentFields, 'customer' | 'shipper' | 'ima
 const schema = new Schema<ShipmentDocumentFields>(
   {
     shippedAt: { type: Date, required: true, index: true },
-    title: { type: String, default: '' },
     customer: { type: Schema.Types.ObjectId, ref: 'customers', default: null, index: true },
     shipper: { type: Schema.Types.ObjectId, ref: 'shippers', default: null, index: true },
     orderNumber: { type: String, default: '', index: true },
@@ -27,7 +26,6 @@ const schema = new Schema<ShipmentDocumentFields>(
 );
 
 schema.index({
-  title: 'text',
   orderNumber: 'text',
   trackingNumber: 'text',
   carrier: 'text',

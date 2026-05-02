@@ -127,7 +127,7 @@
           </template>
         </draggable>
         <v-btn color="primary" variant="outlined" @click="addCycleTime">
-          <v-icon left> mdi-plus </v-icon>Add Cycle Time
+          <v-icon icon="mdi-plus" left />Add Cycle Time
         </v-btn>
       </template>
 
@@ -211,7 +211,7 @@
               </v-col>
             </v-row>
             <v-btn color="primary" variant="outlined" @click="addAdditionalCost">
-              <v-icon left>mdi-plus</v-icon>Add Cost
+              <v-icon icon="mdi-plus" left />Add Cost
             </v-btn>
 
             <v-dialog v-model="linkDialogOpen" max-width="600">

@@ -15,6 +15,11 @@ type BinaryResponse = {
   mimeType: string;
 };
 
+type OcrResponse = {
+  text: string;
+  confidence: number;
+};
+
 type ImageProcessorErrorPayload = {
   error?: unknown;
   code?: unknown;
@@ -92,10 +97,16 @@ async function callImageProcessor(
     }
   }
 
-  const response = await fetch(`${getImageProcessorBaseUrl()}/api/process/${route}`, {
-    method: 'POST',
-    body: form,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${getImageProcessorBaseUrl()}/api/process/${route}`, {
+      method: 'POST',
+      body: form,
+    });
+  } catch (error) {
+    throw new ImageProcessorClientError(503, 'Image processor unavailable', { cause: error });
+  }
 
   if (!response.ok) {
     throw await parseErrorResponse(response);
@@ -111,14 +122,56 @@ async function callImageProcessor(
   };
 }
 
+async function callImageProcessorMultipartJson<T>(
+  route: string,
+  sourcePath: string,
+  fields: Record<string, ImageProcessorRequestFieldValue> = {},
+): Promise<T> {
+  const form = new FormData();
+  const filename = path.basename(sourcePath);
+  const mimeType = getMimeTypeForSourcePath(sourcePath);
+  const sourceBuffer = fs.readFileSync(sourcePath);
+
+  form.append('image', new Blob([sourceBuffer], { type: mimeType }), filename);
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (typeof value === 'string' && value) {
+      form.append(key, value);
+    }
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${getImageProcessorBaseUrl()}/api/process/${route}`, {
+      method: 'POST',
+      body: form,
+    });
+  } catch (error) {
+    throw new ImageProcessorClientError(503, 'Image processor unavailable', { cause: error });
+  }
+
+  if (!response.ok) {
+    throw await parseErrorResponse(response);
+  }
+
+  return (await response.json()) as T;
+}
+
 async function callImageProcessorJson(route: string, payload: unknown): Promise<BinaryResponse> {
-  const response = await fetch(`${getImageProcessorBaseUrl()}/api/${route}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${getImageProcessorBaseUrl()}/api/${route}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    throw new ImageProcessorClientError(503, 'Image processor unavailable', { cause: error });
+  }
 
   if (!response.ok) {
     throw await parseErrorResponse(response);
@@ -177,6 +230,14 @@ export async function processImageStack(
     backend: options.backend ?? undefined,
     model: options.model ?? undefined,
   });
+}
+
+export async function ocrImage(sourcePath: string) {
+  return callImageProcessorMultipartJson<OcrResponse>('ocr', sourcePath);
+}
+
+export async function ocrImageDebugOverlay(sourcePath: string) {
+  return callImageProcessor('ocr/debug?format=image', sourcePath);
 }
 
 export async function buildLocationLabel(data: PrintLocationBody) {

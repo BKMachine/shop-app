@@ -353,9 +353,9 @@ function getEntityIcon(type: Audit['type']) {
     image: 'mdi-image-outline',
     document: 'mdi-file-document-outline',
     customer: 'mdi-account-multiple-outline',
-    supplier: 'mdi-truck-delivery-outline',
+    supplier: 'mdi-warehouse',
     shipper: 'mdi-truck-fast-outline',
-    vendor: 'mdi-package-variant-closed',
+    vendor: 'mdi-storefront-outline',
     report: 'mdi-email-open-outline',
     part_note: 'mdi-note-text-outline',
   };

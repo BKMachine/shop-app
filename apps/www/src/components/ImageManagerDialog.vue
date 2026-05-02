@@ -31,7 +31,7 @@
                 @dragover.prevent="onDragOver"
                 @drop.prevent="onDrop"
               >
-                <v-icon color="primary" size="64">mdi-image</v-icon>
+                <v-icon color="primary" icon="mdi-image" size="64" />
                 <div class="upload-drop-text">
                   <span>
                     Drop your image here, <span class="upload-browse">browse</span>, or paste from
@@ -49,7 +49,7 @@
                 />
               </div>
               <div v-if="selectedFile" class="upload-file-info">
-                <v-icon size="20">mdi-file-image</v-icon>
+                <v-icon size="20" icon="mdi-file-image" />
                 <span class="upload-file-name">{{ selectedFile.name }}</span>
                 <v-progress-linear
                   v-if="uploadLoading"
@@ -59,7 +59,7 @@
                   :value="uploadProgress"
                 />
                 <v-btn :disabled="uploadLoading" icon size="x-small" @click="removeSelectedFile">
-                  <v-icon>mdi-close</v-icon>
+                  <v-icon icon="mdi-close" />
                 </v-btn>
               </div>
               <div v-if="filePreviewUrl" class="upload-file-preview">
@@ -296,7 +296,7 @@
                           type="button"
                           @click.stop="runStackProcess(img.id)"
                         >
-                          <v-icon size="12">mdi-auto-fix</v-icon>
+                          <v-icon size="12" icon="mdi-auto-fix" />
                         </button>
                         <div class="image-card__processing-actions">
                           <div class="image-card__split-action">
@@ -341,7 +341,7 @@
                                   variant="outlined"
                                   @click.stop
                                 >
-                                  <v-icon size="12px">mdi-chevron-down</v-icon>
+                                  <v-icon size="12px" icon="mdi-chevron-down" />
                                 </v-btn>
                               </template>
                               <v-list density="compact">
@@ -571,6 +571,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [boolean];
   'image-selected': [payload: { imageId: string; url: string; isMain?: boolean }];
+  'images-selected': [payload: { images: { imageId: string; url: string; isMain?: boolean }[] }];
 }>();
 
 const partStore = usePartStore();
@@ -651,7 +652,7 @@ function selectFile(file: File | null) {
 }
 
 function onDragEnter() {
-  if (uploadLoading.value || !!urlInput.value) return;
+  if (uploadLoading.value || urlInput.value) return;
   isDragging.value = true;
 }
 
@@ -663,20 +664,20 @@ function onDragLeave(event: DragEvent) {
 }
 
 function onDragOver() {
-  if (uploadLoading.value || !!urlInput.value) return;
+  if (uploadLoading.value || urlInput.value) return;
   isDragging.value = true;
 }
 
 function onDrop(event: DragEvent) {
   isDragging.value = false;
-  if (uploadLoading.value || !!urlInput.value) return;
+  if (uploadLoading.value || urlInput.value) return;
 
   const file = event.dataTransfer?.files?.[0] ?? null;
   selectFile(file);
 }
 
 function onPaste(event: ClipboardEvent) {
-  if (!dialog.value || currentTab.value !== 'upload' || uploadLoading.value || !!urlInput.value) {
+  if (!dialog.value || currentTab.value !== 'upload' || uploadLoading.value || urlInput.value) {
     return;
   }
 
@@ -731,10 +732,12 @@ async function attachUploadedImage(imageId: string) {
             entityType: props.entityType ?? 'part',
             entityId: props.entityId,
             setAsMain: shouldPromoteToMain,
+            skipOcr: props.entityType === 'shipment',
           })
         ).data;
 
   emit('image-selected', { imageId: data.id, url: data.url, isMain: data.isMain });
+  emit('images-selected', { images: [{ imageId: data.id, url: data.url, isMain: data.isMain }] });
   dialog.value = false;
 }
 
@@ -1058,6 +1061,7 @@ async function assignSelectedToEntity() {
     let successCount = 0;
     let failCount = 0;
     let firstAssignedImage: { imageId: string; url: string; isMain?: boolean } | null = null;
+    const assignedImages: { imageId: string; url: string; isMain?: boolean }[] = [];
     let hasMainImage = Boolean(props.hasImage);
 
     for (const imageId of selectedTempImageIds.value) {
@@ -1071,15 +1075,18 @@ async function assignSelectedToEntity() {
                   entityType: props.entityType ?? 'part',
                   entityId: props.entityId,
                   setAsMain: shouldPromoteToMain,
+                  skipOcr: props.entityType === 'shipment',
                 })
               ).data;
+        const assignedImage = {
+          imageId: data.id,
+          url: data.url,
+          isMain: data.isMain,
+        };
         if (!firstAssignedImage) {
-          firstAssignedImage = {
-            imageId: data.id,
-            url: data.url,
-            isMain: data.isMain,
-          };
+          firstAssignedImage = assignedImage;
         }
+        assignedImages.push(assignedImage);
         if (data.isMain) {
           hasMainImage = true;
         }
@@ -1094,6 +1101,7 @@ async function assignSelectedToEntity() {
       if (firstAssignedImage) {
         emit('image-selected', firstAssignedImage);
       }
+      emit('images-selected', { images: assignedImages });
       dialog.value = false;
     }
     if (failCount > 0) {

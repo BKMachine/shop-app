@@ -64,7 +64,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-truck-delivery-outline" />
+          <v-icon class="mr-2" icon="mdi-warehouse" />
           Suppliers
         </v-expansion-panel-title>
         <v-expansion-panel-text> <SupplierSettings /> </v-expansion-panel-text>
@@ -88,7 +88,7 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
-          <v-icon class="mr-2" icon="mdi-package-variant-closed" />
+          <v-icon class="mr-2" icon="mdi-storefront-outline" />
           Vendors
         </v-expansion-panel-title>
 

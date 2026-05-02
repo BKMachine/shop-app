@@ -83,7 +83,7 @@
     </v-card-title>
     <v-card-text class="tool-table-card-text">
       <v-card class="tools-table-card__inner" flat>
-        <div class="tools-table-card__filters">
+        <div class="tools-table-card__filters mt-2">
           <div v-if="category === 'milling'">
             <v-row>
               <v-col cols="5">
@@ -117,6 +117,7 @@
                       clearable
                       :items="types"
                       label="Tool Type"
+                      variant="outlined"
                     />
                   </v-col>
                   <v-col cols="3">
@@ -124,6 +125,7 @@
                       v-model="cuttingDiaFilter"
                       clearable
                       label="Cutting Dia"
+                      variant="outlined"
                       @keydown="isNumber($event)"
                     />
                   </v-col>
@@ -132,6 +134,7 @@
                       v-model="minFluteLengthFilter"
                       clearable
                       label="Min Flute Length"
+                      variant="outlined"
                       @keydown="isNumber($event)"
                     />
                   </v-col>
@@ -169,6 +172,7 @@
                   clearable
                   :items="types"
                   label="Tool Type"
+                  variant="outlined"
                 />
               </v-col>
             </v-row>
@@ -203,6 +207,7 @@
                   clearable
                   :items="types"
                   label="Tool Type"
+                  variant="outlined"
                 />
               </v-col>
             </v-row>

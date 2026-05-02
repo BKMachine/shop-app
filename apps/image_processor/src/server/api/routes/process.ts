@@ -5,6 +5,11 @@ import sharp from 'sharp';
 import { removeImageBackground } from '../../../services/background_removal_service.js';
 import { autoAlignImage } from '../../../services/image_auto_align_service.js';
 import { autoCropImage } from '../../../services/image_auto_crop_service.js';
+import {
+  extractTextFromImage,
+  extractTextFromImageDebug,
+  renderTextFromImageDebugOverlay,
+} from '../../../services/image_ocr_service.js';
 import type {
   BackgroundRemovalBackend,
   BackgroundRemovalModel,
@@ -223,6 +228,52 @@ router.post('/rotate', upload.single('image'), async (req, res, next) => {
       direction === 'cw' ? 90 : -90,
     );
     sendProcessedImage(res, processed);
+  } catch (error) {
+    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    }
+
+    next(error);
+  }
+});
+
+router.post('/ocr', upload.single('image'), async (req, res, next) => {
+  try {
+    const result = await extractTextFromImage(await getUploadedImage(req.file));
+    res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    }
+
+    next(error);
+  }
+});
+
+router.post('/ocr/debug', upload.single('image'), async (req, res, next) => {
+  try {
+    const image = await getUploadedImage(req.file);
+    const debugResult = await extractTextFromImageDebug(image);
+    const format = String(req.query.format ?? req.body?.format ?? 'json')
+      .trim()
+      .toLowerCase();
+
+    if (format === 'image' || format === 'png' || format === 'overlay') {
+      const overlay = await renderTextFromImageDebugOverlay(image, debugResult);
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('X-Ocr-Selected-Source', debugResult.selectedSource);
+      if (debugResult.detectedLabelRegion) {
+        res.setHeader(
+          'X-Ocr-Detected-Label-Region',
+          JSON.stringify(debugResult.detectedLabelRegion),
+        );
+      }
+      res.status(200).send(overlay);
+      return;
+    }
+
+    const { detectedLabelMask: _detectedLabelMask, ...jsonDebugResult } = debugResult;
+    res.status(200).json(jsonDebugResult);
   } catch (error) {
     if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
       return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));

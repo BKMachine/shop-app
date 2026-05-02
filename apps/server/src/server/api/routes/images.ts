@@ -24,6 +24,8 @@ import {
   type BackgroundRemovalModel,
   ImageProcessorClientError,
   isSkippableAutoAlignError,
+  ocrImage,
+  ocrImageDebugOverlay,
   processImageStack,
   removeImageBackground,
   rotateImage,
@@ -125,6 +127,7 @@ const AttachImageRequest = z.strictObject({
   entityType: z.enum(['tool', 'part', 'customer', 'supplier', 'shipper', 'vendor', 'shipment']),
   entityId: mongoObjectId,
   setAsMain: z.boolean().optional(),
+  skipOcr: z.boolean().optional(),
 });
 
 const PromoteImageRequest = z.strictObject({
@@ -136,6 +139,7 @@ type RouteImage = {
   _id: { toString(): string } | string;
   relPath: string;
   createdAt: Date;
+  ocrText?: string;
 };
 
 type PartMediaUpdate = Omit<Part, 'customer' | 'material' | 'imageIds' | 'documentIds'> & {
@@ -155,6 +159,7 @@ function serializeImage(image: unknown, isMain = false): MyImageData {
     url: `/images/${routeImage.relPath}`,
     createdAt: routeImage.createdAt.toISOString(),
     isMain,
+    ocrText: routeImage.ocrText || '',
   };
 }
 
@@ -570,6 +575,92 @@ router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) =>
   }
 });
 
+router.post(
+  '/entities/:entityType/:entityId/images/:imageId/ocr',
+  requireKnownDevice,
+  async (req, res, next) => {
+    assertKnownDevice(req);
+    const { entityType, entityId, imageId } = req.params;
+    if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
+    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+    if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
+    if (entityType !== 'shipment') {
+      return next(new HttpError(400, 'Manual OCR is only supported for shipment images'));
+    }
+
+    try {
+      const entity = await getMultiImageEntity('shipment', entityId);
+      if (!entity) return next(new HttpError(404, 'shipment not found'));
+
+      const image = await ImageService.findById(imageId);
+      if (!image) return next(new HttpError(404, 'Image not found'));
+      if (image.status !== 'attached') {
+        return next(new HttpError(400, 'Only attached images can be OCR processed'));
+      }
+      if (image.entityType !== entityType || image.entityId?.toString() !== entityId) {
+        return next(new HttpError(404, `Image is not attached to this ${entityType}`));
+      }
+
+      const sourcePath = path.join(imageDir, image.relPath);
+      if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
+
+      const ocrResult = await ocrImage(sourcePath);
+      const updatedImage = await ImageService.update(
+        {
+          ...normalizeImageUpdate(image),
+          ocrText: ocrResult.text.trim(),
+        },
+        req.deviceId,
+      );
+      if (!updatedImage) return next(new HttpError(500, 'Failed to persist OCR text'));
+
+      res.status(200).json(serializeImage(updatedImage));
+    } catch (err) {
+      const message = getErrorMessage(err);
+      next(new HttpError(getErrorStatusCode(err, 500), message, { cause: err, expose: true }));
+    }
+  },
+);
+
+router.post(
+  '/entities/:entityType/:entityId/images/:imageId/ocr/debug',
+  requireKnownDevice,
+  async (req, res, next) => {
+    assertKnownDevice(req);
+    const { entityType, entityId, imageId } = req.params;
+    if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
+    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
+    if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
+    if (entityType !== 'shipment') {
+      return next(new HttpError(400, 'Manual OCR debug is only supported for shipment images'));
+    }
+
+    try {
+      const entity = await getMultiImageEntity('shipment', entityId);
+      if (!entity) return next(new HttpError(404, 'shipment not found'));
+
+      const image = await ImageService.findById(imageId);
+      if (!image) return next(new HttpError(404, 'Image not found'));
+      if (image.status !== 'attached') {
+        return next(new HttpError(400, 'Only attached images can be OCR debug processed'));
+      }
+      if (image.entityType !== entityType || image.entityId?.toString() !== entityId) {
+        return next(new HttpError(404, `Image is not attached to this ${entityType}`));
+      }
+
+      const sourcePath = path.join(imageDir, image.relPath);
+      if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
+
+      const overlay = await ocrImageDebugOverlay(sourcePath);
+      res.setHeader('Content-Type', overlay.mimeType);
+      res.status(200).send(overlay.buffer);
+    } catch (err) {
+      const message = getErrorMessage(err);
+      next(new HttpError(getErrorStatusCode(err, 500), message, { cause: err, expose: true }));
+    }
+  },
+);
+
 // Attach an image to an entity
 router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
@@ -597,9 +688,22 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 
     const newRelPath = path.relative(imageDir, destPath).replace(/\\/g, '/');
 
+    let ocrText = '';
+    if (data.entityType === 'shipment' && !data.skipOcr) {
+      try {
+        const ocrResult = await ocrImage(destPath);
+        ocrText = ocrResult.text.trim();
+      } catch (error) {
+        logger.warn(
+          `OCR failed for attached image ${id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
     const imageUpdate: ImageUpdate = {
       ...normalizeImageUpdate(image),
       relPath: newRelPath,
+      ocrText,
       status: 'attached',
       entityType: data.entityType,
       entityId: data.entityId,

@@ -45,6 +45,7 @@ declare global {
     url: string;
     createdAt: string;
     isMain?: boolean;
+    ocrText?: string;
   }
 
   interface MyDocumentData {

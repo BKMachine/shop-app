@@ -141,6 +141,7 @@ declare global {
     filename: string;
     relPath: string;
     mimeType?: string;
+    ocrText?: string;
     status: 'temp' | 'attached';
     entityType:
       | 'tool'
@@ -159,7 +160,6 @@ declare global {
 
   interface ShipmentFields {
     shippedAt: string | Date;
-    title?: string;
     customer?: string | Customer | null;
     shipper?: string | Shipper | null;
     orderNumber?: string;

@@ -22,7 +22,6 @@ function normalizeText(value: unknown): string {
 function toPayload(data: ShipmentCreate | ShipmentUpdate) {
   return {
     shippedAt: new Date(data.shippedAt),
-    title: normalizeText(data.title),
     customer: getEntityIdOrNull(data.customer),
     shipper: getEntityIdOrNull(data.shipper),
     orderNumber: normalizeText(data.orderNumber),

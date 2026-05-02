@@ -1,7 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { Router } from 'express';
 import * as z from 'zod';
 import { isValidId } from '../../../database/index.js';
+import ImageService from '../../../database/lib/image/image_service.js';
 import Shipments from '../../../database/lib/shipment/shipment_service.js';
+import { imageDir } from '../../../directories.js';
 import logger from '../../../logger.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import { normalizeQueryValue } from '../../../utilities/normalizeQueryValue.js';
@@ -12,7 +16,6 @@ const router: Router = Router();
 
 const ShipmentFieldsSchema = z.strictObject({
   shippedAt: z.coerce.date(),
-  title: z.string().optional(),
   customer: mongoObjectId.nullish(),
   shipper: mongoObjectId.nullish(),
   orderNumber: z.string().optional(),
@@ -32,6 +35,11 @@ const UpdateShipmentRequest = z.strictObject({
     __v: z.number().optional(),
   }),
 });
+
+function deleteImageFileIfPresent(relPath: string) {
+  const filePath = path.join(imageDir, relPath);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
 
 router.get('/shipments', async (req, res, next) => {
   try {
@@ -100,6 +108,12 @@ router.delete('/shipments/:id', requireKnownDevice, async (req, res, next) => {
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid shipment id'));
 
   try {
+    const attachedImages = await ImageService.listByEntity('shipment', id);
+    for (const image of attachedImages) {
+      deleteImageFileIfPresent(image.relPath);
+      await ImageService.remove(image._id.toString(), req.deviceId);
+    }
+
     const removed = await Shipments.remove(id, req.deviceId);
     if (!removed) return next(new HttpError(404, 'Shipment not found.'));
     res.status(200).json({ success: true, id });

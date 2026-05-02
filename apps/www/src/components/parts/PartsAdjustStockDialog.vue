@@ -96,9 +96,7 @@
               <p class="text-caption opacity-75">Current</p>
               <p class="current-stock">{{ part.stock }}</p>
             </div>
-            <v-icon class="transition-arrow" color="#8b5cf6" size="x-large">
-              mdi-arrow-down
-            </v-icon>
+            <v-icon class="transition-arrow" color="#8b5cf6" icon="mdi-arrow-down" size="x-large" />
             <div class="stock-value">
               <p class="text-caption opacity-75">New</p>
               <p

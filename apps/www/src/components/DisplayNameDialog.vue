@@ -2,7 +2,7 @@
   <v-dialog v-model="displayNameDialogState.open" max-width="540" persistent>
     <v-card>
       <v-card-title class="d-flex align-center ga-2 py-4">
-        <v-icon color="warning">mdi-monitor-edit</v-icon>
+        <v-icon color="warning" icon="mdi-monitor-edit" />
         Set Device Display Name
       </v-card-title>
 

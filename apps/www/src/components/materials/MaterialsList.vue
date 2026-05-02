@@ -5,6 +5,7 @@
       clearable
       label="Search Materials"
       prepend-inner-icon="mdi-magnify"
+      variant="outlined"
       @click:clear="search = ''"
     />
     <div class="d-flex mb-2 align-center" style="gap: 8px;">

@@ -12,7 +12,7 @@
         <template #prepend>
           <div class="vendor-logo-frame vendor-logo-frame--menu vendor-logo-frame--with-gap">
             <img v-if="hasLogoUrl(item.logo)" alt="" class="vendor-logo" :src="item.logo" />
-            <v-icon v-else class="vendor-logo-fallback" icon="mdi-image-off-outline" size="16" />
+            <v-icon v-else class="vendor-logo-fallback" icon="mdi-storefront-outline" size="16" />
           </div>
         </template>
         {{ item.name }}
@@ -23,7 +23,7 @@
       <div class="vendor-selection">
         <div class="vendor-logo-frame vendor-logo-frame--selection">
           <img v-if="hasLogoUrl(item.logo)" alt="" class="vendor-logo" :src="item.logo" />
-          <v-icon v-else class="vendor-logo-fallback" icon="mdi-image-off-outline" size="14" />
+          <v-icon v-else class="vendor-logo-fallback" icon="mdi-storefront-outline" size="14" />
         </div>
         <span class="vendor-selection__text">{{ item.name }}</span>
       </div>

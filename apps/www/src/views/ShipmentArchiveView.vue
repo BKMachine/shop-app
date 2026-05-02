@@ -14,20 +14,43 @@
     </v-card-title>
 
     <v-card-text class="shipment-archive infinite-scroll-view-card__body">
-      <div class="shipment-filters">
+      <div class="shipment-filters mt-2">
         <v-text-field
           v-model="filters.search"
           clearable
-          hide-details
           label="Search"
           prepend-inner-icon="mdi-magnify"
+          variant="outlined"
           @click:clear="applyFilters"
           @keyup.enter="applyFilters"
+        >
+          <template #details>
+            <div class="search-details">
+              <button class="clear-filters-hint" type="button" @click="clearFilters">
+                Clear all filters
+              </button>
+            </div>
+          </template>
+        </v-text-field>
+        <v-text-field
+          v-model="filters.from"
+          hide-details
+          label="From"
+          type="date"
+          variant="outlined"
         />
-        <v-text-field v-model="filters.from" hide-details label="From" type="date" />
-        <v-text-field v-model="filters.to" hide-details label="To" type="date" />
-        <CustomerSelect v-model="filters.customer" label="Customer" />
-        <v-btn icon="mdi-refresh" title="Refresh" variant="text" @click="applyFilters" />
+        <v-text-field
+          v-model="filters.to"
+          hide-details
+          label="To"
+          type="date"
+          variant="outlined"
+        />
+        <CustomerSelect
+          v-model="filters.customer"
+          label="Customer"
+          variant="outlined"
+        />
       </div>
 
       <div v-if="shipmentStore.loading && !shipmentStore.shipments.length" class="loading-block">
@@ -83,7 +106,14 @@
                   <span>{{ formatShipmentTime(shipment.shippedAt) }}</span>
                   <span v-if="customerName(shipment)">{{ customerName(shipment) }}</span>
                   <span v-if="shipperName(shipment)">{{ shipperName(shipment) }}</span>
-                  <span v-if="shipment.trackingNumber">{{ shipment.trackingNumber }}</span>
+                  <span
+                    v-for="trackingNumber in trackingNumbersForShipment(shipment)"
+                    :key="`${shipment._id}-${trackingNumber}`"
+                    :class="{ 'shipment-tracking-link': trackingUrlForCarrier(shipperName(shipment), trackingNumber) }"
+                    @click.stop="openTrackingLink(shipperName(shipment), trackingNumber)"
+                  >
+                    {{ trackingNumber }}
+                  </span>
                 </div>
               </div>
 
@@ -117,13 +147,21 @@
         </v-card-title>
         <v-divider />
         <v-card-text>
-          <v-row>
-            <v-col cols="12" md="6">
+          <v-row class="create-shipment-fields" no-gutters>
+            <v-col cols="12" md="4">
               <v-text-field
-                v-model="draft.shippedAt"
+                v-model="draftShippedDate"
                 label="Shipment Date"
                 required
-                type="datetime-local"
+                type="date"
+              />
+            </v-col>
+            <v-col cols="12" md="2">
+              <v-text-field
+                v-model="draftShippedTime"
+                label="Time"
+                required
+                type="time"
               />
             </v-col>
             <v-col cols="12" md="6">
@@ -133,13 +171,28 @@
               <v-text-field v-model="draft.orderNumber" label="Order Number" />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="draft.trackingNumber" label="Tracking Number" />
+              <ShipperSelect
+                v-model="draft.shipper"
+                :error="draftCarrierBlurred && Boolean(draftCarrierValidationMessage)"
+                :error-messages="draftCarrierBlurred ? draftCarrierValidationMessage : ''"
+                label="Carrier"
+                required
+                @blur="draftCarrierBlurred = true"
+              />
             </v-col>
             <v-col cols="12" md="6">
-              <ShipperSelect v-model="draft.shipper" label="Carrier" />
+              <v-textarea
+                v-model="draft.trackingNumber"
+                auto-grow
+                :error="draftTrackingBlurred && Boolean(draftTrackingValidationMessage)"
+                :hint="draftTrackingBlurred ? draftTrackingValidationMessage : ''"
+                label="Tracking Numbers"
+                :persistent-hint="draftTrackingBlurred && Boolean(draftTrackingValidationMessage)"
+                rows="2"
+                @blur="draftTrackingBlurred = true"
+              />
             </v-col>
-            <v-col cols="12" md="6"> <v-text-field v-model="draft.title" label="Title" /> </v-col>
-            <v-col cols="12">
+            <v-col cols="12" md="6">
               <v-textarea v-model="draft.notes" auto-grow label="Notes" rows="2" />
             </v-col>
           </v-row>
@@ -204,7 +257,7 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="detailsDialog" fullscreen>
+    <v-dialog v-model="detailsDialogModel" fullscreen>
       <v-card v-if="selectedShipment" class="details-dialog">
         <v-toolbar density="comfortable">
           <v-toolbar-title>{{ shipmentTitle(selectedShipment) }}</v-toolbar-title>
@@ -216,12 +269,13 @@
             @click="addImagesDialog = true"
           />
           <v-btn
+            :disabled="isSelectedShipmentOcrBusy"
             icon="mdi-delete-outline"
             title="Delete Shipment"
             variant="text"
-            @click="deleteShipmentConfirm = true"
+            @click="confirmDeleteShipment"
           />
-          <v-btn icon="mdi-close" variant="text" @click="detailsDialog = false" />
+          <v-btn icon="mdi-close" variant="text" @click="requestCloseDetailsDialog" />
         </v-toolbar>
 
         <v-card-text>
@@ -229,23 +283,34 @@
             <aside class="details-panel">
               <v-text-field
                 v-model="detailDraft.shippedAt"
-                density="compact"
                 label="Shipment Date"
+                readonly  
                 type="datetime-local"
               />
               <CustomerSelect v-model="detailDraft.customer" label="Customer" />
               <v-text-field
                 v-model="detailDraft.orderNumber"
-                density="compact"
                 label="Order Number"
               />
-              <v-text-field
-                v-model="detailDraft.trackingNumber"
-                density="compact"
-                label="Tracking Number"
+              <ShipperSelect
+                v-model="detailDraft.shipper"
+                :error="detailCarrierBlurred && Boolean(detailCarrierValidationMessage)"
+                :error-messages="detailCarrierBlurred ? detailCarrierValidationMessage : ''"
+                label="Carrier"
+                required
+                @blur="detailCarrierBlurred = true"
               />
-              <ShipperSelect v-model="detailDraft.shipper" density="compact" label="Carrier" />
-              <v-text-field v-model="detailDraft.title" density="compact" label="Title" />
+              <v-textarea
+                v-model="detailDraft.trackingNumber"
+                auto-grow
+                :error="detailTrackingBlurred && Boolean(detailTrackingValidationMessage)"
+                :hint="detailTrackingBlurred ? detailTrackingValidationMessage : ''"
+                label="Tracking Numbers"
+                :persistent-hint="detailTrackingBlurred && Boolean(detailTrackingValidationMessage)"
+                rows="2"
+                @blur="detailTrackingBlurred = true"
+              />
+
               <v-textarea
                 v-model="detailDraft.notes"
                 auto-grow
@@ -255,7 +320,8 @@
               />
               <v-btn
                 block
-                color="primary"
+                color="success"
+                :disabled="!hasDetailChanges || savingDetails"
                 :loading="savingDetails"
                 prepend-icon="mdi-content-save-outline"
                 @click="saveDetails"
@@ -274,27 +340,90 @@
               <div v-else class="details-image-grid">
                 <v-card
                   v-for="(image, index) in selectedImages"
-                  :key="image.id"
+                  :key="imageCardKey(image.id, index)"
                   class="details-image-card"
-                  hover
-                  @click="openGallery(index)"
                 >
-                  <v-img
-                    aspect-ratio="1"
-                    class="details-image-card__img"
-                    contain
-                    :src="image.url"
-                  />
-                  <div class="details-image-card__footer">
-                    <span class="text-caption">{{ formatShortDate(image.createdAt) }}</span>
-                    <v-btn
-                      color="error"
-                      icon="mdi-delete"
-                      :loading="deletingImageId === image.id"
-                      size="x-small"
-                      variant="text"
-                      @click.stop="confirmDeleteImage(image)"
+                  <button
+                    class="details-image-card__preview"
+                    type="button"
+                    @click="openGallery(index)"
+                  >
+                    <v-img
+                      aspect-ratio="1"
+                      class="details-image-card__img"
+                      contain
+                      :src="image.url"
                     />
+                  </button>
+                  
+                  <div class="details-image-card__footer">
+                    <div class="details-image-card__actions mt-2">
+                      <v-btn
+                        color="primary"
+                        :disabled="isImageOcrBusy(image.id)"
+                        icon="mdi-text-recognition"
+                        :loading="ocrImageId === image.id"
+                        size="x-small"
+                        :title="isImageOcrQueued(image.id) ? 'OCR queued' : 'Run OCR'"
+                        variant="text"
+                        @click.stop="runImageOcr(image.id)"
+                      />
+                      <v-btn
+                        v-if="showDevTools"
+                        color="secondary"
+                        icon="mdi-image-search-outline"
+                        :loading="ocrDebugImageId === image.id"
+                        size="x-small"
+                        title="Open OCR Debug Overlay"
+                        variant="text"
+                        @click.stop="openImageOcrDebug(image.id)"
+                      />
+                      <v-btn
+                        color="error"
+                        :disabled="isImageOcrBusy(image.id)"
+                        icon="mdi-delete"
+                        :loading="deletingImageId === image.id"
+                        size="x-small"
+                        :title="
+                          isImageOcrBusy(image.id)
+                            ? 'OCR is queued for this image'
+                            : 'Delete image'
+                        "
+                        variant="text"
+                        @click.stop="confirmDeleteImage(image)"
+                      />
+                    </div>
+                  </div>
+                  <div class="details-image-card__ocr" @click.stop>
+                    <v-btn
+                      class="details-image-card__ocr-toggle"
+                      :class="{
+                        'details-image-card__ocr-toggle--expanded': isOcrExpanded(image.id, index),
+                      }"
+                      density="compact"
+                      :icon="
+                        isOcrExpanded(image.id, index) ? 'mdi-chevron-up' : 'mdi-chevron-down'
+                      "
+                      size="x-small"
+                      :title="
+                        isOcrExpanded(image.id, index) ? 'Hide OCR text' : 'Show OCR text'
+                      "
+                      variant="text"
+                      @click.stop="toggleOcrExpanded(image.id, index)"
+                    />
+                    <transition name="ocr-expand">
+                      <div
+                        v-if="isOcrExpanded(image.id, index)"
+                        class="details-image-card__ocr-body"
+                      >
+                        <div v-if="image.ocrText" class="details-image-card__ocr-text">
+                          {{ image.ocrText }}
+                        </div>
+                        <div v-else class="text-body-2 text-medium-emphasis">
+                          No readable text was detected for this image.
+                        </div>
+                      </div>
+                    </transition>
                   </div>
                 </v-card>
               </div>
@@ -365,7 +494,7 @@
       entity-type="shipment"
       :has-image="selectedImages.length > 0"
       :title="shipmentTitle(selectedShipment)"
-      @image-selected="loadSelectedShipmentImages"
+      @images-selected="handleShipmentImagesSelected"
     />
 
     <ConfirmDialog
@@ -385,53 +514,103 @@
       title="Delete Shipment?"
       @confirm="deleteSelectedShipment"
     >
-      This removes the shipment record. Attached images should be removed first if they are no
-      longer needed.
+      This permanently removes the shipment and all attached shipment images.
+    </ConfirmDialog>
+
+    <ConfirmDialog
+      v-model="discardDetailsConfirm"
+      confirm-text="Discard Changes"
+      title="Discard Unsaved Changes?"
+      @confirm="discardDetailChangesAndClose"
+    >
+      You have unsaved shipment detail changes. Closing now will discard them.
     </ConfirmDialog>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import ShipperSelect from '@/components/ShipperSelect.vue';
 import api from '@/plugins/axios';
+import { toastError } from '@/plugins/vue-toast-notification';
 import { useShipmentsStore } from '@/stores/shipments_store';
+import { useShipperStore } from '@/stores/shipper_store';
 
 type TempImage = MyImageData & { status?: 'temp' };
+type ShipmentOcrJob = {
+  shipmentId: string;
+  imageId: string;
+};
+
+type ShipmentDraft = ReturnType<typeof createEmptyDraft>;
 
 const shipmentStore = useShipmentsStore();
+const shipperStore = useShipperStore();
+const todayFilterValue = new Date().toLocaleDateString('en-CA');
 
-const filters = ref({
-  search: '',
-  from: '',
-  to: '',
-  customer: null as string | null,
-});
+function createDefaultFilters() {
+  return {
+    search: '',
+    from: '',
+    to: todayFilterValue,
+    customer: null as string | null,
+  };
+}
+
+const filters = ref(createDefaultFilters());
 
 const createDialog = ref(false);
 const detailsDialog = ref(false);
 const addImagesDialog = ref(false);
 const deleteImageConfirm = ref(false);
 const deleteShipmentConfirm = ref(false);
+const discardDetailsConfirm = ref(false);
 const savingShipment = ref(false);
 const savingDetails = ref(false);
 const deletingShipment = ref(false);
 const loadingTempImages = ref(false);
 const loadingShipmentImages = ref(false);
 const deletingImageId = ref('');
+const ocrImageId = ref('');
+const ocrDebugImageId = ref('');
+const expandedOcrImageIds = ref<string[]>([]);
+const queuedOcrJobs = ref<ShipmentOcrJob[]>([]);
+const processingOcrQueue = ref(false);
 const galleryOpen = ref(false);
 const galleryIndex = ref(0);
 const selectedShipment = ref<Shipment | null>(null);
 const deleteImageTarget = ref<MyImageData | null>(null);
 const tempImages = ref<TempImage[]>([]);
 const selectedTempImageIds = ref<string[]>([]);
+const draftCarrierBlurred = ref(false);
+const detailCarrierBlurred = ref(false);
+const draftTrackingBlurred = ref(false);
+const detailTrackingBlurred = ref(false);
+const detailTrackingEditing = ref(false);
+const detailTrackingTextarea = ref<{ focus?: () => void } | null>(null);
 let searchDebounceId: ReturnType<typeof setTimeout> | null = null;
 
 const draft = ref(createEmptyDraft());
 const detailDraft = ref(createEmptyDraft());
+
+const draftShippedDate = computed({
+  get: () => splitDatetimeLocal(draft.value.shippedAt).date,
+  set: (date: string) => {
+    const current = splitDatetimeLocal(draft.value.shippedAt);
+    draft.value.shippedAt = joinDatetimeLocal(date, current.time);
+  },
+});
+
+const draftShippedTime = computed({
+  get: () => splitDatetimeLocal(draft.value.shippedAt).time,
+  set: (time: string) => {
+    const current = splitDatetimeLocal(draft.value.shippedAt);
+    draft.value.shippedAt = joinDatetimeLocal(current.date, time);
+  },
+});
 
 const selectedImages = computed(() => {
   if (!selectedShipment.value) return [];
@@ -447,6 +626,49 @@ const shipmentCountLabel = computed(() => {
   const count = shipmentStore.total;
   if (count === 1) return '1 shipment';
   return `${count} shipments`;
+});
+
+const showDevTools = import.meta.env.DEV;
+
+const isSelectedShipmentOcrBusy = computed(() => {
+  if (!selectedShipment.value) return false;
+
+  const selectedShipmentId = selectedShipment.value._id;
+  if (queuedOcrJobs.value.some((job) => job.shipmentId === selectedShipmentId)) {
+    return true;
+  }
+
+  if (!ocrImageId.value) return false;
+  return selectedImages.value.some((image) => image.id === ocrImageId.value);
+});
+
+const hasDetailChanges = computed(() => {
+  if (!selectedShipment.value) return false;
+
+  const currentDraft = JSON.stringify(detailDraft.value);
+  const originalDraft = JSON.stringify(shipmentToDraft(selectedShipment.value));
+  return currentDraft !== originalDraft;
+});
+
+const draftCarrierValidationMessage = computed(() => carrierValidationMessageForDraft(draft.value));
+const detailCarrierValidationMessage = computed(() =>
+  carrierValidationMessageForDraft(detailDraft.value),
+);
+const draftTrackingValidationMessage = computed(() => trackingValidationMessageForDraft(draft.value));
+const detailTrackingValidationMessage = computed(() =>
+  trackingValidationMessageForDraft(detailDraft.value),
+);
+
+const detailsDialogModel = computed({
+  get: () => detailsDialog.value,
+  set: (nextValue: boolean) => {
+    if (nextValue) {
+      detailsDialog.value = true;
+      return;
+    }
+
+    requestCloseDetailsDialog();
+  },
 });
 
 const groupedShipments = computed(() => {
@@ -512,10 +734,30 @@ watch(
   },
 );
 
+watch(
+  () => filters.value.customer,
+  () => {
+    void applyFilters();
+  },
+);
+
+watch(
+  () => filters.value.from,
+  () => {
+    void applyFilters();
+  },
+);
+
+watch(
+  () => filters.value.to,
+  () => {
+    void applyFilters();
+  },
+);
+
 function createEmptyDraft() {
   return {
     shippedAt: toDatetimeLocal(new Date()),
-    title: '',
     customer: null as string | null,
     shipper: null as string | null,
     orderNumber: '',
@@ -534,12 +776,19 @@ async function applyFilters() {
   });
 }
 
+async function clearFilters() {
+  filters.value = createDefaultFilters();
+  await applyFilters();
+}
+
 async function loadMore() {
   await shipmentStore.fetchNextPage();
 }
 
 function openCreateDialog() {
   draft.value = createEmptyDraft();
+  draftCarrierBlurred.value = false;
+  draftTrackingBlurred.value = false;
   selectedTempImageIds.value = [];
   createDialog.value = true;
   void loadTempImages();
@@ -565,9 +814,25 @@ function toggleTempImage(imageId: string) {
 }
 
 async function saveShipment() {
+  draftCarrierBlurred.value = true;
+  if (draftCarrierValidationMessage.value) {
+    toastError(draftCarrierValidationMessage.value);
+    return;
+  }
+
+  draftTrackingBlurred.value = true;
+  if (draftTrackingValidationMessage.value) {
+    toastError(draftTrackingValidationMessage.value);
+    return;
+  }
+
   savingShipment.value = true;
   try {
-    await shipmentStore.create(toShipmentCreate(draft.value), selectedTempImageIds.value);
+    const shipment = await shipmentStore.create(
+      toShipmentCreate(draft.value),
+      selectedTempImageIds.value,
+    );
+    queueShipmentImageOcr(shipment._id, selectedTempImageIds.value);
     createDialog.value = false;
   } finally {
     savingShipment.value = false;
@@ -577,8 +842,37 @@ async function saveShipment() {
 async function openDetails(shipment: Shipment) {
   selectedShipment.value = shipment;
   detailDraft.value = shipmentToDraft(shipment);
+  detailCarrierBlurred.value = false;
+  detailTrackingBlurred.value = false;
+  detailTrackingEditing.value = false;
   detailsDialog.value = true;
   await loadSelectedShipmentImages();
+}
+
+function requestCloseDetailsDialog() {
+  if (savingDetails.value) return;
+  if (hasDetailChanges.value) {
+    discardDetailsConfirm.value = true;
+    return;
+  }
+
+  closeDetailsDialog();
+}
+
+function discardDetailChangesAndClose() {
+  if (selectedShipment.value) {
+    detailDraft.value = shipmentToDraft(selectedShipment.value);
+  }
+
+  detailTrackingEditing.value = false;
+  discardDetailsConfirm.value = false;
+  closeDetailsDialog();
+}
+
+function closeDetailsDialog() {
+  detailsDialog.value = false;
+  discardDetailsConfirm.value = false;
+  detailTrackingEditing.value = false;
 }
 
 async function loadSelectedShipmentImages() {
@@ -591,9 +885,88 @@ async function loadSelectedShipmentImages() {
   }
 }
 
+async function handleShipmentImagesSelected(payload: {
+  images: { imageId: string; url: string; isMain?: boolean }[];
+}) {
+  await loadSelectedShipmentImages();
+  if (selectedShipment.value) {
+    queueShipmentImageOcr(
+      selectedShipment.value._id,
+      payload.images.map((image) => image.imageId),
+    );
+  }
+}
+
+function isImageOcrQueued(imageId: string) {
+  return queuedOcrJobs.value.some((job) => job.imageId === imageId);
+}
+
+function isImageOcrBusy(imageId: string) {
+  return ocrImageId.value === imageId || isImageOcrQueued(imageId);
+}
+
+function queueShipmentImageOcr(shipmentId: string, imageIds: string[]) {
+  const nextQueuedJobs = [...queuedOcrJobs.value];
+  for (const imageId of imageIds) {
+    if (
+      !imageId ||
+      ocrImageId.value === imageId ||
+      nextQueuedJobs.some((job) => job.imageId === imageId)
+    ) {
+      continue;
+    }
+    nextQueuedJobs.push({ shipmentId, imageId });
+  }
+
+  queuedOcrJobs.value = nextQueuedJobs;
+  void processShipmentImageOcrQueue();
+}
+
+async function processShipmentImageOcrQueue() {
+  if (processingOcrQueue.value) return;
+
+  processingOcrQueue.value = true;
+  try {
+    while (queuedOcrJobs.value.length) {
+      const job = queuedOcrJobs.value[0];
+      queuedOcrJobs.value = queuedOcrJobs.value.slice(1);
+      if (!job) continue;
+
+      ocrImageId.value = job.imageId;
+      try {
+        await shipmentStore.rerunImageOcr(job.shipmentId, job.imageId, { silent: true });
+      } catch {
+        // Store shows the failure toast; continue with the rest of the queue.
+      } finally {
+        if (ocrImageId.value === job.imageId) ocrImageId.value = '';
+      }
+    }
+  } finally {
+    processingOcrQueue.value = false;
+  }
+}
+
 function openGallery(index: number) {
   galleryIndex.value = index;
   galleryOpen.value = true;
+}
+
+function imageCardKey(imageId: string, index: number) {
+  return `${selectedShipment.value?._id || 'shipment'}:${imageId}:${index}`;
+}
+
+function isOcrExpanded(imageId: string, index: number) {
+  return expandedOcrImageIds.value.includes(imageCardKey(imageId, index));
+}
+
+function toggleOcrExpanded(imageId: string, index: number) {
+  const cardKey = imageCardKey(imageId, index);
+  if (expandedOcrImageIds.value.includes(cardKey)) {
+    expandedOcrImageIds.value = expandedOcrImageIds.value.filter((id) => id !== cardKey);
+    return;
+  }
+
+  expandedOcrImageIds.value = [...expandedOcrImageIds.value, cardKey];
 }
 
 function showPreviousImage() {
@@ -630,6 +1003,19 @@ function handleGalleryKeydown(event: KeyboardEvent) {
 
 async function saveDetails() {
   if (!selectedShipment.value) return;
+
+  detailCarrierBlurred.value = true;
+  if (detailCarrierValidationMessage.value) {
+    toastError(detailCarrierValidationMessage.value);
+    return;
+  }
+
+  detailTrackingBlurred.value = true;
+  if (detailTrackingValidationMessage.value) {
+    toastError(detailTrackingValidationMessage.value);
+    return;
+  }
+
   savingDetails.value = true;
   try {
     const updated = await shipmentStore.update({
@@ -639,14 +1025,40 @@ async function saveDetails() {
     });
     selectedShipment.value = updated;
     detailDraft.value = shipmentToDraft(updated);
+    detailTrackingEditing.value = false;
   } finally {
     savingDetails.value = false;
   }
 }
 
+async function startDetailTrackingEdit() {
+  detailTrackingEditing.value = true;
+  await nextTick();
+  detailTrackingTextarea.value?.focus?.();
+}
+
+function finishDetailTrackingEdit() {
+  detailTrackingBlurred.value = true;
+  detailTrackingEditing.value = false;
+}
+
 function confirmDeleteImage(image: MyImageData) {
+  if (isImageOcrBusy(image.id)) {
+    toastError('Wait for queued OCR to finish before deleting this image');
+    return;
+  }
+
   deleteImageTarget.value = image;
   deleteImageConfirm.value = true;
+}
+
+function confirmDeleteShipment() {
+  if (isSelectedShipmentOcrBusy.value) {
+    toastError('Wait for queued OCR to finish before deleting this shipment');
+    return;
+  }
+
+  deleteShipmentConfirm.value = true;
 }
 
 async function deleteConfirmedImage() {
@@ -661,14 +1073,61 @@ async function deleteConfirmedImage() {
   }
 }
 
+async function runImageOcr(imageId: string) {
+  if (!selectedShipment.value || !imageId || isImageOcrBusy(imageId)) return;
+
+  ocrImageId.value = imageId;
+
+  try {
+    await shipmentStore.rerunImageOcr(selectedShipment.value._id, imageId);
+  } finally {
+    ocrImageId.value = '';
+  }
+}
+
+async function openImageOcrDebug(imageId: string) {
+  if (!showDevTools || !selectedShipment.value || !imageId || ocrDebugImageId.value) return;
+
+  ocrDebugImageId.value = imageId;
+
+  try {
+    const { data } = await api.post<Blob>(
+      `/images/entities/shipment/${selectedShipment.value._id}/images/${imageId}/ocr/debug`,
+      undefined,
+      {
+        responseType: 'blob',
+      },
+    );
+
+    const blobUrl = URL.createObjectURL(data);
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    window.setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+    }, 60_000);
+  } catch (error) {
+    toastError('Failed to open OCR debug overlay');
+    throw error;
+  } finally {
+    ocrDebugImageId.value = '';
+  }
+}
+
 async function deleteSelectedShipment() {
   if (!selectedShipment.value) return;
+  if (isSelectedShipmentOcrBusy.value) {
+    toastError('Wait for queued OCR to finish before deleting this shipment');
+    return;
+  }
+
+  const shipmentId = selectedShipment.value._id;
   deletingShipment.value = true;
   try {
-    await shipmentStore.remove(selectedShipment.value._id);
+    await shipmentStore.remove(shipmentId);
+    queuedOcrJobs.value = queuedOcrJobs.value.filter((job) => job.shipmentId !== shipmentId);
     deleteShipmentConfirm.value = false;
     detailsDialog.value = false;
     selectedShipment.value = null;
+    expandedOcrImageIds.value = [];
   } finally {
     deletingShipment.value = false;
   }
@@ -677,7 +1136,6 @@ async function deleteSelectedShipment() {
 function toShipmentCreate(value: ReturnType<typeof createEmptyDraft>): ShipmentCreate {
   return {
     shippedAt: new Date(value.shippedAt).toISOString(),
-    title: value.title,
     customer: value.customer,
     shipper: value.shipper,
     orderNumber: value.orderNumber,
@@ -691,7 +1149,6 @@ function toShipmentCreate(value: ReturnType<typeof createEmptyDraft>): ShipmentC
 function shipmentToDraft(shipment: Shipment) {
   return {
     shippedAt: toDatetimeLocal(new Date(shipment.shippedAt)),
-    title: shipment.title || '',
     customer:
       typeof shipment.customer === 'string' ? shipment.customer : shipment.customer?._id || null,
     shipper:
@@ -704,7 +1161,6 @@ function shipmentToDraft(shipment: Shipment) {
 }
 
 function shipmentTitle(shipment: Shipment) {
-  if (shipment.title) return shipment.title;
   if (shipment.orderNumber) return `Order ${shipment.orderNumber}`;
   return `Shipment ${formatShipmentTime(shipment.shippedAt)}`;
 }
@@ -716,6 +1172,114 @@ function customerName(shipment: Shipment) {
 function shipperName(shipment: Shipment) {
   if (typeof shipment.shipper === 'object' && shipment.shipper) return shipment.shipper.name;
   return shipment.carrier || '';
+}
+
+function shipperNameForDraft(draftValue: ShipmentDraft) {
+  if (draftValue.carrier) return draftValue.carrier;
+  if (!draftValue.shipper) return '';
+
+  const matchingShipper = shipperStore.shippers.find(
+    (shipper) => shipper._id === draftValue.shipper,
+  );
+  return matchingShipper?.name || '';
+}
+
+function carrierValidationMessageForDraft(draftValue: ShipmentDraft) {
+  return shipperNameForDraft(draftValue) ? '' : 'Carrier is required.';
+}
+
+function normalizeCarrierName(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function parseTrackingNumbers(value: string | null | undefined) {
+  return (value || '')
+    .split(/\r?\n/)
+    .map((trackingNumber) => trackingNumber.trim())
+    .filter(Boolean);
+}
+
+function trackingNumbersForDraft(draftValue: ShipmentDraft) {
+  return parseTrackingNumbers(draftValue.trackingNumber);
+}
+
+function trackingNumbersForShipment(shipment: Shipment) {
+  return parseTrackingNumbers(shipment.trackingNumber);
+}
+
+function trackingValidationMessageForNumber(carrierName: string, trackingNumber: string) {
+  const normalizedCarrier = normalizeCarrierName(carrierName);
+  if (!normalizedCarrier || !trackingNumber) return '';
+
+  const normalizedTrackingNumber = trackingNumber.replace(/[\s-]+/g, '');
+
+  if (normalizedCarrier.includes('ups') || normalizedCarrier.includes('united parcel')) {
+    if (/^(1Z[0-9A-Z]{16}|[0-9A-Z]{9,26})$/i.test(normalizedTrackingNumber)) return '';
+    return `UPS tracking number ${trackingNumber} should look like 1Z followed by 16 letters or numbers.`;
+  }
+
+  if (normalizedCarrier.includes('usps') || normalizedCarrier.includes('postal')) {
+    if (/^(\d{20,22}|[A-Z]{2}\d{9}[A-Z]{2})$/i.test(normalizedTrackingNumber)) return '';
+    return `USPS tracking number ${trackingNumber} should be 20-22 digits or use the USPS international format.`;
+  }
+
+  if (normalizedCarrier.includes('fedex') || normalizedCarrier.includes('federal express')) {
+    if (/^(\d{12}|\d{15}|\d{20}|\d{22})$/.test(normalizedTrackingNumber)) return '';
+    return `FedEx tracking number ${trackingNumber} should be 12, 15, 20, or 22 digits.`;
+  }
+
+  return '';
+}
+
+function trackingValidationMessageForDraft(draftValue: ShipmentDraft) {
+  const carrierName = normalizeCarrierName(shipperNameForDraft(draftValue));
+  if (!carrierName) return '';
+
+  for (const trackingNumber of trackingNumbersForDraft(draftValue)) {
+    const message = trackingValidationMessageForNumber(carrierName, trackingNumber);
+    if (message) return message;
+  }
+
+  return '';
+}
+
+function trackingUrlForCarrier(carrier: string, trackingNumber: string) {
+  const normalizedCarrier = normalizeCarrierName(carrier);
+  const normalizedTrackingNumber = trackingNumber.trim();
+  if (!normalizedCarrier || !normalizedTrackingNumber) return '';
+
+  const encodedTrackingNumber = encodeURIComponent(normalizedTrackingNumber);
+
+  if (normalizedCarrier.includes('ups') || normalizedCarrier.includes('united parcel')) {
+    return `https://www.ups.com/track?tracknum=${encodedTrackingNumber}`;
+  }
+
+  if (normalizedCarrier.includes('usps') || normalizedCarrier.includes('postal')) {
+    return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodedTrackingNumber}`;
+  }
+
+  if (normalizedCarrier.includes('fedex') || normalizedCarrier.includes('federal express')) {
+    return `https://www.fedex.com/fedextrack/?trknbr=${encodedTrackingNumber}`;
+  }
+
+  return '';
+}
+
+function trackingUrlForShipment(shipment: Shipment) {
+  const [firstTrackingNumber] = trackingNumbersForShipment(shipment);
+  return trackingUrlForCarrier(shipperName(shipment), firstTrackingNumber || '');
+}
+
+function openTrackingLink(carrier: string, trackingNumber: string) {
+  const url = trackingUrlForCarrier(carrier, trackingNumber);
+  if (!url) return;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function openTrackingLinkForShipment(shipment: Shipment) {
+  const [firstTrackingNumber] = trackingNumbersForShipment(shipment);
+  if (!firstTrackingNumber) return;
+  openTrackingLink(shipperName(shipment), firstTrackingNumber);
 }
 
 function imageCount(shipment: Shipment) {
@@ -747,6 +1311,19 @@ function toDatetimeLocal(date: Date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
     date.getHours(),
   )}:${pad(date.getMinutes())}`;
+}
+
+function splitDatetimeLocal(value: string) {
+  const [date = '', time = ''] = value.split('T');
+  return {
+    date,
+    time: time.slice(0, 5),
+  };
+}
+
+function joinDatetimeLocal(date: string, time: string) {
+  if (!date || !time) return '';
+  return `${date}T${time}`;
 }
 
 function startOfDayIso(value: string) {
@@ -801,6 +1378,76 @@ function endOfDayIso(value: string) {
   align-items: center;
 }
 
+.details-image-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.details-image-card__meta {
+  width: 100%;
+  padding: 6px 8px 0;
+}
+
+.details-image-card__preview {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.details-image-card__ocr {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0 6px 6px;
+}
+
+.details-image-card__ocr-toggle {
+  min-width: 24px;
+  transition: transform 0.18s ease;
+}
+
+.details-image-card__ocr-toggle--expanded {
+  transform: rotate(180deg);
+}
+
+.details-image-card__ocr-body {
+  width: 100%;
+  padding: 4px 2px 2px;
+  transform-origin: top;
+}
+
+.details-image-card__ocr-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ocr-expand-enter-active,
+.ocr-expand-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    max-height 0.22s ease;
+  overflow: hidden;
+}
+
+.ocr-expand-enter-from,
+.ocr-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scaleY(0.98);
+  max-height: 0;
+}
+
+.ocr-expand-enter-to,
+.ocr-expand-leave-from {
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+  max-height: 320px;
+}
+
 .shipment-batch__header,
 .temp-gallery-header {
   justify-content: space-between;
@@ -809,9 +1456,38 @@ function endOfDayIso(value: string) {
 
 .shipment-filters {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 160px 160px minmax(220px, 320px) auto;
+  grid-template-columns: minmax(220px, 1fr) 160px 160px minmax(220px, 320px);
   gap: 12px;
   align-items: start;
+}
+
+.create-shipment-fields {
+  margin-inline: -6px;
+}
+
+.create-shipment-fields > .v-col {
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-inline: 6px;
+}
+
+.search-details {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 18px;
+  padding-top: 2px;
+}
+
+.clear-filters-hint {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 300;
+  color: #1e88e5;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
 }
 
 .loading-block {
@@ -906,6 +1582,52 @@ function endOfDayIso(value: string) {
   color: rgba(var(--v-theme-on-surface), 0.68);
 }
 
+.shipment-tracking-link {
+  color: rgb(var(--v-theme-primary));
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tracking-field__display {
+  width: 100%;
+  min-height: 84px;
+  padding: 18px 16px 10px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
+  background: rgb(var(--v-theme-surface));
+  text-align: left;
+}
+
+.tracking-field__display:hover {
+  border-color: rgba(var(--v-theme-on-surface), 0.64);
+}
+
+.tracking-field__label {
+  margin-bottom: 8px;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.tracking-field__content {
+  display: grid;
+  gap: 6px;
+}
+
+.tracking-field__placeholder {
+  color: rgba(var(--v-theme-on-surface), 0.48);
+}
+
+.tracking-field__hint {
+  margin-top: 4px;
+  color: rgb(var(--v-theme-error));
+}
+
+.tracking-links__text {
+  color: rgba(var(--v-theme-on-surface), 0.78);
+}
+
 .temp-image-card {
   cursor: pointer;
 }
@@ -941,16 +1663,18 @@ function endOfDayIso(value: string) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
+  align-items: start;
 }
 
 .details-image-card {
   cursor: pointer;
+  align-self: start;
 }
 
 .details-image-card__footer {
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 2px 8px 6px;
 }
 
 .gallery-dialog {
