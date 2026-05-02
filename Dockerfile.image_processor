@@ -43,5 +43,5 @@ COPY --from=image-processor-builder /app/apps/image_processor/assets /app/apps/i
 COPY --from=image-processor-builder /app/apps/image_processor/scripts /app/apps/image_processor/scripts
 ENV NODE_ENV=production
 EXPOSE 3000
-ENTRYPOINT ["bash", "/app/apps/image_processor/scripts/bootstrap_rembg.sh"]
+ENTRYPOINT ["bash", "/app/apps/image_processor/scripts/bootstrap_image_processor.sh"]
 CMD ["node", "/app/apps/image_processor/dist/index.js"]
