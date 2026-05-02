@@ -7,6 +7,7 @@ import type { MaterialDoc } from '../material/material_model.js';
 import type { PartDoc } from '../part/part_model.js';
 import type { PartNoteDoc } from '../part_note/part_note_model.js';
 import type { EmailReportDoc } from '../report/report_model.js';
+import type { ShipmentDoc } from '../shipment/shipment_model.js';
 import type { ShipperDoc } from '../shipper/shipper_model.js';
 import type { SupplierDoc } from '../supplier/supplier_model.js';
 import type { ToolDoc, ToolPopulatedDoc } from '../tool/tool_model.js';
@@ -294,6 +295,14 @@ async function addShipperAudit(
   await addAudit('shipper', oldShipper, newShipper, deviceId);
 }
 
+async function addShipmentAudit(
+  oldShipment: ShipmentDoc | null,
+  newShipment: ShipmentDoc | null,
+  deviceId: string,
+): Promise<void> {
+  await addAudit('shipment', oldShipment, newShipment, deviceId);
+}
+
 async function addVendorAudit(
   oldVendor: VendorDoc | null,
   newVendor: VendorDoc | null,
@@ -333,6 +342,7 @@ export default {
   addCustomerAudit,
   addSupplierAudit,
   addShipperAudit,
+  addShipmentAudit,
   addVendorAudit,
   addReportAudit,
   addPartNoteAudit,

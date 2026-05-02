@@ -2,6 +2,7 @@ import { isValidObjectId } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import { getEntityIdOrNull, normalizeObjectIdArray } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
+import AuditService from '../audit/audit_service.js';
 import Customer from '../customer/customer_model.js';
 import Shipper from '../shipper/shipper_model.js';
 import Shipment, { type ShipmentDoc } from './shipment_model.js';
@@ -89,27 +90,36 @@ async function findById(id: string): Promise<ShipmentDoc | null> {
   return Shipment.findById(id).populate('customer').populate('shipper');
 }
 
-async function create(data: ShipmentCreate, _deviceId: string): Promise<ShipmentDoc> {
+async function create(data: ShipmentCreate, deviceId: string): Promise<ShipmentDoc> {
   const shipment = new Shipment(toPayload(data));
   await shipment.save();
   const populated = await findById(shipment._id.toString());
+  await AuditService.addShipmentAudit(null, populated ?? shipment, deviceId);
   emit('shipment', populated ?? shipment);
   return populated ?? shipment;
 }
 
-async function update(data: ShipmentUpdate, _deviceId: string): Promise<ShipmentDoc> {
+async function update(data: ShipmentUpdate, deviceId: string): Promise<ShipmentDoc> {
+  const oldShipment = await findById(data._id);
+  if (!oldShipment) throw new Error(`Missing shipment document id: ${data._id}`);
+
   const updated = await Shipment.findByIdAndUpdate(data._id, toPayload(data), {
     returnDocument: 'after',
   }).populate('customer');
   await updated?.populate('shipper');
   if (!updated) throw new Error(`Missing shipment document id: ${data._id}`);
+  await AuditService.addShipmentAudit(oldShipment, updated, deviceId);
   emit('shipment', updated);
   return updated;
 }
 
-async function remove(id: string, _deviceId: string): Promise<boolean> {
+async function remove(id: string, deviceId: string): Promise<boolean> {
+  const oldShipment = await findById(id);
   const result = await Shipment.findByIdAndDelete(id);
-  if (result) emit('shipmentDeleted', { id });
+  if (result) {
+    await AuditService.addShipmentAudit(oldShipment, null, deviceId);
+    emit('shipmentDeleted', { id });
+  }
   return Boolean(result);
 }
 

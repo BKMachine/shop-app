@@ -333,6 +333,7 @@ function getEntityLabel(type: Audit['type']) {
     tool: 'Tool',
     material: 'Material',
     part: 'Part',
+    shipment: 'Shipment',
     image: 'Image',
     document: 'Document',
     customer: 'Customer',
@@ -484,6 +485,7 @@ function getAuditRoute(audit: Audit): RouteLocationRaw | undefined {
   const entityType = getStringField(record, 'entityType');
   const entityId = getStringField(record, 'entityId');
 
+  if (audit.type === 'shipment') return { name: 'shipments' };
   if (!id) return undefined;
   if (audit.type === 'tool') return { name: 'viewTool', params: { id } };
   if (audit.type === 'part') return { name: 'viewPart', params: { id } };
@@ -834,6 +836,11 @@ function getJsonLineClass(line: AuditJsonLine) {
   --audit-theme-soft: rgba(38, 166, 154, 0.12);
 }
 
+.audit-theme-shipment {
+  --audit-theme-color: #2e7d32;
+  --audit-theme-soft: rgba(46, 125, 50, 0.12);
+}
+
 .audit-theme-image {
   --audit-theme-color: #00897b;
   --audit-theme-soft: rgba(0, 137, 123, 0.12);
@@ -881,6 +888,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 
 .audit-card.audit-theme-tool,
 .audit-card.audit-theme-part,
+.audit-card.audit-theme-shipment,
 .audit-card.audit-theme-image,
 .audit-card.audit-theme-document,
 .audit-card.audit-theme-material,
@@ -895,6 +903,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 
 .audit-icon.audit-theme-tool,
 .audit-icon.audit-theme-part,
+.audit-icon.audit-theme-shipment,
 .audit-icon.audit-theme-image,
 .audit-icon.audit-theme-document,
 .audit-icon.audit-theme-material,
