@@ -100,13 +100,13 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { uiIcons } from '@/lib/uiIcons';
 import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
 import SettingsReport from '@/components/settings/SettingsReport.vue';
 import ShipperSettings from '@/components/settings/SettingsShipper.vue';
 import SupplierSettings from '@/components/settings/SettingsSupplier.vue';
 import ToolCategorySettings from '@/components/settings/SettingsToolCategories.vue';
 import VendorSettings from '@/components/settings/SettingsVendor.vue';
+import { uiIcons } from '@/lib/uiIcons';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { useFolderHelperState } from '@/state/folderHelper';
 
