@@ -83,6 +83,11 @@ function shouldTryPaddleOcr() {
 }
 
 function getDefaultPaddleOcrVenvDir() {
+  const sharedVenvRootDir = process.env.IMAGE_PROCESSOR_VENVS_DIR?.trim();
+  if (sharedVenvRootDir) {
+    return path.resolve(sharedVenvRootDir, '.venv-ocr');
+  }
+
   return path.resolve(serviceDir, '../../.venv-ocr');
 }
 

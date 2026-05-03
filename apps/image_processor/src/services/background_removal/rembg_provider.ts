@@ -22,6 +22,11 @@ const rembgModelCacheDir = getImageProcessorModelCacheDir('rembg');
 const rembgScriptPath = path.resolve(serviceDir, '../../../scripts/remove_background_rembg.py');
 
 function getDefaultRembgVenvDir() {
+  const sharedVenvRootDir = process.env.IMAGE_PROCESSOR_VENVS_DIR?.trim();
+  if (sharedVenvRootDir) {
+    return path.resolve(sharedVenvRootDir, '.venv-rembg');
+  }
+
   return path.resolve(serviceDir, '../../../.venv-rembg');
 }
 

@@ -3,8 +3,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-VENV_DIR="${OCR_VENV_DIR:-${APP_DIR}/.venv-ocr}"
+
+get_default_venv_dir() {
+  if [[ -n "${IMAGE_PROCESSOR_VENVS_DIR:-}" ]]; then
+    echo "${IMAGE_PROCESSOR_VENVS_DIR%/}/.venv-ocr"
+    return
+  fi
+
+  echo "${APP_DIR}/.venv-ocr"
+}
+
+VENV_DIR="${OCR_VENV_DIR:-$(get_default_venv_dir)}"
 PYTHON_BIN="${VENV_DIR}/bin/python"
+created_venv=0
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 is required to install OCR dependencies." >&2
@@ -20,6 +31,17 @@ if [[ ! -x "${PYTHON_BIN}" ]]; then
     echo "  sudo apt install python3.12-venv" >&2
     exit 1
   fi
+
+  created_venv=1
+fi
+
+if "${PYTHON_BIN}" -c "import paddleocr" >/dev/null 2>&1; then
+  echo "OCR dependencies already available in ${VENV_DIR}."
+  exit 0
+fi
+
+if [[ "${created_venv}" == "1" ]]; then
+  "${PYTHON_BIN}" -m pip install --upgrade pip
 fi
 
 "${PYTHON_BIN}" -m pip install "paddleocr==3.5.0" "paddlepaddle==3.2.2" "numpy<2.4,>=1.24"

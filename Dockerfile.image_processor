@@ -36,12 +36,23 @@ RUN pnpm deploy --filter=image_processor --prod /app/deploy/image_processor
 
 FROM node:22-slim AS runner
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  libgl1 \
+  libglib2.0-0 \
+  libgomp1 \
+  python3 \
+  python3-venv \
+  && rm -rf /var/lib/apt/lists/*
 COPY --from=image-processor-deploy /app/deploy/image_processor/node_modules /app/apps/image_processor/node_modules
 COPY --from=image-processor-builder /app/apps/image_processor/dist /app/apps/image_processor/dist
 COPY --from=image-processor-builder /app/apps/image_processor/assets /app/apps/image_processor/assets
 COPY --from=image-processor-builder /app/apps/image_processor/scripts /app/apps/image_processor/scripts
-ENV IMAGE_PROCESSOR_VENVS_DIR=/app/apps/image_processor/.venvs
+ENV IMAGE_PROCESSOR_VENVS_DIR=/app/apps/image_processor/.venv
+ENV REMBG_VENV_DIR=/app/apps/image_processor/.venv/.venv-rembg
+ENV OCR_VENV_DIR=/app/apps/image_processor/.venv/.venv-ocr
+ENV XDG_CACHE_HOME=/app/data/cache
+ENV HF_HOME=/app/data/cache/huggingface
+ENV PADDLE_HOME=/app/data/cache/paddle
 ENV NODE_ENV=production
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=10s \
