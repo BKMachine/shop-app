@@ -19,6 +19,10 @@ app.use(
 app.use(morgan(format, { stream: logger.stream }));
 app.use(express.json());
 
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 app.use('/api', api);
 
 export default app;
