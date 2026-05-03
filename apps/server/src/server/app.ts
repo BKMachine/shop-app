@@ -29,6 +29,10 @@ app.use((req, _res, next) => {
 const wwwDir = path.join(serverRootDir, '../', 'www', 'dist');
 const downloadsDir = path.join(serverRootDir, 'public', 'downloads');
 
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 app.use('/api', api);
 app.use('/images', express.static(imageDir));
 app.use('/documents', express.static(documentDir));
