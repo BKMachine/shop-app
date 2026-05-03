@@ -1,6 +1,14 @@
 import { type InfluxDBClient, Point } from '@influxdata/influxdb3-client';
 import machines from '../machines/index.js';
 
+function toPercent(numerator: number, denominator: number): number {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) {
+    return 0;
+  }
+
+  return Math.round(((numerator / denominator) * 100 + Number.EPSILON) * 100) / 100;
+}
+
 export function storePerformance(influx: InfluxDBClient, database: string): void {
   let running = 0;
   let notRunning = 0;
@@ -16,11 +24,8 @@ export function storePerformance(influx: InfluxDBClient, database: string): void
     .setTimestamp(new Date())
     .setIntegerField('running', running)
     .setIntegerField('notRunning', notRunning)
-    .setFloatField('percent', Math.round(((running / total) * 100 + Number.EPSILON) * 100) / 100)
-    .setFloatField(
-      'totalPercent',
-      Math.round(((running / machines.size) * 100 + Number.EPSILON) * 100) / 100,
-    )
+    .setFloatField('percent', toPercent(running, total))
+    .setFloatField('totalPercent', toPercent(running, machines.size))
     .setIntegerField('machineCount', machines.size);
 
   influx.write(point, database);
