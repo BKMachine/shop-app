@@ -41,7 +41,10 @@ COPY --from=image-processor-deploy /app/deploy/image_processor/node_modules /app
 COPY --from=image-processor-builder /app/apps/image_processor/dist /app/apps/image_processor/dist
 COPY --from=image-processor-builder /app/apps/image_processor/assets /app/apps/image_processor/assets
 COPY --from=image-processor-builder /app/apps/image_processor/scripts /app/apps/image_processor/scripts
+ENV IMAGE_PROCESSOR_VENVS_DIR=/app/apps/image_processor/.venvs
 ENV NODE_ENV=production
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=10s \
+  CMD node -e "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 ENTRYPOINT ["bash", "/app/apps/image_processor/scripts/bootstrap_image_processor.sh"]
 CMD ["node", "/app/apps/image_processor/dist/index.js"]
