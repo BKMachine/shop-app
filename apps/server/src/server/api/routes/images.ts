@@ -140,6 +140,7 @@ type RouteImage = {
   relPath: string;
   createdAt: Date;
   ocrText?: string;
+  trackingNumber?: string;
 };
 
 type PartMediaUpdate = Omit<Part, 'customer' | 'material' | 'imageIds' | 'documentIds'> & {
@@ -160,6 +161,7 @@ function serializeImage(image: unknown, isMain = false): MyImageData {
     createdAt: routeImage.createdAt.toISOString(),
     isMain,
     ocrText: routeImage.ocrText || '',
+    trackingNumber: routeImage.trackingNumber || '',
   };
 }
 
@@ -609,10 +611,19 @@ router.post(
         {
           ...normalizeImageUpdate(image),
           ocrText: ocrResult.text.trim(),
+          trackingNumber: ocrResult.trackingNumber?.trim() || '',
         },
         req.deviceId,
       );
       if (!updatedImage) return next(new HttpError(500, 'Failed to persist OCR text'));
+
+      if (ocrResult.trackingNumber?.trim()) {
+        await ShipmentService.appendTrackingNumber(
+          entityId,
+          ocrResult.trackingNumber.trim(),
+          req.deviceId,
+        );
+      }
 
       res.status(200).json(serializeImage(updatedImage));
     } catch (err) {
@@ -689,10 +700,12 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
     const newRelPath = path.relative(imageDir, destPath).replace(/\\/g, '/');
 
     let ocrText = '';
+    let trackingNumber = '';
     if (data.entityType === 'shipment' && !data.skipOcr) {
       try {
         const ocrResult = await ocrImage(destPath);
         ocrText = ocrResult.text.trim();
+        trackingNumber = ocrResult.trackingNumber?.trim() || '';
       } catch (error) {
         logger.warn(
           `OCR failed for attached image ${id}: ${error instanceof Error ? error.message : String(error)}`,
@@ -704,12 +717,17 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
       ...normalizeImageUpdate(image),
       relPath: newRelPath,
       ocrText,
+      trackingNumber,
       status: 'attached',
       entityType: data.entityType,
       entityId: data.entityId,
     };
     const updatedImage = await ImageService.update(imageUpdate, req.deviceId);
     if (!updatedImage) return next(new HttpError(500, 'Failed to persist attached image'));
+
+    if (data.entityType === 'shipment' && trackingNumber) {
+      await ShipmentService.appendTrackingNumber(data.entityId, trackingNumber, req.deviceId);
+    }
 
     // Update part's imageIds array if entity is a part
     if (data.entityType === 'part') {

@@ -212,8 +212,12 @@ export const useShipmentsStore = defineStore('shipments', () => {
 
   function upsertShipment(shipment: Shipment) {
     const index = _shipments.value.findIndex((candidate) => candidate._id === shipment._id);
-    if (index > -1) _shipments.value[index] = shipment;
-    else _shipments.value.unshift(shipment);
+    if (index > -1) {
+      Object.assign(_shipments.value[index], shipment);
+      return;
+    }
+
+    _shipments.value.unshift(shipment);
   }
 
   socket.on('shipment', (shipment: Shipment) => {

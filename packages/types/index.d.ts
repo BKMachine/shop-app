@@ -46,6 +46,7 @@ declare global {
     createdAt: string;
     isMain?: boolean;
     ocrText?: string;
+    trackingNumber?: string;
   }
 
   interface MyDocumentData {

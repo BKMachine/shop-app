@@ -262,6 +262,9 @@ router.post('/ocr/debug', upload.single('image'), async (req, res, next) => {
       const overlay = await renderTextFromImageDebugOverlay(image, debugResult);
       res.setHeader('Content-Type', 'image/png');
       res.setHeader('X-Ocr-Selected-Source', debugResult.selectedSource);
+      if (debugResult.selectedResult.trackingNumber) {
+        res.setHeader('X-Ocr-Tracking-Number', debugResult.selectedResult.trackingNumber);
+      }
       if (debugResult.detectedLabelRegion) {
         res.setHeader(
           'X-Ocr-Detected-Label-Region',

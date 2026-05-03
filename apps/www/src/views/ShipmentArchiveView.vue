@@ -403,10 +403,29 @@
                         v-if="isOcrExpanded(image.id, index)"
                         class="details-image-card__ocr-body"
                       >
+                        <div v-if="image.trackingNumber" class="details-image-card__tracking">
+                          <div class="details-image-card__tracking-label">Tracking</div>
+                          <button
+                            type="button"
+                            class="details-image-card__tracking-value"
+                            :class="{
+                              'shipment-tracking-link': trackingUrlForCarrier(
+                                shipperName(selectedShipment),
+                                image.trackingNumber,
+                              ),
+                            }"
+                            @click.stop="openTrackingLink(shipperName(selectedShipment), image.trackingNumber)"
+                          >
+                            {{ image.trackingNumber }}
+                          </button>
+                        </div>
                         <div v-if="image.ocrText" class="details-image-card__ocr-text">
                           {{ image.ocrText }}
                         </div>
-                        <div v-else class="text-body-2 text-medium-emphasis">
+                        <div
+                          v-else-if="!image.trackingNumber"
+                          class="text-body-2 text-medium-emphasis"
+                        >
                           No readable text was detected for this image.
                         </div>
                       </div>
@@ -713,6 +732,19 @@ watch(galleryOpen, (isOpen) => {
     galleryIndex.value = 0;
   }
 });
+
+watch(
+  () => selectedShipment.value?.trackingNumber || '',
+  (nextTrackingNumber, previousTrackingNumber) => {
+    if (!detailsDialog.value || detailTrackingEditing.value) return;
+    if (detailDraft.value.trackingNumber !== previousTrackingNumber) return;
+
+    detailDraft.value = {
+      ...detailDraft.value,
+      trackingNumber: nextTrackingNumber,
+    };
+  },
+);
 
 watch(
   () => filters.value.search,
@@ -1418,6 +1450,27 @@ function endOfDayIso(value: string) {
   width: 100%;
   padding: 4px 2px 2px;
   transform-origin: top;
+}
+
+.details-image-card__tracking {
+  margin-bottom: 10px;
+}
+
+.details-image-card__tracking-label {
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  font-size: 0.75rem;
+  line-height: 1;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.details-image-card__tracking-value {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .details-image-card__ocr-text {

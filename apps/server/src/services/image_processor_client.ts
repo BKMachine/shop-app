@@ -18,6 +18,7 @@ type BinaryResponse = {
 type OcrResponse = {
   text: string;
   confidence: number;
+  trackingNumber?: string;
 };
 
 type ImageProcessorErrorPayload = {

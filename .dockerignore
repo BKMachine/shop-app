@@ -5,6 +5,7 @@
 .editorconfig
 .turbo
 .vscode
+.codex
 README.md
 node_modules
 Dockerfile

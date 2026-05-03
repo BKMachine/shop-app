@@ -4,6 +4,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+load_app_env() {
+  local env_file="${APP_DIR}/.env"
+
+  if [[ ! -f "${env_file}" ]]; then
+    return
+  fi
+
+  set -a
+  # shellcheck disable=SC1090
+  source "${env_file}"
+  set +a
+}
+
+load_app_env
+
 get_default_venv_dir() {
   if [[ -n "${IMAGE_PROCESSOR_VENVS_DIR:-}" ]]; then
     echo "${IMAGE_PROCESSOR_VENVS_DIR%/}/.venv-rembg"
