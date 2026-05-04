@@ -7,6 +7,9 @@
       </div>
 
       <div class="header-actions">
+        <v-btn prepend-icon="mdi-printer-outline" variant="outlined" @click="openQtyLabelDialog">
+          Print Qty Label
+        </v-btn>
         <v-btn color="primary" prepend-icon="mdi-truck-check-outline" @click="openCreateDialog">
           New Shipment
         </v-btn>
@@ -246,6 +249,107 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="qtyLabelDialog" max-width="860" scrollable>
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          Print Qty Label
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" @click="qtyLabelDialog = false" />
+        </v-card-title>
+        <v-divider />
+        <v-card-text>
+          <v-row class="create-shipment-fields" no-gutters>
+            <v-col cols="12" md="6">
+              <v-text-field v-model="qtyLabelDraft.title" hide-details label="Title" />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field v-model="qtyLabelDraft.subtitle" hide-details label="Subtitle" />
+            </v-col>
+          </v-row>
+
+          <div class="shipment-qty-label__header">
+            <div>
+              <h3 class="text-subtitle-1">Rows</h3>
+              <p class="text-body-2 text-medium-emphasis">
+                Fill the qty and item rows you want on the 4x6 thermal label.
+              </p>
+            </div>
+            <v-btn prepend-icon="mdi-plus" size="small" variant="text" @click="addQtyLabelRow">
+              Add Row
+            </v-btn>
+          </div>
+
+          <div class="shipment-qty-label__rows">
+            <div
+              v-for="(row, index) in qtyLabelDraft.rows"
+              :key="`shipment-qty-row-${index}`"
+              class="shipment-qty-label__row mb-1"
+            >
+              <v-text-field
+                class="shipment-qty-label__qty"
+                hide-details
+                inputmode="numeric"
+                label="Qty"
+                :model-value="row.qty"
+                pattern="[0-9]*"
+                @update:model-value="updateQtyLabelRowQty(row, $event)"
+              />
+              <v-combobox
+                class="shipment-qty-label__item"
+                clearable
+                hide-details
+                :items="qtyLabelPartOptions(row.id)"
+                label="Item"
+                :loading="Boolean(qtyLabelSearchLoadingByRowId[row.id])"
+                :model-value="row.item"
+                no-filter
+                placeholder="Search parts by part number or description"
+                @click:clear="updateQtyLabelRowItem(row, null)"
+                @update:model-value="updateQtyLabelRowItem(row, $event)"
+                @update:search="updateQtyLabelRowSearch(row.id, $event)"
+              />
+              <v-btn
+                :disabled="qtyLabelDraft.rows.length <= 1"
+                icon="mdi-delete-outline"
+                size="small"
+                variant="text"
+                @click="removeQtyLabelRow(index)"
+              />
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <div class="text-body-2 text-medium-emphasis">
+            {{ qtyLabelPrintableRows.length }}
+            row{{ qtyLabelPrintableRows.length === 1 ? '' : 's' }}
+            ready
+          </div>
+          <div v-if="qtyLabelIncompleteRows.length" class="text-body-2 text-error ml-3">
+            Complete qty and item for every started row.
+          </div>
+          <div v-else-if="qtyLabelDuplicateRows.length" class="text-body-2 text-error ml-3">
+            Each item can only appear on one row.
+          </div>
+          <v-spacer />
+          <v-btn variant="text" @click="qtyLabelDialog = false">Cancel</v-btn>
+          <v-btn
+            color="primary"
+            :disabled="
+              !qtyLabelPrintableRows.length ||
+              qtyLabelIncompleteRows.length > 0 ||
+              qtyLabelDuplicateRows.length > 0 ||
+              printingQtyLabel
+            "
+            :loading="printingQtyLabel"
+            prepend-icon="mdi-printer-outline"
+            @click="printQtyLabel"
+          >
+            Print Label
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="detailsDialogModel" fullscreen>
       <v-card v-if="selectedShipment" class="details-dialog">
         <v-toolbar density="comfortable">
@@ -406,7 +510,6 @@
                         <div v-if="image.trackingNumber" class="details-image-card__tracking">
                           <div class="details-image-card__tracking-label">Tracking</div>
                           <button
-                            type="button"
                             class="details-image-card__tracking-value"
                             :class="{
                               'shipment-tracking-link': trackingUrlForCarrier(
@@ -414,6 +517,7 @@
                                 image.trackingNumber,
                               ),
                             }"
+                            type="button"
                             @click.stop="openTrackingLink(shipperName(selectedShipment), image.trackingNumber)"
                           >
                             {{ image.trackingNumber }}
@@ -542,6 +646,7 @@ import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import ShipperSelect from '@/components/ShipperSelect.vue';
 import { uiIcons } from '@/lib/uiIcons';
 import api from '@/plugins/axios';
+import printer from '@/plugins/printer';
 import { hasLogoUrl } from '@/plugins/utils';
 import { toastError } from '@/plugins/vue-toast-notification';
 import { deviceState } from '@/state/device';
@@ -552,6 +657,16 @@ type TempImage = MyImageData & { status?: 'temp' };
 type ShipmentOcrJob = {
   shipmentId: string;
   imageId: string;
+};
+
+type QtyLabelRowDraft = PrintShipmentQtyLabelRow & {
+  id: string;
+};
+
+type QtyLabelDraft = {
+  title: string;
+  subtitle: string;
+  rows: QtyLabelRowDraft[];
 };
 
 type ShipmentDraft = ReturnType<typeof createEmptyDraft>;
@@ -573,12 +688,14 @@ function createDefaultFilters() {
 const filters = ref(createDefaultFilters());
 
 const createDialog = ref(false);
+const qtyLabelDialog = ref(false);
 const detailsDialog = ref(false);
 const addImagesDialog = ref(false);
 const deleteImageConfirm = ref(false);
 const deleteShipmentConfirm = ref(false);
 const discardDetailsConfirm = ref(false);
 const savingShipment = ref(false);
+const printingQtyLabel = ref(false);
 const savingDetails = ref(false);
 const deletingShipment = ref(false);
 const loadingTempImages = ref(false);
@@ -601,10 +718,15 @@ const draftTrackingBlurred = ref(false);
 const detailTrackingBlurred = ref(false);
 const detailTrackingEditing = ref(false);
 const detailTrackingTextarea = ref<{ focus?: () => void } | null>(null);
+const qtyLabelSearchResultsByRowId = ref<Record<string, PartSearchItem[]>>({});
+const qtyLabelSearchLoadingByRowId = ref<Record<string, boolean>>({});
+const qtyLabelSearchRequestIdsByRowId = ref<Record<string, number>>({});
 let searchDebounceId: ReturnType<typeof setTimeout> | null = null;
+const qtyLabelSearchTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 const draft = ref(createEmptyDraft());
 const detailDraft = ref(createEmptyDraft());
+const qtyLabelDraft = ref(createDefaultQtyLabelDraft());
 
 const draftShippedDate = computed({
   get: () => splitDatetimeLocal(draft.value.shippedAt).date,
@@ -639,6 +761,37 @@ const shipmentCountLabel = computed(() => {
 });
 
 const showDevTools = import.meta.env.DEV;
+
+const qtyLabelPrintableRows = computed(() =>
+  qtyLabelDraft.value.rows.filter((row) => row.qty.trim() && row.item.trim()),
+);
+
+const qtyLabelIncompleteRows = computed(() =>
+  qtyLabelDraft.value.rows.filter((row) => {
+    const hasQty = Boolean(row.qty.trim());
+    const hasItem = Boolean(row.item.trim());
+    return hasQty !== hasItem;
+  }),
+);
+
+const qtyLabelDuplicateRows = computed(() => {
+  const seen = new Map<string, QtyLabelRowDraft>();
+  const duplicates: QtyLabelRowDraft[] = [];
+
+  for (const row of qtyLabelPrintableRows.value) {
+    const key = getQtyLabelItemKey(row);
+    if (!key) continue;
+
+    if (seen.has(key)) {
+      duplicates.push(row);
+      continue;
+    }
+
+    seen.set(key, row);
+  }
+
+  return duplicates;
+});
 
 const isSelectedShipmentOcrBusy = computed(() => {
   if (!selectedShipment.value) return false;
@@ -713,6 +866,10 @@ onBeforeUnmount(() => {
   if (searchDebounceId) {
     clearTimeout(searchDebounceId);
   }
+  for (const timeoutId of qtyLabelSearchTimeouts.values()) {
+    clearTimeout(timeoutId);
+  }
+  qtyLabelSearchTimeouts.clear();
 });
 
 watch(
@@ -792,6 +949,22 @@ function createEmptyDraft() {
   };
 }
 
+function createEmptyQtyLabelRow(): QtyLabelRowDraft {
+  return {
+    id: crypto.randomUUID(),
+    qty: '',
+    item: '',
+  };
+}
+
+function createDefaultQtyLabelDraft(): QtyLabelDraft {
+  return {
+    title: 'Contents:',
+    subtitle: '',
+    rows: Array.from({ length: 5 }, () => createEmptyQtyLabelRow()),
+  };
+}
+
 async function applyFilters() {
   await shipmentStore.fetch({
     search: filters.value.search || undefined,
@@ -817,6 +990,202 @@ function openCreateDialog() {
   selectedTempImageIds.value = [];
   createDialog.value = true;
   void loadTempImages();
+}
+
+function openQtyLabelDialog() {
+  qtyLabelDraft.value = createDefaultQtyLabelDraft();
+  clearQtyLabelSearchState();
+  qtyLabelDialog.value = true;
+}
+
+function addQtyLabelRow() {
+  qtyLabelDraft.value.rows.push(createEmptyQtyLabelRow());
+}
+
+function removeQtyLabelRow(index: number) {
+  if (qtyLabelDraft.value.rows.length <= 1) return;
+  const [removedRow] = qtyLabelDraft.value.rows.splice(index, 1);
+  if (removedRow) {
+    clearQtyLabelRowSearchState(removedRow.id);
+  }
+}
+
+function clearQtyLabelSearchState() {
+  for (const rowId of Object.keys(qtyLabelSearchResultsByRowId.value)) {
+    clearQtyLabelRowSearchState(rowId);
+  }
+}
+
+function clearQtyLabelRowSearchState(rowId: string) {
+  const timeoutId = qtyLabelSearchTimeouts.get(rowId);
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+    qtyLabelSearchTimeouts.delete(rowId);
+  }
+
+  delete qtyLabelSearchResultsByRowId.value[rowId];
+  delete qtyLabelSearchLoadingByRowId.value[rowId];
+  delete qtyLabelSearchRequestIdsByRowId.value[rowId];
+}
+
+function formatQtyLabelPartOption(item: PartSearchItem) {
+  return [item.part.trim(), item.description.trim()].filter(Boolean).join(' - ');
+}
+
+function normalizeQtyLabelItemKey(value: string) {
+  return (
+    value
+      .trim()
+      .split(/\s+-\s+/, 1)[0]
+      ?.trim()
+      .toLocaleLowerCase() || ''
+  );
+}
+
+function getQtyLabelItemKey(row: Pick<QtyLabelRowDraft, 'item' | 'part'>) {
+  return normalizeQtyLabelItemKey(row.part || row.item);
+}
+
+function isQtyLabelDuplicateItem(row: QtyLabelRowDraft, item: string, part?: string) {
+  const key = normalizeQtyLabelItemKey(part || item);
+  if (!key) return false;
+
+  return qtyLabelDraft.value.rows.some((candidate) => {
+    if (candidate.id === row.id) return false;
+    return getQtyLabelItemKey(candidate) === key;
+  });
+}
+
+function qtyLabelPartOptions(rowId: string) {
+  return (qtyLabelSearchResultsByRowId.value[rowId] || [])
+    .filter((item) => {
+      const optionKey = normalizeQtyLabelItemKey(item.part);
+      return !qtyLabelDraft.value.rows.some((row) => {
+        if (row.id === rowId) return false;
+        return getQtyLabelItemKey(row) === optionKey;
+      });
+    })
+    .map(formatQtyLabelPartOption);
+}
+
+function findQtyLabelPartOptionByLabel(rowId: string, value: string) {
+  return (qtyLabelSearchResultsByRowId.value[rowId] || []).find(
+    (candidate) => formatQtyLabelPartOption(candidate) === value,
+  );
+}
+
+function updateQtyLabelRowItem(row: QtyLabelRowDraft, value: unknown) {
+  if (typeof value !== 'string') {
+    row.item = '';
+    delete row.part;
+    delete row.description;
+    return;
+  }
+
+  const matchedPart = findQtyLabelPartOptionByLabel(row.id, value);
+  const part = matchedPart?.part.trim();
+  if (isQtyLabelDuplicateItem(row, value, part)) {
+    toastError('That item is already on another row.');
+    return;
+  }
+
+  row.item = value;
+
+  if (matchedPart) {
+    row.part = part;
+    row.description = matchedPart.description.trim();
+    return;
+  }
+
+  delete row.part;
+  delete row.description;
+}
+
+function updateQtyLabelRowQty(row: QtyLabelRowDraft, value: unknown) {
+  row.qty = typeof value === 'string' ? value.replace(/\D+/g, '') : '';
+}
+
+function updateQtyLabelRowSearch(rowId: string, value: string) {
+  const trimmedValue = value.trim();
+  const existingTimeout = qtyLabelSearchTimeouts.get(rowId);
+  if (existingTimeout) {
+    clearTimeout(existingTimeout);
+  }
+
+  if (trimmedValue.length < 2) {
+    qtyLabelSearchLoadingByRowId.value[rowId] = false;
+    qtyLabelSearchResultsByRowId.value[rowId] = [];
+    return;
+  }
+
+  qtyLabelSearchTimeouts.set(
+    rowId,
+    setTimeout(() => {
+      qtyLabelSearchTimeouts.delete(rowId);
+      void loadQtyLabelPartSearchResults(rowId, trimmedValue);
+    }, 200),
+  );
+}
+
+async function loadQtyLabelPartSearchResults(rowId: string, search: string) {
+  const requestId = (qtyLabelSearchRequestIdsByRowId.value[rowId] || 0) + 1;
+  qtyLabelSearchRequestIdsByRowId.value[rowId] = requestId;
+  qtyLabelSearchLoadingByRowId.value[rowId] = true;
+
+  try {
+    const { data } = await api.get<PartSearchResponse>('/parts/search', {
+      params: {
+        search,
+        limit: 20,
+      },
+    });
+
+    if (qtyLabelSearchRequestIdsByRowId.value[rowId] !== requestId) return;
+    qtyLabelSearchResultsByRowId.value[rowId] = data.items;
+  } catch {
+    if (qtyLabelSearchRequestIdsByRowId.value[rowId] !== requestId) return;
+    qtyLabelSearchResultsByRowId.value[rowId] = [];
+  } finally {
+    if (qtyLabelSearchRequestIdsByRowId.value[rowId] === requestId) {
+      qtyLabelSearchLoadingByRowId.value[rowId] = false;
+    }
+  }
+}
+
+async function printQtyLabel() {
+  if (qtyLabelIncompleteRows.value.length) {
+    toastError('Each started row needs both a qty and an item.');
+    return;
+  }
+
+  if (qtyLabelDuplicateRows.value.length) {
+    toastError('Each item can only appear on one row.');
+    return;
+  }
+
+  const rows = qtyLabelPrintableRows.value.map((row) => ({
+    qty: row.qty.trim(),
+    item: row.item.trim(),
+    part: row.part?.trim() || undefined,
+    description: row.description?.trim() || undefined,
+  }));
+
+  if (!rows.length) {
+    toastError('Add at least one qty/item row before printing.');
+    return;
+  }
+
+  printingQtyLabel.value = true;
+  try {
+    await printer.printShipmentQtyLabel({
+      title: qtyLabelDraft.value.title.trim() || undefined,
+      subtitle: qtyLabelDraft.value.subtitle.trim() || undefined,
+      rows,
+    });
+    qtyLabelDialog.value = false;
+  } finally {
+    printingQtyLabel.value = false;
+  }
 }
 
 async function loadTempImages() {
@@ -1390,6 +1759,7 @@ function endOfDayIso(value: string) {
 .header-actions {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .shipment-archive {
@@ -1505,6 +1875,27 @@ function endOfDayIso(value: string) {
 .temp-gallery-header {
   justify-content: space-between;
   gap: 16px;
+}
+
+.shipment-qty-label__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  margin-bottom: 10px;
+}
+
+.shipment-qty-label__rows {
+  display: grid;
+  gap: 10px;
+}
+
+.shipment-qty-label__row {
+  display: grid;
+  grid-template-columns: minmax(96px, 120px) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
 }
 
 .shipment-filters {
@@ -1847,6 +2238,11 @@ function endOfDayIso(value: string) {
 @media (max-width: 900px) {
   .shipment-filters,
   .details-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .shipment-qty-label__header,
+  .shipment-qty-label__row {
     grid-template-columns: 1fr;
   }
 

@@ -248,3 +248,7 @@ export async function buildLocationLabel(data: PrintLocationBody) {
 export async function buildItemLabel(data: PrintItemBody) {
   return callImageProcessorJson('labels/item', data);
 }
+
+export async function buildShipmentQtyLabel(data: PrintShipmentQtyLabelBody) {
+  return callImageProcessorJson('labels/shipment-qty', data);
+}

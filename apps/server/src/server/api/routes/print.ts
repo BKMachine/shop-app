@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import logger from '../../../logger.js';
 import CupsService from '../../../services/cups_service.js';
-import { buildItemLabel, buildLocationLabel } from '../../../services/image_processor_client.js';
+import {
+  buildItemLabel,
+  buildLocationLabel,
+  buildShipmentQtyLabel,
+} from '../../../services/image_processor_client.js';
 import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
@@ -55,6 +59,43 @@ router.post('/print/item', requireKnownDevice, async (req, res, next) => {
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="part-position-label-preview.pdf"');
+    res.status(200).send(pdf.buffer);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/print/shipment-qty', requireKnownDevice, async (req, res, next) => {
+  assertKnownDevice(req);
+  const { title, subtitle, rows }: PrintShipmentQtyLabelBody = req.body;
+  const sanitizedRows = Array.isArray(rows)
+    ? rows
+        .map((row) => ({
+          qty: typeof row?.qty === 'string' ? row.qty.trim() : '',
+          item: typeof row?.item === 'string' ? row.item.trim() : '',
+        }))
+        .filter((row) => row.qty || row.item)
+    : [];
+
+  if (!sanitizedRows.length) {
+    return next(new HttpError(400, 'At least one qty/item row is required.'));
+  }
+
+  const body: PrintShipmentQtyLabelBody = {
+    title: typeof title === 'string' ? title.trim() : undefined,
+    subtitle: typeof subtitle === 'string' ? subtitle.trim() : undefined,
+    rows: sanitizedRows,
+  };
+
+  try {
+    const pdf = await buildShipmentQtyLabel(body);
+    await CupsService.printShipmentQtyLabel(pdf.buffer, body).catch((error) => {
+      logger.warn(
+        `CUPS shipment qty print failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="shipment-qty-label-preview.pdf"');
     res.status(200).send(pdf.buffer);
   } catch (e) {
     next(e);

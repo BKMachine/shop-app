@@ -29,6 +29,19 @@ declare global {
     imageUrl?: string;
   }
 
+  interface PrintShipmentQtyLabelRow {
+    qty: string;
+    item: string;
+    part?: string;
+    description?: string;
+  }
+
+  interface PrintShipmentQtyLabelBody {
+    title?: string;
+    subtitle?: string;
+    rows: PrintShipmentQtyLabelRow[];
+  }
+
   interface PrintRequest {
     printerName: string;
     labelXml: string;

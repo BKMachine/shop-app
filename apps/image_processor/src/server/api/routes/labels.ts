@@ -42,4 +42,32 @@ router.post('/item', async (req, res, next) => {
   }
 });
 
+router.post('/shipment-qty', async (req, res, next) => {
+  const { title, subtitle, rows }: PrintShipmentQtyLabelBody = req.body;
+  const sanitizedRows = Array.isArray(rows)
+    ? rows
+        .map((row) => ({
+          qty: typeof row?.qty === 'string' ? row.qty.trim() : '',
+          item: typeof row?.item === 'string' ? row.item.trim() : '',
+        }))
+        .filter((row) => row.qty || row.item)
+    : [];
+
+  if (!sanitizedRows.length) {
+    return next(new HttpError(400, 'At least one qty/item row is required.'));
+  }
+
+  try {
+    const pdf = await LabelPdfService.buildShipmentQtyLabel({
+      title: typeof title === 'string' ? title.trim() : undefined,
+      subtitle: typeof subtitle === 'string' ? subtitle.trim() : undefined,
+      rows: sanitizedRows,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.status(200).send(pdf);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

@@ -28,7 +28,12 @@
         <v-list-item link :prepend-icon="uiIcons.material" :to="{ name: 'materials' }">
           Materials
         </v-list-item>
-        <v-list-item link prepend-icon="mdi-truck-check-outline" :to="{ name: 'shipments' }">
+        <v-list-item
+          v-if="showDev"
+          link
+          prepend-icon="mdi-truck-check-outline"
+          :to="{ name: 'shipments' }"
+        >
           Shipments
         </v-list-item>
         <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
