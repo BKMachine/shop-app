@@ -36,6 +36,7 @@ import HttpError from '../../middleware/httpError.js';
 import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
+const imageOcrEnabled = process.env.IMAGE_OCR_ENABLED !== 'false';
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, tempDir),
@@ -64,6 +65,10 @@ function getErrorStatusCode(error: unknown, fallback: number): number {
   }
 
   return fallback;
+}
+
+function isImageOcrEnabled() {
+  return imageOcrEnabled;
 }
 
 function getExtensionForMimeType(mimeType: string): string {
@@ -606,6 +611,11 @@ router.post(
       const sourcePath = path.join(imageDir, image.relPath);
       if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
 
+      if (!isImageOcrEnabled()) {
+        res.status(200).json(serializeImage(image));
+        return;
+      }
+
       const ocrResult = await ocrImage(sourcePath);
       const updatedImage = await ImageService.update(
         {
@@ -701,7 +711,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 
     let ocrText = '';
     let trackingNumber = '';
-    if (data.entityType === 'shipment' && !data.skipOcr) {
+    if (data.entityType === 'shipment' && !data.skipOcr && isImageOcrEnabled()) {
       try {
         const ocrResult = await ocrImage(destPath);
         ocrText = ocrResult.text.trim();

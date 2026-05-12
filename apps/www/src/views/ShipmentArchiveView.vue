@@ -7,10 +7,20 @@
       </div>
 
       <div class="header-actions">
-        <v-btn prepend-icon="mdi-printer-outline" variant="outlined" @click="openQtyLabelDialog">
+        <v-btn
+          class="header-action-btn"
+          prepend-icon="mdi-printer-outline"
+          variant="outlined"
+          @click="openQtyLabelDialog"
+        >
           Print Qty Label
         </v-btn>
-        <v-btn color="primary" prepend-icon="mdi-truck-check-outline" @click="openCreateDialog">
+        <v-btn
+          class="header-action-btn"
+          color="primary"
+          prepend-icon="mdi-truck-check-outline"
+          @click="openCreateDialog"
+        >
           New Shipment
         </v-btn>
       </div>
@@ -447,7 +457,7 @@
                     />
                   </button>
 
-                  <div class="details-image-card__footer">
+                  <div v-if="false" class="details-image-card__footer">
                     <div class="details-image-card__actions mt-2">
                       <v-btn
                         color="primary"
@@ -460,7 +470,6 @@
                         @click.stop="runImageOcr(image.id)"
                       />
                       <v-btn
-                        v-if="showDevTools"
                         color="secondary"
                         icon="mdi-image-search-outline"
                         :loading="ocrDebugImageId === image.id"
@@ -485,7 +494,7 @@
                       />
                     </div>
                   </div>
-                  <div class="details-image-card__ocr" @click.stop>
+                  <div v-if="false" class="details-image-card__ocr" @click.stop>
                     <v-btn
                       class="details-image-card__ocr-toggle"
                       :class="{
@@ -1565,7 +1574,8 @@ function customerName(shipment: Shipment) {
   return typeof shipment.customer === 'object' && shipment.customer ? shipment.customer.name : '';
 }
 
-function shipperName(shipment: Shipment) {
+function shipperName(shipment: Shipment | null | undefined) {
+  if (!shipment) return '';
   if (typeof shipment.shipper === 'object' && shipment.shipper) return shipment.shipper.name;
   return shipment.carrier || '';
 }
@@ -1644,9 +1654,9 @@ function trackingValidationMessageForDraft(draftValue: ShipmentDraft) {
   return '';
 }
 
-function trackingUrlForCarrier(carrier: string, trackingNumber: string) {
+function trackingUrlForCarrier(carrier: string, trackingNumber?: string | null) {
   const normalizedCarrier = normalizeCarrierName(carrier);
-  const normalizedTrackingNumber = trackingNumber.trim();
+  const normalizedTrackingNumber = trackingNumber?.trim() || '';
   if (!normalizedCarrier || !normalizedTrackingNumber) return '';
 
   const encodedTrackingNumber = encodeURIComponent(normalizedTrackingNumber);
@@ -1671,7 +1681,7 @@ function trackingUrlForShipment(shipment: Shipment) {
   return trackingUrlForCarrier(shipperName(shipment), firstTrackingNumber || '');
 }
 
-function openTrackingLink(carrier: string, trackingNumber: string) {
+function openTrackingLink(carrier: string, trackingNumber?: string | null) {
   const url = trackingUrlForCarrier(carrier, trackingNumber);
   if (!url) return;
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -1760,6 +1770,10 @@ function endOfDayIso(value: string) {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.header-action-btn {
+  font-size: 0.875rem;
 }
 
 .shipment-archive {

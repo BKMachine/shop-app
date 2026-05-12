@@ -20,6 +20,7 @@ import { rotateImage } from '../../../services/image_rotation_service.js';
 import HttpError from '../../middleware/httpError.js';
 
 const router: Router = Router();
+const imageOcrEnabled = process.env.IMAGE_OCR_ENABLED !== 'false';
 const supportedUploadMimeTypes = new Set([
   'image/jpeg',
   'image/jpg',
@@ -106,6 +107,10 @@ function isSkippableAutoAlignError(error: unknown): boolean {
 function sendProcessedImage(res: Response, processed: ProcessedImage) {
   res.setHeader('Content-Type', processed.mimeType);
   res.status(200).send(processed.buffer);
+}
+
+function isImageOcrEnabled() {
+  return imageOcrEnabled;
 }
 
 router.get('/health', (_req, res) => {
@@ -239,6 +244,15 @@ router.post('/rotate', upload.single('image'), async (req, res, next) => {
 
 router.post('/ocr', upload.single('image'), async (req, res, next) => {
   try {
+    if (!isImageOcrEnabled()) {
+      res.status(200).json({
+        text: '',
+        confidence: 0,
+        trackingNumber: '',
+      });
+      return;
+    }
+
     const result = await extractTextFromImage(await getUploadedImage(req.file));
     res.status(200).json(result);
   } catch (error) {

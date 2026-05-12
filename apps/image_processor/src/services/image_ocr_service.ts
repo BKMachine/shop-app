@@ -52,6 +52,10 @@ type LabelDetection = {
   height: number;
 };
 
+type LabelTrackingMatch = TrackingLineMatch & {
+  labelRegion: LabelDetection | null;
+};
+
 const LABEL_DETECTION_MAX_DIMENSION = 384;
 const CARDBOARD_DETECTION_MAX_DIMENSION = 512;
 const BOX_DETECTION_MAX_DIMENSION = 800;
@@ -84,8 +88,10 @@ export type OcrDebugResult = {
   modelId: string;
   detectedCardboardBoxRegion: CropBounds | null;
   detectedLabelRegion: CropBounds | null;
+  detectedLabelRegions: CropBounds[];
   detectedLabelMask: Buffer | null;
   detectedTrackingLineRegion: CropBounds | null;
+  detectedQtyLabelRegion: CropBounds | null;
   detectedHandwritingRegion: CropBounds | null;
   detectedHandwritingLineRegions: CropBounds[];
   lineRegionSource: 'provider' | 'heuristic';
@@ -93,6 +99,7 @@ export type OcrDebugResult = {
   selectedRegion: CropBounds | null;
   selectedResult: OcrResult;
   labelRegionResult: OcrResult | null;
+  qtyLabelRegionResult: OcrResult | null;
   handwritingRegionResult: OcrResult | null;
   fullImageResult: OcrResult;
   timings: OcrDebugTimings;
@@ -198,6 +205,10 @@ function hasTrackingLineHint(line: string) {
 function isLowSignalDigitCandidate(candidate: string) {
   const zeroCount = [...candidate].filter((digit) => digit === '0').length;
   return /^0+$/.test(candidate) || zeroCount / Math.max(1, candidate.length) > 0.65;
+}
+
+function isUspsInternationalTrackingCandidate(candidate: string) {
+  return /^[A-Z]{2}\d{9}[A-Z]{2}$/.test(candidate);
 }
 
 function findTrackingCandidateBounds(line: OcrTextLine, candidate: string): CropBounds | null {
@@ -372,8 +383,12 @@ function extractTrackingMatchFromTextLines(
     const uspsInternationalMatch = compactLine.match(/[A-Z]{2}\d{9}[A-Z]{2}/i);
     if (uspsInternationalMatch) {
       const value = normalizeTrackingCandidate(uspsInternationalMatch[0]);
+      let baseScore = 210;
+      if (hasFedex && !lineHasUspsHint) baseScore -= 240;
+      if (hasUps && !lineHasUspsHint) baseScore -= 120;
+      if (lineHasUspsHint) baseScore += 60;
       const scoredCandidate = scoreTrackingCandidateLine(
-        210,
+        baseScore,
         line,
         value,
         hasFedex,
@@ -467,7 +482,9 @@ function extractTrackingNumberFromText(text: string): string {
   if (upsMatch) return normalizeTrackingCandidate(upsMatch[0]);
 
   const uspsInternationalMatch = joinedText.match(/[A-Z]{2}\d{9}[A-Z]{2}/i);
-  if (uspsInternationalMatch) return normalizeTrackingCandidate(uspsInternationalMatch[0]);
+  if (uspsInternationalMatch && hasUsps && !hasFedex && !hasUps) {
+    return normalizeTrackingCandidate(uspsInternationalMatch[0]);
+  }
 
   const lineCandidates: TrackingCandidate[] = [];
 
@@ -518,8 +535,11 @@ function extractTrackingNumberFromText(text: string): string {
   }
 
   if (hasFedex) {
-    const fedexLineCandidate = rankedLineCandidates.find((candidate) =>
-      /^\d{12}$|^\d{15}$|^\d{20}$|^\d{22}$/.test(candidate.value),
+    const fedexLineCandidate = rankedLineCandidates.find(
+      (candidate) =>
+        (/^\d{12}$|^\d{15}$|^\d{20}$|^\d{22}$/.test(candidate.value) ||
+          isUspsInternationalTrackingCandidate(candidate.value)) &&
+        !isUspsInternationalTrackingCandidate(candidate.value),
     );
     if (fedexLineCandidate) return fedexLineCandidate.value;
 
@@ -599,7 +619,7 @@ function getLabelMaskPixel(data: Uint8Array, offset: number) {
   const brightness = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
 
-  return brightness >= LABEL_BRIGHTNESS_THRESHOLD && chroma <= LABEL_CHROMA_THRESHOLD;
+  return brightness >= LABEL_BRIGHTNESS_THRESHOLD - 18 && chroma <= LABEL_CHROMA_THRESHOLD + 14;
 }
 
 function getCardboardMaskPixel(data: Uint8Array, offset: number) {
@@ -608,10 +628,10 @@ function getCardboardMaskPixel(data: Uint8Array, offset: number) {
   const blue = data[offset + 2] ?? 0;
   const brightness = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
-  const looksBrown = red >= green && green >= blue && red - blue >= 12;
-  const looksNeutral = chroma <= 32;
+  const warmBias = red >= green - 8 && green >= blue - 10;
+  const looksBrown = warmBias && red - blue >= 8;
 
-  return brightness >= 85 && brightness <= 235 && chroma <= 95 && (looksNeutral || looksBrown);
+  return brightness >= 75 && brightness <= 230 && chroma >= 6 && chroma <= 80 && looksBrown;
 }
 
 function getHandwritingMaskPixel(data: Uint8Array, offset: number) {
@@ -742,6 +762,15 @@ function intersectBounds(left: CropBounds, right: CropBounds): CropBounds | null
     width: intersectionRight - intersectionLeft,
     height: intersectionBottom - intersectionTop,
   };
+}
+
+function boundsEqual(left: CropBounds, right: CropBounds) {
+  return (
+    left.left === right.left &&
+    left.top === right.top &&
+    left.width === right.width &&
+    left.height === right.height
+  );
 }
 
 function boundsOverlapOrNear(
@@ -975,26 +1004,302 @@ function scaleBoundsDown(
   };
 }
 
-function findLikelyLabelRegion(
+function buildIntegralMask(mask: Uint8Array, width: number, height: number) {
+  const integral = new Uint32Array((width + 1) * (height + 1));
+
+  for (let y = 0; y < height; y += 1) {
+    let rowSum = 0;
+    for (let x = 0; x < width; x += 1) {
+      rowSum += mask[y * width + x] ?? 0;
+      integral[(y + 1) * (width + 1) + (x + 1)] =
+        (integral[y * (width + 1) + (x + 1)] ?? 0) + rowSum;
+    }
+  }
+
+  return integral;
+}
+
+function getIntegralRectSum(
+  integral: Uint32Array,
+  width: number,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+) {
+  const stride = width + 1;
+  return (
+    (integral[(bottom + 1) * stride + (right + 1)] ?? 0) -
+    (integral[top * stride + (right + 1)] ?? 0) -
+    (integral[(bottom + 1) * stride + left] ?? 0) +
+    (integral[top * stride + left] ?? 0)
+  );
+}
+
+function dilateMask(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  radiusX: number,
+  radiusY: number,
+) {
+  const integral = buildIntegralMask(mask, width, height);
+  const dilated = new Uint8Array(width * height);
+
+  for (let y = 0; y < height; y += 1) {
+    const top = Math.max(0, y - radiusY);
+    const bottom = Math.min(height - 1, y + radiusY);
+    for (let x = 0; x < width; x += 1) {
+      const left = Math.max(0, x - radiusX);
+      const right = Math.min(width - 1, x + radiusX);
+      dilated[y * width + x] =
+        getIntegralRectSum(integral, width, left, top, right, bottom) > 0 ? 1 : 0;
+    }
+  }
+
+  return dilated;
+}
+
+function erodeMask(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  radiusX: number,
+  radiusY: number,
+) {
+  const integral = buildIntegralMask(mask, width, height);
+  const eroded = new Uint8Array(width * height);
+
+  for (let y = 0; y < height; y += 1) {
+    const top = Math.max(0, y - radiusY);
+    const bottom = Math.min(height - 1, y + radiusY);
+    for (let x = 0; x < width; x += 1) {
+      const left = Math.max(0, x - radiusX);
+      const right = Math.min(width - 1, x + radiusX);
+      const windowArea = (right - left + 1) * (bottom - top + 1);
+      eroded[y * width + x] =
+        getIntegralRectSum(integral, width, left, top, right, bottom) === windowArea ? 1 : 0;
+    }
+  }
+
+  return eroded;
+}
+
+function closeMask(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  radiusX: number,
+  radiusY: number,
+) {
+  return erodeMask(
+    dilateMask(mask, width, height, radiusX, radiusY),
+    width,
+    height,
+    radiusX,
+    radiusY,
+  );
+}
+
+function getLabelPaperScore(data: Uint8Array, offset: number) {
+  const red = data[offset] ?? 0;
+  const green = data[offset + 1] ?? 0;
+  const blue = data[offset + 2] ?? 0;
+  const brightness = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+
+  const brightnessScore = Math.max(0, Math.min(1, (brightness - 150) / 95));
+  const chromaScore = Math.max(0, Math.min(1, (70 - chroma) / 70));
+
+  return brightnessScore * chromaScore;
+}
+
+function smoothValues(values: number[], radius: number) {
+  if (!values.length || radius <= 0) return values;
+
+  return values.map((_, index) => {
+    const start = Math.max(0, index - radius);
+    const end = Math.min(values.length - 1, index + radius);
+    let total = 0;
+
+    for (let cursor = start; cursor <= end; cursor += 1) {
+      total += values[cursor] ?? 0;
+    }
+
+    return total / Math.max(1, end - start + 1);
+  });
+}
+
+function findOuterThresholdSpan(
+  values: number[],
+  minimumValue: number,
+  minimumRunLength: number,
+): { start: number; end: number } | null {
+  if (!values.length) return null;
+
+  let start = -1;
+  let runLength = 0;
+  for (let index = 0; index < values.length; index += 1) {
+    if ((values[index] ?? 0) >= minimumValue) {
+      runLength += 1;
+      if (runLength >= minimumRunLength) {
+        start = index - runLength + 1;
+        break;
+      }
+      continue;
+    }
+
+    runLength = 0;
+  }
+
+  if (start < 0) return null;
+
+  let end = -1;
+  runLength = 0;
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if ((values[index] ?? 0) >= minimumValue) {
+      runLength += 1;
+      if (runLength >= minimumRunLength) {
+        end = index + runLength - 1;
+        break;
+      }
+      continue;
+    }
+
+    runLength = 0;
+  }
+
+  if (end < start) return null;
+
+  return { start, end };
+}
+
+function refineLabelBoundsToWhitePaper(
   data: Uint8Array,
   width: number,
   height: number,
   channels: number,
-): ComponentDetection | null {
+  bounds: CropBounds,
+): CropBounds | null {
+  const clampedBounds = intersectBounds(bounds, {
+    left: 0,
+    top: 0,
+    width,
+    height,
+  });
+  if (!clampedBounds) return null;
+
+  const rowScores = smoothValues(
+    Array.from({ length: clampedBounds.height }, (_, rowOffset) => {
+      const top = clampedBounds.top + rowOffset;
+      let total = 0;
+
+      for (let x = clampedBounds.left; x < clampedBounds.left + clampedBounds.width; x += 1) {
+        total += getLabelPaperScore(data, (top * width + x) * channels);
+      }
+
+      return total / Math.max(1, clampedBounds.width);
+    }),
+    Math.max(2, Math.round(clampedBounds.height * 0.015)),
+  );
+  const maxRowScore = Math.max(...rowScores, 0);
+  const rowSegment = findOuterThresholdSpan(
+    rowScores,
+    Math.max(0.18, maxRowScore * 0.52),
+    Math.max(2, Math.round(clampedBounds.height * 0.035)),
+  );
+  if (!rowSegment) return null;
+
+  const refinedTop = clampedBounds.top + rowSegment.start;
+  const refinedBottom = clampedBounds.top + rowSegment.end;
+  const refinedHeight = refinedBottom - refinedTop + 1;
+
+  const columnScores = smoothValues(
+    Array.from({ length: clampedBounds.width }, (_, columnOffset) => {
+      const left = clampedBounds.left + columnOffset;
+      let total = 0;
+
+      for (let y = refinedTop; y <= refinedBottom; y += 1) {
+        total += getLabelPaperScore(data, (y * width + left) * channels);
+      }
+
+      return total / Math.max(1, refinedHeight);
+    }),
+    Math.max(2, Math.round(clampedBounds.width * 0.012)),
+  );
+  const maxColumnScore = Math.max(...columnScores, 0);
+  const columnSegment = findOuterThresholdSpan(
+    columnScores,
+    Math.max(0.24, maxColumnScore * 0.62),
+    Math.max(2, Math.round(clampedBounds.width * 0.03)),
+  );
+  if (!columnSegment) return null;
+
+  return {
+    left: clampedBounds.left + columnSegment.start,
+    top: refinedTop,
+    width: columnSegment.end - columnSegment.start + 1,
+    height: refinedHeight,
+  };
+}
+
+function scoreLabelCandidate(
+  bounds: CropBounds,
+  area: number,
+  totalPixels: number,
+  width: number,
+  height: number,
+) {
+  const bboxArea = bounds.width * bounds.height;
+  const fillRatio = area / Math.max(1, bboxArea);
+  if (fillRatio < 0.045) return null;
+
+  const aspectRatio = bounds.width / Math.max(bounds.height, 1);
+  if (aspectRatio < 0.5 || aspectRatio > 3.5) return null;
+
+  const widthRatio = bounds.width / width;
+  const heightRatio = bounds.height / height;
+  if (widthRatio < 0.08 || heightRatio < 0.12) return null;
+
+  const centerX = bounds.left + bounds.width / 2;
+  const centerY = bounds.top + bounds.height / 2;
+  const normalizedCenterDistance =
+    Math.hypot(centerX - width / 2, centerY - height / 2) / Math.hypot(width / 2, height / 2);
+
+  return (
+    (bboxArea / totalPixels) * 1.35 +
+    fillRatio * 0.35 +
+    widthRatio * 0.35 +
+    heightRatio * 0.5 -
+    normalizedCenterDistance * 0.35
+  );
+}
+
+function findLikelyLabelRegions(
+  data: Uint8Array,
+  width: number,
+  height: number,
+  channels: number,
+): ComponentDetection[] {
   const totalPixels = width * height;
   const minPixels = Math.max(64, Math.round(totalPixels * LABEL_MIN_PIXEL_RATIO));
   const minBoundingPixels = Math.round(totalPixels * LABEL_MIN_BBOX_RATIO);
   const maxBoundingPixels = Math.round(totalPixels * LABEL_MAX_BBOX_RATIO);
+  const initialMask = new Uint8Array(totalPixels);
+
+  for (let index = 0; index < totalPixels; index += 1) {
+    initialMask[index] = getLabelMaskPixel(data, index * channels) ? 1 : 0;
+  }
+  const closeRadiusX = Math.max(5, Math.round(width * 0.018));
+  const closeRadiusY = Math.max(7, Math.round(height * 0.028));
+  const processedMask = closeMask(initialMask, width, height, closeRadiusX, closeRadiusY);
   const visited = new Uint8Array(totalPixels);
-  let bestComponent: ComponentDetection | null = null;
-  let bestScore = -Infinity;
+  const components: ComponentDetection[] = [];
 
   for (let startIndex = 0; startIndex < totalPixels; startIndex += 1) {
     if (visited[startIndex]) continue;
     visited[startIndex] = 1;
-
-    const offset = startIndex * channels;
-    if (!getLabelMaskPixel(data, offset)) continue;
+    if (!processedMask[startIndex]) continue;
 
     const queue = [startIndex];
     let queueIndex = 0;
@@ -1026,7 +1331,7 @@ function findLikelyLabelRegion(
         if (Math.abs(neighborX - x) + Math.abs(neighborY - y) !== 1) continue;
 
         visited[neighbor] = 1;
-        if (getLabelMaskPixel(data, neighbor * channels)) {
+        if (processedMask[neighbor]) {
           queue.push(neighbor);
         }
       }
@@ -1034,7 +1339,7 @@ function findLikelyLabelRegion(
 
     if (area < minPixels) continue;
 
-    const bounds = {
+    let bounds = {
       left: minX,
       top: minY,
       width: maxX - minX + 1,
@@ -1043,32 +1348,37 @@ function findLikelyLabelRegion(
     const bboxArea = bounds.width * bounds.height;
     if (bboxArea < minBoundingPixels || bboxArea > maxBoundingPixels) continue;
 
-    const fillRatio = area / bboxArea;
-    if (fillRatio < 0.45) continue;
-
-    const aspectRatio = bounds.width / bounds.height;
-    if (aspectRatio < 0.5 || aspectRatio > 3.5) continue;
-
-    const centerX = bounds.left + bounds.width / 2;
-    const centerY = bounds.top + bounds.height / 2;
-    const normalizedCenterDistance =
-      Math.hypot(centerX - width / 2, centerY - height / 2) / Math.hypot(width / 2, height / 2);
-    const score = bboxArea / totalPixels + fillRatio * 1.5 - normalizedCenterDistance * 0.35;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestComponent = {
-        bounds,
-        score,
-        area,
-        mask: componentMask,
-        maskWidth: width,
-        maskHeight: height,
-      };
+    const refinedBounds = refineLabelBoundsToWhitePaper(data, width, height, channels, bounds);
+    if (refinedBounds) {
+      bounds = refinedBounds;
+      area = bounds.width * bounds.height;
     }
+
+    const score = scoreLabelCandidate(bounds, area, totalPixels, width, height);
+    if (score === null) continue;
+
+    components.push({
+      bounds,
+      score,
+      area,
+      mask: componentMask,
+      maskWidth: width,
+      maskHeight: height,
+    });
   }
 
-  return bestComponent;
+  return components
+    .sort((left, right) => right.score - left.score || right.area - left.area)
+    .filter((candidate, index, allCandidates) =>
+      allCandidates
+        .slice(0, index)
+        .every(
+          (selectedCandidate) =>
+            !boundsOverlapOrNear(selectedCandidate.bounds, candidate.bounds, 6, 6) ||
+            selectedCandidate.area < candidate.area * 0.65,
+        ),
+    )
+    .slice(0, 6);
 }
 
 function findLikelyCardboardRegion(
@@ -1647,9 +1957,59 @@ async function buildLabelMask(
   component: ComponentDetection,
   outputWidth: number,
   outputHeight: number,
+  maskRegion: CropBounds = { left: 0, top: 0, width: outputWidth, height: outputHeight },
 ): Promise<Buffer> {
   if (!component.mask || !component.maskWidth || !component.maskHeight) {
-    throw new Error('Label component mask is unavailable');
+    const fallbackBounds = intersectBounds(component.bounds, {
+      left: 0,
+      top: 0,
+      width: component.maskWidth ?? maskRegion.width,
+      height: component.maskHeight ?? maskRegion.height,
+    });
+
+    if (!fallbackBounds) {
+      throw new Error('Label component mask is unavailable');
+    }
+
+    const rgbaMask = Buffer.alloc(maskRegion.width * maskRegion.height * 4);
+    const clippedBounds = intersectBounds(fallbackBounds, maskRegion);
+    if (!clippedBounds) {
+      return sharp(rgbaMask, {
+        raw: {
+          width: maskRegion.width,
+          height: maskRegion.height,
+          channels: 4,
+        },
+      })
+        .png()
+        .toBuffer();
+    }
+
+    for (let y = clippedBounds.top; y < clippedBounds.top + clippedBounds.height; y += 1) {
+      for (let x = clippedBounds.left; x < clippedBounds.left + clippedBounds.width; x += 1) {
+        const localX = x - maskRegion.left;
+        const localY = y - maskRegion.top;
+        if (localX < 0 || localY < 0 || localX >= maskRegion.width || localY >= maskRegion.height) {
+          continue;
+        }
+
+        const offset = (localY * maskRegion.width + localX) * 4;
+        rgbaMask[offset] = 255;
+        rgbaMask[offset + 1] = 255;
+        rgbaMask[offset + 2] = 255;
+        rgbaMask[offset + 3] = 255;
+      }
+    }
+
+    return sharp(rgbaMask, {
+      raw: {
+        width: maskRegion.width,
+        height: maskRegion.height,
+        channels: 4,
+      },
+    })
+      .png()
+      .toBuffer();
   }
 
   const rgbaMask = Buffer.alloc(component.maskWidth * component.maskHeight * 4);
@@ -1662,7 +2022,7 @@ async function buildLabelMask(
     rgbaMask[offset + 3] = alpha;
   }
 
-  return sharp(rgbaMask, {
+  const regionMask = await sharp(rgbaMask, {
     raw: {
       width: component.maskWidth,
       height: component.maskHeight,
@@ -1670,24 +2030,65 @@ async function buildLabelMask(
     },
   })
     .resize({
-      width: outputWidth,
-      height: outputHeight,
+      width: maskRegion.width,
+      height: maskRegion.height,
       fit: 'fill',
       kernel: sharp.kernel.nearest,
     })
     .png()
     .toBuffer();
+
+  return sharp({
+    create: {
+      width: outputWidth,
+      height: outputHeight,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 0 },
+    },
+  })
+    .composite([
+      {
+        input: regionMask,
+        left: maskRegion.left,
+        top: maskRegion.top,
+      },
+    ])
+    .png()
+    .toBuffer();
 }
 
-async function detectShippingLabelRegion(input: InputImage): Promise<LabelDetection | null> {
+async function detectLabelRegions(
+  input: InputImage,
+  boxRegion: CropBounds | null = null,
+): Promise<LabelDetection[]> {
   const baseImage = sharp(input.buffer, { animated: true, failOn: 'none', pages: 1 })
     .rotate()
     .flatten({ background: '#ffffff' });
   const metadata = await baseImage.metadata();
 
-  if (!metadata.width || !metadata.height) return null;
+  if (!metadata.width || !metadata.height) return [];
+
+  const searchRegion = boxRegion
+    ? (intersectBounds(boxRegion, {
+        left: 0,
+        top: 0,
+        width: metadata.width,
+        height: metadata.height,
+      }) ?? {
+        left: 0,
+        top: 0,
+        width: metadata.width,
+        height: metadata.height,
+      })
+    : {
+        left: 0,
+        top: 0,
+        width: metadata.width,
+        height: metadata.height,
+      };
 
   const { data, info } = await baseImage
+    .extract(searchRegion)
     .resize({
       width: LABEL_DETECTION_MAX_DIMENSION,
       height: LABEL_DETECTION_MAX_DIMENSION,
@@ -1698,23 +2099,38 @@ async function detectShippingLabelRegion(input: InputImage): Promise<LabelDetect
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  const detectedComponent = findLikelyLabelRegion(data, info.width, info.height, info.channels);
-  if (!detectedComponent) return null;
+  const detectedComponents = findLikelyLabelRegions(data, info.width, info.height, info.channels);
 
-  const scaled = scaleBounds(
-    detectedComponent.bounds,
-    metadata.width / info.width,
-    metadata.height / info.height,
-    metadata.width,
-    metadata.height,
+  return Promise.all(
+    detectedComponents.map(async (detectedComponent) => {
+      const scaled = scaleBounds(
+        detectedComponent.bounds,
+        searchRegion.width / info.width,
+        searchRegion.height / info.height,
+        searchRegion.width,
+        searchRegion.height,
+      );
+      const bounds = expandBounds(
+        offsetBounds(scaled, searchRegion),
+        metadata.width,
+        metadata.height,
+        0.005,
+        1,
+      );
+
+      return {
+        bounds,
+        mask: await buildLabelMask(
+          detectedComponent,
+          metadata.width,
+          metadata.height,
+          searchRegion,
+        ),
+        width: metadata.width,
+        height: metadata.height,
+      };
+    }),
   );
-
-  return {
-    bounds: expandBounds(scaled, metadata.width, metadata.height, 0.005, 1),
-    mask: await buildLabelMask(detectedComponent, metadata.width, metadata.height),
-    width: metadata.width,
-    height: metadata.height,
-  };
 }
 
 async function detectCardboardBoxRegion(
@@ -2570,41 +2986,274 @@ async function extractTrackingNumberFromLabelRegion(
   }
 }
 
+async function extractTrackingNumberFromLabelRegions(
+  input: InputImage,
+  labelRegions: LabelDetection[],
+  timings?: Partial<OcrDebugTimings>,
+): Promise<LabelTrackingMatch> {
+  const startedAt = Date.now();
+
+  try {
+    const matches = await Promise.all(
+      labelRegions.map(async (labelRegion) => ({
+        labelRegion,
+        match: await extractTrackingNumberFromLabelRegion(input, labelRegion),
+      })),
+    );
+
+    const rankedMatches = matches
+      .map(({ labelRegion, match }) => {
+        const normalizedTrackingNumber = normalizeTrackingCandidate(match.trackingNumber);
+        const normalizedLine = normalizeOcrText(match.line ?? '').toUpperCase();
+        const area = labelRegion.bounds.width * labelRegion.bounds.height;
+        let score = 0;
+
+        if (normalizedTrackingNumber) score += 200;
+        if (/^1Z[0-9A-Z]{16}$/.test(normalizedTrackingNumber)) score += 140;
+        if (/^[0-9]{12}$|^[0-9]{15}$|^[0-9]{20}$|^[0-9]{22}$/.test(normalizedTrackingNumber)) {
+          score += 120;
+        }
+        if (/^[A-Z]{2}[0-9]{9}[A-Z]{2}$/.test(normalizedTrackingNumber)) score += 120;
+        if (hasTrackingLineHint(normalizedLine)) score += 140;
+        if (/\bFEDEX\b|\bUPS\b|\bUSPS\b|\bTRACK\b|\bTRK\b/i.test(normalizedLine)) {
+          score += 60;
+        }
+        if (/^96/.test(normalizedTrackingNumber)) score -= 120;
+        if (isLowSignalDigitCandidate(normalizedTrackingNumber)) score -= 80;
+        score += Math.min(area / 2500, 80);
+
+        return {
+          labelRegion,
+          match,
+          score,
+          hasTrackingNumber: Boolean(normalizedTrackingNumber),
+        };
+      })
+      .sort((left, right) => right.score - left.score);
+
+    const selectedMatch = rankedMatches.find((candidate) => candidate.hasTrackingNumber);
+    if (selectedMatch) {
+      return {
+        ...selectedMatch.match,
+        labelRegion: selectedMatch.labelRegion,
+      };
+    }
+
+    return {
+      trackingNumber: '',
+      lineRegion: null,
+      labelRegion: labelRegions[0] ?? null,
+    };
+  } finally {
+    if (timings) timings.trackingDetectionMs = Date.now() - startedAt;
+  }
+}
+
+function formatQtyLabelTextFromLines(lines: OcrTextLine[], fullText: string) {
+  const rawLines = lines.length
+    ? lines.map((line) => line.text)
+    : normalizeOcrText(fullText)
+        .split(/\n+/)
+        .map((line) => line.trim());
+  const formattedLines: string[] = [];
+  let sawTableHeader = false;
+
+  const normalizeQtyLine = (value: string) => normalizeOcrText(value).replace(/\s{2,}/g, ' ');
+  const normalizeQtyToken = (value: string) =>
+    value
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, ' ')
+      .trim();
+  const isHeaderLine = (value: string) => {
+    const normalizedValue = normalizeQtyToken(value);
+    return (
+      /^CONTENTS?$/.test(normalizedValue) ||
+      /^CONTENTS\s/.test(normalizedValue) ||
+      /^QTY\s+ITEM$/.test(normalizedValue) ||
+      normalizedValue === 'QTY' ||
+      normalizedValue === 'ITEM'
+    );
+  };
+  const extractQtyRowParts = (value: string): { quantity: string; itemText: string } | null => {
+    const match = value.match(/^(\d+)\s*[-:|]?\s*(.*)$/);
+    if (!match) return null;
+
+    return {
+      quantity: match[1] ?? '',
+      itemText: (match[2] ?? '').trim(),
+    };
+  };
+  const looksLikeItemCodeOnly = (value: string) =>
+    /^[A-Z]{2,}[A-Z0-9-]*$/i.test(value) || (/[A-Z]/i.test(value) && !/\s/.test(value));
+
+  for (let index = 0; index < rawLines.length; index += 1) {
+    const rawLine = rawLines[index] ?? '';
+    const line = normalizeQtyLine(rawLine);
+    if (!line) continue;
+
+    const normalizedLine = normalizeQtyToken(line);
+    if (!normalizedLine) continue;
+    if (isHeaderLine(line)) {
+      sawTableHeader = true;
+      continue;
+    }
+    const rowParts = extractQtyRowParts(line);
+    if (!rowParts) continue;
+
+    let itemText = rowParts.itemText;
+    const nextLine = normalizeQtyLine(rawLines[index + 1] ?? '');
+    if (
+      nextLine &&
+      !extractQtyRowParts(nextLine) &&
+      !isHeaderLine(nextLine) &&
+      looksLikeItemCodeOnly(itemText)
+    ) {
+      itemText = `${itemText} - ${nextLine}`;
+      index += 1;
+    }
+
+    const cleaned = `${rowParts.quantity} ${itemText}`.trim();
+    if (sawTableHeader || cleaned) formattedLines.push(cleaned);
+  }
+
+  return normalizeOcrText(formattedLines.join('\n'));
+}
+
+async function ocrLabelRegion(
+  input: InputImage,
+  labelRegion: LabelDetection,
+  formatText?: (lines: OcrTextLine[], fullText: string) => string,
+): Promise<OcrRunResult | null> {
+  const labelInput: InputImage = {
+    buffer: await extractRegionBuffer(input, labelRegion.bounds),
+    filename: 'label-region.png',
+    mimeType: 'image/png',
+  };
+
+  const finalizeRunResult = (runResult: OcrRunResult) => {
+    const text = formatText ? formatText(runResult.textLines, runResult.text) : runResult.text;
+    if (!text) return null;
+
+    return {
+      ...runResult,
+      text,
+      textRegion: runResult.textRegion
+        ? offsetBounds(runResult.textRegion, labelRegion.bounds)
+        : labelRegion.bounds,
+      tokenLineRegions: runResult.tokenLineRegions.map((region) =>
+        offsetBounds(region, labelRegion.bounds),
+      ),
+      textLines: runResult.textLines.map((line) => ({
+        ...line,
+        bounds: offsetBounds(line.bounds, labelRegion.bounds),
+        words: line.words?.map((word) => ({
+          ...word,
+          bounds: offsetBounds(word.bounds, labelRegion.bounds),
+        })),
+      })),
+    };
+  };
+
+  try {
+    const ocrSpaceResult = await runOcrSpace(labelInput, null, null, [], OCR_SPACE_ENGINE);
+    if (ocrSpaceResult?.text) {
+      const finalized = finalizeRunResult(ocrSpaceResult);
+      if (finalized) return finalized;
+    }
+  } catch {
+    // Continue to local OCR fallback for label crops.
+  }
+
+  const paddleResult = await runPaddleOcr(labelInput, null, null);
+  if (!paddleResult?.text) return null;
+
+  return finalizeRunResult(paddleResult);
+}
+
+async function ocrQtyLabelRegion(
+  input: InputImage,
+  labelRegion: LabelDetection,
+): Promise<OcrRunResult | null> {
+  return ocrLabelRegion(input, labelRegion, formatQtyLabelTextFromLines);
+}
+
 function buildDebugResult(
-  runResult: OcrRunResult,
+  labelRunResult: OcrRunResult | null,
   cardboardBoxRegion: CropBounds | null,
+  labelRegions: LabelDetection[],
   labelRegion: LabelDetection | null,
+  qtyLabelRegion: LabelDetection | null,
+  qtyLabelRunResult: OcrRunResult | null,
   trackingLineRegion: CropBounds | null,
   handwritingRegion: CropBounds | null,
+  handwritingRunResult: OcrRunResult | null,
   fallbackLineRegions: CropBounds[],
   trackingNumber: string,
   timings: OcrDebugTimings,
 ): OcrDebugResult {
-  const selectedRegion = runResult.textRegion || handwritingRegion;
-  const usesProviderLineRegions = runResult.tokenLineRegions.length > 0;
+  const selectedRunResult = qtyLabelRunResult ??
+    handwritingRunResult ??
+    labelRunResult ?? {
+      text: '',
+      confidence: 0,
+      trackingNumber: '',
+      modelId: 'cardboard-box-and-labels-only',
+      source: 'ocrspace' as const,
+      textRegion: null,
+      tokenLineRegions: [],
+      textLines: [],
+    };
+  const selectedRegion =
+    qtyLabelRunResult?.textRegion ||
+    handwritingRunResult?.textRegion ||
+    qtyLabelRegion?.bounds ||
+    labelRunResult?.textRegion ||
+    handwritingRegion;
+  const usesProviderLineRegions = selectedRunResult.tokenLineRegions.length > 0;
   const selectedLineRegions = usesProviderLineRegions
-    ? runResult.tokenLineRegions
+    ? selectedRunResult.tokenLineRegions
     : fallbackLineRegions;
   const selectedOcrResult = {
-    text: runResult.text,
-    confidence: runResult.confidence,
+    text: selectedRunResult.text,
+    confidence: selectedRunResult.confidence,
     trackingNumber,
   };
 
   return {
-    modelId: runResult.modelId,
+    modelId: selectedRunResult.modelId,
     detectedCardboardBoxRegion: cardboardBoxRegion,
     detectedLabelRegion: labelRegion?.bounds || null,
+    detectedLabelRegions: labelRegions.map((region) => region.bounds),
     detectedLabelMask: labelRegion?.mask || null,
     detectedTrackingLineRegion: trackingLineRegion,
+    detectedQtyLabelRegion: qtyLabelRegion?.bounds || null,
     detectedHandwritingRegion: handwritingRegion,
     detectedHandwritingLineRegions: selectedLineRegions,
     lineRegionSource: usesProviderLineRegions ? 'provider' : 'heuristic',
-    selectedSource: runResult.source,
+    selectedSource: selectedRunResult.source,
     selectedRegion,
     selectedResult: selectedOcrResult,
-    labelRegionResult: null,
-    handwritingRegionResult: selectedOcrResult,
+    labelRegionResult: labelRunResult
+      ? {
+          text: labelRunResult.text,
+          confidence: labelRunResult.confidence,
+          trackingNumber,
+        }
+      : null,
+    qtyLabelRegionResult: qtyLabelRunResult
+      ? {
+          text: qtyLabelRunResult.text,
+          confidence: qtyLabelRunResult.confidence,
+          trackingNumber,
+        }
+      : null,
+    handwritingRegionResult: handwritingRunResult
+      ? {
+          text: handwritingRunResult.text,
+          confidence: handwritingRunResult.confidence,
+          trackingNumber,
+        }
+      : null,
     fullImageResult: selectedOcrResult,
     timings,
   };
@@ -2615,76 +3264,130 @@ export async function extractTextFromImageDebug(input: InputImage): Promise<OcrD
   const timings: OcrDebugTimings = {
     totalMs: 0,
   };
+  void [
+    refineHandwritingRegionToCardboardEdges,
+    detectLabelRegions,
+    detectHandwritingRegion,
+    extractTrackingNumberFromLabelRegions,
+    ocrQtyLabelRegion,
+    buildDebugResult,
+  ];
   clearSavedOcrInputFiles();
   const cardboardBoxRegion = await detectCardboardBoxRegion(input, timings);
   const labelStartedAt = Date.now();
-  const labelRegion = await detectShippingLabelRegion(input);
+  const labelRegions = await detectLabelRegions(input, cardboardBoxRegion);
   timings.labelDetectionMs = Date.now() - labelStartedAt;
-  const trackingMatch = await extractTrackingNumberFromLabelRegion(input, labelRegion, timings);
-  const handwritingStartedAt = Date.now();
-  let handwritingRegion = await detectHandwritingRegion(input, labelRegion, cardboardBoxRegion);
-  timings.handwritingDetectionMs = Date.now() - handwritingStartedAt;
-  const handwritingLinesStartedAt = Date.now();
-  let handwritingLineRegions = handwritingRegion
-    ? await detectHandwritingLineRegions(input, handwritingRegion)
-    : [];
-  if (handwritingRegion && handwritingLineRegions.length) {
-    const refinedHandwritingRegion = await refineHandwritingRegionToCardboardEdges(
-      input,
-      handwritingRegion,
-      handwritingLineRegions,
-    );
-    if (refinedHandwritingRegion) {
-      handwritingRegion = refinedHandwritingRegion;
-      handwritingLineRegions = await detectHandwritingLineRegions(input, handwritingRegion);
+  const trackingMatch = await extractTrackingNumberFromLabelRegions(input, labelRegions, timings);
+  const trackingLabelRegion = trackingMatch.labelRegion;
+
+  let trackingLabelRunResult: OcrRunResult | null = null;
+  if (trackingLabelRegion) {
+    try {
+      trackingLabelRunResult = await ocrLabelRegion(input, trackingLabelRegion);
+    } catch {
+      trackingLabelRunResult = null;
     }
-  }
-  timings.handwritingLineDetectionMs = Date.now() - handwritingLinesStartedAt;
-  try {
-    const ocrSpaceStartedAt = Date.now();
-    const ocrSpaceResult = await runOcrSpace(
-      input,
-      labelRegion,
-      handwritingRegion,
-      handwritingLineRegions,
-    );
-    timings.mainOcrSpaceMs = Date.now() - ocrSpaceStartedAt;
-    if (ocrSpaceResult?.text) {
-      timings.totalMs = Date.now() - totalStartedAt;
-      return buildDebugResult(
-        ocrSpaceResult,
-        cardboardBoxRegion,
-        labelRegion,
-        trackingMatch.lineRegion,
-        handwritingRegion,
-        handwritingLineRegions,
-        trackingMatch.trackingNumber,
-        timings,
-      );
-    }
-  } catch (error) {
-    console.warn(`ocr.space failed, falling back to PaddleOCR: ${getExecErrorMessage(error)}`);
   }
 
-  const paddleStartedAt = Date.now();
-  const paddleOcrResult = await runPaddleOcr(input, handwritingRegion, labelRegion?.bounds || null);
-  timings.mainPaddleMs = Date.now() - paddleStartedAt;
-  if (paddleOcrResult?.text) {
-    timings.totalMs = Date.now() - totalStartedAt;
-    return buildDebugResult(
-      paddleOcrResult,
+  const qtyCandidateRegions = labelRegions.filter(
+    (region) => !trackingLabelRegion || !boundsEqual(region.bounds, trackingLabelRegion.bounds),
+  );
+  let qtyLabelRegion: LabelDetection | null = null;
+  let qtyLabelRunResult: OcrRunResult | null = null;
+  for (const candidateRegion of qtyCandidateRegions) {
+    try {
+      const candidateRunResult = await ocrQtyLabelRegion(input, candidateRegion);
+      if (!candidateRunResult?.text) continue;
+      qtyLabelRegion = candidateRegion;
+      qtyLabelRunResult = candidateRunResult;
+      break;
+    } catch {
+      // Continue checking remaining non-tracking labels.
+    }
+  }
+
+  let handwritingRegion: CropBounds | null = null;
+  let handwritingLineRegions: CropBounds[] = [];
+  let handwritingRunResult: OcrRunResult | null = null;
+  if (labelRegions.length === 1 && !qtyLabelRunResult && trackingLabelRegion) {
+    const handwritingStartedAt = Date.now();
+    const detectedHandwritingRegion = await detectHandwritingRegion(
+      input,
+      trackingLabelRegion,
       cardboardBoxRegion,
-      labelRegion,
-      trackingMatch.lineRegion,
-      handwritingRegion,
-      handwritingLineRegions,
-      trackingMatch.trackingNumber,
-      timings,
     );
+    timings.handwritingDetectionMs = Date.now() - handwritingStartedAt;
+
+    if (detectedHandwritingRegion) {
+      const lineStartedAt = Date.now();
+      const detectedLineRegions = await detectHandwritingLineRegions(
+        input,
+        detectedHandwritingRegion,
+      );
+      timings.handwritingLineDetectionMs = Date.now() - lineStartedAt;
+
+      handwritingLineRegions = detectedLineRegions;
+      handwritingRegion =
+        (detectedLineRegions.length
+          ? await refineHandwritingRegionToCardboardEdges(
+              input,
+              detectedHandwritingRegion,
+              detectedLineRegions,
+            )
+          : null) ?? detectedHandwritingRegion;
+
+      if (handwritingRegion !== detectedHandwritingRegion) {
+        const refinedLineStartedAt = Date.now();
+        handwritingLineRegions = await detectHandwritingLineRegions(input, handwritingRegion);
+        timings.handwritingLineDetectionMs =
+          (timings.handwritingLineDetectionMs ?? 0) + (Date.now() - refinedLineStartedAt);
+      }
+
+      try {
+        const ocrSpaceStartedAt = Date.now();
+        handwritingRunResult = await runOcrSpace(
+          input,
+          trackingLabelRegion,
+          handwritingRegion,
+          handwritingLineRegions,
+          '3',
+        );
+        timings.mainOcrSpaceMs = Date.now() - ocrSpaceStartedAt;
+      } catch {
+        handwritingRunResult = null;
+      }
+
+      if (!handwritingRunResult?.text) {
+        try {
+          const paddleStartedAt = Date.now();
+          handwritingRunResult = await runPaddleOcr(
+            input,
+            handwritingRegion,
+            trackingLabelRegion.bounds,
+          );
+          timings.mainPaddleMs = Date.now() - paddleStartedAt;
+        } catch {
+          handwritingRunResult = null;
+        }
+      }
+    }
   }
 
-  throw new Error(
-    `OCR did not return text. Configure OCRSPACE_API_KEY for cloud OCR or install local OCR deps with "pnpm --dir apps/image_processor run install:ocr" and check the detected handwriting region.`,
+  timings.totalMs = Date.now() - totalStartedAt;
+
+  return buildDebugResult(
+    trackingLabelRunResult,
+    cardboardBoxRegion,
+    labelRegions,
+    trackingLabelRegion,
+    qtyLabelRegion,
+    qtyLabelRunResult,
+    trackingMatch.lineRegion,
+    handwritingRegion,
+    handwritingRunResult,
+    handwritingLineRegions,
+    trackingMatch.trackingNumber,
+    timings,
   );
 }
 
@@ -2698,6 +3401,7 @@ function getDebugOverlaySvg(width: number, height: number, debugResult: OcrDebug
   const lineRegionStroke = debugResult.lineRegionSource === 'provider' ? '#f97316' : '#a855f7';
   const lineRegionLabel = debugResult.lineRegionSource === 'provider' ? 'provider' : 'heuristic';
   const timingRows = buildDebugTimingRows(debugResult.timings);
+  const detectedLabelCount = debugResult.detectedLabelRegions.length;
 
   if (debugResult.detectedCardboardBoxRegion) {
     const region = debugResult.detectedCardboardBoxRegion;
@@ -2706,10 +3410,34 @@ function getDebugOverlaySvg(width: number, height: number, debugResult: OcrDebug
     );
   }
 
-  if (debugResult.detectedLabelRegion && !debugResult.detectedLabelMask) {
+  for (const region of debugResult.detectedLabelRegions) {
+    if (
+      debugResult.detectedLabelRegion &&
+      boundsEqual(region, debugResult.detectedLabelRegion) &&
+      debugResult.detectedLabelMask
+    ) {
+      continue;
+    }
+    elements.push(
+      `<rect x="${region.left}" y="${region.top}" width="${region.width}" height="${region.height}" fill="none" stroke="#f59e0b" stroke-width="8" />`,
+    );
+  }
+
+  if (
+    debugResult.detectedLabelRegion &&
+    !debugResult.detectedLabelMask &&
+    !debugResult.detectedLabelRegions.length
+  ) {
     const region = debugResult.detectedLabelRegion;
     elements.push(
       `<rect x="${region.left}" y="${region.top}" width="${region.width}" height="${region.height}" fill="none" stroke="#f59e0b" stroke-width="8" />`,
+    );
+  }
+
+  if (debugResult.detectedQtyLabelRegion) {
+    const region = debugResult.detectedQtyLabelRegion;
+    elements.push(
+      `<rect x="${region.left}" y="${region.top}" width="${region.width}" height="${region.height}" fill="none" stroke="#14b8a6" stroke-width="8" stroke-dasharray="18 10" />`,
     );
   }
 
@@ -2740,7 +3468,7 @@ function getDebugOverlaySvg(width: number, height: number, debugResult: OcrDebug
     );
   }
 
-  const statusText = `selected=${debugResult.selectedSource} model=${debugResult.modelId} lines=${lineRegionLabel}`;
+  const statusText = `selected=${debugResult.selectedSource} model=${debugResult.modelId} labels=${detectedLabelCount} lines=${lineRegionLabel}`;
   const tableTop = 50;
   const rowHeight = 22;
   const bannerHeight = Math.min(

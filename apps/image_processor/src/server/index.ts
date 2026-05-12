@@ -7,7 +7,7 @@ let httpTerminator: HttpTerminator;
 
 export function start(): void {
   const server = new Server(app);
-  const port = process.env.PORT || 3101;
+  const port = process.env.PORT || 3000;
   httpTerminator = createHttpTerminator({ server });
   server.listen(port);
   logger.info(`Listening on port ${port}`);

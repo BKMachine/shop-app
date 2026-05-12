@@ -12,6 +12,7 @@
     "check": "biome check --write",
     "ci": "biome ci",
     "check-types": "tsc --noEmit",
+    "debug:ocr-overlays": "tsx -r dotenv/config ./scripts/render_ocr_debug_overlays.ts",
     "install:rembg": "bash ./scripts/install_rembg.sh",
     "install:ocr": "bash ./scripts/install_ocr.sh"
   },
