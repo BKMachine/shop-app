@@ -471,6 +471,38 @@ async function updateDirectParentCounts(
   if (operations.length) await Promise.all(operations);
 }
 
+async function buildDerivedPersistenceUpdate(part: unknown) {
+  const derivedCandidate = await buildDerivedPartCandidate(part);
+  await calculateDerivedPartProperties(derivedCandidate);
+
+  return {
+    subComponentIds: derivedCandidate.subComponentIds,
+    derived: {
+      shopRate: Number(derivedCandidate.derived?.shopRate) || 0,
+      directSubComponentCount: Number(derivedCandidate.derived?.directSubComponentCount) || 0,
+      directParentCount: getDirectParentCount(derivedCandidate),
+    },
+  };
+}
+
+async function refreshStoredPartDerivedProperties(part: PartDoc): Promise<void> {
+  await Part.findByIdAndUpdate(part._id, await buildDerivedPersistenceUpdate(part));
+}
+
+async function refreshParentDerivedProperties(
+  partId: string,
+  visited = new Set<string>(),
+): Promise<void> {
+  if (visited.has(partId)) return;
+  visited.add(partId);
+
+  const parents = await Part.find({ 'subComponentIds.partId': partId });
+  for (const parent of parents) {
+    await refreshStoredPartDerivedProperties(parent);
+    await refreshParentDerivedProperties(parent._id.toString(), visited);
+  }
+}
+
 async function list(filters: PartListFilters = {}): Promise<PartListResult> {
   const limit = Math.min(Math.max(Number(filters.limit) || 10, 1), 100);
   const offset = Math.max(Number(filters.offset) || 0, 0);
@@ -578,6 +610,7 @@ async function update(
   const updatedPart = await Part.findByIdAndUpdate(id, updatePayload, { returnDocument: 'after' });
   if (!updatedPart) throw new Error(`Unable to update part document id: ${id}`);
   await updateDirectParentCounts(addedChildIds, removedChildIds);
+  await refreshParentDerivedProperties(id);
 
   const refreshedPart = await findById(id);
   if (!refreshedPart) throw new Error(`Unable to load updated part document id: ${id}`);
