@@ -14,7 +14,8 @@
     "repair:images": "tsx -r dotenv/config ./scripts/repair_image_database.ts",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./jest.config.cjs",
     "fixture:pdf-text": "tsx ./scripts/pdf_fixture_text_pdf.ts",
-    "database:derived": "tsx -r dotenv/config ./scripts/add_derived_properties.ts"
+    "database:derived": "tsx -r dotenv/config ./scripts/add_derived_properties.ts",
+    "mongodump": "tsx -r dotenv/config ./scripts/mongodump.ts"
   },
   "dependencies": {
     "@repo/utilities": "workspace:*",

@@ -13,6 +13,7 @@
     "check": "turbo run check",
     "ci": "turbo run ci",
     "check-types": "turbo run check-types",
+
     "build:haas_serial": "docker build -f ./Dockerfile.haas_serial -t bkmachine/haas-serial .",
     "build:image_processor": "docker build -f ./Dockerfile.image_processor -t bkmachine/image-processor .",
     "build:server": "docker build -f ./Dockerfile.server -t bkmachine/shop-app .",
