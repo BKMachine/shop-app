@@ -13,8 +13,8 @@ const initState: ArduinoState = {
 };
 
 class ArduinoMachine extends Machine {
-  constructor(doc: MachineDoc) {
-    super(doc, { ...initState });
+  constructor(doc: MachineDoc, seedState?: MachineState) {
+    super(doc, { ...initState, ...(seedState ?? {}) } as ArduinoState);
   }
 
   updateStatus(): void {

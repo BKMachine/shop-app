@@ -11,7 +11,7 @@ export const arduinoMachines = new Map<string, ArduinoMachine>();
 export const mtConnectMachines = new Map<string, MTConnectMachine>();
 export const haasMachines = new Map<string, HaasMachine>();
 
-export function initMachines(): Promise<void> {
+export function initMachines(seedStates = new Map<string, MachineState>()): Promise<void> {
   return new Promise((resolve) => {
     (async () => {
       const machineDocs = await Machine.list();
@@ -21,20 +21,25 @@ export function initMachines(): Promise<void> {
       mtConnectMachines.clear();
       haasMachines.clear();
       machineDocs.forEach((doc: any) => {
+        const seedState = seedStates.get(doc._id.toString());
         if (doc.source === 'focas') {
-          const machine = new FocasMachine(doc);
+          const machine = new FocasMachine(doc, seedState);
+          machine.updateStatus();
           machines.set(machine.doc._id.toString(), machine);
           focasMachines.set(doc.location, machine);
         } else if (doc.source === 'arduino') {
-          const machine = new ArduinoMachine(doc);
+          const machine = new ArduinoMachine(doc, seedState);
+          machine.updateStatus();
           machines.set(machine.doc._id.toString(), machine);
           arduinoMachines.set(doc.location, machine);
         } else if (doc.source === 'mtconnect') {
-          const machine = new MTConnectMachine(doc);
+          const machine = new MTConnectMachine(doc, seedState);
+          machine.updateStatus();
           machines.set(machine.doc._id.toString(), machine);
           mtConnectMachines.set(doc.location, machine);
         } else if (doc.source === 'serial') {
-          const machine = new HaasMachine(doc);
+          const machine = new HaasMachine(doc, seedState);
+          machine.updateStatus();
           machines.set(machine.doc._id.toString(), machine);
           haasMachines.set(doc.location, machine);
         }
@@ -43,6 +48,14 @@ export function initMachines(): Promise<void> {
       resolve();
     })();
   });
+}
+
+export function listMachineData(): MachineData[] {
+  return Array.from(machines.values(), (machine) => machine.getMachine());
+}
+
+export function listMachineStateEntries(): Array<[string, MachineState]> {
+  return Array.from(machines, ([id, machine]) => [id, machine.getState()]);
 }
 
 export default machines;

@@ -12,8 +12,8 @@ const initState: HaasState = {
 };
 
 class HaasMachine extends Machine {
-  constructor(doc: MachineDoc) {
-    super(doc, { ...initState });
+  constructor(doc: MachineDoc, seedState?: MachineState) {
+    super(doc, { ...initState, ...(seedState ?? {}) } as HaasState);
   }
 
   updateStatus(): void {

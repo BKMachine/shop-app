@@ -21,8 +21,8 @@ const initState: FocasState = {
 };
 
 class FocasMachine extends Machine {
-  constructor(doc: MachineDoc) {
-    super(doc, { ...initState });
+  constructor(doc: MachineDoc, seedState?: MachineState) {
+    super(doc, { ...initState, ...(seedState ?? {}) } as FocasState);
   }
 
   updateStatus(): void {

@@ -5,6 +5,10 @@ import * as mqtt from './machines/Focas/mqtt.js';
 import * as serial from './machines/Haas/serial.js';
 import * as machines from './machines/index.js';
 import * as mtconnect from './machines/MTConnect/mtconnect_polling.js';
+import {
+  loadRecentMachineStateSnapshot,
+  saveMachineStateSnapshot,
+} from './machines/state_cache.js';
 import * as server from './server/index.js';
 import * as influx from './timeseries/influx.js';
 
@@ -12,7 +16,8 @@ const HAAS_SERIAL_ENABLED = process.env.HAAS_SERIAL_ENABLED === 'true';
 
 export async function start(): Promise<void> {
   await database.connect();
-  await machines.initMachines();
+  const seedStates = await loadRecentMachineStateSnapshot();
+  await machines.initMachines(seedStates);
   if (process.env.NODE_ENV === 'production') {
     await influx.connect().catch((err) => {
       logger.error('Failed to connect to InfluxDB:', err);
@@ -31,6 +36,7 @@ export async function stop(): Promise<void> {
   mtconnect.stop();
   arduino.stop();
   mqtt.disconnect();
+  await saveMachineStateSnapshot(machines.listMachineStateEntries());
   await influx.disconnect();
   await database.disconnect();
 }
