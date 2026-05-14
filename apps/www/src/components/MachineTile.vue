@@ -1,5 +1,8 @@
 <template>
-  <div class="machine" :class="[status, { online: isOnline, alarmed: hasAlarm, blink }]">
+  <div
+    class="machine"
+    :class="[status, { online: isOnline, alarmed: hasAlarm, 'blink-off': blinkOffPhase }]"
+  >
     <div class="header">
       <div>{{ data.name }}</div>
       <img v-if="!isOnline" alt="OFFLINE" class="offline" :src="offlineImg" />
@@ -188,8 +191,12 @@ const alarmMessages = computed<string[]>(() => {
   }
 });
 
-const blink = computed(() => {
+const shouldBlink = computed(() => {
   return isOnline.value && status.value === 'status-red' && seconds.value >= 60 * 15;
+});
+
+const blinkOffPhase = computed(() => {
+  return shouldBlink.value && Math.floor(nowStore.now.valueOf() / 1000) % 2 === 1;
 });
 
 const longChange = computed(() => {
@@ -263,23 +270,8 @@ const status = computed(() => {
   background: #bd0000;
 }
 
-.blink {
-  animation: blinkingAlarm 2s infinite;
-}
-
-@keyframes blinkingAlarm {
-  0% {
-    background-color: #bd0000;
-  }
-  50% {
-    background-color: #bd0000;
-  }
-  51% {
-    background-color: #6c6c6c;
-  }
-  100% {
-    background-color: #6c6c6c;
-  }
+.machine.online.status-red.blink-off {
+  background: #6c6c6c;
 }
 
 .long-change {
