@@ -457,9 +457,9 @@
                     />
                   </button>
 
-                  <div v-if="false" class="details-image-card__footer">
+                  <div class="details-image-card__footer">
                     <div class="details-image-card__actions mt-2">
-                      <v-btn
+                      <!-- <v-btn
                         color="primary"
                         :disabled="isImageOcrBusy(image.id)"
                         icon="mdi-text-recognition"
@@ -477,13 +477,13 @@
                         title="Open OCR Debug Overlay"
                         variant="text"
                         @click.stop="openImageOcrDebug(image.id)"
-                      />
+                      /> -->
                       <v-btn
                         color="error"
                         :disabled="isImageOcrBusy(image.id)"
-                        icon="mdi-delete"
+                        icon="mdi-delete-outline"
                         :loading="deletingImageId === image.id"
-                        size="x-small"
+                        size="xs-small"
                         :title="
                           isImageOcrBusy(image.id)
                             ? 'OCR is queued for this image'
