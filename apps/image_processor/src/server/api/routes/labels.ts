@@ -18,7 +18,17 @@ router.post('/location', async (req, res, next) => {
 });
 
 router.post('/item', async (req, res, next) => {
-  const { identifier, description, entity, loc, pos, qrText, imageUrl }: PrintItemBody = req.body;
+  const {
+    identifier,
+    description,
+    entity,
+    loc,
+    pos,
+    qrText,
+    imageUrl,
+    labelOffsetX,
+    labelOffsetY,
+  }: PrintItemBody = req.body;
   if (!identifier || !description || !entity || !loc || !pos || !qrText) {
     return next(
       new HttpError(400, 'identifier, description, entity, loc, pos, and qrText are required.'),
@@ -34,6 +44,8 @@ router.post('/item', async (req, res, next) => {
       pos,
       qrText,
       imageUrl,
+      labelOffsetX,
+      labelOffsetY,
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.status(200).send(pdf);

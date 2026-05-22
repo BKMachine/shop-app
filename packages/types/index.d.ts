@@ -27,6 +27,18 @@ declare global {
     pos: string;
     qrText: string;
     imageUrl?: string;
+    labelOffsetX?: number;
+    labelOffsetY?: number;
+  }
+
+  interface LabelOffset {
+    x: number;
+    y: number;
+  }
+
+  interface MiscSettings {
+    _id: 'misc-settings';
+    itemLabelOffset: LabelOffset;
   }
 
   interface PrintShipmentQtyLabelRow {

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import MiscSettings from '../../../database/lib/misc_settings/misc_settings_service.js';
 import logger from '../../../logger.js';
 import CupsService from '../../../services/cups_service.js';
 import {
@@ -40,17 +41,19 @@ router.post('/print/item', requireKnownDevice, async (req, res, next) => {
     );
   }
 
-  const body: PrintItemBody = {
-    identifier,
-    description,
-    entity,
-    loc,
-    pos,
-    qrText,
-    imageUrl,
-  };
-
   try {
+    const miscSettings = await MiscSettings.get();
+    const body: PrintItemBody = {
+      identifier,
+      description,
+      entity,
+      loc,
+      pos,
+      qrText,
+      imageUrl,
+      labelOffsetX: miscSettings.itemLabelOffset.x,
+      labelOffsetY: miscSettings.itemLabelOffset.y,
+    };
     const pdf = await buildItemLabel(body);
     await CupsService.printAddressLabel(pdf.buffer, body).catch((error) => {
       logger.warn(

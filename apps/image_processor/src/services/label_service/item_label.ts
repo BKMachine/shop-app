@@ -391,14 +391,20 @@ export async function buildItemLabel(data: PrintItemBody) {
   pdf.registerFontkit(fontkit);
   const page = pdf.addPage([ROTATED_ADDRESS_LABEL.width, ROTATED_ADDRESS_LABEL.height]);
   const sans = await pdf.embedFont(fs.readFileSync(segoeUiRegularPath));
+  const offsetX = Number.isFinite(data.labelOffsetX) ? Number(data.labelOffsetX) : 0;
+  const offsetY = Number.isFinite(data.labelOffsetY) ? Number(data.labelOffsetY) : 0;
   const rightMargin =
     PART_POSITION_LAYOUT.paddingX + PART_POSITION_LAYOUT.printableArea.extraRightMargin;
 
-  const borderLeft = PART_POSITION_LAYOUT.paddingX - PART_POSITION_LAYOUT.border.inset;
-  const borderRight = ADDRESS_LABEL.width / 72 - rightMargin + PART_POSITION_LAYOUT.border.inset;
-  const borderTop = PART_POSITION_LAYOUT.paddingY - PART_POSITION_LAYOUT.border.inset;
+  const borderLeft = PART_POSITION_LAYOUT.paddingX - PART_POSITION_LAYOUT.border.inset + offsetX;
+  const borderRight =
+    ADDRESS_LABEL.width / 72 - rightMargin + PART_POSITION_LAYOUT.border.inset + offsetX;
+  const borderTop = PART_POSITION_LAYOUT.paddingY - PART_POSITION_LAYOUT.border.inset + offsetY;
   const borderBottom =
-    ADDRESS_LABEL.height / 72 - PART_POSITION_LAYOUT.paddingY + PART_POSITION_LAYOUT.border.inset;
+    ADDRESS_LABEL.height / 72 -
+    PART_POSITION_LAYOUT.paddingY +
+    PART_POSITION_LAYOUT.border.inset +
+    offsetY;
 
   const topLeft = rotateClockwisePoint(inches(borderLeft), toPdfY(ADDRESS_LABEL.height, borderTop));
   const topRight = rotateClockwisePoint(
