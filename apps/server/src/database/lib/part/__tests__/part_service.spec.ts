@@ -28,16 +28,66 @@ function createPartDoc(record: PartRecord) {
   };
 }
 
+function getNestedValue(record: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((value, key) => {
+    if (!value || typeof value !== 'object') return undefined;
+    return (value as Record<string, unknown>)[key];
+  }, record);
+}
+
 function createPartQuery(records: PartRecord[]) {
-  const docs = records.map(createPartDoc) as Array<ReturnType<typeof createPartDoc>> & {
-    populate: () => typeof docs;
+  let workingRecords = records.map((record) => cloneValue(record));
+  let skipCount = 0;
+  let limitCount = Number.POSITIVE_INFINITY;
+
+  const query = [] as Array<ReturnType<typeof createPartDoc>> & {
+    sort: (sortSpec: Record<string, 1 | -1>) => typeof query;
+    skip: (value: number) => typeof query;
+    limit: (value: number) => typeof query;
+    populate: () => typeof query;
     lean: () => PartRecord[];
   };
 
-  docs.populate = () => docs;
-  docs.lean = () => records.map((record) => cloneValue(record));
+  const syncDocs = () => {
+    query.length = 0;
+    query.push(
+      ...workingRecords
+        .slice(skipCount, skipCount + limitCount)
+        .map((record) => createPartDoc(record)),
+    );
+  };
 
-  return docs;
+  syncDocs();
+
+  query.sort = (sortSpec: Record<string, 1 | -1>) => {
+    const [[field, direction]] = Object.entries(sortSpec);
+    workingRecords = [...workingRecords].sort((left, right) => {
+      const leftValue = getNestedValue(left as unknown as Record<string, unknown>, field);
+      const rightValue = getNestedValue(right as unknown as Record<string, unknown>, field);
+
+      if (leftValue === rightValue) return 0;
+      if (leftValue === undefined) return 1;
+      if (rightValue === undefined) return -1;
+      return leftValue > rightValue ? direction : -direction;
+    });
+    syncDocs();
+    return query;
+  };
+  query.skip = (value: number) => {
+    skipCount = value;
+    syncDocs();
+    return query;
+  };
+  query.limit = (value: number) => {
+    limitCount = value;
+    syncDocs();
+    return query;
+  };
+  query.populate = () => query;
+  query.lean = () =>
+    workingRecords.slice(skipCount, skipCount + limitCount).map((record) => cloneValue(record));
+
+  return query;
 }
 
 function partMatchesQuery(record: PartRecord, query?: Record<string, unknown>): boolean {
@@ -104,6 +154,10 @@ const PartModelMock = {
     );
     return createPartQuery(records);
   }),
+  countDocuments: jest.fn(
+    (query?: Record<string, unknown>) =>
+      Array.from(partStore.values()).filter((record) => partMatchesQuery(record, query)).length,
+  ),
 };
 
 const MaterialModelMock = {
@@ -219,4 +273,55 @@ test('update refreshes parent derived shop rate when a child part changes', asyn
       }),
     }),
   );
+});
+
+test('list sorts parts by price ascending and descending', async () => {
+  partStore.set(
+    'part-low',
+    buildPart({
+      _id: 'part-low',
+      part: 'LOW',
+      description: 'Low price',
+      price: 5,
+    }),
+  );
+  partStore.set(
+    'part-mid',
+    buildPart({
+      _id: 'part-mid',
+      part: 'MID',
+      description: 'Mid price',
+      price: 15,
+    }),
+  );
+  partStore.set(
+    'part-high',
+    buildPart({
+      _id: 'part-high',
+      part: 'HIGH',
+      description: 'High price',
+      price: 25,
+    }),
+  );
+
+  const PartService = await loadPartService();
+
+  const ascending = await PartService.list({ sort: 'price', order: 'asc', limit: 10, offset: 0 });
+  const descending = await PartService.list({
+    sort: 'price',
+    order: 'desc',
+    limit: 10,
+    offset: 0,
+  });
+
+  expect(ascending.items.map((part: PartListItem) => part._id)).toEqual([
+    'part-low',
+    'part-mid',
+    'part-high',
+  ]);
+  expect(descending.items.map((part: PartListItem) => part._id)).toEqual([
+    'part-high',
+    'part-mid',
+    'part-low',
+  ]);
 });

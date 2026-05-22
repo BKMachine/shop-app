@@ -108,6 +108,7 @@ const validSortFields = new Set([
   'description',
   'customer.name',
   'shopRate',
+  'price',
   'needsReview',
   'location',
   'position',

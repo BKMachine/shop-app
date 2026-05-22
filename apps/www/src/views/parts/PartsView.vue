@@ -224,6 +224,12 @@ const headers = [
     width: 80,
   },
   {
+    title: 'Price',
+    key: 'price',
+    width: 80,
+    format: (value: unknown) => (typeof value === 'number' ? `$${value.toFixed(2)}` : ''),
+  },
+  {
     title: 'Needs Review',
     key: 'needsReview',
   },

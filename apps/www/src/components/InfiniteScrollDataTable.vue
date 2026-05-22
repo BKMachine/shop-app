@@ -3,7 +3,7 @@
     <v-data-table-virtual
       :custom-key-sort="customKeySort"
       fixed-header
-      :headers="headers"
+      :headers="normalizedHeaders"
       :height="tableHeight"
       :items="items"
       :loading="loading"
@@ -11,6 +11,14 @@
       @click:row="handleClickRow"
       @update:sort-by="handleUpdateSortBy"
     >
+      <template
+        v-for="header in autoFormattedHeaders"
+        :key="`format-${header.key}`"
+        #[`item.${header.key}`]="{ item }"
+      >
+        {{ formatCellValue(header, item) }}
+      </template>
+
       <template v-for="slotName in forwardedSlotNames" :key="slotName" #[slotName]="slotProps">
         <slot :name="slotName" v-bind="slotProps" />
       </template>
@@ -37,10 +45,14 @@ import { useVirtualTableScroll } from '@/lib/useVirtualTableScroll';
 
 type TableSort = { key: string; order: 'asc' | 'desc' };
 type CustomKeySort = Record<string, (...args: unknown[]) => number>;
+type TableHeader = Record<string, unknown> & {
+  key?: string;
+  format?: (value: unknown, item: unknown) => unknown;
+};
 
 const props = withDefaults(
   defineProps<{
-    headers: readonly Record<string, unknown>[];
+    headers: readonly TableHeader[];
     items: readonly unknown[];
     loading: boolean;
     hasMore: boolean;
@@ -75,6 +87,16 @@ const forwardedSlotNames = computed(() => {
   return Object.keys(slots).filter((name) => name !== 'default' && name !== 'bottom');
 });
 
+const normalizedHeaders = computed(() => {
+  return props.headers.map(({ format, ...header }) => header);
+});
+
+const autoFormattedHeaders = computed(() => {
+  return props.headers.filter((header) => {
+    return Boolean(header.format && header.key) && !slots[`item.${header.key}`];
+  });
+});
+
 const showAllItemsLoaded = computed(() => {
   return (
     !props.hasMore && props.items.length > 0 && (!isTableScrollable.value || isAtTableBottom.value)
@@ -91,6 +113,22 @@ function handleClickRow(event: unknown, payload: unknown) {
 
 function handleUpdateSortBy(value: TableSort[]) {
   emit('update:sortBy', value);
+}
+
+function getItemValue(item: unknown, key: string) {
+  if (!item || typeof item !== 'object') return undefined;
+
+  return key.split('.').reduce<unknown>((currentValue, pathSegment) => {
+    if (!currentValue || typeof currentValue !== 'object') return undefined;
+    return (currentValue as Record<string, unknown>)[pathSegment];
+  }, item);
+}
+
+function formatCellValue(header: TableHeader, item: unknown) {
+  if (!header.key) return '';
+  const value = getItemValue(item, header.key);
+  const formattedValue = header.format ? header.format(value, item) : value;
+  return formattedValue ?? '';
 }
 
 async function refreshLayout() {
