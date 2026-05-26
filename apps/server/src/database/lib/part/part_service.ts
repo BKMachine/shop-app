@@ -539,7 +539,7 @@ async function list(filters: PartListFilters = {}): Promise<PartListResult> {
   const [items, total, allMatchingParts]: [
     items: PartDoc[],
     total: number,
-    allMatchingParts: PartDoc[],
+    allMatchingParts: Array<Pick<PartFields, 'price' | 'stock'>>,
   ] = await Promise.all([
     Part.find(query)
       .sort({ [sortField]: direction })
@@ -547,7 +547,7 @@ async function list(filters: PartListFilters = {}): Promise<PartListResult> {
       .limit(limit)
       .populate('customer'),
     Part.countDocuments(query),
-    Part.find(query).lean(),
+    Part.find(query, { price: 1, stock: 1 }).lean(),
   ]);
 
   return {
