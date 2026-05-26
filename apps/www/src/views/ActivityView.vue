@@ -95,7 +95,8 @@
 
                 <!-- Part Info -->
                 <v-col class="info-col" cols="auto">
-                  <div class="tool-description">{{ activity._id }}</div>
+                  <div class="tool-description">{{ activity.new.part }}</div>
+                  <div class="tool-description-subtext">{{ activity.new.description }}</div>
                   <div class="activity-meta">
                     <span
                       :class="`amount ${activity.type === 'increase' ? 'increase' : 'decrease'}`"
@@ -443,6 +444,10 @@ function open(item: Tool | Part, type: 'tool' | 'part') {
   margin-bottom: 3px;
   line-height: 1.2;
   word-break: break-word;
+}
+
+.tool-description-subtext {
+  font-weight: normal;
 }
 
 .activity-meta {
