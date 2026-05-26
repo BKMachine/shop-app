@@ -82,6 +82,7 @@ declare global {
   interface PartListResult {
     items: PartListItem[];
     total: number;
+    totalValue: number;
     limit: number;
     offset: number;
     hasMore: boolean;

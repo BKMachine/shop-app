@@ -7,6 +7,7 @@ export const usePartStore = defineStore('parts', () => {
   const parts = ref<Part[]>([]);
   const listParts = ref<PartListItem[]>([]);
   const listTotal = ref(0);
+  const totalValue = ref(0);
   const listLimit = ref(20);
   const listOffset = ref(0);
   const listHasMore = ref(false);
@@ -84,6 +85,7 @@ export const usePartStore = defineStore('parts', () => {
       }
 
       listTotal.value = data.total;
+      totalValue.value = data.totalValue;
       total.value = data.total;
       listLimit.value = data.limit;
       listOffset.value = data.offset;
@@ -100,6 +102,7 @@ export const usePartStore = defineStore('parts', () => {
     activeListRequestId.value++;
     listParts.value = [];
     listTotal.value = 0;
+    totalValue.value = 0;
     listOffset.value = 0;
     listHasMore.value = false;
     currentListQuery.value = {};
@@ -358,6 +361,7 @@ export const usePartStore = defineStore('parts', () => {
     listParts,
     loading,
     total,
+    totalValue,
     listTotal,
     listLimit,
     listOffset,

@@ -504,6 +504,13 @@ async function refreshParentDerivedProperties(
   }
 }
 
+function calculateTotalValue(parts: Array<Pick<PartFields, 'price' | 'stock'>>): number {
+  return parts.reduce(
+    (sum, part) => sum + (Number(part.price) || 0) * (Number(part.stock) || 0),
+    0,
+  );
+}
+
 async function list(filters: PartListFilters = {}): Promise<PartListResult> {
   const limit = Math.min(Math.max(Number(filters.limit) || 10, 1), 100);
   const offset = Math.max(Number(filters.offset) || 0, 0);
@@ -517,28 +524,36 @@ async function list(filters: PartListFilters = {}): Promise<PartListResult> {
       compareParts(left, right, sortField, direction),
     );
     const pagedItems = sortedItems.slice(offset, offset + limit);
+    const totalValue = calculateTotalValue(sortedItems);
 
     return {
       items: pagedItems.map(createListItem),
       total: sortedItems.length,
+      totalValue,
       limit,
       offset,
       hasMore: offset + pagedItems.length < sortedItems.length,
     };
   }
 
-  const [items, total]: [items: PartDoc[], total: number] = await Promise.all([
+  const [items, total, allMatchingParts]: [
+    items: PartDoc[],
+    total: number,
+    allMatchingParts: PartDoc[],
+  ] = await Promise.all([
     Part.find(query)
       .sort({ [sortField]: direction })
       .skip(offset)
       .limit(limit)
       .populate('customer'),
     Part.countDocuments(query),
+    Part.find(query).lean(),
   ]);
 
   return {
     items: items.map(createListItem),
     total,
+    totalValue: calculateTotalValue(allMatchingParts),
     limit,
     offset,
     hasMore: offset + items.length < total,

@@ -1,4 +1,4 @@
-import { reactive } from 'vue';
+import { computed, reactive } from 'vue';
 import api from '@/plugins/axios';
 
 type DeviceState = {
@@ -10,6 +10,8 @@ export const deviceState = reactive<DeviceState>({
   current: null,
   loaded: false,
 });
+
+export const isAdmin = computed(() => Boolean(deviceState.current?.isAdmin));
 
 export async function fetchCurrentDevice() {
   try {

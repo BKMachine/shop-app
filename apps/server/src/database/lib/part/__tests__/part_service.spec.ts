@@ -283,6 +283,7 @@ test('list sorts parts by price ascending and descending', async () => {
       part: 'LOW',
       description: 'Low price',
       price: 5,
+      stock: 3,
     }),
   );
   partStore.set(
@@ -292,6 +293,7 @@ test('list sorts parts by price ascending and descending', async () => {
       part: 'MID',
       description: 'Mid price',
       price: 15,
+      stock: 4,
     }),
   );
   partStore.set(
@@ -301,6 +303,7 @@ test('list sorts parts by price ascending and descending', async () => {
       part: 'HIGH',
       description: 'High price',
       price: 25,
+      stock: 1,
     }),
   );
 
@@ -319,9 +322,11 @@ test('list sorts parts by price ascending and descending', async () => {
     'part-mid',
     'part-high',
   ]);
+  expect(ascending.totalValue).toBe(100);
   expect(descending.items.map((part: PartListItem) => part._id)).toEqual([
     'part-high',
     'part-mid',
     'part-low',
   ]);
+  expect(descending.totalValue).toBe(100);
 });

@@ -3,7 +3,13 @@
     <v-card-title class="header mt-4">
       <div class="d-flex flex-column">
         <span>Parts</span>
-        <span class="text-title-small text-medium-emphasis">{{ partStore.total }} Results</span>
+        <div class="parts-summary-row text-title-small text-medium-emphasis">
+          <span>{{ partStore.total }} Results</span>
+          <span v-if="isAdmin">|</span>
+          <button v-if="isAdmin" class="show-value-button" type="button" @click="toggleTotalValue">
+            {{ revealedTotalValue }}
+          </button>
+        </div>
       </div>
       <div class="header-actions">
         <v-checkbox
@@ -170,7 +176,7 @@ import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vu
 import { useDocumentScrollLock } from '@/lib/useDocumentScrollLock';
 import { getToneForRate } from '@/plugins/rates_theme';
 import router from '@/router';
-import { deviceState } from '@/state/device';
+import { deviceState, isAdmin } from '@/state/device';
 import { usePartStore } from '@/stores/parts_store';
 
 type PartsListRow = Part & {
@@ -191,13 +197,14 @@ const sortBy = ref<Array<{ key: string; order: 'asc' | 'desc' }>>([{ key: 'part'
 const search = ref('');
 const selectedCustomerId = ref<string | null>(null);
 const showSubComponents = ref(false);
+const isTotalValueVisible = ref(false);
 const missingImageIds = ref<Record<string, boolean>>({});
 const visibleHeaderKeys = ref<string[]>([]);
 const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const FILTER_QUERY_KEYS = ['search', 'customer', 'subcomponents', 'sort', 'order'] as const;
 const isFilterQueryKey = (key: string): key is (typeof FILTER_QUERY_KEYS)[number] =>
   FILTER_QUERY_KEYS.includes(key as (typeof FILTER_QUERY_KEYS)[number]);
-const showNeedsReviewColumn = computed(() => Boolean(deviceState.current?.isAdmin));
+const showNeedsReviewColumn = computed(() => isAdmin.value);
 
 const headers = [
   {
@@ -261,6 +268,15 @@ const visibleHeaders = computed(() => {
 
 const customKeySort = computed(() => {
   return Object.fromEntries(visibleHeaders.value.map(({ key }) => [key, () => 0]));
+});
+
+const revealedTotalValue = computed(() => {
+  if (!isTotalValueVisible.value) return 'Show Value';
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(partStore.totalValue);
 });
 
 function syncVisibleHeaders() {
@@ -387,6 +403,10 @@ function updateSortBy(value: Array<{ key: string; order: 'asc' | 'desc' }>) {
 
 function loadMore() {
   void partStore.fetchNextListPage();
+}
+
+function toggleTotalValue() {
+  isTotalValueVisible.value = !isTotalValueVisible.value;
 }
 
 function getTone(item: PartsListRow) {
@@ -548,6 +568,23 @@ function areFilterQueriesEqual(
   display: flex;
   align-items: center;
   /* gap: 1rem; */
+}
+
+.parts-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.show-value-button {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1e88e5;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .search-details {
