@@ -86,6 +86,7 @@
             <v-col cols="12">
               <v-autocomplete
                 v-model="part.material"
+                clearable
                 hide-details
                 item-title="description"
                 item-value="_id"
