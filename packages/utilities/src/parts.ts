@@ -10,12 +10,24 @@ interface MaterialCostInput extends MaterialUsageInput {
 }
 
 interface CycleTimeInput {
+  operation?: string | null;
   time?: number | null;
+}
+
+interface AdditionalCostInput {
+  cost?: number | null;
+}
+
+interface RateInputPart extends MaterialCostInput {
+  cycleTimes?: CycleTimeInput[] | null;
+  additionalCosts?: AdditionalCostInput[] | null;
+  material?: unknown;
 }
 
 interface AssemblyPartInput extends MaterialCostInput {
   _id?: string;
   cycleTimes?: CycleTimeInput[] | null;
+  additionalCosts?: AdditionalCostInput[] | null;
   material?: unknown;
   subComponentIds?: unknown;
 }
@@ -150,4 +162,52 @@ export function calculatePartShopRate(
 
   const amountMinusMaterial = (Number(price) || 0) - partMaterialCost;
   return amountMinusMaterial / (totalCycleMinutes / 60);
+}
+
+export function hasMissingRateInputs<TPart extends RateInputPart>(part: TPart): boolean {
+  const hasCycleTimes = (part.cycleTimes || []).some((cycle) => Number(cycle.time) > 0);
+  const hasIncompleteCycleTimeEntry = (part.cycleTimes || []).some((cycle) => {
+    const operationName = cycle.operation?.trim() || '';
+    return Boolean(operationName) && Number(cycle.time) <= 0;
+  });
+  const hasAdditionalCost = (part.additionalCosts || []).some((cost) => Number(cost.cost) > 0);
+  const isMissingMaterial = !part.material && !part.customerSuppliedMaterial;
+
+  return (
+    ((!hasCycleTimes || hasIncompleteCycleTimeEntry) && !hasAdditionalCost) ||
+    hasIncompleteCycleTimeEntry ||
+    isMissingMaterial
+  );
+}
+
+export function hasIncompleteAssemblyLeafCosts<TPart extends AssemblyPartInput>(
+  part: TPart,
+  resolvePart: (id: string) => TPart | undefined,
+  visited = new Set<string>(),
+): boolean {
+  if (!part?._id) return false;
+  if (visited.has(part._id)) return false;
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(part._id);
+
+  const subComponents = normalizeSubComponentIds(part.subComponentIds);
+  for (const entry of subComponents) {
+    const subComponent = resolvePart(entry.partId);
+    if (!subComponent) continue;
+
+    const nestedSubComponents = normalizeSubComponentIds(subComponent.subComponentIds);
+    if (nestedSubComponents.length) {
+      if (hasIncompleteAssemblyLeafCosts(subComponent, resolvePart, nextVisited)) {
+        return true;
+      }
+      continue;
+    }
+
+    if (hasMissingRateInputs(subComponent)) {
+      return true;
+    }
+  }
+
+  return false;
 }

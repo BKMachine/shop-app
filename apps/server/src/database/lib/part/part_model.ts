@@ -43,6 +43,7 @@ const schema = new Schema<PartDocumentFields>({
     shopRate: { type: Number, default: 0 },
     directSubComponentCount: { type: Number, default: 0 },
     directParentCount: { type: Number, default: 0 },
+    hasIncompleteSubComponentCosts: { type: Boolean, default: false },
   },
   needsReview: { type: Boolean, default: true },
 });

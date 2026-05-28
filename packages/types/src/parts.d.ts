@@ -44,6 +44,7 @@ declare global {
     shopRate: number;
     directSubComponentCount: number;
     directParentCount: number;
+    hasIncompleteSubComponentCosts?: boolean;
   }
 
   interface CycleTimes {

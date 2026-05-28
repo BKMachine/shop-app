@@ -2,6 +2,7 @@ import {
   calculateAssemblyCycleMinutes,
   calculateAssemblyMaterialCost,
   calculatePartShopRate,
+  hasIncompleteAssemblyLeafCosts,
 } from '@repo/utilities/parts';
 import { emit } from '../../../server/sockets.js';
 import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
@@ -92,6 +93,9 @@ async function buildPersistencePayload(
       shopRate: Number(derivedCandidate.derived?.shopRate) || 0,
       directSubComponentCount: Number(derivedCandidate.derived?.directSubComponentCount) || 0,
       directParentCount,
+      hasIncompleteSubComponentCosts: Boolean(
+        derivedCandidate.derived?.hasIncompleteSubComponentCosts,
+      ),
     },
     img: preserveManagedMediaFields ? existingPart?.img : plainPart.img,
     imageIds: preserveManagedMediaFields
@@ -220,16 +224,18 @@ async function assemblyDescendantsIncludePart(
 export async function calculateDerivedPartProperties(part: Part): Promise<void> {
   const normalizedSubComponentIds = normalizeSubComponentIds(part.subComponentIds);
   part.subComponentIds = normalizedSubComponentIds;
+  const partGraph = await buildAssemblyPartGraph(part);
+
   part.derived = {
-    shopRate: await deriveShopRate(part),
+    shopRate: deriveShopRateFromGraph(part, partGraph),
     directSubComponentCount: normalizedSubComponentIds.length,
     directParentCount: getDirectParentCount(part),
+    hasIncompleteSubComponentCosts: hasIncompleteSubComponentCosts(part, partGraph),
   };
 }
 
-const deriveShopRate = async (part: Part): Promise<number> => {
+const deriveShopRateFromGraph = (part: Part, partGraph: Map<string, Part>): number => {
   const rootId = part._id;
-  const partGraph = await buildAssemblyPartGraph(part);
   const rootPart = partGraph.get(rootId);
   if (!rootPart) return 0;
 
@@ -250,6 +256,13 @@ const deriveShopRate = async (part: Part): Promise<number> => {
 
   return calculatePartShopRate(rootPart.price, partMaterialCost, totalCycleMinutes);
 };
+
+function hasIncompleteSubComponentCosts(part: Part, partGraph: Map<string, Part>): boolean {
+  const rootPart = partGraph.get(part._id);
+  if (!rootPart) return false;
+
+  return hasIncompleteAssemblyLeafCosts(rootPart, (partId: string) => partGraph.get(partId));
+}
 
 function getSortValue(part: PartDoc, field: string): string | number {
   if (field === 'customer.name') return getCustomerName(toPlainEntity(part).customer);
@@ -339,6 +352,7 @@ function createListItem(part: PartDoc): PartListItem {
       shopRate: Number(part.derived?.shopRate) || 0,
       directSubComponentCount,
       directParentCount,
+      hasIncompleteSubComponentCosts: Boolean(part.derived?.hasIncompleteSubComponentCosts),
     },
     hasSubComponents: directSubComponentCount > 0,
     isSubComponent: directParentCount > 0,
@@ -359,6 +373,7 @@ function createDetailItem(part: PartDoc): Part {
       shopRate: Number(part.derived?.shopRate) || 0,
       directSubComponentCount,
       directParentCount,
+      hasIncompleteSubComponentCosts: Boolean(part.derived?.hasIncompleteSubComponentCosts),
     },
   };
 }
@@ -472,8 +487,18 @@ async function updateDirectParentCounts(
   if (operations.length) await Promise.all(operations);
 }
 
-async function buildDerivedPersistenceUpdate(part: unknown) {
+async function buildDerivedPersistenceUpdate(part: unknown, directParentCount?: number) {
   const derivedCandidate = await buildDerivedPartCandidate(part);
+  if (typeof directParentCount === 'number') {
+    derivedCandidate.derived = {
+      shopRate: Number(derivedCandidate.derived?.shopRate) || 0,
+      directSubComponentCount: Number(derivedCandidate.derived?.directSubComponentCount) || 0,
+      directParentCount,
+      hasIncompleteSubComponentCosts: Boolean(
+        derivedCandidate.derived?.hasIncompleteSubComponentCosts,
+      ),
+    };
+  }
   await calculateDerivedPartProperties(derivedCandidate);
 
   return {
@@ -481,7 +506,13 @@ async function buildDerivedPersistenceUpdate(part: unknown) {
     derived: {
       shopRate: Number(derivedCandidate.derived?.shopRate) || 0,
       directSubComponentCount: Number(derivedCandidate.derived?.directSubComponentCount) || 0,
-      directParentCount: getDirectParentCount(derivedCandidate),
+      directParentCount:
+        typeof directParentCount === 'number'
+          ? directParentCount
+          : getDirectParentCount(derivedCandidate),
+      hasIncompleteSubComponentCosts: Boolean(
+        derivedCandidate.derived?.hasIncompleteSubComponentCosts,
+      ),
     },
   };
 }
@@ -502,6 +533,28 @@ async function refreshParentDerivedProperties(
     await refreshStoredPartDerivedProperties(parent);
     await refreshParentDerivedProperties(parent._id.toString(), visited);
   }
+}
+
+async function refreshAllStoredDerivedProperties(): Promise<number> {
+  const parts = await Part.find();
+  const directParentCountByPartId = new Map<string, number>();
+
+  for (const part of parts) {
+    for (const subComponent of part.subComponentIds || []) {
+      const childId = String(subComponent.partId);
+      directParentCountByPartId.set(childId, (directParentCountByPartId.get(childId) || 0) + 1);
+    }
+  }
+
+  for (const part of parts) {
+    const directParentCount = directParentCountByPartId.get(part._id.toString()) || 0;
+    await Part.findByIdAndUpdate(
+      part._id,
+      await buildDerivedPersistenceUpdate(part, directParentCount),
+    );
+  }
+
+  return parts.length;
 }
 
 function calculateTotalValue(parts: Array<Pick<PartFields, 'price' | 'stock'>>): number {
@@ -676,4 +729,7 @@ export default {
   stock,
   getPartLocations,
   getPartPositions,
+  refreshAllStoredDerivedProperties,
 };
+
+export { refreshAllStoredDerivedProperties };

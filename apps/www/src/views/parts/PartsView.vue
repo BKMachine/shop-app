@@ -108,9 +108,7 @@
                 item.hasSubComponents ? 'rate-swatch--assembly' : '',
                 `rate-swatch--${getTone(item)}`,
               ]"
-              :title="item.derived?.shopRate
-                ? `$${item.derived.shopRate.toFixed(2)}`
-                : 'No rate'"
+              :title="getRateSwatchTitle(item)"
               @click.stop="openPartCost(item)"
             />
           </div>
@@ -167,6 +165,7 @@
 </template>
 
 <script setup lang="ts">
+import { hasMissingRateInputs } from '@repo/utilities/parts';
 import { computed, nextTick, ref, watch } from 'vue';
 import { type LocationQueryValue, type LocationQueryValueRaw, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
@@ -176,7 +175,7 @@ import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vu
 import { useDocumentScrollLock } from '@/lib/useDocumentScrollLock';
 import { getToneForRate } from '@/plugins/rates_theme';
 import router from '@/router';
-import { deviceState, isAdmin } from '@/state/device';
+import { isAdmin } from '@/state/device';
 import { usePartStore } from '@/stores/parts_store';
 
 type PartsListRow = Part & {
@@ -411,7 +410,24 @@ function toggleTotalValue() {
 
 function getTone(item: PartsListRow) {
   if (!item.price) return 'empty';
+  if (item.hasSubComponents && item.derived?.hasIncompleteSubComponentCosts) return 'neutral';
+  if (item.hasSubComponents) return getToneForRate(item.derived?.shopRate || 0);
+  if (hasPriceWithoutRateInputs(item)) return 'neutral';
   return getToneForRate(item.derived?.shopRate || 0);
+}
+
+function getRateSwatchTitle(item: PartsListRow) {
+  if (!item.price) return 'No rate';
+  if (item.hasSubComponents && item.derived?.hasIncompleteSubComponentCosts)
+    return 'Assembly has nested subcomponents with missing cost inputs';
+  if (item.hasSubComponents)
+    return item.derived?.shopRate ? `$${item.derived.shopRate.toFixed(2)}` : 'No rate';
+  if (hasPriceWithoutRateInputs(item)) return 'Price set with missing cost inputs';
+  return item.derived?.shopRate ? `$${item.derived.shopRate.toFixed(2)}` : 'No rate';
+}
+
+function hasPriceWithoutRateInputs(item: PartsListRow) {
+  return Boolean(item.price) && hasMissingRateInputs(item);
 }
 
 function openPart(event: unknown, { item }: { item: PartsListRow }) {
@@ -654,6 +670,10 @@ function areFilterQueriesEqual(
 
 .rate-swatch--empty {
   background: white;
+}
+
+.rate-swatch--neutral {
+  color: rgb(156, 163, 175);
 }
 
 .rate-swatch--subcomponent {
