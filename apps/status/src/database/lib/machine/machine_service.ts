@@ -7,7 +7,9 @@ function list(): Promise<MachineDoc[]> {
 
 async function create(data: unknown): Promise<MachineDoc> {
   const doc = new Machine(data);
-  return await doc.save();
+  const created = await doc.save();
+  await initMachines();
+  return created;
 }
 
 async function update(id: string, data: MachineDoc): Promise<MachineDoc | null> {

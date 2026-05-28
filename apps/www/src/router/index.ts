@@ -9,6 +9,7 @@ import PartView from '@/views/parts/PartView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import ShipmentArchiveView from '@/views/ShipmentArchiveView.vue';
 import StatusView from '@/views/StatusView.vue';
+import StatusSettingsView from '@/views/status/StatusSettingsView.vue';
 import TestView from '@/views/TestView.vue';
 import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
@@ -81,6 +82,11 @@ const router = createRouter({
       path: '/status',
       name: 'status',
       component: StatusView,
+    },
+    {
+      path: '/status/settings',
+      name: 'statusSettings',
+      component: StatusSettingsView,
     },
     {
       path: '/activity',
