@@ -10,7 +10,11 @@
         </div>
 
         <div class="status-settings__header-actions">
-          <v-btn prepend-icon="mdi-arrow-left" variant="text" @click="router.push({ name: 'status' })">
+          <v-btn
+            prepend-icon="mdi-arrow-left"
+            variant="text"
+            @click="router.push({ name: 'status' })"
+          >
             Back to Status
           </v-btn>
           <v-btn color="primary" prepend-icon="mdi-plus" variant="flat" @click="startCreate">
@@ -35,7 +39,8 @@
               >
                 <v-list-item-title>{{ machine.name }}</v-list-item-title>
                 <v-list-item-subtitle>
-                  {{ machine.brand }} • {{ machine.type }} • {{ machine.location }}
+                  {{ machine.brand }}
+                  • {{ machine.type }} • {{ machine.location }}
                 </v-list-item-subtitle>
               </v-list-item>
             </v-list>
@@ -47,9 +52,7 @@
 
       <v-col cols="12" md="8">
         <v-card rounded="lg">
-          <v-card-title>
-            {{ selectedMachineId ? 'Edit Machine' : 'Add Machine' }}
-          </v-card-title>
+          <v-card-title> {{ selectedMachineId ? 'Edit Machine' : 'Add Machine' }} </v-card-title>
           <v-card-text>
             <v-form @submit.prevent="saveMachine">
               <v-row>
@@ -136,21 +139,29 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 import { statusApi } from '@/plugins/axios';
+import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
 type MachineForm = {
   name: string;
   serialNumber: string;
-  brand: MachineBrand | '';
+  brand: MachineBrand | null;
   model: string;
-  source: MachineSource | '';
-  type: MachineType | '';
+  source: MachineSource | null;
+  type: MachineType | null;
   paths: '1' | '2';
   location: string;
 };
 
-const brandOptions: MachineBrand[] = ['fanuc', 'mori', 'doosan', 'mitsubishi', 'haas', 'mazak', 'hanwha'];
+const brandOptions: MachineBrand[] = [
+  'fanuc',
+  'mori',
+  'doosan',
+  'mitsubishi',
+  'haas',
+  'mazak',
+  'hanwha',
+];
 const sourceOptions: MachineSource[] = ['focas', 'arduino', 'mtconnect', 'serial'];
 const typeOptions: MachineType[] = ['lathe', 'mill', 'swiss'];
 const pathOptions: Array<'1' | '2'> = ['1', '2'];
@@ -273,10 +284,10 @@ function createEmptyForm(): MachineForm {
   return {
     name: '',
     serialNumber: '',
-    brand: '',
+    brand: null,
     model: '',
-    source: '',
-    type: '',
+    source: null,
+    type: null,
     paths: '1',
     location: '',
   };
