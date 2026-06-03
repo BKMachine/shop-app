@@ -20,6 +20,13 @@ const ryersonTextFixturePath = path.resolve(
   process.cwd(),
   'stubs/Ryerson/ryerson_extracted.pdf.txt',
 );
+const jestWithEsmMocks = jest as typeof jest & {
+  unstable_mockModule: (
+    moduleName: string,
+    moduleFactory: () => Record<string, unknown>,
+  ) => typeof jest;
+  unstable_unmockModule: (moduleName: string) => typeof jest;
+};
 
 async function readTextFixture(filePath: string): Promise<string> {
   return fs.readFile(filePath, 'utf8');
@@ -27,7 +34,7 @@ async function readTextFixture(filePath: string): Promise<string> {
 
 async function parseMaterialPdfFromText(text: string) {
   jest.resetModules();
-  jest.unstable_mockModule('pdf-parse', () => ({
+  jestWithEsmMocks.unstable_mockModule('pdf-parse', () => ({
     PDFParse: class {
       async getText(): Promise<{ text: string }> {
         return { text };
@@ -41,7 +48,7 @@ async function parseMaterialPdfFromText(text: string) {
     const module = await import('../material_pdf_parser.js');
     return module.default(Buffer.from('fixture'));
   } finally {
-    jest.unstable_unmockModule('pdf-parse');
+    jestWithEsmMocks.unstable_unmockModule('pdf-parse');
     jest.resetModules();
   }
 }

@@ -9,6 +9,13 @@ const partStore = new Map<string, PartRecord>();
 const materialStore = new Map<string, MaterialRecord>();
 const emit = jest.fn();
 const addPartAudit = jest.fn(async () => undefined);
+const jestWithEsmMocks = jest as typeof jest & {
+  unstable_mockModule: (
+    moduleName: string,
+    moduleFactory: () => Record<string, unknown>,
+  ) => typeof jest;
+  unstable_unmockModule: (moduleName: string) => typeof jest;
+};
 
 function cloneValue<T>(value: T): T {
   return structuredClone(value);
@@ -28,6 +35,98 @@ function createPartDoc(record: PartRecord) {
   };
 }
 
+class MockPartQuery extends Array<ReturnType<typeof createPartDoc>> {
+  private workingRecords: PartRecord[];
+  private skipCount = 0;
+  private limitCount = Number.POSITIVE_INFINITY;
+
+  static get [Symbol.species](): ArrayConstructor {
+    return Array;
+  }
+
+  constructor(records: PartRecord[] | number = []) {
+    super();
+    if (typeof records === 'number') {
+      this.workingRecords = [];
+      return;
+    }
+
+    this.workingRecords = records.map((record) => cloneValue(record));
+    this.syncDocs();
+  }
+
+  override sort(
+    compareFn?:
+      | ((a: ReturnType<typeof createPartDoc>, b: ReturnType<typeof createPartDoc>) => number)
+      | Record<string, 1 | -1>,
+  ): this {
+    if (typeof compareFn === 'function' || compareFn === undefined) {
+      return super.sort(
+        compareFn as
+          | ((a: ReturnType<typeof createPartDoc>, b: ReturnType<typeof createPartDoc>) => number)
+          | undefined,
+      ) as this;
+    }
+
+    const [entry] = Object.entries(compareFn);
+    if (!entry) return this;
+
+    const [field, direction] = entry;
+    this.workingRecords = [...this.workingRecords].sort((left, right) => {
+      const leftValue = getNestedValue(left as unknown as Record<string, unknown>, field);
+      const rightValue = getNestedValue(right as unknown as Record<string, unknown>, field);
+
+      if (leftValue === rightValue) return 0;
+      if (leftValue == null) return 1;
+      if (rightValue == null) return -1;
+
+      if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+        return leftValue > rightValue ? direction : -direction;
+      }
+
+      return (
+        String(leftValue).localeCompare(String(rightValue), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }) * direction
+      );
+    });
+    this.syncDocs();
+    return this;
+  }
+
+  skip(value: number): this {
+    this.skipCount = value;
+    this.syncDocs();
+    return this;
+  }
+
+  limit(value: number): this {
+    this.limitCount = value;
+    this.syncDocs();
+    return this;
+  }
+
+  populate(): this {
+    return this;
+  }
+
+  lean(): PartRecord[] {
+    return this.workingRecords
+      .slice(this.skipCount, this.skipCount + this.limitCount)
+      .map((record) => cloneValue(record));
+  }
+
+  private syncDocs(): void {
+    this.length = 0;
+    this.push(
+      ...this.workingRecords
+        .slice(this.skipCount, this.skipCount + this.limitCount)
+        .map((record) => createPartDoc(record)),
+    );
+  }
+}
+
 function getNestedValue(record: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce<unknown>((value, key) => {
     if (!value || typeof value !== 'object') return undefined;
@@ -36,58 +135,7 @@ function getNestedValue(record: Record<string, unknown>, path: string): unknown 
 }
 
 function createPartQuery(records: PartRecord[]) {
-  let workingRecords = records.map((record) => cloneValue(record));
-  let skipCount = 0;
-  let limitCount = Number.POSITIVE_INFINITY;
-
-  const query = [] as Array<ReturnType<typeof createPartDoc>> & {
-    sort: (sortSpec: Record<string, 1 | -1>) => typeof query;
-    skip: (value: number) => typeof query;
-    limit: (value: number) => typeof query;
-    populate: () => typeof query;
-    lean: () => PartRecord[];
-  };
-
-  const syncDocs = () => {
-    query.length = 0;
-    query.push(
-      ...workingRecords
-        .slice(skipCount, skipCount + limitCount)
-        .map((record) => createPartDoc(record)),
-    );
-  };
-
-  syncDocs();
-
-  query.sort = (sortSpec: Record<string, 1 | -1>) => {
-    const [[field, direction]] = Object.entries(sortSpec);
-    workingRecords = [...workingRecords].sort((left, right) => {
-      const leftValue = getNestedValue(left as unknown as Record<string, unknown>, field);
-      const rightValue = getNestedValue(right as unknown as Record<string, unknown>, field);
-
-      if (leftValue === rightValue) return 0;
-      if (leftValue === undefined) return 1;
-      if (rightValue === undefined) return -1;
-      return leftValue > rightValue ? direction : -direction;
-    });
-    syncDocs();
-    return query;
-  };
-  query.skip = (value: number) => {
-    skipCount = value;
-    syncDocs();
-    return query;
-  };
-  query.limit = (value: number) => {
-    limitCount = value;
-    syncDocs();
-    return query;
-  };
-  query.populate = () => query;
-  query.lean = () =>
-    workingRecords.slice(skipCount, skipCount + limitCount).map((record) => cloneValue(record));
-
-  return query;
+  return new MockPartQuery(records);
 }
 
 function partMatchesQuery(record: PartRecord, query?: Record<string, unknown>): boolean {
@@ -119,8 +167,17 @@ const PartModelMock = {
       ...current,
       ...cloneValue(update),
       derived: {
-        ...current.derived,
-        ...cloneValue(update.derived),
+        shopRate: Number(update.derived?.shopRate ?? current.derived?.shopRate) || 0,
+        directSubComponentCount:
+          Number(
+            update.derived?.directSubComponentCount ?? current.derived?.directSubComponentCount,
+          ) || 0,
+        directParentCount:
+          Number(update.derived?.directParentCount ?? current.derived?.directParentCount) || 0,
+        hasIncompleteSubComponentCosts: Boolean(
+          update.derived?.hasIncompleteSubComponentCosts ??
+            current.derived?.hasIncompleteSubComponentCosts,
+        ),
       },
     };
     partStore.set(String(id), nextRecord);
@@ -169,21 +226,21 @@ const MaterialModelMock = {
   })),
 };
 
-jest.unstable_mockModule('../part_model.js', () => ({
+jestWithEsmMocks.unstable_mockModule('../part_model.js', () => ({
   default: PartModelMock,
 }));
 
-jest.unstable_mockModule('../../material/material_model.js', () => ({
+jestWithEsmMocks.unstable_mockModule('../../material/material_model.js', () => ({
   default: MaterialModelMock,
 }));
 
-jest.unstable_mockModule('../../audit/audit_service.js', () => ({
+jestWithEsmMocks.unstable_mockModule('../../audit/audit_service.js', () => ({
   default: {
     addPartAudit,
   },
 }));
 
-jest.unstable_mockModule('../../../../server/sockets.js', () => ({
+jestWithEsmMocks.unstable_mockModule('../../../../server/sockets.js', () => ({
   emit,
 }));
 
