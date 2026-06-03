@@ -98,7 +98,7 @@ router.get('/parts', async (req, res, next) => {
 
 router.get('/parts/search', async (req, res, next) => {
   const search = normalizeQueryValue(req.query.search);
-  if (!search || search.trim().length < 2) {
+  if (!search || search.length < 2) {
     return res.status(200).json({ items: [] });
   }
 

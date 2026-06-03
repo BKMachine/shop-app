@@ -74,8 +74,8 @@ router.post('/print/shipment-qty', requireKnownDevice, async (req, res, next) =>
   const sanitizedRows = Array.isArray(rows)
     ? rows
         .map((row) => ({
-          qty: typeof row?.qty === 'string' ? row.qty.trim() : '',
-          item: typeof row?.item === 'string' ? row.item.trim() : '',
+          qty: typeof row?.qty === 'string' ? row.qty : '',
+          item: typeof row?.item === 'string' ? row.item : '',
         }))
         .filter((row) => row.qty || row.item)
     : [];
@@ -85,8 +85,8 @@ router.post('/print/shipment-qty', requireKnownDevice, async (req, res, next) =>
   }
 
   const body: PrintShipmentQtyLabelBody = {
-    title: typeof title === 'string' ? title.trim() : undefined,
-    subtitle: typeof subtitle === 'string' ? subtitle.trim() : undefined,
+    title: typeof title === 'string' ? title : undefined,
+    subtitle: typeof subtitle === 'string' ? subtitle : undefined,
     rows: sanitizedRows,
   };
 

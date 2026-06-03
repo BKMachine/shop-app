@@ -6,6 +6,7 @@ import { documentDir, imageDir } from '../directories.js';
 import * as logger from '../logger.js';
 import api from './api/index.js';
 import errorHandler from './middleware/errorHandler.js';
+import trimRequestStrings from './middleware/trimRequestStrings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +34,7 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-app.use('/api', api);
+app.use('/api', trimRequestStrings, api);
 app.use('/images', express.static(imageDir));
 app.use('/documents', express.static(documentDir));
 app.use('/downloads', express.static(downloadsDir));

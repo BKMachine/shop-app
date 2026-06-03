@@ -72,7 +72,7 @@ router.put('/reports', requireKnownDevice, async (req, res, next) => {
 
 router.delete('/reports/:id', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
-  const id = String(req.params.id ?? '').trim();
+  const id = String(req.params.id ?? '');
   if (!id) return next(new HttpError(400, 'No report id provided.'));
 
   try {
