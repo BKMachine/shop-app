@@ -27,8 +27,8 @@ function trimStringValues<T>(value: T): T {
 
 export default function trimRequestStrings(req: Request, _res: Response, next: NextFunction): void {
   req.body = trimStringValues(req.body);
-  req.query = trimStringValues(req.query);
-  req.params = trimStringValues(req.params);
+  trimStringValues(req.query);
+  trimStringValues(req.params);
   next();
 }
 

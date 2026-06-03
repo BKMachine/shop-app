@@ -58,4 +58,29 @@ describe('trimRequestStrings', () => {
     expect(req.params).toEqual({ id: '123' });
     expect(nextCalls).toBe(1);
   });
+
+  it('does not assign to getter-only query objects', () => {
+    const query = { search: '  widget  ', ids: ['  a  ', ' b '] };
+    const req = {
+      body: { name: '  Alice  ' },
+      params: { id: '  123  ' },
+    } as Partial<Request>;
+
+    Object.defineProperty(req, 'query', {
+      configurable: true,
+      enumerable: true,
+      get: () => query,
+    });
+
+    let nextCalls = 0;
+    const next = () => {
+      nextCalls += 1;
+    };
+
+    expect(() => trimRequestStrings(req as Request, {} as never, next)).not.toThrow();
+    expect(req.body).toEqual({ name: 'Alice' });
+    expect(req.params).toEqual({ id: '123' });
+    expect(query).toEqual({ search: 'widget', ids: ['a', 'b'] });
+    expect(nextCalls).toBe(1);
+  });
 });
