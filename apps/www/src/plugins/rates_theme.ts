@@ -7,7 +7,7 @@ export const RATE_TARGET_RANGE = {
   max: 200,
   step: 5,
 } as const;
-export const RATE_THRESHOLDS = [100, 125, 150, 175] as const;
+export const RATE_THRESHOLDS = [80, 115, 150, 175] as const;
 
 export function buildRateThresholdGradient(
   minRate: number,
