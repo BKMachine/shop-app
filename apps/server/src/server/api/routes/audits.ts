@@ -52,6 +52,18 @@ router.post('/audits/parts/stock', async (req, res, next) => {
   }
 });
 
+router.post('/audits/materials/cost', async (req, res, next) => {
+  const { id, from, to }: { id?: string; from?: string; to?: string } = req.body;
+  if (!id || !from || !to) return next(new HttpError(400, 'id, from, and to are required.'));
+
+  try {
+    const audits = await Audit.getMaterialAudits(id, from, to);
+    res.status(200).json(audits);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/audits', requireKnownDevice, async (req, res, next) => {
   assertKnownDevice(req);
   if (!req.device.isAdmin) return next(new HttpError(403, 'Forbidden: admin access required.'));

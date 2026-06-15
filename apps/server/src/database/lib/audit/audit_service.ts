@@ -246,6 +246,31 @@ async function getPartAudits(id: string, from: string, to: string): Promise<Audi
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
 }
 
+async function getMaterialAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
+  const projection = 'timestamp device new.costPerFoot old.costPerFoot';
+
+  const docsInRange = await Audit.find(
+    {
+      type: 'material',
+      'old._id': new Types.ObjectId(id),
+      timestamp: { $gte: from, $lte: to },
+    },
+    projection,
+  ).populate('device', 'displayName deviceType');
+  if (!docsInRange.length) return [];
+
+  const previousDoc = await Audit.findOne(
+    { type: 'material', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
+    projection,
+  )
+    .sort({
+      _id: -1,
+    })
+    .populate('device', 'displayName deviceType');
+
+  return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
+}
+
 async function getAllPartAudits(from: string, to: string): Promise<ActivityAudit[]> {
   const projection = 'timestamp device new old.stock';
 
@@ -335,6 +360,7 @@ export default {
   getAllToolAudits,
   addPartAudit,
   getPartAudits,
+  getMaterialAudits,
   getAllPartAudits,
   addImageAudit,
   addDocumentAudit,

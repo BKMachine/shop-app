@@ -209,6 +209,11 @@
                   />
                 </v-col>
               </v-row>
+              <MaterialCostGraph
+                v-if="selectedMaterial._id"
+                :id="selectedMaterial._id"
+                :current-cost-per-foot="selectedMaterial.costPerFoot || 0"
+              />
             </v-card-text>
             <v-card-actions>
               <v-spacer />
@@ -275,6 +280,7 @@ import { computed, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import CurrencyInput from '@/components/CurrencyInput.vue';
 import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
+import MaterialCostGraph from '@/components/materials/MaterialCostGraph.vue';
 import MaterialPdfReview from '@/components/materials/MaterialPdfReview.vue';
 import MaterialSelection from '@/components/materials/MaterialSelection.vue';
 import MaterialSketch from '@/components/materials/MaterialSketch.vue';
