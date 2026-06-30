@@ -1,5 +1,20 @@
 <template>
-  <div class="container">
+  <div v-if="!deviceState.loaded" class="status-access-state">
+    <v-progress-circular color="primary" indeterminate size="24" width="3" />
+    <span>Checking status access...</span>
+  </div>
+
+  <div v-else-if="!canViewStatus" class="status-access-state status-access-state--blocked">
+    <v-icon color="warning" icon="mdi-lan-disconnect" size="28" />
+    <div>
+      <div class="text-h6">Status requires a LAN connection</div>
+      <div class="text-body-2 text-medium-emphasis">
+        Connect to the local network to view machine status.
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="container">
     <draggable
       v-model="tiles"
       class="inner-container"
@@ -54,12 +69,14 @@
 
 <script setup lang="ts">
 import { io } from 'socket.io-client';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import MachineTile from '@/components/MachineTile.vue';
+import { isLanHostname } from '@/lib/networkAccess';
 import { statusApi } from '@/plugins/axios';
+import { deviceState, isAdmin } from '@/state/device';
 
 const MACHINE_ORDER_STORAGE_KEY = 'status-machine-order';
 const BLANK_TILE_PREFIX = 'blank:';
@@ -69,6 +86,8 @@ type StatusTile = MachineInfo | BlankMachineTile;
 const router = useRouter();
 const tiles = ref<StatusTile[]>([]);
 const resetOrderConfirmVisible = ref(false);
+const hasInitializedStatus = ref(false);
+const canViewStatus = computed(() => isAdmin.value || isLanHostname(window.location.hostname));
 
 const socket = io(import.meta.env.VITE_STATUS_API_URL, {
   transports: ['websocket', 'polling'],
@@ -100,14 +119,37 @@ socket.on('refresh-data', () => {
   fetchMachines();
 });
 
-onMounted(async () => {
-  await fetchMachines();
-  socket.connect();
-});
+watch(
+  () => ({ loaded: deviceState.loaded, allowed: canViewStatus.value }),
+  ({ loaded, allowed }) => {
+    if (!loaded) {
+      return;
+    }
+
+    if (!allowed) {
+      tiles.value = [];
+      socket.disconnect();
+      return;
+    }
+
+    if (hasInitializedStatus.value) {
+      return;
+    }
+
+    hasInitializedStatus.value = true;
+    void initializeStatus();
+  },
+  { immediate: true },
+);
 
 onBeforeUnmount(() => {
   socket.disconnect();
 });
+
+async function initializeStatus() {
+  await fetchMachines();
+  socket.connect();
+}
 
 async function fetchMachines() {
   statusApi
@@ -219,6 +261,19 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
   display: flex;
   padding: 20px;
 }
+
+.status-access-state {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-height: 240px;
+  padding: 32px 20px;
+}
+
+.status-access-state--blocked {
+  align-items: flex-start;
+}
+
 .inner-container {
   align-content: flex-start;
   display: flex;

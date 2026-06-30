@@ -1,5 +1,23 @@
 <template>
-  <v-container class="status-settings">
+  <v-container v-if="!deviceState.loaded" class="status-settings status-settings--state">
+    <v-progress-circular color="primary" indeterminate size="24" width="3" />
+    <span>Checking status access...</span>
+  </v-container>
+
+  <v-container
+    v-else-if="!canViewStatus"
+    class="status-settings status-settings--state status-settings--blocked"
+  >
+    <v-icon color="warning" icon="mdi-lan-disconnect" size="28" />
+    <div>
+      <div class="text-h6">Status requires a LAN connection</div>
+      <div class="text-body-2 text-medium-emphasis">
+        Connect to the local network to manage machine status.
+      </div>
+    </div>
+  </v-container>
+
+  <v-container v-else class="status-settings">
     <v-card class="mb-4" rounded="lg">
       <v-card-title class="status-settings__header">
         <div>
@@ -137,10 +155,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { isLanHostname } from '@/lib/networkAccess';
 import { statusApi } from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+import { deviceState, isAdmin } from '@/state/device';
 
 type MachineForm = {
   name: string;
@@ -171,6 +191,8 @@ const machines = ref<MachineInfo[]>([]);
 const selectedMachineId = ref<string | null>(null);
 const savePending = ref(false);
 const form = ref<MachineForm>(createEmptyForm());
+const canViewStatus = computed(() => isAdmin.value || isLanHostname(window.location.hostname));
+const hasInitializedSettings = ref(false);
 
 const canSave = computed(() =>
   Boolean(
@@ -185,9 +207,18 @@ const canSave = computed(() =>
   ),
 );
 
-onMounted(async () => {
-  await fetchMachines();
-});
+watch(
+  () => ({ loaded: deviceState.loaded, allowed: canViewStatus.value }),
+  ({ loaded, allowed }) => {
+    if (!loaded || !allowed || hasInitializedSettings.value) {
+      return;
+    }
+
+    hasInitializedSettings.value = true;
+    void fetchMachines();
+  },
+  { immediate: true },
+);
 
 async function fetchMachines() {
   try {
@@ -297,6 +328,17 @@ function createEmptyForm(): MachineForm {
 <style scoped>
 .status-settings {
   padding-block: 16px 32px;
+}
+
+.status-settings--state {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-height: 240px;
+}
+
+.status-settings--blocked {
+  align-items: flex-start;
 }
 
 .status-settings__header {
