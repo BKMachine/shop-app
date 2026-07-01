@@ -122,7 +122,7 @@
                   variant="flat"
                   @click="importImage(true)"
                 >
-                  Upload
+                  {{ canStageForUnsavedEntity ? 'Upload And Stage' : 'Upload' }}
                 </v-btn>
               </div>
             </v-card-text>
@@ -174,20 +174,27 @@
                       </v-btn>
                       <v-btn
                         color="primary"
-                        :disabled="!entityId || !selectedTempImageIds.length || assignLoading || deleteAllLoading"
+                        :disabled="(!entityId && !canStageForUnsavedEntity) || !selectedTempImageIds.length || assignLoading || deleteAllLoading"
                         :loading="assignLoading"
                         size="small"
                         variant="flat"
                         @click="assignSelectedToEntity"
                       >
-                        {{ canSelectMultiple ? 'Assign Selected' : 'Assign Image' }}
+                        {{ canStageForUnsavedEntity ? 'Stage Selected' : canSelectMultiple ? 'Assign Selected' : 'Assign Image' }}
                       </v-btn>
                     </div>
                   </div>
                   <div v-if="assignSuccess" class="text-success text-body-2 mb-2">
-                    Assigned selected image(s).
+                    {{ canStageForUnsavedEntity ? 'Staged selected image(s).' : 'Assigned selected image(s).' }}
                   </div>
-                  <div v-if="!entityId" class="text-warning text-body-2 mb-2">
+                  <div
+                    v-if="canStageForUnsavedEntity"
+                    class="text-medium-emphasis text-body-2 mb-2"
+                  >
+                    Staged images will be attached when you save this
+                    {{ props.entityType || 'item' }}.
+                  </div>
+                  <div v-else-if="!entityId" class="text-warning text-body-2 mb-2">
                     Save first to assign selected images.
                   </div>
                 </v-col>
@@ -571,7 +578,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [boolean];
   'image-selected': [payload: { imageId: string; url: string; isMain?: boolean }];
-  'images-selected': [payload: { images: { imageId: string; url: string; isMain?: boolean }[] }];
+  'images-selected': [
+    payload: {
+      images: { imageId: string; url: string; isMain?: boolean; createdAt?: string }[];
+    },
+  ];
 }>();
 
 const partStore = usePartStore();
@@ -585,6 +596,17 @@ const dialog = computed({
 const currentTab = ref<'upload' | 'item' | 'gallery'>('gallery');
 const showItemGalleryTab = computed(() => {
   return (props.entityType === 'part' || props.entityType === 'tool') && Boolean(props.entityId);
+});
+const canStageForUnsavedEntity = computed(() => {
+  return (
+    (props.entityType === 'part' ||
+      props.entityType === 'tool' ||
+      props.entityType === 'customer' ||
+      props.entityType === 'supplier' ||
+      props.entityType === 'shipper' ||
+      props.entityType === 'vendor') &&
+    !props.entityId
+  );
 });
 
 // Upload
@@ -737,7 +759,35 @@ async function attachUploadedImage(imageId: string) {
         ).data;
 
   emit('image-selected', { imageId: data.id, url: data.url, isMain: data.isMain });
-  emit('images-selected', { images: [{ imageId: data.id, url: data.url, isMain: data.isMain }] });
+  emit('images-selected', {
+    images: [
+      {
+        imageId: data.id,
+        url: data.url,
+        isMain: data.isMain,
+        createdAt: data.createdAt,
+      },
+    ],
+  });
+  dialog.value = false;
+}
+
+function emitTempImagesSelected(images: ImageData[]) {
+  if (!images.length) return;
+
+  const payload = images.map((image, index) => ({
+    imageId: image.id,
+    url: image.url,
+    isMain: !props.hasImage && index === 0,
+    createdAt: image.createdAt,
+  }));
+
+  const firstImage = payload[0];
+  if (firstImage) {
+    emit('image-selected', firstImage);
+  }
+
+  emit('images-selected', { images: payload });
   dialog.value = false;
 }
 
@@ -999,6 +1049,15 @@ async function uploadFile(attachAfterUpload: boolean) {
 
     if (attachAfterUpload && props.entityId) {
       await attachUploadedImage(data.id);
+    } else if (attachAfterUpload && canStageForUnsavedEntity.value) {
+      emitTempImagesSelected([
+        {
+          id: data.id,
+          url: data.url,
+          createdAt: data.createdAt,
+          status: 'temp',
+        },
+      ]);
     } else {
       uploadSuccess.value = true;
       currentTab.value = 'gallery';
@@ -1028,6 +1087,15 @@ async function uploadUrl(attachAfterUpload: boolean) {
 
     if (attachAfterUpload && props.entityId) {
       await attachUploadedImage(data.id);
+    } else if (attachAfterUpload && canStageForUnsavedEntity.value) {
+      emitTempImagesSelected([
+        {
+          id: data.id,
+          url: data.url,
+          createdAt: data.createdAt,
+          status: 'temp',
+        },
+      ]);
     } else {
       uploadSuccess.value = true;
       currentTab.value = 'gallery';
@@ -1047,6 +1115,21 @@ async function uploadUrl(attachAfterUpload: boolean) {
 }
 
 async function assignSelectedToEntity() {
+  if (canStageForUnsavedEntity.value) {
+    if (!selectedTempImageIds.value.length) return;
+
+    assignSuccess.value = false;
+    galleryError.value = '';
+
+    const selectedImages = tempImages.value.filter((image) =>
+      selectedTempImageIds.value.includes(image.id),
+    );
+
+    emitTempImagesSelected(selectedImages);
+    assignSuccess.value = true;
+    return;
+  }
+
   if (!props.entityId) {
     galleryError.value = 'Save first to assign selected images.';
     return;
@@ -1061,7 +1144,12 @@ async function assignSelectedToEntity() {
     let successCount = 0;
     let failCount = 0;
     let firstAssignedImage: { imageId: string; url: string; isMain?: boolean } | null = null;
-    const assignedImages: { imageId: string; url: string; isMain?: boolean }[] = [];
+    const assignedImages: {
+      imageId: string;
+      url: string;
+      isMain?: boolean;
+      createdAt?: string;
+    }[] = [];
     let hasMainImage = Boolean(props.hasImage);
 
     for (const imageId of selectedTempImageIds.value) {
@@ -1082,6 +1170,7 @@ async function assignSelectedToEntity() {
           imageId: data.id,
           url: data.url,
           isMain: data.isMain,
+          createdAt: data.createdAt,
         };
         if (!firstAssignedImage) {
           firstAssignedImage = assignedImage;

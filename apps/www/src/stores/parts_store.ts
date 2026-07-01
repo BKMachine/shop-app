@@ -176,11 +176,30 @@ export const usePartStore = defineStore('parts', () => {
     };
   }
 
-  async function add(part: Part | PartCreate) {
-    await axios.post<Part>('/parts', { data: toPartCreatePayload(part) }).then(({ data }) => {
-      parts.value.push(data);
-      refreshListIfLoaded();
-    });
+  async function add(part: Part | PartCreate, tempImageIds: string[] = []) {
+    const { data } = await axios.post<Part>('/parts', { data: toPartCreatePayload(part) });
+
+    let hasMainImage = false;
+    for (const imageId of tempImageIds) {
+      const attachedImage = await axios.post<MyImageData>(`/images/uploads/${imageId}/attach`, {
+        entityType: 'part',
+        entityId: data._id,
+        setAsMain: !hasMainImage,
+      });
+
+      if (attachedImage.data.isMain) {
+        hasMainImage = true;
+      }
+    }
+
+    parts.value.push(data);
+    refreshListIfLoaded();
+
+    if (tempImageIds.length) {
+      await loadPartImages(data._id);
+    }
+
+    return data;
   }
 
   async function update(part: Part | PartUpdate) {

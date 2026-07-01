@@ -122,16 +122,26 @@ export const useToolStore = defineStore('tools', () => {
     return typeof value === 'string' ? value : value._id;
   }
 
-  async function add(tool: Tool) {
+  async function add(tool: Tool, tempImageId?: string) {
     const payload: ToolCreate = {
       ...tool,
       vendor: toEntityId(tool.vendor),
       supplier: toEntityId(tool.supplier) ?? UNKNOWN_SUPPLIER_ID,
     };
 
-    await axios.post<Tool>('/tools', { tool: payload }).then(({ data }) => {
-      upsertTool(data);
-    });
+    const { data } = await axios.post<Tool>('/tools', { tool: payload });
+
+    if (tempImageId) {
+      const attachedImage = await axios.post<MyImageData>(`/images/uploads/${tempImageId}/attach`, {
+        entityType: 'tool',
+        entityId: data._id,
+        setAsMain: true,
+      });
+      data.img = attachedImage.data.url;
+    }
+
+    upsertTool(data);
+    return data;
   }
 
   async function update(tool: Tool) {

@@ -8,7 +8,6 @@
 
       <v-btn
         color="primary"
-        :disabled="!part._id"
         prepend-icon="mdi-image-plus-outline"
         variant="elevated"
         @click="openImageManager"
@@ -17,20 +16,23 @@
       </v-btn>
     </div>
 
-    <v-alert v-if="!part._id" type="info" variant="tonal">
-      Save this part first, then you can upload and manage images.
-    </v-alert>
-
-    <v-card v-else>
+    <v-card>
       <v-card-text>
-        <div v-if="loading" class="d-flex justify-center my-6">
+        <v-alert v-if="!part._id" class="mb-4" type="info" variant="tonal">
+          Images stay staged while you are creating the part. Saving the part will attach them.
+        </v-alert>
+
+        <div v-if="part._id && loading" class="d-flex justify-center my-6">
           <v-progress-circular indeterminate />
         </div>
 
-        <div v-else-if="error" class="text-error">{{ error }}</div>
+        <div v-else-if="part._id && error" class="text-error">{{ error }}</div>
 
-        <div v-else-if="!images.length" class="text-medium-emphasis py-4">
-          No images yet. Click <strong>Add Images</strong> to upload.
+        <div v-else-if="!sortedImages.length" class="text-medium-emphasis py-4">
+          <span v-if="part._id">No images yet. Click <strong>Add Images</strong> to upload.</span>
+          <span v-else
+            >No staged images yet. Click <strong>Add Images</strong> to queue them before save.</span
+          >
         </div>
 
         <v-row v-else dense>
@@ -95,7 +97,7 @@
         <v-card-text class="gallery-content pa-0">
           <div class="gallery-stage">
             <button
-              v-if="images.length > 1"
+              v-if="sortedImages.length > 1"
               aria-label="Previous image"
               class="gallery-nav gallery-nav--prev"
               type="button"
@@ -114,7 +116,7 @@
             </div>
 
             <button
-              v-if="images.length > 1"
+              v-if="sortedImages.length > 1"
               aria-label="Next image"
               class="gallery-nav gallery-nav--next"
               type="button"
@@ -124,7 +126,7 @@
             </button>
           </div>
 
-          <div v-if="images.length > 1" class="gallery-pagination">
+          <div v-if="sortedImages.length > 1" class="gallery-pagination">
             <button
               v-for="(_, index) in sortedImages"
               :key="`gallery-dot-${index}`"
@@ -145,6 +147,7 @@
       :has-image="Boolean(part.img)"
       :title="part.description"
       @image-selected="onImageSelected"
+      @images-selected="onImagesSelected"
     />
 
     <ConfirmDialog
@@ -167,15 +170,18 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
+import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import { usePartStore } from '@/stores/parts_store';
 
 const props = defineProps<{
   part: Part;
+  draftImages?: MyImageData[];
 }>();
 
 const emit = defineEmits<{
   'image-selected': [payload: { imageId: string; url: string; isMain?: boolean }];
+  'draft-images-changed': [payload: MyImageData[]];
 }>();
 
 const partStore = usePartStore();
@@ -192,7 +198,9 @@ const deleteConfirmVisible = ref(false);
 const deleteTarget = ref<MyImageData | null>(null);
 
 const sortedImages = computed(() => {
-  return [...images.value].sort((a, b) => {
+  const sourceImages = props.part._id ? images.value : props.draftImages || [];
+
+  return [...sourceImages].sort((a, b) => {
     if (a.isMain && !b.isMain) return -1;
     if (!a.isMain && b.isMain) return 1;
     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -257,13 +265,13 @@ onBeforeUnmount(() => {
 });
 
 const imageCountLabel = computed(() => {
-  const count = images.value.length;
+  const count = sortedImages.value.length;
   return count === 1 ? '1 image' : `${count} images`;
 });
 
 const galleryTitle = computed(() => {
-  if (!images.value.length) return 'Image Gallery';
-  return `Image ${galleryIndex.value + 1} of ${images.value.length}`;
+  if (!sortedImages.value.length) return 'Image Gallery';
+  return `Image ${galleryIndex.value + 1} of ${sortedImages.value.length}`;
 });
 
 function openImageManager() {
@@ -276,13 +284,13 @@ function openGallery(index: number) {
 }
 
 function showPreviousImage() {
-  if (!images.value.length) return;
+  if (!sortedImages.value.length) return;
   galleryIndex.value =
     galleryIndex.value === 0 ? sortedImages.value.length - 1 : galleryIndex.value - 1;
 }
 
 function showNextImage() {
-  if (!images.value.length) return;
+  if (!sortedImages.value.length) return;
   galleryIndex.value =
     galleryIndex.value === sortedImages.value.length - 1 ? 0 : galleryIndex.value + 1;
 }
@@ -292,7 +300,17 @@ function formatImageDate(createdAt: string): string {
 }
 
 async function promoteToMain(image: MyImageData) {
-  if (!props.part._id || image.isMain) return;
+  if (image.isMain) return;
+
+  if (!props.part._id) {
+    const nextImages = (props.draftImages || []).map((draftImage) => ({
+      ...draftImage,
+      isMain: draftImage.id === image.id,
+    }));
+    emit('draft-images-changed', nextImages);
+    emit('image-selected', { imageId: image.id, url: image.url, isMain: true });
+    return;
+  }
 
   promotingId.value = image.id;
   error.value = '';
@@ -326,12 +344,35 @@ async function deleteConfirmedImage() {
 }
 
 async function deleteImage(image: MyImageData) {
-  if (!props.part._id) return;
-
   deletingId.value = image.id;
   error.value = '';
 
   try {
+    if (!props.part._id) {
+      await api.delete(`/images/uploads/${image.id}`);
+      const remainingImages = (props.draftImages || []).filter(
+        (draftImage) => draftImage.id !== image.id,
+      );
+
+      if (image.isMain && remainingImages[0]) {
+        remainingImages[0] = { ...remainingImages[0], isMain: true };
+        emit('image-selected', {
+          imageId: remainingImages[0].id,
+          url: remainingImages[0].url,
+          isMain: true,
+        });
+      }
+
+      if (image.isMain && !remainingImages.length) {
+        emit('image-selected', { imageId: '', url: '', isMain: true });
+      }
+
+      emit('draft-images-changed', remainingImages);
+      deleteConfirmVisible.value = false;
+      deleteTarget.value = null;
+      return;
+    }
+
     const data = await partStore.deletePartImage(props.part._id, image.id);
     images.value = partStore.getPartImages(props.part._id);
     emit('image-selected', {
@@ -375,7 +416,52 @@ async function loadImages() {
 
 function onImageSelected(payload: { imageId: string; url: string; isMain?: boolean }) {
   emit('image-selected', payload);
-  loadImages();
+  if (props.part._id) {
+    loadImages();
+  }
+}
+
+function onImagesSelected(payload: {
+  images: { imageId: string; url: string; isMain?: boolean; createdAt?: string }[];
+}) {
+  if (props.part._id) {
+    loadImages();
+    return;
+  }
+
+  const nextImages = [...(props.draftImages || [])];
+  let hasMainImage = nextImages.some((image) => image.isMain);
+
+  for (const image of payload.images) {
+    const existingIndex = nextImages.findIndex((candidate) => candidate.id === image.imageId);
+    const shouldBeMain = Boolean(image.isMain) || (!hasMainImage && nextImages.length === 0);
+    const nextImage: MyImageData = {
+      id: image.imageId,
+      url: image.url,
+      createdAt: image.createdAt || new Date().toISOString(),
+      isMain: shouldBeMain,
+    };
+
+    if (existingIndex >= 0) {
+      nextImages[existingIndex] = {
+        ...nextImages[existingIndex],
+        ...nextImage,
+      };
+    } else {
+      nextImages.push(nextImage);
+    }
+
+    if (shouldBeMain) {
+      hasMainImage = true;
+      for (const draftImage of nextImages) {
+        if (draftImage.id !== image.imageId) {
+          draftImage.isMain = false;
+        }
+      }
+    }
+  }
+
+  emit('draft-images-changed', nextImages);
 }
 
 watch(

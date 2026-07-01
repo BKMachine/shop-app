@@ -438,7 +438,12 @@
 
         <v-window-item value="docs"> <PartDocumentsDetails :part="part" /> </v-window-item>
         <v-window-item value="images">
-          <PartImagesDetails :part="part" @image-selected="onPartImageSelected" />
+          <PartImagesDetails
+            :draft-images="draftPartImages"
+            :part="part"
+            @draft-images-changed="onDraftImagesChanged"
+            @image-selected="onPartImageSelected"
+          />
         </v-window-item>
         <v-window-item value="notes">
           <PartNotesDetails :part="part" @notes-changed="loadCriticalNotesCount" />
@@ -548,6 +553,7 @@ const loading = ref(false);
 const saveFlag = ref(false);
 const partMaterialCost = ref(0);
 const imageManagerVisible = ref(false);
+const draftPartImages = ref<MyImageData[]>([]);
 const criticalNotesCount = ref(0);
 const showStockValue = ref(false);
 const leaveDialogVisible = ref(false);
@@ -960,8 +966,13 @@ async function persistPart() {
   }));
   if (routeName === 'createPart') {
     await partStore
-      .add(part.value)
-      .then(() => {
+      .add(
+        part.value,
+        draftPartImages.value.map((image) => image.id),
+      )
+      .then((savedPart) => {
+        draftPartImages.value = [];
+        part.value = cloneDeep(savedPart);
         partOriginal.value = cloneDeep(part.value);
         toastSuccess('Part added successfully');
       })
@@ -1067,7 +1078,9 @@ const comparablePart = computed(() => toComparablePart(part.value));
 const comparableOriginalPart = computed(() => toComparablePart(partOriginal.value));
 
 const partIsAltered = computed<boolean>(() => {
-  return !isEqual(comparablePart.value, comparableOriginalPart.value);
+  return (
+    !isEqual(comparablePart.value, comparableOriginalPart.value) || draftPartImages.value.length > 0
+  );
 });
 
 const REQUIRED_MESSAGE = 'Required';
@@ -1329,11 +1342,22 @@ function onPartImageSelected(payload: { imageId: string; url: string; isMain?: b
   if (!payload.isMain) return;
 
   part.value.img = payload.url;
-  partOriginal.value.img = payload.url;
   if (part.value._id) {
+    partOriginal.value.img = payload.url;
     partStore.updatePartImage(part.value._id, payload.url);
     syncPersistedPartImages();
   }
+}
+
+function onDraftImagesChanged(images: MyImageData[]) {
+  draftPartImages.value = images;
+
+  if (part.value._id) {
+    return;
+  }
+
+  const mainImage = images.find((image) => image.isMain) || images[0];
+  part.value.img = mainImage?.url || '';
 }
 
 const expandedImage = ref({

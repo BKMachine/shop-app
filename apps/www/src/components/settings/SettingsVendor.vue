@@ -30,7 +30,6 @@
               <div class="d-flex align-center ga-2 pt-3">
                 <v-btn
                   color="primary"
-                  :disabled="!editingItem._id"
                   prepend-icon="mdi-image-edit-outline"
                   variant="elevated"
                   @click="imageManagerVisible = true"
@@ -49,7 +48,8 @@
                 </v-btn>
               </div>
               <div v-if="!editingItem._id" class="text-body-2 text-medium-emphasis pt-2">
-                Save this vendor first, then you can attach a logo.
+                Logos stay staged while you are creating the vendor. Saving will attach the current
+                logo.
               </div>
             </div>
           </div>
@@ -80,6 +80,7 @@
     :has-image="Boolean(editingItem.logo)"
     :title="editingItem.name"
     @image-selected="onImageSelected"
+    @images-selected="onImagesSelected"
   />
   <ConfirmDialog
     v-model="deleteImageConfirmVisible"
@@ -97,6 +98,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import SettingsTiles from '@/components/settings/SettingsTiles.vue';
+import api from '@/plugins/axios';
 import { useVendorStore } from '@/stores/vendor_store';
 
 const vendorStore = useVendorStore();
@@ -107,6 +109,7 @@ const valid = ref(true);
 const imageManagerVisible = ref(false);
 const deleteImageConfirmVisible = ref(false);
 const removingImage = ref(false);
+const draftLogo = ref<MyImageData | null>(null);
 
 const isEditing = computed(() => editingIndex.value > -1);
 
@@ -122,6 +125,7 @@ const actionText = computed(() => {
 function create() {
   editingIndex.value = -1;
   editingItem.value = {} as Vendor;
+  draftLogo.value = null;
   dialog.value = true;
 }
 
@@ -129,10 +133,17 @@ function edit(i: number) {
   editingIndex.value = i;
   const editingVendor = vendorStore.vendors[editingIndex.value];
   if (editingVendor) editingItem.value = { ...editingVendor };
+  draftLogo.value = null;
   dialog.value = true;
 }
 
 async function close() {
+  if (!editingItem.value._id && draftLogo.value?.id) {
+    await api.delete(`/images/uploads/${draftLogo.value.id}`).catch(() => undefined);
+  }
+
+  draftLogo.value = null;
+  editingItem.value.logo = '';
   dialog.value = false;
   imageManagerVisible.value = false;
   deleteImageConfirmVisible.value = false;
@@ -150,7 +161,11 @@ const rules = {
 } satisfies Rules;
 async function save() {
   if (editingIndex.value === -1) {
-    await vendorStore.add(editingItem.value);
+    const saved = await vendorStore.add(editingItem.value, draftLogo.value?.id);
+    if (saved) {
+      editingItem.value = { ...saved };
+      draftLogo.value = null;
+    }
   } else {
     await vendorStore.update(editingItem.value);
   }
@@ -168,11 +183,39 @@ function onImageSelected(payload: { imageId: string; url: string; isMain?: boole
   }
 }
 
-async function removeLogo() {
-  if (!editingItem.value._id) return;
+async function onImagesSelected(payload: {
+  images: { imageId: string; url: string; isMain?: boolean; createdAt?: string }[];
+}) {
+  const selectedImage = payload.images[0];
+  if (!selectedImage || editingItem.value._id) return;
 
+  const previousDraftId = draftLogo.value?.id;
+  draftLogo.value = {
+    id: selectedImage.imageId,
+    url: selectedImage.url,
+    createdAt: selectedImage.createdAt || new Date().toISOString(),
+    isMain: true,
+  };
+
+  if (previousDraftId && previousDraftId !== selectedImage.imageId) {
+    await api.delete(`/images/uploads/${previousDraftId}`).catch(() => undefined);
+  }
+}
+
+async function removeLogo() {
   removingImage.value = true;
   try {
+    if (!editingItem.value._id) {
+      const draftImageId = draftLogo.value?.id;
+      if (!draftImageId) return;
+
+      await api.delete(`/images/uploads/${draftImageId}`);
+      draftLogo.value = null;
+      editingItem.value.logo = '';
+      deleteImageConfirmVisible.value = false;
+      return;
+    }
+
     const removed = await vendorStore.removeVendorLogo(editingItem.value._id);
     if (removed) {
       editingItem.value.logo = '';

@@ -19,15 +19,29 @@ export const useSupplierStore = defineStore('suppliers', () => {
     });
   }
 
-  async function add(supplier: SupplierCreate) {
-    await api
+  async function add(supplier: SupplierCreate, tempImageId?: string) {
+    return api
       .post<Supplier>('/suppliers', { supplier })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        if (tempImageId) {
+          const attachedImage = await api.post<MyImageData>(
+            `/images/uploads/${tempImageId}/attach`,
+            {
+              entityType: 'supplier',
+              entityId: data._id,
+              setAsMain: true,
+            },
+          );
+          data.logo = attachedImage.data.url;
+        }
+
         upsertSupplier(data);
         toastSuccess('Supplier added successfully');
+        return data;
       })
       .catch(() => {
         toastError('Failed to add supplier. Please try again.');
+        return null;
       });
   }
 

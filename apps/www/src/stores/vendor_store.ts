@@ -19,15 +19,29 @@ export const useVendorStore = defineStore('vendors', () => {
     });
   }
 
-  async function add(vendor: VendorCreate) {
-    await api
+  async function add(vendor: VendorCreate, tempImageId?: string) {
+    return api
       .post<Vendor>('/vendors', { vendor })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        if (tempImageId) {
+          const attachedImage = await api.post<MyImageData>(
+            `/images/uploads/${tempImageId}/attach`,
+            {
+              entityType: 'vendor',
+              entityId: data._id,
+              setAsMain: true,
+            },
+          );
+          data.logo = attachedImage.data.url;
+        }
+
         upsertVendor(data);
         toastSuccess('Vendor added successfully!');
+        return data;
       })
       .catch(() => {
         toastError('Failed to add vendor. Please try again.');
+        return null;
       });
   }
 

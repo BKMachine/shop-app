@@ -19,15 +19,29 @@ export const useCustomerStore = defineStore('customers', () => {
     });
   }
 
-  async function add(customer: CustomerCreate) {
-    await api
+  async function add(customer: CustomerCreate, tempImageId?: string) {
+    return api
       .post<Customer>('/customers', { customer })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        if (tempImageId) {
+          const attachedImage = await api.post<MyImageData>(
+            `/images/uploads/${tempImageId}/attach`,
+            {
+              entityType: 'customer',
+              entityId: data._id,
+              setAsMain: true,
+            },
+          );
+          data.logo = attachedImage.data.url;
+        }
+
         upsertCustomer(data);
         toastSuccess('Customer added successfully');
+        return data;
       })
       .catch(() => {
         toastError('Failed to add customer');
+        return null;
       });
   }
 

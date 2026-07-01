@@ -19,15 +19,29 @@ export const useShipperStore = defineStore('shippers', () => {
     });
   }
 
-  async function add(shipper: ShipperCreate) {
-    await api
+  async function add(shipper: ShipperCreate, tempImageId?: string) {
+    return api
       .post<Shipper>('/shippers', { shipper })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        if (tempImageId) {
+          const attachedImage = await api.post<MyImageData>(
+            `/images/uploads/${tempImageId}/attach`,
+            {
+              entityType: 'shipper',
+              entityId: data._id,
+              setAsMain: true,
+            },
+          );
+          data.logo = attachedImage.data.url;
+        }
+
         upsertShipper(data);
         toastSuccess('Shipper added successfully');
+        return data;
       })
       .catch(() => {
         toastError('Failed to add shipper. Please try again.');
+        return null;
       });
   }
 

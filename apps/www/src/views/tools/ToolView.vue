@@ -166,7 +166,6 @@
                 <div class="d-flex align-center ga-2">
                   <v-btn
                     color="primary"
-                    :disabled="!tool._id"
                     prepend-icon="mdi-image-edit-outline"
                     variant="elevated"
                     @click="imageManagerVisible = true"
@@ -186,7 +185,8 @@
                 </div>
               </div>
               <div v-if="!tool._id" class="text-body-2 text-medium-emphasis pt-2">
-                Save this tool first, then you can attach an image.
+                Images stay staged while you are creating the tool. Saving the tool will attach the
+                current image.
               </div>
             </v-col>
           </v-row>
@@ -377,6 +377,7 @@
       :has-image="Boolean(tool.img)"
       :title="tool.description"
       @image-selected="onToolImageSelected"
+      @images-selected="onToolImagesSelected"
     />
     <ConfirmDialog
       v-model="deleteImageConfirmVisible"
@@ -455,6 +456,7 @@ const valid = ref(false);
 const loading = ref(false);
 const saveFlag = ref(false);
 const imageManagerVisible = ref(false);
+const draftToolImage = ref<MyImageData | null>(null);
 const deleteImageConfirmVisible = ref(false);
 const printWithoutImageDialog = ref({
   visible: false,
@@ -582,9 +584,11 @@ async function persistTool() {
   let saved = false;
   if (routeName === 'createTool') {
     await toolStore
-      .add({ ...tool.value, category: category.value })
-      .then(() => {
+      .add({ ...tool.value, category: category.value }, draftToolImage.value?.id)
+      .then((savedTool) => {
         saved = true;
+        draftToolImage.value = null;
+        tool.value = { ...savedTool };
         toastSuccess('Tool added successfully');
       })
       .catch(() => {
@@ -649,15 +653,48 @@ function onToolImageSelected(payload: { imageId: string; url: string; isMain?: b
   }
 }
 
+async function onToolImagesSelected(payload: {
+  images: { imageId: string; url: string; isMain?: boolean; createdAt?: string }[];
+}) {
+  const selectedImage = payload.images[0];
+  if (!selectedImage || tool.value._id) return;
+
+  const previousDraftId = draftToolImage.value?.id;
+  draftToolImage.value = {
+    id: selectedImage.imageId,
+    url: selectedImage.url,
+    createdAt: selectedImage.createdAt || new Date().toISOString(),
+    isMain: true,
+  };
+
+  if (previousDraftId && previousDraftId !== selectedImage.imageId) {
+    try {
+      await axios.delete(`/images/uploads/${previousDraftId}`);
+    } catch {
+      // Keep the newly staged image even if temp cleanup fails.
+    }
+  }
+}
+
 function removeConfirmedToolImage() {
   removeToolImage();
 }
 
 async function removeToolImage() {
-  if (!tool.value._id) return;
-
   removingImage.value = true;
   try {
+    if (!tool.value._id) {
+      const draftImageId = draftToolImage.value?.id;
+      if (!draftImageId) return;
+
+      await axios.delete(`/images/uploads/${draftImageId}`);
+      draftToolImage.value = null;
+      tool.value.img = '';
+      deleteImageConfirmVisible.value = false;
+      toastSuccess('Staged tool image removed');
+      return;
+    }
+
     await axios.delete(`/images/entities/tool/${tool.value._id}/image`);
     tool.value.img = '';
     toolStore.updateToolImage(tool.value._id, '');
@@ -817,7 +854,9 @@ function getChangedToolFields() {
 }
 
 const toolIsAltered = computed<boolean>(() => {
-  return !isEqual(comparableTool.value, comparableOriginalTool.value);
+  return (
+    !isEqual(comparableTool.value, comparableOriginalTool.value) || Boolean(draftToolImage.value)
+  );
 });
 const changedToolFields = computed<Array<{ label: string; value: string; blockReason?: string }>>(
   () => getChangedToolFields(),
