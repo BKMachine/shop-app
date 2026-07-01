@@ -109,6 +109,7 @@
                       :model-value="getCycleInputValue(element.rowId, element.cycle.time)"
                       @blur="onCycleBlur(element.rowId, index)"
                       @focus="onCycleFocus(element.rowId, element.cycle.time)"
+                      @keydown.enter.prevent="onCycleBlur(element.rowId, index)"
                       @update:model-value="onCycleInput(element.rowId, $event)"
                     />
                   </v-col>
