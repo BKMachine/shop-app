@@ -47,7 +47,22 @@ async function printShipmentQtyLabel(data: PrintShipmentQtyLabelBody) {
     });
 }
 
+async function openJobTraveler(jobId: string) {
+  if (!jobId) return;
+
+  try {
+    const response = await axios.get(`/print/jobs/${jobId}/traveler`, { responseType: 'blob' });
+    openPdfPreview(response.data);
+    return response;
+  } catch (error) {
+    console.error('Error opening job traveler:', error);
+    toastError('Failed to open traveler PDF.');
+    return undefined;
+  }
+}
+
 export default {
+  openJobTraveler,
   printLocation,
   printItem,
   printShipmentQtyLabel,

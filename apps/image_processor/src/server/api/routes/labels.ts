@@ -82,4 +82,43 @@ router.post('/shipment-qty', async (req, res, next) => {
   }
 });
 
+router.post('/job-traveler', async (req, res, next) => {
+  const body = req.body as PrintJobTravelerBody;
+
+  if (!Number.isFinite(body?.jobNumber) || body.jobNumber < 1) {
+    return next(new HttpError(400, 'A valid job number is required.'));
+  }
+
+  if (!Array.isArray(body?.jobDetails) || !body.jobDetails.length) {
+    return next(new HttpError(400, 'At least one job detail row is required.'));
+  }
+
+  try {
+    const pdf = await LabelPdfService.buildJobTravelerPdf({
+      jobNumber: body.jobNumber,
+      barcodeText: typeof body.barcodeText === 'string' ? body.barcodeText.trim() : '',
+      partImageUrl: typeof body.partImageUrl === 'string' ? body.partImageUrl.trim() : undefined,
+      jobDetails: body.jobDetails
+        .map((row) => ({
+          label: typeof row?.label === 'string' ? row.label.trim() : '',
+          value: typeof row?.value === 'string' ? row.value.trim() : '',
+        }))
+        .filter((row) => row.label && row.value),
+      partDetails: Array.isArray(body.partDetails)
+        ? body.partDetails
+            .map((row) => ({
+              label: typeof row?.label === 'string' ? row.label.trim() : '',
+              value: typeof row?.value === 'string' ? row.value.trim() : '',
+            }))
+            .filter((row) => row.label && row.value)
+        : [],
+      operatorNotes: typeof body.operatorNotes === 'string' ? body.operatorNotes.trim() : undefined,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.status(200).send(pdf);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

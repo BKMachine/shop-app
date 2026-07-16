@@ -44,11 +44,12 @@
         </v-btn>
         <v-btn
           v-if="!isCreateRoute"
+          :loading="travelerLoading"
           prepend-icon="mdi-printer-outline"
           variant="text"
           @click="printJobTraveler"
         >
-          Print Traveler
+          Traveler
         </v-btn>
         <v-btn color="green" :disabled="!canSaveJob" :loading="saving" @click="saveJob">
           {{ isCreateRoute ? 'Create' : 'Save' }}
@@ -184,6 +185,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import JobFormFields, { type JobDraft } from '@/components/jobs/JobFormFields.vue';
+import printer from '@/plugins/printer';
 import { toastError } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { isAdmin } from '@/state/device';
@@ -195,6 +197,7 @@ const jobsStore = useJobsStore();
 const loading = ref(false);
 const saving = ref(false);
 const deleting = ref(false);
+const travelerLoading = ref(false);
 const deleteConfirm = ref(false);
 const job = ref<Job | null>(null);
 const draft = ref(createEmptyDraft());
@@ -467,7 +470,16 @@ async function deleteJob() {
   }
 }
 
-function printJobTraveler() {}
+async function printJobTraveler() {
+  if (!job.value?._id) return;
+
+  travelerLoading.value = true;
+  try {
+    await printer.openJobTraveler(job.value._id);
+  } finally {
+    travelerLoading.value = false;
+  }
+}
 
 function goBack() {
   void router.push({ name: 'jobs' });
