@@ -19,6 +19,7 @@
     <v-navigation-drawer v-model="drawer">
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
+        <v-list-item link :prepend-icon="uiIcons.job" :to="{ name: 'jobs' }"> Jobs </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.part" :to="{ name: 'parts' }"> Parts </v-list-item>
 
         <v-list-item link :prepend-icon="uiIcons.tool" :to="{ name: 'tools' }"> Tools </v-list-item>

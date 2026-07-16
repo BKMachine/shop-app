@@ -17,6 +17,7 @@ declare global {
       | 'tool'
       | 'material'
       | 'part'
+      | 'job'
       | 'shipment'
       | 'image'
       | 'document'
@@ -186,6 +187,65 @@ declare global {
 
   interface ShipmentListResponse {
     items: Shipment[];
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }
+
+  /* JOB */
+
+  type JobStatus = 'open' | 'in_process' | 'closed';
+
+  type JobListStatusFilter = JobStatus | 'not_closed';
+
+  type JobPriority = 'low' | 'normal' | 'rush';
+
+  interface JobFields {
+    customer: string | Customer;
+    part: string | Part;
+    qty: number;
+    status: JobStatus;
+    dueDate?: string | Date | null;
+    startedOn?: string | Date | null;
+    completedOn?: string | Date | null;
+    customerPo?: string;
+    priority?: JobPriority;
+    notes?: string;
+    customerName?: string;
+    partNumber?: string;
+    partDescription?: string;
+    partRevision?: string;
+  }
+
+  interface Job extends JobFields {
+    _id: string;
+    jobNumber: number;
+    createdAt: string | Date;
+    updatedAt: string | Date;
+  }
+
+  interface JobCreate extends JobFields {}
+
+  interface JobUpdate extends JobFields {
+    _id: string;
+    jobNumber: number;
+    __v?: number;
+  }
+
+  interface JobListQuery {
+    search?: string;
+    customer?: string;
+    part?: string;
+    status?: JobListStatusFilter;
+    dueBefore?: string;
+    dueAfter?: string;
+    limit?: number;
+    offset?: number;
+  }
+
+  interface JobListResponse {
+    items: Job[];
     total: number;
     limit: number;
     offset: number;

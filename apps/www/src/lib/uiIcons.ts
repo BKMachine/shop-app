@@ -2,6 +2,7 @@ export const uiIcons: Record<Audit['type'], string> = {
   tool: 'mdi-tools',
   material: 'mdi-cube-scan',
   part: 'mdi-shape',
+  job: 'mdi-briefcase-outline',
   shipment: 'mdi-truck-check-outline',
   image: 'mdi-image-outline',
   document: 'mdi-file-document-outline',

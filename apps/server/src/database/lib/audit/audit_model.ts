@@ -7,6 +7,7 @@ const schema = new Schema<AuditDoc>({
       'tool',
       'material',
       'part',
+      'job',
       'shipment',
       'image',
       'document',

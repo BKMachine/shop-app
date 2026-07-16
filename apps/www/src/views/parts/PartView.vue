@@ -88,7 +88,7 @@
       </div>
     </teleport>
 
-    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="secondary">
+    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="yellow">
       <v-tab value="general"> General </v-tab>
       <v-tab value="material"> Material </v-tab>
       <v-tab value="cost"> Cost </v-tab>

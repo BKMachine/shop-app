@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 import ActivityView from '@/views/ActivityView.vue';
 import AuditTrailView from '@/views/AuditTrailView.vue';
 import HomeView from '@/views/HomeView.vue';
+import JobsView from '@/views/JobsView.vue';
+import JobView from '@/views/jobs/JobView.vue';
 import LocationsView from '@/views/LocationsView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
 import PartsView from '@/views/parts/PartsView.vue';
@@ -37,6 +39,21 @@ const router = createRouter({
       path: '/tools/database/:id',
       name: 'viewTool',
       component: ToolView,
+    },
+    {
+      path: '/jobs',
+      name: 'jobs',
+      component: JobsView,
+    },
+    {
+      path: '/job/create',
+      name: 'createJob',
+      component: JobView,
+    },
+    {
+      path: '/job/:id',
+      name: 'viewJob',
+      component: JobView,
     },
     {
       path: '/locations',
