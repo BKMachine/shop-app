@@ -31,6 +31,14 @@ function coerceJobDate(value: unknown) {
 }
 
 const jobDateSchema = z.preprocess(coerceJobDate, z.coerce.date()).nullish();
+const productionTaskSchema = z.strictObject({
+  id: z.string().trim().min(1),
+  machineId: z.string().trim().min(1),
+  machineName: z.string().trim().min(1),
+  machineType: z.enum(['lathe', 'mill', 'swiss']),
+  startedAt: z.coerce.date(),
+  endedAt: z.coerce.date().nullish(),
+});
 
 const JobFieldsSchema = z.strictObject({
   customer: mongoObjectId,
@@ -47,6 +55,7 @@ const JobFieldsSchema = z.strictObject({
   partNumber: z.string().optional(),
   partDescription: z.string().optional(),
   partRevision: z.string().optional(),
+  productionTasks: z.array(productionTaskSchema).optional(),
 });
 
 const CreateJobRequest = z.strictObject({

@@ -15,27 +15,6 @@
       </div>
 
       <div class="job-header-grid__right">
-        <div v-if="showJobStateActions" class="job-header-grid__state-actions">
-          <v-btn
-            class="job-header-grid__state-button"
-            color="success"
-            :disabled="!canStartJob || stateChangeLoading"
-            size="large"
-            @click="requestJobStateChange('start')"
-          >
-            Start Job
-          </v-btn>
-          <v-btn
-            class="job-header-grid__state-button"
-            color="primary"
-            :disabled="!canEndJob || stateChangeLoading"
-            size="large"
-            @click="requestJobStateChange('end')"
-          >
-            End Job
-          </v-btn>
-        </div>
-
         <div class="job-header-grid__chips">
           <div class="job-header-grid__chip-row">
             <v-chip :color="statusColor(draft.status)" density="comfortable">
@@ -93,82 +72,110 @@
             <div class="production-tab">
               <div class="production-tab__header">
                 <div>
-                  <div class="text-h6">Production Entries</div>
+                  <div class="text-h6">Production Tasks</div>
                   <div class="text-body-2 text-medium-emphasis">
-                    Frontend-only for now. Entries stay local to this page until backend support is
-                    added.
+                    Start work on a machine, then end each task when that machine run is complete.
                   </div>
                 </div>
 
-                <v-btn color="primary" prepend-icon="mdi-plus" @click="addProductionEntry">
-                  Add Entry
+                <v-btn
+                  class="production-tab__start-button"
+                  color="success"
+                  :disabled="!canOpenStartTaskDialog"
+                  :loading="productionTaskLoading"
+                  prepend-icon="mdi-play"
+                  size="x-large"
+                  @click="openStartTaskDialog"
+                >
+                  Start Task
                 </v-btn>
               </div>
 
               <div
-                v-if="!productionEntries.length"
+                v-if="showCreateRouteProductionMessage"
                 class="production-tab__empty text-medium-emphasis"
               >
-                No production entries yet.
+                Save the job before starting production tasks.
               </div>
 
-              <div v-else class="production-tab__list">
-                <v-card
-                  v-for="(entry, index) in productionEntries"
-                  :key="entry.id"
-                  class="production-entry"
-                  variant="outlined"
+              <template v-else>
+                <div v-if="machinesLoading" class="text-body-2 text-medium-emphasis">
+                  Loading machines...
+                </div>
+
+                <div v-if="machinesLoadFailed" class="text-body-2 text-error">
+                  Unable to load machines. Check the status API connection and try again.
+                </div>
+
+                <div
+                  v-if="!productionTasks.length"
+                  class="production-tab__empty text-medium-emphasis"
                 >
-                  <v-card-text>
-                    <div class="production-entry__header mb-4">
-                      <div class="text-subtitle-1 font-weight-medium">Entry {{ index + 1 }}</div>
-                      <v-btn
-                        color="error"
-                        size="small"
-                        variant="text"
-                        @click="removeProductionEntry(entry.id)"
-                      >
-                        Remove
-                      </v-btn>
-                    </div>
+                  No production tasks yet.
+                </div>
 
-                    <v-row>
-                      <v-col cols="12" md="3">
-                        <v-text-field
-                          v-model="entry.name"
-                          label="Name"
-                          placeholder="Operator name"
-                          variant="outlined"
-                        />
-                      </v-col>
-                      <v-col cols="12" md="3">
-                        <v-text-field
-                          v-model="entry.machine"
-                          label="Machine"
-                          placeholder="Machine"
-                          variant="outlined"
-                        />
-                      </v-col>
-                      <v-col cols="12" md="3">
-                        <v-text-field
-                          v-model="entry.startTime"
-                          label="Start Time"
-                          type="datetime-local"
-                          variant="outlined"
-                        />
-                      </v-col>
-                      <v-col cols="12" md="3">
-                        <v-text-field
-                          v-model="entry.endTime"
-                          label="End Time"
-                          type="datetime-local"
-                          variant="outlined"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-card-text>
-                </v-card>
-              </div>
+                <div v-else class="production-tab__list">
+                  <v-card
+                    v-for="(task, index) in productionTasks"
+                    :key="task.id"
+                    class="production-entry"
+                    variant="outlined"
+                  >
+                    <v-card-text>
+                      <div class="production-entry__header mb-4">
+                        <div>
+                          <div class="text-subtitle-1 font-weight-medium">Task {{ index + 1 }}</div>
+                          <div class="text-body-2 text-medium-emphasis">
+                            {{ task.machineName }}
+                            • {{ machineTypeLabel(task.machineType) }}
+                          </div>
+                        </div>
+                        <v-chip
+                          :color="task.endedAt ? 'grey' : 'success'"
+                          size="small"
+                          variant="tonal"
+                        >
+                          {{ task.endedAt ? 'Ended' : 'Active' }}
+                        </v-chip>
+                      </div>
+
+                      <div class="production-entry__grid">
+                        <div>
+                          <div class="production-entry__label">Machine</div>
+                          <div class="production-entry__value">{{ task.machineName }}</div>
+                        </div>
+                        <div>
+                          <div class="production-entry__label">Started</div>
+                          <div class="production-entry__value">
+                            {{ formatTaskDateTime(task.startedAt) }}
+                          </div>
+                        </div>
+                        <div>
+                          <div class="production-entry__label">Ended</div>
+                          <div class="production-entry__value">
+                            {{ task.endedAt ? formatTaskDateTime(task.endedAt) : 'In progress' }}
+                          </div>
+                        </div>
+                        <div>
+                          <div class="production-entry__label">Duration</div>
+                          <div class="production-entry__value">{{ formatTaskDuration(task) }}</div>
+                        </div>
+                        <div class="production-entry__action">
+                          <v-btn
+                            v-if="!task.endedAt"
+                            color="primary"
+                            :disabled="productionTaskLoading"
+                            variant="flat"
+                            @click="requestEndProductionTask(task.id)"
+                          >
+                            End Task
+                          </v-btn>
+                        </div>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </div>
+              </template>
             </div>
           </v-card-text>
         </v-window-item>
@@ -202,13 +209,86 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog max-width="420" :model-value="Boolean(jobStateConfirmAction)">
+    <v-dialog v-model="startTaskDialog" max-width="720">
       <v-card>
-        <v-card-title>{{ jobStateConfirmTitle }}</v-card-title>
+        <v-card-title>Start Task</v-card-title>
         <v-card-text>
-          <div>{{ jobStateConfirmMessage }}</div>
-          <div v-if="jobStateConfirmDetails" class="job-state-confirm__details mt-3">
-            {{ jobStateConfirmDetails }}
+          <div v-if="job">Choose the machine to start for Job #{{ job.jobNumber }}.</div>
+          <div v-if="jobSummaryDetails" class="production-dialog__details mt-3">
+            {{ jobSummaryDetails }}
+          </div>
+          <div v-if="draftIsAltered" class="text-medium-emphasis mt-3">
+            Unsaved changes on this page will be discarded.
+          </div>
+
+          <v-row class="mt-2">
+            <v-col cols="12" md="4">
+              <v-select
+                clearable
+                hide-details
+                item-title="displayName"
+                item-value="id"
+                :items="machineOptionsByType.mill"
+                label="Mill"
+                :model-value="selectedStartTaskMachineIds.mill"
+                @update:model-value="updateStartTaskMachineSelection('mill', $event)"
+              />
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-select
+                clearable
+                hide-details
+                item-title="displayName"
+                item-value="id"
+                :items="machineOptionsByType.lathe"
+                label="Lathe"
+                :model-value="selectedStartTaskMachineIds.lathe"
+                @update:model-value="updateStartTaskMachineSelection('lathe', $event)"
+              />
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-select
+                clearable
+                hide-details
+                item-title="displayName"
+                item-value="id"
+                :items="machineOptionsByType.swiss"
+                label="Swiss"
+                :model-value="selectedStartTaskMachineIds.swiss"
+                @update:model-value="updateStartTaskMachineSelection('swiss', $event)"
+              />
+            </v-col>
+          </v-row>
+
+          <div v-if="selectedStartTaskMachine" class="text-body-2 mt-4">
+            Selected machine: {{ selectedStartTaskMachine.displayName }}
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="closeStartTaskDialog">Cancel</v-btn>
+          <v-btn
+            color="success"
+            :disabled="!canConfirmStartTask"
+            :loading="productionTaskLoading"
+            @click="confirmStartTask"
+          >
+            Start Task
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog max-width="420" :model-value="Boolean(endTaskConfirmTaskId)">
+      <v-card>
+        <v-card-title>End Task</v-card-title>
+        <v-card-text>
+          <div>Are you sure you want to end this task?</div>
+          <div v-if="pendingEndTask" class="production-dialog__details mt-3">
+            {{ pendingEndTask.machineName }}: {{ machineTypeLabel(pendingEndTask.machineType) }}
+          </div>
+          <div v-if="jobSummaryDetails" class="text-medium-emphasis mt-2">
+            {{ jobSummaryDetails }}
           </div>
           <div v-if="draftIsAltered" class="text-medium-emphasis mt-3">
             Unsaved changes on this page will be discarded.
@@ -216,9 +296,9 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="jobStateConfirmAction = null">Cancel</v-btn>
-          <v-btn color="primary" :loading="stateChangeLoading" @click="confirmJobStateChange">
-            {{ jobStateConfirmButtonLabel }}
+          <v-btn variant="text" @click="endTaskConfirmTaskId = null">Cancel</v-btn>
+          <v-btn color="primary" :loading="productionTaskLoading" @click="confirmEndProductionTask">
+            End Task
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -230,6 +310,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import JobFormFields, { type JobDraft } from '@/components/jobs/JobFormFields.vue';
+import { statusApi } from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { toastError } from '@/plugins/vue-toast-notification';
 import router from '@/router';
@@ -244,13 +325,21 @@ const saving = ref(false);
 const deleting = ref(false);
 const travelerLoading = ref(false);
 const deleteConfirm = ref(false);
-const stateChangeLoading = ref(false);
+const machines = ref<MachineInfo[]>([]);
+const machinesLoading = ref(false);
+const machinesLoadFailed = ref(false);
+const productionTaskLoading = ref(false);
+const startTaskDialog = ref(false);
+const endTaskConfirmTaskId = ref<string | null>(null);
 const job = ref<Job | null>(null);
 const draft = ref(createEmptyDraft());
 const tab = ref<'general' | 'production' | 'shipments'>('general');
 const valid = ref(false);
-const productionEntries = ref<ProductionEntry[]>([]);
-const jobStateConfirmAction = ref<'start' | 'end' | null>(null);
+const selectedStartTaskMachineIds = ref<Record<MachineType, string | null>>({
+  mill: null,
+  lathe: null,
+  swiss: null,
+});
 
 const isCreateRoute = computed(() => route.name === 'createJob');
 const showDelete = computed(() => !isCreateRoute.value && Boolean(job.value) && isAdmin.value);
@@ -301,9 +390,6 @@ const priorityLabel = computed(() => {
   if (draft.value.priority === 'low') return 'Low';
   return 'Normal';
 });
-const showJobStateActions = computed(() => !isCreateRoute.value && Boolean(job.value));
-const canStartJob = computed(() => canTransitionJobState('start'));
-const canEndJob = computed(() => canTransitionJobState('end'));
 const normalizedQty = computed(() => Math.max(1, Number(draft.value.qty) || 1));
 const draftIsAltered = computed(() => {
   const baselineDraft = isCreateRoute.value
@@ -315,22 +401,8 @@ const draftIsAltered = computed(() => {
   return serializeDraft(draft.value) !== serializeDraft(baselineDraft);
 });
 const canSaveJob = computed(() => draftIsAltered.value && valid.value);
-const jobStateConfirmTitle = computed(() =>
-  jobStateConfirmAction.value === 'start' ? 'Start Job' : 'Stop Job',
-);
-const jobStateConfirmButtonLabel = computed(() =>
-  jobStateConfirmAction.value === 'start' ? 'Start Job' : 'Stop Job',
-);
-const jobStateConfirmMessage = computed(() => {
-  if (!job.value) return '';
-
-  if (jobStateConfirmAction.value === 'start') {
-    return `Are you sure you want to start Job #${job.value.jobNumber}?`;
-  }
-
-  return `Are you sure you want to stop Job #${job.value.jobNumber}?`;
-});
-const jobStateConfirmDetails = computed(() => {
+const productionTasks = computed(() => job.value?.productionTasks ?? []);
+const jobSummaryDetails = computed(() => {
   if (!job.value) return '';
 
   const customerName =
@@ -340,6 +412,36 @@ const jobStateConfirmDetails = computed(() => {
 
   return [customerName, partTitle].filter(Boolean).join(': ');
 });
+const sortedMachines = computed(() =>
+  [...machines.value].sort((left, right) =>
+    (left.displayName || left.name).localeCompare(right.displayName || right.name),
+  ),
+);
+const machineOptionsByType = computed<Record<MachineType, MachineInfo[]>>(() => ({
+  mill: sortedMachines.value.filter((machine) => machine.type === 'mill'),
+  lathe: sortedMachines.value.filter((machine) => machine.type === 'lathe'),
+  swiss: sortedMachines.value.filter((machine) => machine.type === 'swiss'),
+}));
+const selectedStartTaskMachine = computed(() => {
+  const selectedMachineIds = Object.values(selectedStartTaskMachineIds.value).filter(Boolean);
+  return sortedMachines.value.find((machine) => selectedMachineIds.includes(machine.id)) || null;
+});
+const pendingEndTask = computed(
+  () => productionTasks.value.find((task) => task.id === endTaskConfirmTaskId.value) || null,
+);
+const showCreateRouteProductionMessage = computed(() => isCreateRoute.value || !job.value);
+const canOpenStartTaskDialog = computed(
+  () =>
+    !showCreateRouteProductionMessage.value &&
+    !machinesLoading.value &&
+    !machinesLoadFailed.value &&
+    !productionTaskLoading.value &&
+    machines.value.length > 0 &&
+    job.value?.status !== 'closed',
+);
+const canConfirmStartTask = computed(
+  () => canOpenStartTaskDialog.value && Boolean(selectedStartTaskMachine.value),
+);
 
 watch(
   () => route.fullPath,
@@ -350,6 +452,7 @@ watch(
 
 onMounted(async () => {
   await syncRouteState();
+  await fetchMachines();
 });
 
 function createEmptyDraft(): JobDraft {
@@ -373,24 +476,6 @@ function defaultDueDateValue() {
   return date.toLocaleDateString('en-CA');
 }
 
-type ProductionEntry = {
-  id: string;
-  name: string;
-  machine: string;
-  startTime: string;
-  endTime: string;
-};
-
-function createProductionEntry(): ProductionEntry {
-  return {
-    id: crypto.randomUUID(),
-    name: '',
-    machine: '',
-    startTime: '',
-    endTime: '',
-  };
-}
-
 function currentDateInputValue() {
   const now = new Date();
   const year = now.getFullYear();
@@ -399,10 +484,8 @@ function currentDateInputValue() {
   return `${year}-${month}-${day}`;
 }
 
-function canTransitionJobState(action: 'start' | 'end') {
-  if (!job.value || stateChangeLoading.value) return false;
-  if (action === 'start') return job.value.status === 'open';
-  return job.value.status === 'in_process';
+function currentTimestampValue() {
+  return new Date().toISOString();
 }
 
 function serializeDraft(value: JobDraft) {
@@ -455,14 +538,20 @@ function jobToDraft(currentJob: Job): JobDraft {
   };
 }
 
-function validateDraft(nextDraft: JobDraft) {
+function validateDraft(nextDraft: JobDraft, existingProductionTasks: JobProductionTask[]) {
   if (!nextDraft.customer) return 'Select a customer.';
   if (!nextDraft.part) return 'Select a part.';
   if (Math.max(0, Number(nextDraft.qty) || 0) < 1) return 'Qty must be at least 1.';
+  if (
+    nextDraft.status === 'closed' &&
+    existingProductionTasks.some((productionTask) => !productionTask.endedAt)
+  ) {
+    return 'All production tasks must be ended before closing the job.';
+  }
   return null;
 }
 
-function toJobPayload(nextDraft: JobDraft): JobCreate {
+function toJobPayload(nextDraft: JobDraft, productionTasks: JobProductionTask[] = []): JobCreate {
   return {
     customer: nextDraft.customer || '',
     part: nextDraft.part || '',
@@ -474,6 +563,7 @@ function toJobPayload(nextDraft: JobDraft): JobCreate {
     customerPo: nextDraft.customerPo.trim() || undefined,
     priority: nextDraft.priority,
     notes: nextDraft.notes.trim() || undefined,
+    productionTasks,
   };
 }
 
@@ -500,7 +590,8 @@ function applyJobStatus(nextDraft: JobDraft, status: JobStatus): JobDraft {
 
 async function syncRouteState() {
   tab.value = 'general';
-  productionEntries.value = [];
+  closeStartTaskDialog();
+  endTaskConfirmTaskId.value = null;
 
   if (isCreateRoute.value) {
     job.value = null;
@@ -527,18 +618,26 @@ async function syncRouteState() {
   }
 }
 
-function addProductionEntry() {
-  productionEntries.value = [...productionEntries.value, createProductionEntry()];
-}
+async function fetchMachines() {
+  machinesLoading.value = true;
+  machinesLoadFailed.value = false;
 
-function removeProductionEntry(entryId: string) {
-  productionEntries.value = productionEntries.value.filter((entry) => entry.id !== entryId);
+  try {
+    const { data } = await statusApi.get<MachineInfo[]>('/machines');
+    machines.value = data;
+  } catch {
+    machines.value = [];
+    machinesLoadFailed.value = true;
+    toastError('Unable to load machines.');
+  } finally {
+    machinesLoading.value = false;
+  }
 }
 
 async function saveJob() {
   if (!canSaveJob.value) return;
 
-  const errorMessage = validateDraft(draft.value);
+  const errorMessage = validateDraft(draft.value, job.value?.productionTasks ?? []);
   if (errorMessage) {
     toastError(errorMessage);
     return;
@@ -546,8 +645,10 @@ async function saveJob() {
 
   saving.value = true;
   try {
+    const payload = toJobPayload(draft.value, job.value?.productionTasks ?? []);
+
     if (isCreateRoute.value) {
-      const createdJob = await jobsStore.create(toJobPayload(draft.value));
+      const createdJob = await jobsStore.create(payload);
       job.value = createdJob;
       draft.value = jobToDraft(createdJob);
       await router.replace({ name: 'viewJob', params: { id: createdJob._id } });
@@ -556,7 +657,7 @@ async function saveJob() {
 
     if (!job.value) return;
     const updatedJob = await jobsStore.update({
-      ...toJobPayload(draft.value),
+      ...payload,
       _id: job.value._id,
       jobNumber: job.value.jobNumber,
     });
@@ -567,34 +668,95 @@ async function saveJob() {
   }
 }
 
-function requestJobStateChange(action: 'start' | 'end') {
-  if (!canTransitionJobState(action)) return;
-
-  jobStateConfirmAction.value = action;
+function resetStartTaskMachineSelection() {
+  selectedStartTaskMachineIds.value = {
+    mill: null,
+    lathe: null,
+    swiss: null,
+  };
 }
 
-async function confirmJobStateChange() {
-  if (!job.value || !jobStateConfirmAction.value) return;
-  if (!canTransitionJobState(jobStateConfirmAction.value)) {
-    jobStateConfirmAction.value = null;
-    return;
-  }
+function updateStartTaskMachineSelection(machineType: MachineType, value: string | null) {
+  const nextSelection: Record<MachineType, string | null> = {
+    mill: null,
+    lathe: null,
+    swiss: null,
+  };
 
-  const nextStatus = jobStateConfirmAction.value === 'start' ? 'in_process' : 'closed';
-  const nextDraft = applyJobStatus(jobToDraft(job.value), nextStatus);
+  nextSelection[machineType] = value;
+  selectedStartTaskMachineIds.value = nextSelection;
+}
 
-  stateChangeLoading.value = true;
+function openStartTaskDialog() {
+  if (!canOpenStartTaskDialog.value) return;
+
+  resetStartTaskMachineSelection();
+  startTaskDialog.value = true;
+}
+
+function closeStartTaskDialog() {
+  startTaskDialog.value = false;
+  resetStartTaskMachineSelection();
+}
+
+async function confirmStartTask() {
+  if (!job.value || !selectedStartTaskMachine.value) return;
+
+  const nextTasks = [
+    ...productionTasks.value,
+    {
+      id: crypto.randomUUID(),
+      machineId: selectedStartTaskMachine.value.id,
+      machineName:
+        selectedStartTaskMachine.value.displayName || selectedStartTaskMachine.value.name,
+      machineType: selectedStartTaskMachine.value.type,
+      startedAt: currentTimestampValue(),
+      endedAt: null,
+    },
+  ];
+  const nextDraft = applyJobStatus(jobToDraft(job.value), 'in_process');
+
+  productionTaskLoading.value = true;
   try {
     const updatedJob = await jobsStore.update({
-      ...toJobPayload(nextDraft),
+      ...toJobPayload(nextDraft, nextTasks),
       _id: job.value._id,
       jobNumber: job.value.jobNumber,
     });
     job.value = updatedJob;
     draft.value = jobToDraft(updatedJob);
-    jobStateConfirmAction.value = null;
+    closeStartTaskDialog();
   } finally {
-    stateChangeLoading.value = false;
+    productionTaskLoading.value = false;
+  }
+}
+
+function requestEndProductionTask(taskId: string) {
+  const task = productionTasks.value.find((currentTask) => currentTask.id === taskId);
+  if (!task || task.endedAt || productionTaskLoading.value) return;
+
+  endTaskConfirmTaskId.value = taskId;
+}
+
+async function confirmEndProductionTask() {
+  if (!job.value || !pendingEndTask.value) return;
+
+  const nextTasks = productionTasks.value.map((task) =>
+    task.id === pendingEndTask.value?.id ? { ...task, endedAt: currentTimestampValue() } : task,
+  );
+
+  productionTaskLoading.value = true;
+  try {
+    const updatedJob = await jobsStore.update({
+      ...toJobPayload(jobToDraft(job.value), nextTasks),
+      _id: job.value._id,
+      jobNumber: job.value.jobNumber,
+    });
+    job.value = updatedJob;
+    draft.value = jobToDraft(updatedJob);
+    endTaskConfirmTaskId.value = null;
+  } finally {
+    productionTaskLoading.value = false;
   }
 }
 
@@ -620,10 +782,6 @@ async function printJobTraveler() {
   } finally {
     travelerLoading.value = false;
   }
-}
-
-function goBack() {
-  void router.push({ name: 'jobs' });
 }
 
 function priorityColor(priority: JobPriority | undefined) {
@@ -655,6 +813,36 @@ function formatHeaderDate(value: string) {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString();
 }
+
+function formatTaskDateTime(value: string | Date | null | undefined) {
+  if (!value) return '';
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString();
+}
+
+function formatTaskDuration(task: JobProductionTask) {
+  if (!task.endedAt) return 'In progress';
+
+  const startedAt = new Date(task.startedAt);
+  const endedAt = new Date(task.endedAt);
+  if (Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime())) return '';
+
+  const totalMinutes = Math.max(0, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours && minutes) return `${hours}h ${minutes}m`;
+  if (hours) return `${hours}h`;
+  return `${minutes}m`;
+}
+
+function machineTypeLabel(machineType: MachineType) {
+  if (machineType === 'mill') return 'Mill';
+  if (machineType === 'lathe') return 'Lathe';
+  return 'Swiss';
+}
 </script>
 
 <style scoped>
@@ -685,21 +873,9 @@ function formatHeaderDate(value: string) {
 
 .job-header-grid__right {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 16px;
-}
-
-.job-header-grid__state-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 150px;
-}
-
-.job-header-grid__state-button {
-  flex: 1;
-  font-weight: 600;
-  min-height: 36px;
+  justify-content: flex-end;
 }
 
 .job-header-grid__chips {
@@ -741,7 +917,7 @@ function formatHeaderDate(value: string) {
   flex-wrap: wrap;
 }
 
-.job-state-confirm__details {
+.production-dialog__details {
   font-weight: 600;
 }
 
@@ -756,6 +932,11 @@ function formatHeaderDate(value: string) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.production-tab__start-button {
+  min-height: 52px;
+  font-weight: 700;
 }
 
 .production-tab__empty {
@@ -775,6 +956,32 @@ function formatHeaderDate(value: string) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.production-entry__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.production-entry__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.production-entry__value {
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.production-entry__action {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
 }
 
 .shipments-placeholder {
@@ -799,8 +1006,6 @@ function formatHeaderDate(value: string) {
   }
 
   .job-header-grid__right,
-  .job-header-grid__right,
-  .job-header-grid__state-actions,
   .job-header-grid__chip-row {
     align-items: center;
     justify-content: center;
@@ -813,6 +1018,14 @@ function formatHeaderDate(value: string) {
   .production-entry__header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .production-entry__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .production-entry__action {
+    justify-content: flex-start;
   }
 }
 </style>

@@ -38,6 +38,54 @@ function normalizeStatus(value: unknown): JobStatus {
   return 'open';
 }
 
+function normalizeProductionTasks(
+  tasks: JobProductionTask[] | undefined,
+  fallbackTasks: JobProductionTask[] = [],
+): JobProductionTask[] {
+  const sourceTasks = Array.isArray(tasks) ? tasks : fallbackTasks;
+
+  return sourceTasks.map((task) => {
+    const id = normalizeText(task.id);
+    const machineId = normalizeText(task.machineId);
+    const machineName = normalizeText(task.machineName);
+    const startedAt = normalizeDate(task.startedAt);
+
+    if (!id) {
+      throw new JobValidationError('Production task id is required.');
+    }
+    if (!machineId) {
+      throw new JobValidationError(`Production task ${id} is missing a machine id.`);
+    }
+    if (!machineName) {
+      throw new JobValidationError(`Production task ${id} is missing a machine name.`);
+    }
+    if (!startedAt) {
+      throw new JobValidationError(`Production task ${id} is missing a valid start timestamp.`);
+    }
+
+    return {
+      id,
+      machineId,
+      machineName,
+      machineType: task.machineType,
+      startedAt,
+      endedAt: normalizeDate(task.endedAt),
+    };
+  });
+}
+
+function hasOpenProductionTasks(tasks: JobProductionTask[]) {
+  return tasks.some((task) => !task.endedAt);
+}
+
+function hasAddedProductionTasks(
+  tasks: JobProductionTask[],
+  fallbackTasks: JobProductionTask[] = [],
+) {
+  const existingTaskIds = new Set(fallbackTasks.map((task) => task.id));
+  return tasks.some((task) => !existingTaskIds.has(task.id));
+}
+
 function currentDateOnlyValue() {
   const now = new Date();
   return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0));
@@ -46,6 +94,8 @@ function currentDateOnlyValue() {
 async function buildPayload(
   data: JobCreate | JobUpdate,
   jobNumber: number,
+  fallbackProductionTasks: JobProductionTask[] = [],
+  previousStatus?: JobStatus,
 ): Promise<Omit<Job, '_id' | 'createdAt' | 'updatedAt'>> {
   const customerId = getEntityIdOrNull(data.customer);
   const partId = getEntityIdOrNull(data.part);
@@ -73,7 +123,20 @@ async function buildPayload(
   const qty = normalizeQty(data.qty);
   if (qty < 1) throw new JobValidationError('Job quantity must be at least 1.');
 
-  const status = normalizeStatus(data.status);
+  const requestedStatus = normalizeStatus(data.status);
+  const productionTasks = normalizeProductionTasks(data.productionTasks, fallbackProductionTasks);
+  const addedProductionTasks = hasAddedProductionTasks(productionTasks, fallbackProductionTasks);
+
+  if (previousStatus === 'closed' && addedProductionTasks) {
+    throw new JobValidationError('Cannot add production tasks to a closed job.');
+  }
+
+  if (requestedStatus === 'closed' && hasOpenProductionTasks(productionTasks)) {
+    throw new JobValidationError('All production tasks must be ended before closing the job.');
+  }
+
+  const status =
+    addedProductionTasks && requestedStatus !== 'closed' ? 'in_process' : requestedStatus;
   const startedOn =
     status === 'in_process'
       ? (normalizeDate(data.startedOn) ?? currentDateOnlyValue())
@@ -96,6 +159,7 @@ async function buildPayload(
     partNumber: part.part ?? '',
     partDescription: part.description ?? '',
     partRevision: normalizeText(part.revision),
+    productionTasks,
   };
 }
 
@@ -182,7 +246,12 @@ async function update(data: JobUpdate, deviceId: string): Promise<JobDoc> {
   const oldJob = await findById(data._id);
   if (!oldJob) throw new JobNotFoundError(`Missing job document id: ${data._id}`);
 
-  const payload = await buildPayload(data, oldJob.jobNumber);
+  const payload = await buildPayload(
+    data,
+    oldJob.jobNumber,
+    oldJob.productionTasks ?? [],
+    oldJob.status,
+  );
   const updatedJob = await Job.findByIdAndUpdate(data._id, payload, {
     returnDocument: 'after',
   })

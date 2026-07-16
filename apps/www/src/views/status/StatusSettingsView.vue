@@ -37,9 +37,10 @@
                 rounded="lg"
                 @click="selectMachine(machine)"
               >
-                <v-list-item-title>{{ machine.name }}</v-list-item-title>
+                <v-list-item-title>{{ machine.displayName || machine.name }}</v-list-item-title>
                 <v-list-item-subtitle>
-                  {{ machine.brand }}
+                  {{ machine.name }}
+                  • {{ machine.brand }}
                   • {{ machine.type }} • {{ machine.location }}
                 </v-list-item-subtitle>
               </v-list-item>
@@ -58,6 +59,14 @@
               <v-row>
                 <v-col cols="12" md="6">
                   <v-text-field v-model="form.name" label="Name" required variant="outlined" />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="form.displayName"
+                    label="Display Name"
+                    required
+                    variant="outlined"
+                  />
                 </v-col>
                 <v-col cols="12" md="6">
                   <v-text-field
@@ -144,6 +153,7 @@ import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
 type MachineForm = {
   name: string;
+  displayName: string;
   serialNumber: string;
   brand: MachineBrand | null;
   model: string;
@@ -175,6 +185,7 @@ const form = ref<MachineForm>(createEmptyForm());
 const canSave = computed(() =>
   Boolean(
     form.value.name.trim() &&
+      form.value.displayName.trim() &&
       form.value.serialNumber.trim() &&
       form.value.brand &&
       form.value.model.trim() &&
@@ -225,6 +236,7 @@ function resetForm() {
 function applyMachineToForm(machine: MachineInfo) {
   form.value = {
     name: machine.name,
+    displayName: machine.displayName || machine.name,
     serialNumber: machine.serialNumber,
     brand: machine.brand,
     model: machine.model,
@@ -246,6 +258,7 @@ async function saveMachine() {
   try {
     const payload = {
       name: form.value.name.trim(),
+      displayName: form.value.displayName.trim(),
       serialNumber: form.value.serialNumber.trim(),
       brand: form.value.brand,
       model: form.value.model.trim(),
@@ -283,6 +296,7 @@ async function saveMachine() {
 function createEmptyForm(): MachineForm {
   return {
     name: '',
+    displayName: '',
     serialNumber: '',
     brand: null,
     model: '',

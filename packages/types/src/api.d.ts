@@ -201,6 +201,15 @@ declare global {
 
   type JobPriority = 'low' | 'normal' | 'rush';
 
+  interface JobProductionTask {
+    id: string;
+    machineId: string;
+    machineName: string;
+    machineType: MachineType;
+    startedAt: string | Date;
+    endedAt?: string | Date | null;
+  }
+
   interface JobFields {
     customer: string | Customer;
     part: string | Part;
@@ -216,6 +225,7 @@ declare global {
     partNumber?: string;
     partDescription?: string;
     partRevision?: string;
+    productionTasks?: JobProductionTask[];
   }
 
   interface Job extends JobFields {

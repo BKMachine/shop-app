@@ -3,6 +3,7 @@ import { model, Schema, type Types } from 'mongoose';
 export interface MachineDoc {
   _id: Types.ObjectId;
   name: string;
+  displayName: string;
   serialNumber: string;
   brand: MachineBrand;
   model: string;
@@ -14,6 +15,7 @@ export interface MachineDoc {
 
 const schema = new Schema<MachineDoc>({
   name: String,
+  displayName: { type: String, default: '' },
   serialNumber: String,
   brand: String,
   model: String,

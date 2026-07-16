@@ -22,6 +22,7 @@
             prepend-inner-icon="mdi-magnify"
             single-line
             variant="outlined"
+            @click:clear="clearSearchFilter"
           >
             <template #details>
               <div class="search-details">
@@ -235,6 +236,11 @@ async function clearFilters() {
   filters.search = '';
   filters.customer = null;
   filters.status = 'not_closed';
+  syncFiltersToQuery();
+}
+
+function clearSearchFilter() {
+  filters.search = '';
   syncFiltersToQuery();
 }
 

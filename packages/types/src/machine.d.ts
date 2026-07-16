@@ -117,6 +117,7 @@ declare global {
   interface MachineData {
     id: string;
     name: string;
+    displayName: string;
     serialNumber: string;
     brand: MachineBrand;
     model: string;

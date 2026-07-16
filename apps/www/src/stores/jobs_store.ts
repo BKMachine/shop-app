@@ -16,6 +16,19 @@ function normalizeDateValue(value: string | Date | null | undefined) {
   return trimmedValue || undefined;
 }
 
+function normalizeProductionTasksValue(tasks: JobProductionTask[] | undefined) {
+  if (!Array.isArray(tasks)) return undefined;
+
+  return tasks.map((task) => ({
+    id: task.id,
+    machineId: task.machineId,
+    machineName: task.machineName,
+    machineType: task.machineType,
+    startedAt: normalizeDateValue(task.startedAt) ?? new Date(task.startedAt).toISOString(),
+    endedAt: normalizeDateValue(task.endedAt),
+  }));
+}
+
 function toJobCreatePayload(job: Job | JobCreate): JobCreate {
   return {
     customer: getRelatedEntityId(job.customer) ?? '',
@@ -28,6 +41,7 @@ function toJobCreatePayload(job: Job | JobCreate): JobCreate {
     customerPo: job.customerPo?.trim() || undefined,
     priority: job.priority || 'normal',
     notes: job.notes?.trim() || undefined,
+    productionTasks: normalizeProductionTasksValue(job.productionTasks),
   };
 }
 

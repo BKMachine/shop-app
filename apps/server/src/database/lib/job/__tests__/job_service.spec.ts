@@ -204,6 +204,7 @@ class MockJobModel {
   partNumber?: string;
   partDescription?: string;
   partRevision?: string;
+  productionTasks?: JobProductionTask[];
   createdAt: Date;
   updatedAt: Date;
 
@@ -224,6 +225,7 @@ class MockJobModel {
     this.partNumber = data.partNumber ?? '';
     this.partDescription = data.partDescription ?? '';
     this.partRevision = data.partRevision ?? '';
+    this.productionTasks = data.productionTasks ?? [];
     this.createdAt = new Date();
     this.updatedAt = new Date();
   }
@@ -247,6 +249,7 @@ class MockJobModel {
       partNumber: this.partNumber ?? '',
       partDescription: this.partDescription ?? '',
       partRevision: this.partRevision ?? '',
+      productionTasks: this.productionTasks ?? [],
       createdAt: this.createdAt,
       updatedAt: new Date(),
     });
@@ -501,6 +504,247 @@ test('update in-process job auto-fills startedOn when missing', async () => {
   expect(updated.status).toBe('in_process');
   expect(updated.startedOn).toBeTruthy();
   expect(addJobAudit).toHaveBeenCalledTimes(1);
+});
+
+test('update stores production tasks on the job', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const updated = await JobService.update(
+    {
+      _id: 'job-1',
+      jobNumber: 1001,
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
+      qty: 3,
+      status: 'in_process',
+      productionTasks: [
+        {
+          id: 'task-1',
+          machineId: 'machine-1',
+          machineName: 'VF-2',
+          machineType: 'mill',
+          startedAt: new Date('2026-07-16T14:00:00.000Z'),
+          endedAt: new Date('2026-07-16T15:30:00.000Z'),
+        },
+      ],
+    },
+    'device-1',
+  );
+
+  expect(updated.productionTasks).toEqual([
+    expect.objectContaining({
+      id: 'task-1',
+      machineId: 'machine-1',
+      machineName: 'VF-2',
+      machineType: 'mill',
+    }),
+  ]);
+  expect(updated.status).toBe('in_process');
+});
+
+test('update adding a production task moves an open job to in-process', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const updated = await JobService.update(
+    {
+      _id: 'job-1',
+      jobNumber: 1001,
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
+      qty: 3,
+      status: 'open',
+      productionTasks: [
+        {
+          id: 'task-1',
+          machineId: 'machine-1',
+          machineName: 'VF-2',
+          machineType: 'mill',
+          startedAt: new Date('2026-07-16T14:00:00.000Z'),
+          endedAt: null,
+        },
+      ],
+    },
+    'device-1',
+  );
+
+  expect(updated.status).toBe('in_process');
+  expect(updated.startedOn).toBeTruthy();
+});
+
+test('update rejects closing a job with open production tasks', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'in_process',
+    dueDate: null,
+    startedOn: new Date('2026-07-16T14:00:00.000Z'),
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [
+      {
+        id: 'task-1',
+        machineId: 'machine-1',
+        machineName: 'VF-2',
+        machineType: 'mill',
+        startedAt: new Date('2026-07-16T14:00:00.000Z'),
+        endedAt: null,
+      },
+    ],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const module = await loadJobService();
+
+  await expect(
+    module.default.update(
+      {
+        _id: 'job-1',
+        jobNumber: 1001,
+        customer: CUSTOMER_ID_1,
+        part: PART_ID_1,
+        qty: 3,
+        status: 'closed',
+        productionTasks: [
+          {
+            id: 'task-1',
+            machineId: 'machine-1',
+            machineName: 'VF-2',
+            machineType: 'mill',
+            startedAt: new Date('2026-07-16T14:00:00.000Z'),
+            endedAt: null,
+          },
+        ],
+      },
+      'device-1',
+    ),
+  ).rejects.toThrow('All production tasks must be ended before closing the job.');
+});
+
+test('update rejects adding a production task to a closed job', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'closed',
+    dueDate: null,
+    startedOn: new Date('2026-07-16T14:00:00.000Z'),
+    completedOn: new Date('2026-07-16T15:00:00.000Z'),
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [
+      {
+        id: 'task-1',
+        machineId: 'machine-1',
+        machineName: 'VF-2',
+        machineType: 'mill',
+        startedAt: new Date('2026-07-16T14:00:00.000Z'),
+        endedAt: new Date('2026-07-16T15:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const module = await loadJobService();
+
+  await expect(
+    module.default.update(
+      {
+        _id: 'job-1',
+        jobNumber: 1001,
+        customer: CUSTOMER_ID_1,
+        part: PART_ID_1,
+        qty: 3,
+        status: 'closed',
+        productionTasks: [
+          {
+            id: 'task-1',
+            machineId: 'machine-1',
+            machineName: 'VF-2',
+            machineType: 'mill',
+            startedAt: new Date('2026-07-16T14:00:00.000Z'),
+            endedAt: new Date('2026-07-16T15:00:00.000Z'),
+          },
+          {
+            id: 'task-2',
+            machineId: 'machine-2',
+            machineName: 'ST-20',
+            machineType: 'lathe',
+            startedAt: new Date('2026-07-16T16:00:00.000Z'),
+            endedAt: null,
+          },
+        ],
+      },
+      'device-1',
+    ),
+  ).rejects.toThrow('Cannot add production tasks to a closed job.');
 });
 
 test('list filters by status and customer', async () => {
