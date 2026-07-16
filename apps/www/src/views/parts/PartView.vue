@@ -151,6 +151,19 @@
         >
           Save
         </v-btn>
+        <v-btn
+          v-if="showSaveAndPrint"
+          class="mr-2"
+          color="teal"
+          density="comfortable"
+          :disabled="!canSaveAndPrint"
+          :loading="saveFlag"
+          variant="elevated"
+          @click="saveAndPrintPart"
+        >
+          <v-icon icon="mdi-content-save-plus-outline" />
+          <v-icon icon="mdi-printer" />
+        </v-btn>
       </div>
     </v-tabs>
     <v-form v-model="valid">
@@ -754,6 +767,17 @@ const normalizedPartFilesPath = computed(() => normalizeFolderPath(part.value.pa
 const canOpenPartFiles = computed(() => {
   return helperStatus.value === 'likely-installed' && Boolean(normalizedPartFilesPath.value);
 });
+const showSaveAndPrint = computed(() => router.currentRoute.value.name === 'createPart');
+const canSaveAndPrint = computed(() => {
+  return (
+    canSavePart.value &&
+    Boolean(part.value.part) &&
+    Boolean(part.value.description) &&
+    Boolean(part.value.customer) &&
+    Boolean(part.value.location) &&
+    Boolean(part.value.position)
+  );
+});
 
 function setTabFromQuery() {
   const routeTab = router.currentRoute.value.query.tab;
@@ -948,7 +972,7 @@ async function savePart() {
   router.back();
 }
 
-async function persistPart() {
+async function persistPart(): Promise<Part | null> {
   const routeName = router.currentRoute.value.name;
   saveFlag.value = true;
   part.value.subComponentIds = (part.value.subComponentIds || []).filter(
@@ -964,34 +988,52 @@ async function persistPart() {
     partId: String(subComponent.partId),
     qty: Math.max(1, Number(subComponent.qty) || 1),
   }));
-  if (routeName === 'createPart') {
-    await partStore
-      .add(
+  try {
+    if (routeName === 'createPart') {
+      const savedPart = await partStore.add(
         part.value,
         draftPartImages.value.map((image) => image.id),
-      )
-      .then((savedPart) => {
-        draftPartImages.value = [];
-        part.value = cloneDeep(savedPart);
-        partOriginal.value = cloneDeep(part.value);
-        toastSuccess('Part added successfully');
-      })
-      .catch(() => {
-        toastError('Unable to add part');
-      });
-  } else if (routeName === 'viewPart') {
-    await partStore
-      .update(part.value)
-      .then(() => {
-        partOriginal.value = cloneDeep(part.value);
-        toastSuccess('Part updated successfully');
-      })
-      .catch(() => {
-        toastError('Unable to update part');
-      });
+      );
+      draftPartImages.value = [];
+      part.value = cloneDeep(savedPart);
+      partOriginal.value = cloneDeep(part.value);
+      toastSuccess('Part added successfully');
+      return savedPart;
+    }
+
+    if (routeName === 'viewPart') {
+      const savedPart = await partStore.update(part.value);
+      part.value = cloneDeep(savedPart);
+      partOriginal.value = cloneDeep(savedPart);
+      toastSuccess('Part updated successfully');
+      return savedPart;
+    }
+
+    return null;
+  } catch {
+    toastError(routeName === 'createPart' ? 'Unable to add part' : 'Unable to update part');
+    return null;
+  } finally {
+    saveFlag.value = false;
   }
-  saveFlag.value = false;
-  return true;
+}
+
+async function saveAndPrintPart() {
+  const savedPart = await persistPart();
+  if (!savedPart) return;
+
+  if (router.currentRoute.value.name === 'createPart') {
+    await router.replace({
+      name: 'viewPart',
+      params: { id: savedPart._id },
+      query: {
+        ...router.currentRoute.value.query,
+        tab: 'stock',
+      },
+    });
+  }
+
+  requestPrintItem();
 }
 
 async function saveAndContinue() {
