@@ -15,20 +15,43 @@
       </div>
 
       <div class="job-header-grid__right">
-        <div class="job-header-grid__chip-row">
-          <v-chip :color="statusColor(draft.status)" density="comfortable">
-            {{ statusLabel(draft.status) }}
-          </v-chip>
-          <v-chip :color="priorityColor(draft.priority)" density="comfortable" variant="tonal">
-            {{ priorityLabel }}
-            Priority
-          </v-chip>
+        <div v-if="showJobStateActions" class="job-header-grid__state-actions">
+          <v-btn
+            class="job-header-grid__state-button"
+            color="success"
+            :disabled="!canStartJob || stateChangeLoading"
+            size="large"
+            @click="requestJobStateChange('start')"
+          >
+            Start Job
+          </v-btn>
+          <v-btn
+            class="job-header-grid__state-button"
+            color="primary"
+            :disabled="!canEndJob || stateChangeLoading"
+            size="large"
+            @click="requestJobStateChange('end')"
+          >
+            End Job
+          </v-btn>
         </div>
-        <div class="job-header-grid__chip-row">
-          <v-chip density="comfortable" variant="outlined"> Qty {{ normalizedQty }} </v-chip>
-          <v-chip v-if="draft.dueDate" density="comfortable" variant="outlined">
-            Due {{ formatHeaderDate(draft.dueDate) }}
-          </v-chip>
+
+        <div class="job-header-grid__chips">
+          <div class="job-header-grid__chip-row">
+            <v-chip :color="statusColor(draft.status)" density="comfortable">
+              {{ statusLabel(draft.status) }}
+            </v-chip>
+            <v-chip :color="priorityColor(draft.priority)" density="comfortable" variant="tonal">
+              {{ priorityLabel }}
+              Priority
+            </v-chip>
+          </div>
+          <div class="job-header-grid__chip-row">
+            <v-chip density="comfortable" variant="outlined"> Qty {{ normalizedQty }} </v-chip>
+            <v-chip v-if="draft.dueDate" density="comfortable" variant="outlined">
+              Due {{ formatHeaderDate(draft.dueDate) }}
+            </v-chip>
+          </div>
         </div>
       </div>
     </div>
@@ -178,6 +201,28 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog max-width="420" :model-value="Boolean(jobStateConfirmAction)">
+      <v-card>
+        <v-card-title>{{ jobStateConfirmTitle }}</v-card-title>
+        <v-card-text>
+          <div>{{ jobStateConfirmMessage }}</div>
+          <div v-if="jobStateConfirmDetails" class="job-state-confirm__details mt-3">
+            {{ jobStateConfirmDetails }}
+          </div>
+          <div v-if="draftIsAltered" class="text-medium-emphasis mt-3">
+            Unsaved changes on this page will be discarded.
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="jobStateConfirmAction = null">Cancel</v-btn>
+          <v-btn color="primary" :loading="stateChangeLoading" @click="confirmJobStateChange">
+            {{ jobStateConfirmButtonLabel }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -199,11 +244,13 @@ const saving = ref(false);
 const deleting = ref(false);
 const travelerLoading = ref(false);
 const deleteConfirm = ref(false);
+const stateChangeLoading = ref(false);
 const job = ref<Job | null>(null);
 const draft = ref(createEmptyDraft());
 const tab = ref<'general' | 'production' | 'shipments'>('general');
 const valid = ref(false);
 const productionEntries = ref<ProductionEntry[]>([]);
+const jobStateConfirmAction = ref<'start' | 'end' | null>(null);
 
 const isCreateRoute = computed(() => route.name === 'createJob');
 const showDelete = computed(() => !isCreateRoute.value && Boolean(job.value) && isAdmin.value);
@@ -254,6 +301,9 @@ const priorityLabel = computed(() => {
   if (draft.value.priority === 'low') return 'Low';
   return 'Normal';
 });
+const showJobStateActions = computed(() => !isCreateRoute.value && Boolean(job.value));
+const canStartJob = computed(() => canTransitionJobState('start'));
+const canEndJob = computed(() => canTransitionJobState('end'));
 const normalizedQty = computed(() => Math.max(1, Number(draft.value.qty) || 1));
 const draftIsAltered = computed(() => {
   const baselineDraft = isCreateRoute.value
@@ -265,6 +315,31 @@ const draftIsAltered = computed(() => {
   return serializeDraft(draft.value) !== serializeDraft(baselineDraft);
 });
 const canSaveJob = computed(() => draftIsAltered.value && valid.value);
+const jobStateConfirmTitle = computed(() =>
+  jobStateConfirmAction.value === 'start' ? 'Start Job' : 'Stop Job',
+);
+const jobStateConfirmButtonLabel = computed(() =>
+  jobStateConfirmAction.value === 'start' ? 'Start Job' : 'Stop Job',
+);
+const jobStateConfirmMessage = computed(() => {
+  if (!job.value) return '';
+
+  if (jobStateConfirmAction.value === 'start') {
+    return `Are you sure you want to start Job #${job.value.jobNumber}?`;
+  }
+
+  return `Are you sure you want to stop Job #${job.value.jobNumber}?`;
+});
+const jobStateConfirmDetails = computed(() => {
+  if (!job.value) return '';
+
+  const customerName =
+    job.value.customerName ||
+    (typeof job.value.customer === 'string' ? '' : job.value.customer?.name || '');
+  const partTitle = partHeaderTitle.value;
+
+  return [customerName, partTitle].filter(Boolean).join(': ');
+});
 
 watch(
   () => route.fullPath,
@@ -314,6 +389,20 @@ function createProductionEntry(): ProductionEntry {
     startTime: '',
     endTime: '',
   };
+}
+
+function currentDateInputValue() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function canTransitionJobState(action: 'start' | 'end') {
+  if (!job.value || stateChangeLoading.value) return false;
+  if (action === 'start') return job.value.status === 'open';
+  return job.value.status === 'in_process';
 }
 
 function serializeDraft(value: JobDraft) {
@@ -388,6 +477,27 @@ function toJobPayload(nextDraft: JobDraft): JobCreate {
   };
 }
 
+function applyJobStatus(nextDraft: JobDraft, status: JobStatus): JobDraft {
+  const updatedDraft: JobDraft = {
+    ...nextDraft,
+    status,
+  };
+
+  if (status === 'in_process' && !updatedDraft.startedOn) {
+    updatedDraft.startedOn = currentDateInputValue();
+  }
+
+  if (status === 'closed' && !updatedDraft.completedOn) {
+    updatedDraft.completedOn = currentDateInputValue();
+  }
+
+  if (status !== 'closed') {
+    updatedDraft.completedOn = '';
+  }
+
+  return updatedDraft;
+}
+
 async function syncRouteState() {
   tab.value = 'general';
   productionEntries.value = [];
@@ -454,6 +564,37 @@ async function saveJob() {
     draft.value = jobToDraft(updatedJob);
   } finally {
     saving.value = false;
+  }
+}
+
+function requestJobStateChange(action: 'start' | 'end') {
+  if (!canTransitionJobState(action)) return;
+
+  jobStateConfirmAction.value = action;
+}
+
+async function confirmJobStateChange() {
+  if (!job.value || !jobStateConfirmAction.value) return;
+  if (!canTransitionJobState(jobStateConfirmAction.value)) {
+    jobStateConfirmAction.value = null;
+    return;
+  }
+
+  const nextStatus = jobStateConfirmAction.value === 'start' ? 'in_process' : 'closed';
+  const nextDraft = applyJobStatus(jobToDraft(job.value), nextStatus);
+
+  stateChangeLoading.value = true;
+  try {
+    const updatedJob = await jobsStore.update({
+      ...toJobPayload(nextDraft),
+      _id: job.value._id,
+      jobNumber: job.value.jobNumber,
+    });
+    job.value = updatedJob;
+    draft.value = jobToDraft(updatedJob);
+    jobStateConfirmAction.value = null;
+  } finally {
+    stateChangeLoading.value = false;
   }
 }
 
@@ -544,9 +685,29 @@ function formatHeaderDate(value: string) {
 
 .job-header-grid__right {
   display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.job-header-grid__state-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 150px;
+}
+
+.job-header-grid__state-button {
+  flex: 1;
+  font-weight: 600;
+  min-height: 36px;
+}
+
+.job-header-grid__chips {
+  display: flex;
   align-items: flex-end;
   flex-direction: column;
   gap: 12px;
+  justify-content: center;
 }
 
 .job-header-grid__chip-row {
@@ -578,6 +739,10 @@ function formatHeaderDate(value: string) {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.job-state-confirm__details {
+  font-weight: 600;
 }
 
 .production-tab {
@@ -634,11 +799,16 @@ function formatHeaderDate(value: string) {
   }
 
   .job-header-grid__right,
+  .job-header-grid__right,
+  .job-header-grid__state-actions,
   .job-header-grid__chip-row {
     align-items: center;
     justify-content: center;
   }
 
+  .job-header-grid__right {
+    flex-direction: column;
+  }
   .production-tab__header,
   .production-entry__header {
     align-items: flex-start;
