@@ -101,11 +101,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { DateTime } from 'luxon';
-import { useRoute } from 'vue-router';
-import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { type LocationQueryValue, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
+import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import router from '@/router';
 import { useJobsStore } from '@/stores/jobs_store';
 
@@ -253,15 +253,7 @@ function buildFilterQuery() {
   };
 }
 
-function firstQueryValue(
-  value:
-    | string
-    | null
-    | undefined
-    | Array<string | null>
-    | Record<string, never>
-    | Array<Record<string, never>>,
-) {
+function firstQueryValue(value: LocationQueryValue | LocationQueryValue[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? undefined;
   return typeof value === 'string' ? value : undefined;
 }
