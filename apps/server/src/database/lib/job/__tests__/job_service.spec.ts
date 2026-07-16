@@ -14,6 +14,11 @@ const addJobAudit = jest.fn(async () => undefined);
 let nextJobNumber = 1000;
 let nextJobId = 1;
 
+const CUSTOMER_ID_1 = '507f1f77bcf86cd799439011';
+const CUSTOMER_ID_2 = '507f1f77bcf86cd799439012';
+const PART_ID_1 = '507f1f77bcf86cd799439021';
+const PART_ID_2 = '507f1f77bcf86cd799439022';
+
 const jestWithEsmMocks = jest as typeof jest & {
   unstable_mockModule: (
     moduleName: string,
@@ -337,7 +342,7 @@ async function loadJobService() {
 
 function buildCustomer(overrides: Partial<CustomerRecord> = {}): CustomerRecord {
   return {
-    _id: 'customer-1',
+    _id: CUSTOMER_ID_1,
     name: 'Acme',
     ...overrides,
   };
@@ -345,8 +350,8 @@ function buildCustomer(overrides: Partial<CustomerRecord> = {}): CustomerRecord 
 
 function buildPart(overrides: Partial<PartRecord> = {}): PartRecord {
   return {
-    _id: 'part-1',
-    customer: 'customer-1' as unknown as Customer,
+    _id: PART_ID_1,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
     part: 'PART-100',
     description: 'Widget',
     revision: 'A',
@@ -364,14 +369,14 @@ beforeEach(() => {
 });
 
 test('create assigns the next job number and copies snapshot fields', async () => {
-  customerStore.set('customer-1', buildCustomer());
-  partStore.set('part-1', buildPart());
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
 
   const { default: JobService } = await loadJobService();
   const job = await JobService.create(
     {
-      customer: 'customer-1',
-      part: 'part-1',
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
       qty: 5,
       status: 'open',
       customerPo: 'PO-55',
@@ -391,11 +396,11 @@ test('create assigns the next job number and copies snapshot fields', async () =
 });
 
 test('create rejects a part that belongs to a different customer', async () => {
-  customerStore.set('customer-1', buildCustomer());
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
   partStore.set(
-    'part-1',
+    PART_ID_1,
     buildPart({
-      customer: 'customer-2' as unknown as Customer,
+      customer: CUSTOMER_ID_2 as unknown as Customer,
     }),
   );
 
@@ -404,8 +409,8 @@ test('create rejects a part that belongs to a different customer', async () => {
   await expect(
     module.default.create(
       {
-        customer: 'customer-1',
-        part: 'part-1',
+        customer: CUSTOMER_ID_1,
+        part: PART_ID_1,
         qty: 2,
         status: 'open',
       },
@@ -415,13 +420,13 @@ test('create rejects a part that belongs to a different customer', async () => {
 });
 
 test('update closes a job and auto-fills completedOn when missing', async () => {
-  customerStore.set('customer-1', buildCustomer());
-  partStore.set('part-1', buildPart());
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
   jobStore.set('job-1', {
     _id: 'job-1',
     jobNumber: 1001,
-    customer: 'customer-1' as unknown as Customer,
-    part: 'part-1' as unknown as Part,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
     qty: 3,
     status: 'open',
     dueDate: null,
@@ -443,8 +448,8 @@ test('update closes a job and auto-fills completedOn when missing', async () => 
     {
       _id: 'job-1',
       jobNumber: 1001,
-      customer: 'customer-1',
-      part: 'part-1',
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
       qty: 3,
       status: 'closed',
     },
@@ -457,13 +462,13 @@ test('update closes a job and auto-fills completedOn when missing', async () => 
 });
 
 test('update in-process job auto-fills startedOn when missing', async () => {
-  customerStore.set('customer-1', buildCustomer());
-  partStore.set('part-1', buildPart());
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
   jobStore.set('job-1', {
     _id: 'job-1',
     jobNumber: 1001,
-    customer: 'customer-1' as unknown as Customer,
-    part: 'part-1' as unknown as Part,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
     qty: 3,
     status: 'open',
     dueDate: null,
@@ -485,8 +490,8 @@ test('update in-process job auto-fills startedOn when missing', async () => {
     {
       _id: 'job-1',
       jobNumber: 1001,
-      customer: 'customer-1',
-      part: 'part-1',
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
       qty: 3,
       status: 'in_process',
     },
@@ -502,8 +507,8 @@ test('list filters by status and customer', async () => {
   jobStore.set('job-1', {
     _id: 'job-1',
     jobNumber: 1001,
-    customer: 'customer-1' as unknown as Customer,
-    part: 'part-1' as unknown as Part,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
     qty: 3,
     status: 'open',
     dueDate: new Date('2026-07-20T00:00:00.000Z'),
@@ -522,8 +527,8 @@ test('list filters by status and customer', async () => {
   jobStore.set('job-2', {
     _id: 'job-2',
     jobNumber: 1002,
-    customer: 'customer-2' as unknown as Customer,
-    part: 'part-2' as unknown as Part,
+    customer: CUSTOMER_ID_2 as unknown as Customer,
+    part: PART_ID_2 as unknown as Part,
     qty: 1,
     status: 'closed',
     dueDate: new Date('2026-07-22T00:00:00.000Z'),
@@ -542,7 +547,7 @@ test('list filters by status and customer', async () => {
 
   const { default: JobService } = await loadJobService();
   const response = await JobService.list({
-    customer: 'customer-1',
+    customer: CUSTOMER_ID_1,
     status: 'open',
   });
 
