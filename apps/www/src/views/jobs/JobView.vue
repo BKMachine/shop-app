@@ -331,6 +331,8 @@ import router from '@/router';
 import { isAdmin } from '@/state/device';
 import { useJobsStore } from '@/stores/jobs_store';
 
+const JOB_TAB_VALUES = ['general', 'production', 'shipments'] as const;
+
 const route = useRoute();
 const jobsStore = useJobsStore();
 
@@ -347,7 +349,7 @@ const startTaskDialog = ref(false);
 const endTaskConfirmTaskId = ref<string | null>(null);
 const job = ref<Job | null>(null);
 const draft = ref(createEmptyDraft());
-const tab = ref<'general' | 'production' | 'shipments'>('general');
+const tab = ref<(typeof JOB_TAB_VALUES)[number]>('general');
 const valid = ref(false);
 const selectedStartTaskMachineIds = ref<Record<MachineType, string | null>>({
   mill: null,
@@ -463,6 +465,10 @@ watch(
     void syncRouteState();
   },
 );
+
+watch(tab, (value) => {
+  syncTabToQuery(value);
+});
 
 onMounted(async () => {
   await syncRouteState();
@@ -611,7 +617,7 @@ function applyJobStatus(nextDraft: JobDraft, status: JobStatus): JobDraft {
 }
 
 async function syncRouteState() {
-  tab.value = 'general';
+  tab.value = selectedRouteTab();
   closeStartTaskDialog();
   endTaskConfirmTaskId.value = null;
 
@@ -638,6 +644,35 @@ async function syncRouteState() {
   } finally {
     loading.value = false;
   }
+}
+
+function selectedRouteTab(): (typeof JOB_TAB_VALUES)[number] {
+  const queryValue = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
+  return isJobTab(queryValue) ? queryValue : 'general';
+}
+
+function isJobTab(value: unknown): value is (typeof JOB_TAB_VALUES)[number] {
+  return (
+    typeof value === 'string' && JOB_TAB_VALUES.includes(value as (typeof JOB_TAB_VALUES)[number])
+  );
+}
+
+function syncTabToQuery(value: (typeof JOB_TAB_VALUES)[number]) {
+  const currentTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
+  const nextQuery = {
+    ...route.query,
+    ...(value === 'general' ? {} : { tab: value }),
+  };
+
+  if (value === 'general') {
+    delete nextQuery.tab;
+  }
+
+  if (currentTab === nextQuery.tab || (!currentTab && !nextQuery.tab)) {
+    return;
+  }
+
+  void router.replace({ query: nextQuery });
 }
 
 async function fetchMachines() {
