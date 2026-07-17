@@ -65,6 +65,24 @@
           <span class="job-number">#{{ item.jobNumber }}</span>
         </template>
 
+        <template #['item.img']="{ item }">
+          <v-hover>
+            <template #default="{ props }">
+              <v-img
+                v-if="hasPartImage(item)"
+                v-bind="props"
+                :id="item._id"
+                class="part-img"
+                :src="displayPartImageSrc(item)"
+                @error="markImageMissing(item._id)"
+                @mouseenter="showExpandedImage(item, $event)"
+                @mouseleave="hideExpandedImage"
+              />
+              <MissingImage v-else class="part-img part-img-fallback" />
+            </template>
+          </v-hover>
+        </template>
+
         <template #['item.customerName']="{ item }"> {{ displayCustomerName(item) }} </template>
 
         <template #['item.partNumber']="{ item }">
@@ -99,6 +117,16 @@
       </InfiniteScrollDataTable>
     </v-card-text>
   </v-card>
+
+  <teleport to="body">
+    <div
+      v-if="expandedImage.visible"
+      class="expanded-img-container"
+      :style="{ top: expandedImage.top + 'px', left: expandedImage.left + 'px' }"
+    >
+      <v-img class="expanded-img" :src="expandedImage.src" />
+    </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
@@ -107,6 +135,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { type LocationQueryValue, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
+import MissingImage from '@/components/MissingImage.vue';
 import router from '@/router';
 import { useJobsStore } from '@/stores/jobs_store';
 
@@ -120,6 +149,14 @@ const route = useRoute();
 const jobsStore = useJobsStore();
 const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const sortBy = ref<Array<{ key: string; order: 'asc' | 'desc' }>>([]);
+const missingImageIds = ref<Record<string, boolean>>({});
+const expandedImage = ref({
+  visible: false,
+  partId: '',
+  src: '',
+  top: 0,
+  left: 0,
+});
 let searchDebounceId: ReturnType<typeof setTimeout> | null = null;
 
 const filters = reactive<{
@@ -134,8 +171,9 @@ const filters = reactive<{
 
 const headers = [
   { title: 'Job #', key: 'jobNumber', width: 110 },
-  { title: 'Customer', key: 'customerName' },
+  { title: '', key: 'img', width: 72, sortable: false },
   { title: 'Part', key: 'partNumber' },
+  { title: 'Customer', key: 'customerName' },
   { title: 'Qty', key: 'qty', width: 90 },
   { title: 'Status', key: 'status', width: 110 },
   { title: 'Priority', key: 'priority', width: 110 },
@@ -310,6 +348,50 @@ function displayPartDescription(job: Job) {
   return job.partDescription || (typeof job.part === 'string' ? '' : job.part?.description || '');
 }
 
+function displayPartImageSrc(job: Job) {
+  return typeof job.part === 'string' ? '' : job.part?.img?.trim() || '';
+}
+
+function hasPartImage(job: Job) {
+  return Boolean(displayPartImageSrc(job)) && !missingImageIds.value[job._id];
+}
+
+function markImageMissing(jobId: string) {
+  missingImageIds.value = {
+    ...missingImageIds.value,
+    [jobId]: true,
+  };
+
+  if (expandedImage.value.visible && expandedImage.value.partId === jobId) {
+    hideExpandedImage();
+  }
+}
+
+function showExpandedImage(job: Job, event: MouseEvent) {
+  const src = displayPartImageSrc(job);
+  if (!src || !hasPartImage(job)) return;
+
+  const target = event.target as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  expandedImage.value = {
+    visible: true,
+    partId: job._id,
+    src,
+    top: rect.top,
+    left: rect.right,
+  };
+}
+
+function hideExpandedImage() {
+  expandedImage.value = {
+    visible: false,
+    partId: '',
+    src: '',
+    top: 0,
+    left: 0,
+  };
+}
+
 function parseJobDate(value: unknown) {
   if (!value) return null;
 
@@ -418,6 +500,28 @@ function statusLabel(status: JobStatus) {
 
 .job-number {
   font-weight: 700;
+}
+
+.part-img {
+  max-height: 50px;
+}
+
+.part-img-fallback {
+  width: 50px;
+}
+
+.expanded-img-container {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.expanded-img {
+  width: 360px;
+  max-height: 360px;
+  border: 1px solid #ccc;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .part-cell {
