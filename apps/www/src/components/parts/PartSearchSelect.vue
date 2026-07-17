@@ -25,12 +25,25 @@
         </span>
       </div>
     </template>
+
+    <template #append-inner>
+      <v-btn
+        color="primary"
+        :disabled="!selectedPartId"
+        icon="mdi-open-in-app"
+        size="small"
+        variant="text"
+        @click.stop="openSelectedPart"
+        @mousedown.stop.prevent
+      />
+    </template>
   </v-autocomplete>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useAttrs, watch } from 'vue';
 import api from '@/plugins/axios';
+import router from '@/router';
 
 type PartOption = {
   value: string;
@@ -159,6 +172,11 @@ async function loadSearchResults(search: string) {
       loading.value = false;
     }
   }
+}
+
+function openSelectedPart() {
+  if (!selectedPartId.value) return;
+  void router.push({ name: 'viewPart', params: { id: selectedPartId.value } });
 }
 
 watch(
