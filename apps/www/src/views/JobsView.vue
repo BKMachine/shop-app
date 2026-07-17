@@ -92,6 +92,10 @@
           </div>
         </template>
 
+        <template #['item.material']="{ item }">
+          <MaterialSwatch :on-hand="item.materialOnHandOn" :ordered="item.materialOrderedOn" />
+        </template>
+
         <template #['item.status']="{ item }">
           <v-chip :color="statusColor(item.status)" size="small">
             {{ statusLabel(item.status) }}
@@ -134,6 +138,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { type LocationQueryValue, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
+import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import MissingImage from '@/components/MissingImage.vue';
 import router from '@/router';
@@ -175,9 +180,10 @@ const headers = [
   { title: 'Part', key: 'partNumber' },
   { title: 'Customer', key: 'customerName' },
   { title: 'Qty', key: 'qty', width: 90 },
-  { title: 'Status', key: 'status', width: 110 },
-  { title: 'Priority', key: 'priority', width: 110 },
-  { title: 'Due', key: 'dueDate', width: 130, format: formatRelativeDate },
+  { title: 'Material', key: 'material', width: 110, sortable: false, align: 'center' },
+  { title: 'Status', key: 'status', width: 110, align: 'center' },
+  { title: 'Priority', key: 'priority', width: 110, align: 'center' },
+  { title: 'Due', key: 'dueDate', width: 130, format: formatRelativeDate, align: 'center' },
   { title: 'Completed', key: 'completedOn', width: 130, format: formatRelativeDate },
   { title: 'PO', key: 'customerPo' },
 ];

@@ -24,6 +24,7 @@
               {{ priorityLabel }}
               Priority
             </v-chip>
+            <MaterialSwatch :on-hand="draft.materialOnHandOn" :ordered="draft.materialOrderedOn" />
           </div>
           <div class="job-header-grid__chip-row">
             <v-chip density="comfortable" variant="outlined"> Qty {{ normalizedQty }} </v-chip>
@@ -321,6 +322,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import JobFormFields, { type JobDraft } from '@/components/jobs/JobFormFields.vue';
+import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
 import { dueDateColor } from '@/lib/job_dates';
 import { statusApi } from '@/plugins/axios';
 import printer from '@/plugins/printer';
