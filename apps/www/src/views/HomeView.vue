@@ -3,9 +3,9 @@
     <img alt="BK Machine logo" class="home-view__logo" :src="logo" />
 
     <div
-      :aria-label="isScanReady ? 'Ready to scan' : 'Not ready to scan'"
+      :aria-label="isAppScanReady ? 'Ready to scan' : 'Not ready to scan'"
       class="scan-stage"
-      :class="isScanReady ? 'scan-stage--ready' : 'scan-stage--not-ready'"
+      :class="isAppScanReady ? 'scan-stage--ready' : 'scan-stage--not-ready'"
     >
       <span class="scan-stage__corner scan-stage__corner--top-left" />
       <span class="scan-stage__corner scan-stage__corner--top-right" />
@@ -16,31 +16,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import logo from '@/assets/img/bk_logo.png';
-
-const isWindowFocused = ref(false);
-const isDocumentVisible = ref(false);
-
-const isScanReady = computed(() => isWindowFocused.value && isDocumentVisible.value);
-
-function syncFocusState() {
-  isWindowFocused.value = document.hasFocus();
-  isDocumentVisible.value = document.visibilityState === 'visible';
-}
-
-onMounted(() => {
-  syncFocusState();
-  window.addEventListener('focus', syncFocusState);
-  window.addEventListener('blur', syncFocusState);
-  document.addEventListener('visibilitychange', syncFocusState);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener('focus', syncFocusState);
-  window.removeEventListener('blur', syncFocusState);
-  document.removeEventListener('visibilitychange', syncFocusState);
-});
+import { isAppScanReady } from '@/state/app_focus';
 </script>
 
 <style scoped>

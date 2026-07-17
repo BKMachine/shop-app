@@ -8,13 +8,22 @@
         </v-avatar>
         BK Machine
       </v-app-bar-title>
-      <v-btn
-        :aria-label="themeToggleLabel"
-        :icon="themeToggleIcon"
-        :title="themeToggleLabel"
-        variant="text"
-        @click="toggleTheme"
-      />
+      <div class="app-bar__actions">
+        <v-icon
+          :aria-label="scanReadyLabel"
+          class="app-bar__scan-indicator"
+          :color="scanReadyColor"
+          icon="mdi-barcode-scan"
+          :title="scanReadyLabel"
+        />
+        <v-btn
+          :aria-label="themeToggleLabel"
+          :icon="themeToggleIcon"
+          :title="themeToggleLabel"
+          variant="text"
+          @click="toggleTheme"
+        />
+      </div>
     </v-app-bar>
     <v-navigation-drawer v-model="drawer" :rail="drawerRail">
       <v-list>
@@ -85,6 +94,7 @@ import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import onScan from '@/lib/onscan';
 import { uiIcons } from '@/lib/uiIcons';
 import router from '@/router';
+import { isAppScanReady, startAppFocusTracking } from '@/state/app_focus';
 import { deviceState, fetchCurrentDevice } from '@/state/device';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
@@ -156,11 +166,20 @@ const themeToggleLabel = computed(() => {
   return isDarkTheme.value ? 'Switch to light mode' : 'Switch to dark mode';
 });
 
+const scanReadyColor = computed(() => {
+  return isAppScanReady.value ? 'success' : 'error';
+});
+
+const scanReadyLabel = computed(() => {
+  return isAppScanReady.value ? 'Ready to scan' : 'Not ready to scan';
+});
+
 function toggleTheme() {
   theme.change(isDarkTheme.value ? 'light' : 'dark');
 }
 
 onBeforeMount(() => {
+  startAppFocusTracking();
   void customerStore.fetch();
   void materialsStore.fetch();
   void shipperStore.fetch();
@@ -191,6 +210,16 @@ const showAuditTrail = computed<boolean>(() => Boolean(deviceState.current?.isAd
 </script>
 
 <style scoped>
+.app-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-bar__scan-indicator {
+  transition: color 120ms ease;
+}
+
 .scan-dialog {
   max-width: 500px;
 }
