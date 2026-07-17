@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount, ref, watch } from 'vue';
+import { computed, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
 import { useTheme } from 'vuetify';
 import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
@@ -94,7 +94,11 @@ import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import onScan from '@/lib/onscan';
 import { uiIcons } from '@/lib/uiIcons';
 import router from '@/router';
-import { isAppScanReady, startAppFocusTracking } from '@/state/app_focus';
+import {
+  isAppScanReady,
+  startAppFocusTracking,
+  useIdleHomeRedirectEnabled,
+} from '@/state/app_focus';
 import { deviceState, fetchCurrentDevice } from '@/state/device';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
@@ -114,6 +118,15 @@ const vendorStore = useVendorStore();
 const theme = useTheme();
 
 const THEME_STORAGE_KEY = 'shop-app-theme';
+const IDLE_HOME_REDIRECT_TIMEOUT_MS = 1000 * 60 * 5;
+const IDLE_ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
+  'pointerdown',
+  'pointermove',
+  'keydown',
+  'touchstart',
+  'wheel',
+  'scroll',
+];
 
 // onscan.js by default ignores chars other than alphanumeric
 // mappedCodes are chars we do want included in scans
@@ -156,6 +169,7 @@ document.addEventListener('scan', (e) => {
 
 const drawer = ref(true);
 const drawerRail = ref(false);
+let idleHomeRedirectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const isDarkTheme = computed(() => theme.global.name.value === 'dark');
 
@@ -179,8 +193,51 @@ function toggleTheme() {
   theme.change(isDarkTheme.value ? 'light' : 'dark');
 }
 
+function clearIdleHomeRedirectTimeout() {
+  if (!idleHomeRedirectTimeoutId) return;
+  clearTimeout(idleHomeRedirectTimeoutId);
+  idleHomeRedirectTimeoutId = null;
+}
+
+function scheduleIdleHomeRedirect() {
+  if (!useIdleHomeRedirectEnabled.value) {
+    clearIdleHomeRedirectTimeout();
+    return;
+  }
+
+  clearIdleHomeRedirectTimeout();
+
+  idleHomeRedirectTimeoutId = setTimeout(() => {
+    idleHomeRedirectTimeoutId = null;
+    if (!useIdleHomeRedirectEnabled.value) return;
+    if (router.currentRoute.value.name === 'home') return;
+    void router.push({ name: 'home' });
+  }, IDLE_HOME_REDIRECT_TIMEOUT_MS);
+}
+
+function resetIdleHomeRedirectTimeout() {
+  scheduleIdleHomeRedirect();
+}
+
+function startIdleHomeRedirectTracking() {
+  if (typeof window === 'undefined') return;
+
+  for (const eventName of IDLE_ACTIVITY_EVENTS) {
+    window.addEventListener(eventName, resetIdleHomeRedirectTimeout, { passive: true });
+  }
+}
+
+function stopIdleHomeRedirectTracking() {
+  if (typeof window === 'undefined') return;
+
+  for (const eventName of IDLE_ACTIVITY_EVENTS) {
+    window.removeEventListener(eventName, resetIdleHomeRedirectTimeout);
+  }
+}
+
 onBeforeMount(() => {
   startAppFocusTracking();
+  startIdleHomeRedirectTracking();
   void customerStore.fetch();
   void materialsStore.fetch();
   void shipperStore.fetch();
@@ -195,10 +252,28 @@ onBeforeMount(() => {
   }
 });
 
+onBeforeUnmount(() => {
+  stopIdleHomeRedirectTracking();
+  clearIdleHomeRedirectTimeout();
+});
+
 watch(
   () => theme.global.name.value,
   (value) => {
     window.localStorage.setItem(THEME_STORAGE_KEY, value);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => useIdleHomeRedirectEnabled.value,
+  (enabled) => {
+    if (!enabled) {
+      clearIdleHomeRedirectTimeout();
+      return;
+    }
+
+    scheduleIdleHomeRedirect();
   },
   { immediate: true },
 );

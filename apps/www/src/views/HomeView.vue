@@ -2,22 +2,34 @@
   <div class="home-view">
     <img alt="BK Machine logo" class="home-view__logo" :src="logo" />
 
-    <div
-      :aria-label="isAppScanReady ? 'Ready to scan' : 'Not ready to scan'"
-      class="scan-stage"
-      :class="isAppScanReady ? 'scan-stage--ready' : 'scan-stage--not-ready'"
-    >
-      <span class="scan-stage__corner scan-stage__corner--top-left" />
-      <span class="scan-stage__corner scan-stage__corner--top-right" />
-      <span class="scan-stage__corner scan-stage__corner--bottom-left" />
-      <span class="scan-stage__corner scan-stage__corner--bottom-right" />
+    <div class="scan-stage-shell">
+      <div
+        :aria-label="isAppScanReady ? 'Ready to scan' : 'Not ready to scan'"
+        class="scan-stage"
+        :class="isAppScanReady ? 'scan-stage--ready' : 'scan-stage--not-ready'"
+      >
+        <span class="scan-stage__corner scan-stage__corner--top-left" />
+        <span class="scan-stage__corner scan-stage__corner--top-right" />
+        <span class="scan-stage__corner scan-stage__corner--bottom-left" />
+        <span class="scan-stage__corner scan-stage__corner--bottom-right" />
+      </div>
+
+      <v-checkbox
+        v-model="idleHomeRedirectEnabled"
+        class="scan-stage-shell__checkbox"
+        color="primary"
+        hide-details
+        label="Return here if idle"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import logo from '@/assets/img/bk_logo.png';
-import { isAppScanReady } from '@/state/app_focus';
+import { isAppScanReady, useIdleHomeRedirectEnabled } from '@/state/app_focus';
+
+const idleHomeRedirectEnabled = useIdleHomeRedirectEnabled;
 </script>
 
 <style scoped>
@@ -47,9 +59,17 @@ import { isAppScanReady } from '@/state/app_focus';
   user-select: none;
 }
 
-.scan-stage {
+.scan-stage-shell {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.scan-stage {
+  position: relative;
   width: min(72vw, 860px);
   height: min(46vh, 420px);
   border-radius: 28px;
@@ -57,6 +77,15 @@ import { isAppScanReady } from '@/state/app_focus';
   box-shadow:
     0 18px 48px rgba(0, 0, 0, 0.08),
     inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.scan-stage-shell__checkbox {
+  align-self: flex-start;
+  margin-left: 4px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 2px 10px;
+  border-radius: 999px;
   backdrop-filter: blur(4px);
 }
 
