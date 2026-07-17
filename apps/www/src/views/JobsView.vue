@@ -140,8 +140,8 @@ import { type LocationQueryValue, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
-import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import MissingImage from '@/components/MissingImage.vue';
+import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import router from '@/router';
 import { useJobsStore } from '@/stores/jobs_store';
 
