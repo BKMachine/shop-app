@@ -14,7 +14,15 @@
     variant="outlined"
   >
     <template #item="{ props, item }">
-      <v-list-item v-bind="props" :subtitle="item.description" :title="item.part" />
+      <v-list-item
+        v-bind="props"
+        :subtitle="optionFromSlot(item).description"
+        :title="optionFromSlot(item).part"
+      >
+        <template #append>
+          <span class="part-option-stock">{{ optionFromSlot(item).stock }}</span>
+        </template>
+      </v-list-item>
     </template>
 
     <template #selection="{ item }">
@@ -37,6 +45,17 @@
         @mousedown.stop.prevent
       />
     </template>
+
+    <template #details>
+      <div v-if="selectedPartOption" class="part-selection-hint">
+        <span>Stock:</span>
+        <span class="part-selection-hint__stock">{{ selectedPartOption.stock }}</span>
+        <span class="part-selection-hint__divider">|</span>
+        <span>{{ selectedPartOption.location || '-' }}</span>
+        <span class="part-selection-hint__divider">|</span>
+        <span>{{ selectedPartOption.position || '-' }}</span>
+      </div>
+    </template>
   </v-autocomplete>
 </template>
 
@@ -50,6 +69,9 @@ type PartOption = {
   part: string;
   description: string;
   label: string;
+  stock: number;
+  location: string;
+  position: string;
 };
 
 const props = withDefaults(
@@ -89,12 +111,38 @@ const normalizedCustomerId = computed(() => {
   return typeof props.customerId === 'string' ? props.customerId : props.customerId._id;
 });
 
-function createOption(part: Pick<Part, '_id' | 'part' | 'description'>): PartOption {
+const selectedPartOption = computed(() => {
+  return options.value.find((option) => option.value === selectedPartId.value) || null;
+});
+
+function createOption(
+  part: Pick<Part, '_id' | 'part' | 'description' | 'stock' | 'location' | 'position'>,
+): PartOption {
   return {
     value: part._id,
     part: part.part?.trim() || '',
     description: part.description?.trim() || '',
     label: [part.part?.trim() || '', part.description?.trim() || ''].filter(Boolean).join(' - '),
+    stock: Math.max(0, Number(part.stock) || 0),
+    location: part.location?.trim() || '',
+    position: part.position?.trim() || '',
+  };
+}
+
+function optionFromSlot(item: unknown): PartOption {
+  const candidate =
+    item && typeof item === 'object' && 'raw' in item
+      ? (item as { raw?: PartOption }).raw
+      : (item as PartOption | undefined);
+
+  return {
+    value: candidate?.value || '',
+    part: candidate?.part || '',
+    description: candidate?.description || '',
+    label: candidate?.label || '',
+    stock: Math.max(0, Number(candidate?.stock) || 0),
+    location: candidate?.location || '',
+    position: candidate?.position || '',
   };
 }
 
@@ -149,7 +197,10 @@ async function loadSearchResults(search: string) {
         _id: item._id,
         part: item.part,
         description: item.description,
-      } as Pick<Part, '_id' | 'part' | 'description'>),
+        stock: item.stock,
+        location: item.location,
+        position: item.position,
+      } as Pick<Part, '_id' | 'part' | 'description' | 'stock' | 'location' | 'position'>),
     );
 
     if (selectedPartId.value) {
@@ -232,5 +283,32 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: rgba(0, 0, 0, 0.6);
+}
+
+.part-selection-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* min-height: 22px; */
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.68);
+  white-space: nowrap;
+}
+
+.part-selection-hint__stock {
+  font-weight: 800;
+}
+
+.part-selection-hint__divider {
+  margin: 0 4px 0 8px;
+  color: rgba(0, 0, 0, 0.42);
+}
+
+.part-option-stock {
+  min-width: 3ch;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.68);
 }
 </style>
