@@ -53,7 +53,13 @@
         >
           Traveler
         </v-btn>
-        <v-btn color="green" :disabled="!canSaveJob" :loading="saving" @click="saveJob">
+        <v-btn
+          color="green"
+          :disabled="!canSaveJob"
+          :loading="saving"
+          prepend-icon="mdi-content-save-outline"
+          @click="saveJob"
+        >
           {{ isCreateRoute ? 'Create' : 'Save' }}
         </v-btn>
       </div>
@@ -663,6 +669,7 @@ async function saveJob() {
     });
     job.value = updatedJob;
     draft.value = jobToDraft(updatedJob);
+    router.back();
   } finally {
     saving.value = false;
   }
