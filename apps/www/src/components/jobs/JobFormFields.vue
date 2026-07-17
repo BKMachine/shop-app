@@ -12,7 +12,7 @@
         :rules="[requiredRule]"
       />
     </v-col>
-    <v-col cols="12" md="8">
+    <v-col class="job-form__fields-column" cols="12" md="8">
       <v-row dense>
         <v-col cols="12" md="3">
           <v-text-field
@@ -48,12 +48,21 @@
           <v-text-field v-model="draft.customerPo" label="Customer PO" variant="outlined" />
         </v-col>
         <v-col cols="12" md="4">
-          <v-text-field v-model="draft.dueDate" label="Due Date" type="date" variant="outlined" />
+          <v-text-field
+            v-model="draft.dueDate"
+            :hint="formatRelativeDateHint(draft.dueDate)"
+            label="Due Date"
+            persistent-hint
+            type="date"
+            variant="outlined"
+          />
         </v-col>
         <v-col cols="12" md="4">
           <v-text-field
             v-model="draft.startedOn"
+            :hint="formatRelativeDateHint(draft.startedOn)"
             label="Started On"
+            persistent-hint
             type="date"
             variant="outlined"
           />
@@ -62,14 +71,44 @@
           <v-text-field
             v-model="draft.completedOn"
             :disabled="draft.status !== 'closed'"
+            :hint="formatRelativeDateHint(draft.completedOn)"
             label="Completed On"
+            persistent-hint
+            type="date"
+            variant="outlined"
+          />
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-checkbox v-model="materialOrderedChecked" hide-details label="Material Ordered" />
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-text-field
+            v-model="draft.materialOrderedOn"
+            :disabled="!materialOrderedChecked"
+            :hint="formatRelativeDateHint(draft.materialOrderedOn)"
+            label="Material Ordered On"
+            persistent-hint
+            type="date"
+            variant="outlined"
+          />
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-checkbox v-model="materialOnHandChecked" hide-details label="Material On Hand" />
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-text-field
+            v-model="draft.materialOnHandOn"
+            :disabled="!materialOnHandChecked"
+            :hint="formatRelativeDateHint(draft.materialOnHandOn)"
+            label="Material On Hand On"
+            persistent-hint
             type="date"
             variant="outlined"
           />
         </v-col>
       </v-row>
     </v-col>
-    <v-col cols="12" md="4">
+    <v-col class="job-form__preview-column" cols="12" md="4">
       <div class="part-preview">
         <div class="part-preview__frame">
           <v-progress-circular v-if="loadingPart" color="primary" indeterminate size="32" />
@@ -94,6 +133,7 @@ import { computed, ref, watch } from 'vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartSearchSelect from '@/components/parts/PartSearchSelect.vue';
+import { formatRelativeDate } from '@/lib/job_dates';
 import api from '@/plugins/axios';
 
 export type JobDraft = {
@@ -104,6 +144,8 @@ export type JobDraft = {
   dueDate: string;
   startedOn: string;
   completedOn: string;
+  materialOrderedOn: string;
+  materialOnHandOn: string;
   customerPo: string;
   priority: JobPriority;
   notes: string;
@@ -122,6 +164,26 @@ const draft = computed({
 const selectedPart = ref<Part | null>(null);
 const loadingPart = ref(false);
 let partRequestId = 0;
+
+const materialOrderedChecked = computed({
+  get: () => Boolean(draft.value.materialOrderedOn),
+  set: (checked: boolean) => {
+    draft.value = {
+      ...draft.value,
+      materialOrderedOn: checked ? draft.value.materialOrderedOn || currentDateInputValue() : '',
+    };
+  },
+});
+
+const materialOnHandChecked = computed({
+  get: () => Boolean(draft.value.materialOnHandOn),
+  set: (checked: boolean) => {
+    draft.value = {
+      ...draft.value,
+      materialOnHandOn: checked ? draft.value.materialOnHandOn || currentDateInputValue() : '',
+    };
+  },
+});
 
 const statusOptions = [
   { title: 'Open', value: 'open' },
@@ -150,6 +212,10 @@ function currentDateInputValue() {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function formatRelativeDateHint(value: string) {
+  return formatRelativeDate(value);
 }
 
 async function loadSelectedPart(partId: string | null) {
@@ -227,11 +293,17 @@ watch(
 </script>
 
 <style scoped>
+.job-form__fields-column,
+.job-form__preview-column {
+  display: flex;
+}
+
 .part-preview {
   --job-form-input-details-height: 28px;
   display: flex;
   flex-direction: column;
-  height: calc(100% - var(--job-form-input-details-height) + 6px);
+  flex: 1;
+  min-height: 100%;
 }
 
 .part-preview__frame {
@@ -239,7 +311,7 @@ watch(
   border: 1px dashed rgba(var(--v-theme-on-surface), 0.2);
   border-radius: 12px;
   display: flex;
-  height: 150px;
+  flex: 1;
   justify-content: center;
   overflow: hidden;
   padding: 12px;
@@ -258,5 +330,16 @@ watch(
 .part-preview__fallback {
   height: 100%;
   width: 100%;
+}
+
+@media (max-width: 959px) {
+  .job-form__fields-column,
+  .job-form__preview-column {
+    display: block;
+  }
+
+  .part-preview__frame {
+    min-height: 180px;
+  }
 }
 </style>

@@ -11,6 +11,8 @@ type JobDocumentFields = Omit<Job, '_id' | 'customer' | 'part'> & {
   dueDate?: Date | null;
   startedOn?: Date | null;
   completedOn?: Date | null;
+  materialOrderedOn?: Date | null;
+  materialOnHandOn?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -39,6 +41,8 @@ const schema = new Schema<JobDocumentFields>(
     dueDate: { type: Date, default: null, index: true },
     startedOn: { type: Date, default: null },
     completedOn: { type: Date, default: null },
+    materialOrderedOn: { type: Date, default: null },
+    materialOnHandOn: { type: Date, default: null },
     customerPo: { type: String, default: '', index: true },
     priority: { type: String, enum: ['low', 'normal', 'rush'], default: 'normal', index: true },
     notes: { type: String, default: '' },

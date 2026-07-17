@@ -38,6 +38,8 @@ function toJobCreatePayload(job: Job | JobCreate): JobCreate {
     dueDate: normalizeDateValue(job.dueDate),
     startedOn: normalizeDateValue(job.startedOn),
     completedOn: job.status === 'closed' ? normalizeDateValue(job.completedOn) : undefined,
+    materialOrderedOn: normalizeDateValue(job.materialOrderedOn),
+    materialOnHandOn: normalizeDateValue(job.materialOnHandOn),
     customerPo: job.customerPo?.trim() || undefined,
     priority: job.priority || 'normal',
     notes: job.notes?.trim() || undefined,

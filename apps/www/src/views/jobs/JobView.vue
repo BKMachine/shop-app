@@ -27,7 +27,12 @@
           </div>
           <div class="job-header-grid__chip-row">
             <v-chip density="comfortable" variant="outlined"> Qty {{ normalizedQty }} </v-chip>
-            <v-chip v-if="draft.dueDate" density="comfortable" variant="outlined">
+            <v-chip
+              v-if="draft.dueDate"
+              :color="dueDateColor(draft.dueDate)"
+              density="comfortable"
+              variant="tonal"
+            >
               Due {{ formatHeaderDate(draft.dueDate) }}
             </v-chip>
           </div>
@@ -316,6 +321,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import JobFormFields, { type JobDraft } from '@/components/jobs/JobFormFields.vue';
+import { dueDateColor } from '@/lib/job_dates';
 import { statusApi } from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { toastError } from '@/plugins/vue-toast-notification';
@@ -470,6 +476,8 @@ function createEmptyDraft(): JobDraft {
     dueDate: defaultDueDateValue(),
     startedOn: '',
     completedOn: '',
+    materialOrderedOn: '',
+    materialOnHandOn: '',
     customerPo: '',
     priority: 'normal',
     notes: '',
@@ -503,6 +511,8 @@ function serializeDraft(value: JobDraft) {
     dueDate: value.dueDate || '',
     startedOn: value.startedOn || '',
     completedOn: value.completedOn || '',
+    materialOrderedOn: value.materialOrderedOn || '',
+    materialOnHandOn: value.materialOnHandOn || '',
     customerPo: value.customerPo.trim(),
     priority: value.priority,
     notes: value.notes.trim(),
@@ -538,6 +548,8 @@ function jobToDraft(currentJob: Job): JobDraft {
     dueDate: dateInputValue(currentJob.dueDate),
     startedOn: dateInputValue(currentJob.startedOn),
     completedOn: dateInputValue(currentJob.completedOn),
+    materialOrderedOn: dateInputValue(currentJob.materialOrderedOn),
+    materialOnHandOn: dateInputValue(currentJob.materialOnHandOn),
     customerPo: currentJob.customerPo || '',
     priority: currentJob.priority || 'normal',
     notes: currentJob.notes || '',
@@ -566,6 +578,8 @@ function toJobPayload(nextDraft: JobDraft, productionTasks: JobProductionTask[] 
     dueDate: nextDraft.dueDate || undefined,
     startedOn: nextDraft.startedOn || undefined,
     completedOn: nextDraft.status === 'closed' ? nextDraft.completedOn || undefined : undefined,
+    materialOrderedOn: nextDraft.materialOrderedOn || undefined,
+    materialOnHandOn: nextDraft.materialOnHandOn || undefined,
     customerPo: nextDraft.customerPo.trim() || undefined,
     priority: nextDraft.priority,
     notes: nextDraft.notes.trim() || undefined,

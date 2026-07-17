@@ -506,6 +506,51 @@ test('update in-process job auto-fills startedOn when missing', async () => {
   expect(addJobAudit).toHaveBeenCalledTimes(1);
 });
 
+test('update stores material ordered and material on hand timestamps', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    materialOrderedOn: null,
+    materialOnHandOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const updated = await JobService.update(
+    {
+      _id: 'job-1',
+      jobNumber: 1001,
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
+      qty: 3,
+      status: 'open',
+      materialOrderedOn: new Date('2026-07-16T12:00:00.000Z'),
+      materialOnHandOn: new Date('2026-07-17T12:00:00.000Z'),
+    },
+    'device-1',
+  );
+
+  expect(updated.materialOrderedOn).toEqual(new Date('2026-07-16T12:00:00.000Z'));
+  expect(updated.materialOnHandOn).toEqual(new Date('2026-07-17T12:00:00.000Z'));
+});
+
 test('update stores production tasks on the job', async () => {
   customerStore.set(CUSTOMER_ID_1, buildCustomer());
   partStore.set(PART_ID_1, buildPart());

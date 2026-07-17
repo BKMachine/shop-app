@@ -142,6 +142,8 @@ async function buildPayload(
       ? (normalizeDate(data.startedOn) ?? currentDateOnlyValue())
       : normalizeDate(data.startedOn);
   const completedOn = status === 'closed' ? (normalizeDate(data.completedOn) ?? new Date()) : null;
+  const materialOrderedOn = normalizeDate(data.materialOrderedOn);
+  const materialOnHandOn = normalizeDate(data.materialOnHandOn);
 
   return {
     jobNumber,
@@ -152,6 +154,8 @@ async function buildPayload(
     dueDate: normalizeDate(data.dueDate),
     startedOn,
     completedOn,
+    materialOrderedOn,
+    materialOnHandOn,
     customerPo: normalizeText(data.customerPo),
     priority: normalizePriority(data.priority),
     notes: normalizeText(data.notes),

@@ -130,11 +130,11 @@
 </template>
 
 <script setup lang="ts">
-import { DateTime } from 'luxon';
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { type LocationQueryValue, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
+import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import MissingImage from '@/components/MissingImage.vue';
 import router from '@/router';
 import { useJobsStore } from '@/stores/jobs_store';
@@ -390,59 +390,6 @@ function hideExpandedImage() {
     top: 0,
     left: 0,
   };
-}
-
-function parseJobDate(value: unknown) {
-  if (!value) return null;
-
-  if (value instanceof Date) {
-    const dateTime = DateTime.fromJSDate(value);
-    return dateTime.isValid ? dateTime : null;
-  }
-
-  const stringValue = String(value);
-  const dateOnlyMatch = stringValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  const dateTime = dateOnlyMatch
-    ? DateTime.fromObject({
-        year: Number(dateOnlyMatch[1]),
-        month: Number(dateOnlyMatch[2]),
-        day: Number(dateOnlyMatch[3]),
-      })
-    : DateTime.fromISO(stringValue);
-
-  return dateTime.isValid ? dateTime : null;
-}
-
-function relativeDayDiff(value: unknown) {
-  const dateTime = parseJobDate(value);
-  if (!dateTime) return null;
-
-  const today = DateTime.now().startOf('day');
-  const targetDay = dateTime.startOf('day');
-  return Math.round(targetDay.diff(today, 'days').days);
-}
-
-function formatRelativeDate(value: unknown) {
-  if (!value) return '';
-
-  const dayDiff = relativeDayDiff(value);
-  if (dayDiff == null) return '';
-
-  if (dayDiff === 0) return 'today';
-  if (dayDiff === 1) return 'in 1 day';
-  if (dayDiff > 1) return `in ${dayDiff} days`;
-  if (dayDiff === -1) return 'yesterday';
-  return `${Math.abs(dayDiff)} days ago`;
-}
-
-function dueDateColor(value: unknown) {
-  const dayDiff = relativeDayDiff(value);
-  if (dayDiff == null) return 'grey';
-  if (dayDiff <= -7) return 'purple-lighten-2';
-  if (dayDiff < 0) return 'error';
-  if (dayDiff > 14) return 'success';
-  return 'warning';
 }
 
 function priorityColor(priority: JobPriority | undefined) {

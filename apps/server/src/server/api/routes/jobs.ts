@@ -48,6 +48,8 @@ const JobFieldsSchema = z.strictObject({
   dueDate: jobDateSchema,
   startedOn: jobDateSchema,
   completedOn: jobDateSchema,
+  materialOrderedOn: jobDateSchema,
+  materialOnHandOn: jobDateSchema,
   customerPo: z.string().optional(),
   priority: z.enum(['low', 'normal', 'rush']).optional(),
   notes: z.string().optional(),

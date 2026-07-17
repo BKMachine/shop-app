@@ -218,6 +218,8 @@ declare global {
     dueDate?: string | Date | null;
     startedOn?: string | Date | null;
     completedOn?: string | Date | null;
+    materialOrderedOn?: string | Date | null;
+    materialOnHandOn?: string | Date | null;
     customerPo?: string;
     priority?: JobPriority;
     notes?: string;
