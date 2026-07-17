@@ -296,7 +296,7 @@
                                 variant="text"
                                 @click.prevent.stop="removeSubComponent(String(element.partId))"
                               />
-                              <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
+                              <v-icon color="primary" icon="mdi-open-in-app" />
                             </div>
                           </template>
                         </v-list-item>
@@ -359,7 +359,7 @@
                           >
                             Uses {{ parentItem.qty }}
                           </v-chip>
-                          <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
+                          <v-icon color="primary" icon="mdi-open-in-app" />
                         </div>
                       </template>
                     </v-list-item>
