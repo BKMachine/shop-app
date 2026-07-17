@@ -1,7 +1,7 @@
 <template>
   <v-app v-cloak>
     <v-app-bar class="elevation-2">
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
+      <v-app-bar-nav-icon @click.stop="drawerRail = !drawerRail" />
       <v-app-bar-title>
         <v-avatar class="pointer" size="48" @click="router.push({ name: 'home' })">
           <v-img src="@/assets/img/bk_logo.png" />
@@ -16,7 +16,7 @@
         @click="toggleTheme"
       />
     </v-app-bar>
-    <v-navigation-drawer v-model="drawer">
+    <v-navigation-drawer v-model="drawer" :rail="drawerRail">
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.job" :to="{ name: 'jobs' }"> Jobs </v-list-item>
@@ -132,11 +132,19 @@ document.addEventListener('scan', (e) => {
     return;
   }
 
+  // Handle production job scans from a QRCode starting with bk-job:
+  if (e.detail.scanCode.startsWith('bk-job:')) {
+    const jobNumber = e.detail.scanCode.replace('bk-job:', '');
+    router.push({ name: 'jobs', query: { job: jobNumber } });
+    return;
+  }
+
   // Handle Tool scans from tool sleeve barcodes
   scannerStore.scan(e.detail.scanCode);
 });
 
 const drawer = ref(true);
+const drawerRail = ref(false);
 
 const isDarkTheme = computed(() => theme.global.name.value === 'dark');
 
