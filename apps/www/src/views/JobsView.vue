@@ -73,6 +73,7 @@
                 v-bind="props"
                 :id="item._id"
                 class="part-img"
+                contain
                 :src="displayPartImageSrc(item)"
                 @error="markImageMissing(item._id)"
                 @mouseenter="showExpandedImage(item, $event)"
@@ -456,11 +457,16 @@ function statusLabel(status: JobStatus) {
 }
 
 .part-img {
-  max-height: 50px;
+  width: 38px;
+  height: 38px;
+  margin: 2px auto;
+  cursor: zoom-in;
 }
 
 .part-img-fallback {
-  width: 50px;
+  width: 38px;
+  min-height: 38px;
+  margin: 2px auto;
 }
 
 .expanded-img-container {
