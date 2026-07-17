@@ -227,17 +227,28 @@ function toMachineDashboardPartSummary(
   return normalizedPartNumber || normalizedPartDescription;
 }
 
+function extractPartImage(value: unknown) {
+  if (!value || typeof value !== 'object' || !('img' in value)) return null;
+
+  const imageValue = value.img;
+  return typeof imageValue === 'string' && imageValue.trim() ? imageValue.trim() : null;
+}
+
 async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
   const [machines, jobs] = await Promise.all([
     Machine.find().sort({ name: 1 }),
-    Job.find({ status: 'in_process' }).sort({ dueDate: 1, jobNumber: -1 }),
+    Job.find({ status: 'in_process' })
+      .populate('part', { img: 1 })
+      .sort({ dueDate: 1, jobNumber: -1 }),
   ]);
 
   const activeJobByMachineId = new Map<
     string,
     {
       task: JobProductionTask;
-      job: Pick<Job, '_id' | 'jobNumber' | 'qty' | 'dueDate' | 'partNumber' | 'partDescription'>;
+      job: Pick<Job, '_id' | 'jobNumber' | 'qty' | 'dueDate' | 'partNumber' | 'partDescription'> & {
+        partImage: string | null;
+      };
     }
   >();
 
@@ -259,6 +270,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
             dueDate: job.dueDate,
             partNumber: job.partNumber,
             partDescription: job.partDescription,
+            partImage: extractPartImage(job.part),
           },
         });
       }
@@ -285,6 +297,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
       dueDate: activeEntry?.job.dueDate ?? null,
       partNumber: activeEntry?.job.partNumber ?? null,
       partDescription: activeEntry?.job.partDescription ?? null,
+      partImage: activeEntry?.job.partImage ?? null,
       partSummary: activeEntry
         ? toMachineDashboardPartSummary(activeEntry.job.partNumber, activeEntry.job.partDescription)
         : '',

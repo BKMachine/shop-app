@@ -276,6 +276,7 @@ declare global {
     dueDate?: string | Date | null;
     partNumber?: string | null;
     partDescription?: string | null;
+    partImage?: string | null;
     partSummary: string;
   }
 
