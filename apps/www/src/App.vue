@@ -145,7 +145,8 @@ document.addEventListener('scan', (e) => {
   // Handle production job scans from a QRCode starting with bk-job:
   if (e.detail.scanCode.startsWith('bk-job:')) {
     const jobNumber = e.detail.scanCode.replace('bk-job:', '');
-    router.push({ name: 'jobs', query: { job: jobNumber } });
+    // go to /job/{id}?tab=production
+    router.push({ name: 'viewJob', params: { id: jobNumber }, query: { tab: 'production' } });
     return;
   }
 
