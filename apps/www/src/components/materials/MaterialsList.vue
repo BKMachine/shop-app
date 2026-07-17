@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div ref="materialsListContainer">
     <v-text-field
       v-model="search"
       clearable
@@ -26,7 +26,8 @@
         v-for="material in sortedFilteredMaterials"
         :key="material._id"
         :active="material._id === selectedMaterialId"
-        class="material-row"
+        :class="['material-row', { 'material-row--selected': material._id === selectedMaterialId }]"
+        :data-material-id="material._id"
         @click="emit('select', material)"
       >
         <v-list-item-title class="material-title">
@@ -42,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { formatCrossSectionDimension } from '@/plugins/utils';
 
 const props = defineProps<{
@@ -54,6 +55,7 @@ const emit = defineEmits<{
   select: [material: Material];
 }>();
 
+const materialsListContainer = ref<HTMLElement | null>(null);
 const search = ref('');
 const typeFilter = ref<'All' | 'Flat' | 'Round'>('All');
 const tubingFilter = ref<'All' | 'Tubing' | 'Bar'>('All');
@@ -90,6 +92,31 @@ const sortedFilteredMaterials = computed(() => {
     })
     .sort((a, b) => compareMaterials(a, b));
 });
+
+watch(
+  [() => props.selectedMaterialId, sortedFilteredMaterials],
+  async ([selectedMaterialId]) => {
+    if (!selectedMaterialId) return;
+
+    await nextTick();
+
+    const listElement = materialsListContainer.value?.querySelector<HTMLElement>('.materials-list');
+    const selectedElement = materialsListContainer.value?.querySelector<HTMLElement>(
+      `[data-material-id="${selectedMaterialId}"]`,
+    );
+
+    if (!listElement || !selectedElement) return;
+
+    const targetTop =
+      selectedElement.offsetTop - listElement.clientHeight / 2 + selectedElement.clientHeight / 2;
+
+    listElement.scrollTo({
+      top: Math.max(targetTop, 0),
+      behavior: 'smooth',
+    });
+  },
+  { immediate: true },
+);
 
 function formatMaterialTitle(material: Material): string {
   const type = material.wallThickness ? 'Tubing' : 'Bar';
@@ -172,6 +199,10 @@ function getSortDimensions(material: Material): number[] {
   border-radius: 6px;
 }
 
+.material-row--selected {
+  background-color: #e3f2fd;
+}
+
 .material-title {
   font-size: 0.95rem;
   font-weight: 500;
@@ -188,6 +219,7 @@ function getSortDimensions(material: Material): number[] {
 }
 
 .selected-item,
+.material-row--selected,
 .v-list-item--active {
   background-color: #e3f2fd;
 }

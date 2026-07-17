@@ -277,7 +277,7 @@
 import { calculateMaterialWeight, normalizeDimensions } from '@repo/utilities/materials';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref } from 'vue';
-import { onBeforeRouteLeave } from 'vue-router';
+import { onBeforeRouteLeave, useRoute } from 'vue-router';
 import CurrencyInput from '@/components/CurrencyInput.vue';
 import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
 import MaterialCostGraph from '@/components/materials/MaterialCostGraph.vue';
@@ -301,6 +301,7 @@ import { useSupplierStore } from '@/stores/supplier_store';
 const materialsStore = useMaterialsStore();
 const supplierStore = useSupplierStore();
 const materials = computed(() => materialsStore.materials);
+const route = useRoute();
 
 type EditableMaterial = MaterialFields & {
   _id?: string;
@@ -337,8 +338,18 @@ const savingMaterial = ref(false);
 const skipUnsavedChangesGuard = ref(false);
 const pendingAction = ref<null | (() => void | Promise<void>)>(null);
 
-onMounted(() => {
-  materialsStore.fetch();
+onMounted(async () => {
+  await materialsStore.fetch();
+
+  const requestedMaterialId = selectedRouteMaterialId();
+  if (!requestedMaterialId) return;
+
+  const requestedMaterial = materials.value.find(
+    (material) => material._id === requestedMaterialId,
+  );
+  if (requestedMaterial) {
+    selectMaterialInternal(requestedMaterial);
+  }
 });
 
 const selectedMaterialId = computed(() => selectedMaterial.value._id ?? '');
@@ -525,6 +536,10 @@ function selectMaterial(material: Material) {
 
 function selectMaterialInternal(material: Material) {
   selectedMaterial.value = { ...material, isMetric: material.isMetric ?? false };
+  void router.replace({
+    name: 'materials',
+    query: { id: material._id },
+  });
 }
 
 function addNewMaterial() {
@@ -536,6 +551,15 @@ function addNewMaterial() {
 function addNewMaterialInternal() {
   form.value?.resetValidation();
   selectedMaterial.value = { ...defaultMaterial };
+  void router.replace({
+    name: 'materials',
+    query: {},
+  });
+}
+
+function selectedRouteMaterialId() {
+  const routeValue = Array.isArray(route.query.id) ? route.query.id[0] : route.query.id;
+  return typeof routeValue === 'string' && routeValue.trim() ? routeValue : '';
 }
 
 const canSaveMaterial = computed<boolean>(() => {

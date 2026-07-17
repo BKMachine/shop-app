@@ -4,6 +4,7 @@ import { getEntityIdOrNull } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import AuditService from '../audit/audit_service.js';
 import Customer from '../customer/customer_model.js';
+import Machine from '../machine/index.js';
 import Part from '../part/part_model.js';
 import SequenceService from '../sequence/sequence_service.js';
 import Job, { type JobDoc } from './job_model.js';
@@ -205,6 +206,100 @@ function buildListFilter(query: JobListQuery): Record<string, unknown> {
   return filter;
 }
 
+function normalizeTaskTimestamp(value: string | Date | null | undefined) {
+  if (!value) return 0;
+  const date = value instanceof Date ? value : new Date(value);
+  const time = date.getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function toMachineDashboardPartSummary(
+  partNumber?: string | null,
+  partDescription?: string | null,
+) {
+  const normalizedPartNumber = normalizeText(partNumber);
+  const normalizedPartDescription = normalizeText(partDescription);
+
+  if (normalizedPartNumber && normalizedPartDescription) {
+    return `${normalizedPartNumber} / ${normalizedPartDescription}`;
+  }
+
+  return normalizedPartNumber || normalizedPartDescription;
+}
+
+async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
+  const [machines, jobs] = await Promise.all([
+    Machine.find().sort({ name: 1 }),
+    Job.find({ status: 'in_process' }).sort({ dueDate: 1, jobNumber: -1 }),
+  ]);
+
+  const activeJobByMachineId = new Map<
+    string,
+    {
+      task: JobProductionTask;
+      job: Pick<Job, '_id' | 'jobNumber' | 'qty' | 'dueDate' | 'partNumber' | 'partDescription'>;
+    }
+  >();
+
+  for (const job of jobs) {
+    const openTasks = (job.productionTasks ?? []).filter((task) => !task.endedAt);
+    for (const task of openTasks) {
+      const existingEntry = activeJobByMachineId.get(task.machineId);
+      if (
+        !existingEntry ||
+        normalizeTaskTimestamp(task.startedAt) >
+          normalizeTaskTimestamp(existingEntry.task.startedAt)
+      ) {
+        activeJobByMachineId.set(task.machineId, {
+          task,
+          job: {
+            _id: job._id.toString(),
+            jobNumber: job.jobNumber,
+            qty: job.qty,
+            dueDate: job.dueDate,
+            partNumber: job.partNumber,
+            partDescription: job.partDescription,
+          },
+        });
+      }
+    }
+  }
+
+  const active: MachineJobDashboardRow[] = [];
+  const idle: MachineJobDashboardRow[] = [];
+
+  for (const machine of machines) {
+    const machineId = machine._id.toString();
+    const machineName = machine.displayName?.trim() || machine.name;
+    const activeEntry = activeJobByMachineId.get(machineId);
+
+    const row: MachineJobDashboardRow = {
+      machineId,
+      machineName,
+      machineType: machine.type,
+      location: machine.location,
+      hasInProcessJob: Boolean(activeEntry),
+      jobId: activeEntry?.job._id ?? null,
+      jobNumber: activeEntry?.job.jobNumber ?? null,
+      qty: activeEntry?.job.qty ?? null,
+      dueDate: activeEntry?.job.dueDate ?? null,
+      partNumber: activeEntry?.job.partNumber ?? null,
+      partDescription: activeEntry?.job.partDescription ?? null,
+      partSummary: activeEntry
+        ? toMachineDashboardPartSummary(activeEntry.job.partNumber, activeEntry.job.partDescription)
+        : '',
+    };
+
+    if (activeEntry) {
+      active.push(row);
+    } else {
+      idle.push(row);
+    }
+  }
+
+  return { active, idle };
+}
+
 async function list(query: JobListQuery = {}): Promise<JobListResponse> {
   const filter = buildListFilter(query);
   const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
@@ -281,6 +376,7 @@ async function remove(id: string, deviceId: string): Promise<boolean> {
 
 export default {
   list,
+  listMachineDashboard,
   findById,
   create,
   update,

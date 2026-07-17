@@ -105,6 +105,15 @@ router.get('/jobs', async (req, res, next) => {
   }
 });
 
+router.get('/jobs/machine-dashboard', async (_req, res, next) => {
+  try {
+    const data = await Jobs.listMachineDashboard();
+    res.status(200).json(data);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/jobs/:id', async (req, res, next) => {
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid job id'));

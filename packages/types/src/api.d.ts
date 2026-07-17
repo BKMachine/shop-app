@@ -264,6 +264,26 @@ declare global {
     hasMore: boolean;
   }
 
+  interface MachineJobDashboardRow {
+    machineId: string;
+    machineName: string;
+    machineType: MachineType;
+    location: string;
+    hasInProcessJob: boolean;
+    jobId?: string | null;
+    jobNumber?: number | null;
+    qty?: number | null;
+    dueDate?: string | Date | null;
+    partNumber?: string | null;
+    partDescription?: string | null;
+    partSummary: string;
+  }
+
+  interface MachineJobDashboardResponse {
+    active: MachineJobDashboardRow[];
+    idle: MachineJobDashboardRow[];
+  }
+
   interface Image extends ImageFields {
     _id: string;
     createdAt: Date;
