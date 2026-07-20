@@ -3,7 +3,7 @@
 import { jest } from '@jest/globals';
 
 type JobRecord = Job & { __v?: number };
-type PartRecord = Pick<Part, '_id' | 'customer' | 'part' | 'description' | 'revision'>;
+type PartRecord = Pick<Part, '_id' | 'customer' | 'part' | 'description' | 'revision' | 'price'>;
 type CustomerRecord = Customer;
 
 const jobStore = new Map<string, JobRecord>();
@@ -30,12 +30,33 @@ function cloneValue<T>(value: T): T {
   return structuredClone(value);
 }
 
+function populateJobRecord(record: JobRecord, path?: string) {
+  const nextRecord = cloneValue(record);
+
+  if (!path || path === 'customer') {
+    const customerId =
+      typeof nextRecord.customer === 'string' ? nextRecord.customer : nextRecord.customer?._id;
+    const customer = customerId ? customerStore.get(String(customerId)) : null;
+    if (customer) nextRecord.customer = cloneValue(customer);
+  }
+
+  if (!path || path === 'part') {
+    const partId = typeof nextRecord.part === 'string' ? nextRecord.part : nextRecord.part?._id;
+    const part = partId ? partStore.get(String(partId)) : null;
+    if (part) nextRecord.part = cloneValue(part) as unknown as Part;
+  }
+
+  return nextRecord;
+}
+
 function createJobDoc(record: JobRecord) {
-  const snapshot = cloneValue(record);
+  let snapshot = cloneValue(record);
 
   return {
     ...snapshot,
-    populate() {
+    populate(path?: string) {
+      snapshot = populateJobRecord(snapshot, path);
+      Object.assign(this, snapshot);
       return this;
     },
     toObject() {
@@ -92,7 +113,9 @@ class MockJobQuery extends Array<ReturnType<typeof createJobDoc>> {
     this.syncDocs();
   }
 
-  populate(): this {
+  populate(path?: string): this {
+    this.workingRecords = this.workingRecords.map((record) => populateJobRecord(record, path));
+    this.syncDocs();
     return this;
   }
 
@@ -358,6 +381,7 @@ function buildPart(overrides: Partial<PartRecord> = {}): PartRecord {
     part: 'PART-100',
     description: 'Widget',
     revision: 'A',
+    price: 0,
     ...overrides,
   };
 }
@@ -793,6 +817,12 @@ test('update rejects adding a production task to a closed job', async () => {
 });
 
 test('list filters by status and customer', async () => {
+  partStore.set(PART_ID_1, buildPart({ price: 12.5 }));
+  partStore.set(
+    PART_ID_2,
+    buildPart({ _id: PART_ID_2, part: 'PART-200', description: 'Bracket', price: 22 }),
+  );
+
   jobStore.set('job-1', {
     _id: 'job-1',
     jobNumber: 1001,
@@ -841,5 +871,6 @@ test('list filters by status and customer', async () => {
   });
 
   expect(response.total).toBe(1);
+  expect(response.totalValue).toBe(37.5);
   expect(response.items.map((job) => job._id)).toEqual(['job-1']);
 });

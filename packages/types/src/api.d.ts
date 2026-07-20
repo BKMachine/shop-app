@@ -259,6 +259,7 @@ declare global {
   interface JobListResponse {
     items: Job[];
     total: number;
+    totalValue: number;
     limit: number;
     offset: number;
     hasMore: boolean;

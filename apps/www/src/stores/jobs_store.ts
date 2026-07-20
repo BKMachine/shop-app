@@ -67,6 +67,7 @@ function normalizeQuery(query: JobListQuery): JobListQuery {
 export const useJobsStore = defineStore('jobs', () => {
   const _jobs = ref<Job[]>([]);
   const total = ref(0);
+  const totalValue = ref(0);
   const loading = ref(false);
   const limit = ref(50);
   const offset = ref(0);
@@ -101,6 +102,7 @@ export const useJobsStore = defineStore('jobs', () => {
       }
 
       total.value = data.total;
+      totalValue.value = data.totalValue;
       limit.value = data.limit;
       offset.value = data.offset;
       hasMore.value = data.hasMore;
@@ -197,6 +199,7 @@ export const useJobsStore = defineStore('jobs', () => {
   return {
     jobs,
     total,
+    totalValue,
     loading,
     limit,
     offset,

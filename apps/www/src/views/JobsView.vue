@@ -3,7 +3,13 @@
     <v-card-title class="header mt-4">
       <div class="d-flex flex-column">
         <span>Jobs</span>
-        <div class="text-title-small text-medium-emphasis">{{ jobsCountLabel }}</div>
+        <div class="parts-summary-row text-title-small text-medium-emphasis">
+          <span>{{ jobsCountLabel }}</span>
+          <span v-if="isAdmin">|</span>
+          <button v-if="isAdmin" class="show-value-button" type="button" @click="toggleTotalValue">
+            {{ revealedTotalValue }}
+          </button>
+        </div>
       </div>
       <div class="header-actions">
         <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog">
@@ -143,6 +149,7 @@ import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import router from '@/router';
+import { isAdmin } from '@/state/device';
 import { useJobsStore } from '@/stores/jobs_store';
 
 type FilterStatus = 'all' | 'closed' | 'in_process' | 'not_closed';
@@ -156,6 +163,7 @@ const jobsStore = useJobsStore();
 const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const sortBy = ref<Array<{ key: string; order: 'asc' | 'desc' }>>([]);
 const missingImageIds = ref<Record<string, boolean>>({});
+const isTotalValueVisible = ref(false);
 const expandedImage = ref({
   visible: false,
   partId: '',
@@ -200,6 +208,15 @@ const jobsCountLabel = computed(() => {
   const count = jobsStore.total;
   if (count === 1) return '1 job';
   return `${count} jobs`;
+});
+
+const revealedTotalValue = computed(() => {
+  if (!isTotalValueVisible.value) return 'Show Value';
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(jobsStore.totalValue);
 });
 
 watch(
@@ -287,6 +304,10 @@ async function clearFilters() {
 function clearSearchFilter() {
   filters.search = '';
   syncFiltersToQuery();
+}
+
+function toggleTotalValue() {
+  isTotalValueVisible.value = !isTotalValueVisible.value;
 }
 
 function buildFilterQuery() {
@@ -438,6 +459,13 @@ function statusLabel(status: JobStatus) {
   gap: 12px;
 }
 
+.parts-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .search-details {
   display: flex;
   justify-content: flex-start;
@@ -450,6 +478,17 @@ function statusLabel(status: JobStatus) {
   color: rgb(var(--v-theme-primary));
   cursor: pointer;
   font: inherit;
+}
+
+.show-value-button {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1e88e5;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .job-number {

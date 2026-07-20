@@ -318,7 +318,7 @@ async function list(query: JobListQuery = {}): Promise<JobListResponse> {
   const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
   const offset = Math.max(Number(query.offset) || 0, 0);
 
-  const [items, total] = await Promise.all([
+  const [items, total, matchingJobs] = await Promise.all([
     Job.find(filter)
       .populate('customer')
       .populate('part')
@@ -326,11 +326,21 @@ async function list(query: JobListQuery = {}): Promise<JobListResponse> {
       .skip(offset)
       .limit(limit),
     Job.countDocuments(filter),
+    Job.find(filter).populate('part'),
   ]);
+
+  const totalValue = matchingJobs.reduce((sum, job) => {
+    const populatedPart =
+      job.part && typeof job.part === 'object' ? (job.part as { price?: number }) : null;
+    const partPrice = Number(populatedPart?.price) || 0;
+    const qty = Number(job.qty) || 0;
+    return sum + qty * partPrice;
+  }, 0);
 
   return {
     items: items as unknown as Job[],
     total,
+    totalValue,
     limit,
     offset,
     hasMore: offset + items.length < total,
