@@ -55,7 +55,7 @@
           :loading="travelerLoading"
           prepend-icon="mdi-printer-outline"
           variant="text"
-          @click="printJobTraveler"
+          @click="requestPrintJobTraveler"
         >
           Traveler
         </v-btn>
@@ -221,6 +221,26 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="printClosedConfirm" max-width="420">
+      <v-card>
+        <v-card-title>Print Closed Job Traveler?</v-card-title>
+        <v-card-text>
+          <div>
+            <strong v-if="job">Job #{{ job.jobNumber }}</strong>
+            <span v-else>This job</span>
+            is closed. Are you sure you want to print the traveler?
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="printClosedConfirm = false">Cancel</v-btn>
+          <v-btn color="warning" :loading="travelerLoading" @click="confirmPrintJobTraveler">
+            Print Traveler
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="startTaskDialog" max-width="720">
       <v-card>
         <v-card-title>Start Task</v-card-title>
@@ -341,6 +361,7 @@ const saving = ref(false);
 const deleting = ref(false);
 const travelerLoading = ref(false);
 const deleteConfirm = ref(false);
+const printClosedConfirm = ref(false);
 const machines = ref<MachineInfo[]>([]);
 const machinesLoading = ref(false);
 const machinesLoadFailed = ref(false);
@@ -830,6 +851,21 @@ async function deleteJob() {
   } finally {
     deleting.value = false;
   }
+}
+
+function requestPrintJobTraveler() {
+  if (!job.value?._id) return;
+  if (job.value.status === 'closed') {
+    printClosedConfirm.value = true;
+    return;
+  }
+
+  void printJobTraveler();
+}
+
+async function confirmPrintJobTraveler() {
+  printClosedConfirm.value = false;
+  await printJobTraveler();
 }
 
 async function printJobTraveler() {
