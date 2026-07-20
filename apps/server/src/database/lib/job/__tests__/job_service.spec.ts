@@ -874,3 +874,61 @@ test('list filters by status and customer', async () => {
   expect(response.totalValue).toBe(37.5);
   expect(response.items.map((job) => job._id)).toEqual(['job-1']);
 });
+
+test('list filters by exact job number', async () => {
+  partStore.set(PART_ID_1, buildPart({ price: 12.5 }));
+  partStore.set(
+    PART_ID_2,
+    buildPart({ _id: PART_ID_2, part: 'PART-200', description: 'Bracket', price: 22 }),
+  );
+
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'open',
+    dueDate: new Date('2026-07-20T00:00:00.000Z'),
+    startedOn: null,
+    completedOn: null,
+    customerPo: 'PO-1',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+  jobStore.set('job-2', {
+    _id: 'job-2',
+    jobNumber: 1002,
+    customer: CUSTOMER_ID_2 as unknown as Customer,
+    part: PART_ID_2 as unknown as Part,
+    qty: 1,
+    status: 'closed',
+    dueDate: new Date('2026-07-22T00:00:00.000Z'),
+    startedOn: null,
+    completedOn: new Date('2026-07-21T00:00:00.000Z'),
+    customerPo: 'PO-2',
+    priority: 'rush',
+    notes: '',
+    customerName: 'Bravo',
+    partNumber: 'PART-200',
+    partDescription: 'Bracket',
+    partRevision: 'B',
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const response = await JobService.list({
+    jobNumber: 1002,
+  });
+
+  expect(response.total).toBe(1);
+  expect(response.totalValue).toBe(22);
+  expect(response.items.map((job) => job._id)).toEqual(['job-2']);
+});

@@ -82,6 +82,7 @@ router.get('/jobs', async (req, res, next) => {
   try {
     const data = await Jobs.list({
       search: normalizeQueryValue(req.query.search),
+      jobNumber: Number(normalizeQueryValue(req.query.jobNumber)),
       customer: normalizeQueryValue(req.query.customer),
       part: normalizeQueryValue(req.query.part),
       status:

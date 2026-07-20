@@ -171,6 +171,9 @@ async function buildPayload(
 function buildListFilter(query: JobListQuery): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
 
+  if (Number.isInteger(query.jobNumber) && Number(query.jobNumber) > 0) {
+    filter.jobNumber = Number(query.jobNumber);
+  }
   if (query.customer && isValidObjectId(query.customer)) filter.customer = query.customer;
   if (query.part && isValidObjectId(query.part)) filter.part = query.part;
   if (query.status === 'not_closed') {

@@ -247,6 +247,7 @@ declare global {
 
   interface JobListQuery {
     search?: string;
+    jobNumber?: number;
     customer?: string;
     part?: string;
     status?: JobListStatusFilter;

@@ -20,7 +20,21 @@
 
     <v-card-text class="jobs-view-card__body">
       <v-row>
-        <v-col cols="6">
+        <v-col cols="2">
+          <v-text-field
+            v-model="filters.jobNumber"
+            clearable
+            hide-details
+            inputmode="numeric"
+            label="Job #"
+            prepend-inner-icon="mdi-pound"
+            single-line
+            variant="outlined"
+            @click:clear="clearJobNumberFilter"
+            @keydown.enter.prevent="openJobNumberResult"
+          />
+        </v-col>
+        <v-col cols="5">
           <v-text-field
             v-model="filters.search"
             clearable
@@ -39,8 +53,14 @@
             </template>
           </v-text-field>
         </v-col>
-        <v-col cols="4">
-          <CustomerSelect v-model="filters.customer" clearable hide-details label="Customer" />
+        <v-col cols="3">
+          <CustomerSelect
+            v-model="filters.customer"
+            clearable
+            hide-details
+            label="Customer"
+            variant="outlined"
+          />
         </v-col>
         <v-col cols="2">
           <v-select
@@ -154,9 +174,38 @@ import { useJobsStore } from '@/stores/jobs_store';
 
 type FilterStatus = 'all' | 'closed' | 'in_process' | 'not_closed';
 
-type JobFilterQueryKey = 'search' | 'customer' | 'status';
+type JobSortKey =
+  | 'jobNumber'
+  | 'partNumber'
+  | 'customerName'
+  | 'qty'
+  | 'status'
+  | 'priority'
+  | 'dueDate'
+  | 'completedOn'
+  | 'customerPo';
 
-const FILTER_QUERY_KEYS: JobFilterQueryKey[] = ['search', 'customer', 'status'];
+type JobFilterQueryKey = 'search' | 'jobNumber' | 'customer' | 'status' | 'sort' | 'order';
+
+const FILTER_QUERY_KEYS: JobFilterQueryKey[] = [
+  'search',
+  'jobNumber',
+  'customer',
+  'status',
+  'sort',
+  'order',
+];
+const SORTABLE_JOB_KEYS: JobSortKey[] = [
+  'jobNumber',
+  'partNumber',
+  'customerName',
+  'qty',
+  'status',
+  'priority',
+  'dueDate',
+  'completedOn',
+  'customerPo',
+];
 
 const route = useRoute();
 const jobsStore = useJobsStore();
@@ -175,16 +224,18 @@ let searchDebounceId: ReturnType<typeof setTimeout> | null = null;
 
 const filters = reactive<{
   search: string;
+  jobNumber: string;
   customer: string | null;
   status: FilterStatus;
 }>({
   search: '',
+  jobNumber: '',
   customer: null,
   status: 'not_closed',
 });
 
 const headers = [
-  { title: 'Job #', key: 'jobNumber', width: 110 },
+  { title: 'Job#', key: 'jobNumber', width: 110 },
   { title: '', key: 'img', width: 72, sortable: false },
   { title: 'Part', key: 'partNumber' },
   { title: 'Customer', key: 'customerName' },
@@ -255,6 +306,19 @@ watch(
   },
 );
 
+watch(
+  () => filters.jobNumber,
+  () => {
+    if (searchDebounceId) {
+      clearTimeout(searchDebounceId);
+    }
+
+    searchDebounceId = setTimeout(() => {
+      syncFiltersToQuery();
+    }, 250);
+  },
+);
+
 onMounted(async () => {
   await nextTick();
   await tableRef.value?.refreshLayout?.();
@@ -262,6 +326,7 @@ onMounted(async () => {
 
 function applyRouteFilters() {
   filters.search = firstQueryValue(route.query.search) ?? '';
+  filters.jobNumber = firstQueryValue(route.query.jobNumber) ?? '';
   filters.customer = firstQueryValue(route.query.customer) ?? null;
 
   const routeStatus = firstQueryValue(route.query.status);
@@ -274,6 +339,11 @@ function applyRouteFilters() {
       : routeStatus === 'open'
         ? 'not_closed'
         : 'not_closed';
+
+  const requestedSortKey = firstQueryValue(route.query.sort);
+  const sortKey = requestedSortKey && isJobSortKey(requestedSortKey) ? requestedSortKey : undefined;
+  const sortOrder = firstQueryValue(route.query.order) === 'desc' ? 'desc' : 'asc';
+  sortBy.value = sortKey ? [{ key: sortKey, order: sortOrder }] : [];
 }
 
 function syncFiltersToQuery() {
@@ -287,17 +357,23 @@ function syncFiltersToQuery() {
 }
 
 async function applyFilters() {
+  const normalizedJobNumber = Number.parseInt(filters.jobNumber.trim(), 10);
+  const hasJobNumberFilter = Number.isInteger(normalizedJobNumber) && normalizedJobNumber > 0;
+
   await jobsStore.fetch({
     search: filters.search.trim() || undefined,
+    jobNumber: hasJobNumberFilter ? normalizedJobNumber : undefined,
     customer: filters.customer || undefined,
-    status: filters.status === 'all' ? undefined : filters.status,
+    status: hasJobNumberFilter || filters.status === 'all' ? undefined : filters.status,
   });
 }
 
 async function clearFilters() {
   filters.search = '';
+  filters.jobNumber = '';
   filters.customer = null;
   filters.status = 'not_closed';
+  sortBy.value = [];
   syncFiltersToQuery();
 }
 
@@ -306,11 +382,18 @@ function clearSearchFilter() {
   syncFiltersToQuery();
 }
 
+function clearJobNumberFilter() {
+  filters.jobNumber = '';
+  syncFiltersToQuery();
+}
+
 function toggleTotalValue() {
   isTotalValueVisible.value = !isTotalValueVisible.value;
 }
 
 function buildFilterQuery() {
+  const trimmedJobNumber = filters.jobNumber.trim();
+
   const baseQuery = Object.fromEntries(
     Object.entries(route.query).filter(
       ([key]) => !FILTER_QUERY_KEYS.includes(key as JobFilterQueryKey),
@@ -320,9 +403,29 @@ function buildFilterQuery() {
   return {
     ...baseQuery,
     ...(filters.search.trim() ? { search: filters.search.trim() } : {}),
+    ...(trimmedJobNumber ? { jobNumber: trimmedJobNumber } : {}),
     ...(filters.customer ? { customer: filters.customer } : {}),
-    ...(filters.status !== 'not_closed' ? { status: filters.status } : {}),
+    ...(trimmedJobNumber || filters.status === 'not_closed' ? {} : { status: filters.status }),
+    ...(sortBy.value[0]?.key ? { sort: sortBy.value[0].key, order: sortBy.value[0].order } : {}),
   };
+}
+
+async function openJobNumberResult() {
+  if (!filters.jobNumber.trim()) return;
+
+  await applyFilters();
+
+  const [job] = jobsStore.jobs;
+  if (jobsStore.total === 1 && job) {
+    router.push({ name: 'viewJob', params: { id: job._id } });
+    return;
+  }
+
+  syncFiltersToQuery();
+}
+
+function isJobSortKey(value: string): value is JobSortKey {
+  return SORTABLE_JOB_KEYS.includes(value as JobSortKey);
 }
 
 function firstQueryValue(value: LocationQueryValue | LocationQueryValue[] | undefined) {
@@ -353,7 +456,8 @@ async function loadMore() {
 }
 
 function updateSortBy(value: Array<{ key: string; order: 'asc' | 'desc' }>) {
-  sortBy.value = value;
+  sortBy.value = value.length ? value : [];
+  syncFiltersToQuery();
 }
 
 function openCreateDialog() {
