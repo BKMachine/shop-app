@@ -148,10 +148,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import logo from '@/assets/img/bk_logo.png';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import api from '@/plugins/axios';
+import { socket } from '@/plugins/socket';
 import { toastError } from '@/plugins/vue-toast-notification';
 import { isAppScanReady, useIdleHomeRedirectEnabled } from '@/state/app_focus';
 
@@ -237,8 +238,19 @@ async function fetchMachineDashboard() {
   }
 }
 
+function refreshMachineDashboard() {
+  void fetchMachineDashboard();
+}
+
 onMounted(() => {
   void fetchMachineDashboard();
+  socket.on('job', refreshMachineDashboard);
+  socket.on('jobDeleted', refreshMachineDashboard);
+});
+
+onBeforeUnmount(() => {
+  socket.off('job', refreshMachineDashboard);
+  socket.off('jobDeleted', refreshMachineDashboard);
 });
 
 if (typeof window !== 'undefined') {
