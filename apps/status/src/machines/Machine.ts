@@ -16,9 +16,12 @@ class Machine {
   }
 
   getMachine(): MachineData {
+    const displayName = this.doc.displayName || this.doc.name;
+
     return {
       id: this.doc._id.toString(),
       name: this.doc.name,
+      displayName,
       serialNumber: this.doc.serialNumber,
       brand: this.doc.brand,
       source: this.doc.source,

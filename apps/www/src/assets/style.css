@@ -24,6 +24,10 @@ body,
   background-color: rgba(204, 204, 204, 0.42);
 }
 
+.v-card-title .v-btn {
+  font-size: 0.875rem;
+}
+
 .stock {
   font-weight: bolder;
   font-size: 1.1em;

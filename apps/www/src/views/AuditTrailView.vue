@@ -333,6 +333,7 @@ function getEntityLabel(type: Audit['type']) {
     tool: 'Tool',
     material: 'Material',
     part: 'Part',
+    job: 'Job',
     shipment: 'Shipment',
     image: 'Image',
     document: 'Document',

@@ -3,6 +3,7 @@ import { emit } from '../../../server/sockets.js';
 import type { CustomerDoc } from '../customer/customer_model.js';
 import type { StoredDocumentDoc } from '../document/document_model.js';
 import type { ImageDoc } from '../image/image_model.js';
+import type { JobDoc } from '../job/job_model.js';
 import type { MaterialDoc } from '../material/material_model.js';
 import type { PartDoc } from '../part/part_model.js';
 import type { PartNoteDoc } from '../part_note/part_note_model.js';
@@ -206,6 +207,14 @@ async function addPartAudit(
   emit('part_audit');
 }
 
+async function addJobAudit(
+  oldJob: JobDoc | null,
+  newJob: JobDoc | null,
+  deviceId: string,
+): Promise<void> {
+  await addAudit('job', oldJob, newJob, deviceId);
+}
+
 async function addImageAudit(
   oldImage: ImageDoc | null,
   newImage: ImageDoc | null,
@@ -359,6 +368,7 @@ export default {
   getToolAudits,
   getAllToolAudits,
   addPartAudit,
+  addJobAudit,
   getPartAudits,
   getMaterialAudits,
   getAllPartAudits,

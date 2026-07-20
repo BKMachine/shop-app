@@ -18,7 +18,7 @@
                         <v-btn
                           color="primary"
                           density="comfortable"
-                          icon="mdi-open-in-new"
+                          icon="mdi-open-in-app"
                           size="x-small"
                           variant="text"
                           @click="openSubComponent(component.partId)"
@@ -93,7 +93,19 @@
                 :items="sortedMaterials"
                 label="Material"
                 @update:model-value="assignMaterial"
-              />
+              >
+                <template #append-inner>
+                  <v-btn
+                    v-if="selectedMaterialId"
+                    color="primary"
+                    density="comfortable"
+                    icon="mdi-open-in-app"
+                    size="x-small"
+                    variant="text"
+                    @click.prevent="openSelectedMaterial"
+                  />
+                </template>
+              </v-autocomplete>
             </v-col>
           </v-row>
           <v-row>
@@ -422,6 +434,11 @@ const selectedMaterialLength = computed(() => {
   return resolveMaterial(props.part.material)?.length || 0;
 });
 
+const selectedMaterialId = computed(() => {
+  if (!props.part.material) return '';
+  return typeof props.part.material === 'string' ? props.part.material : props.part.material._id;
+});
+
 const partsPerBarDetails = computed(() => {
   const cutType = props.part.materialCutType || 'blanks';
   const fullBarLength = Number(selectedMaterialLength.value) || 0;
@@ -604,6 +621,11 @@ function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
     props.part.barLength = ((props.part.materialLength || 0) + 0.1) * 2 + 0.15;
     props.part.remnantLength = 0;
   }
+}
+
+function openSelectedMaterial() {
+  if (!selectedMaterialId.value) return;
+  router.push({ name: 'materials', query: { id: selectedMaterialId.value } });
 }
 
 function openSubComponent(partId: string) {

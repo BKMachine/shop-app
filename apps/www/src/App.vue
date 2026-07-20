@@ -1,24 +1,34 @@
 <template>
   <v-app v-cloak>
     <v-app-bar class="elevation-2">
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
+      <v-app-bar-nav-icon @click.stop="drawerRail = !drawerRail" />
       <v-app-bar-title>
         <v-avatar class="pointer" size="48" @click="router.push({ name: 'home' })">
           <v-img src="@/assets/img/bk_logo.png" />
         </v-avatar>
         BK Machine
       </v-app-bar-title>
-      <v-btn
-        :aria-label="themeToggleLabel"
-        :icon="themeToggleIcon"
-        :title="themeToggleLabel"
-        variant="text"
-        @click="toggleTheme"
-      />
+      <div class="app-bar__actions">
+        <v-icon
+          :aria-label="scanReadyLabel"
+          class="app-bar__scan-indicator"
+          :color="scanReadyColor"
+          icon="mdi-barcode-scan"
+          :title="scanReadyLabel"
+        />
+        <v-btn
+          :aria-label="themeToggleLabel"
+          :icon="themeToggleIcon"
+          :title="themeToggleLabel"
+          variant="text"
+          @click="toggleTheme"
+        />
+      </div>
     </v-app-bar>
-    <v-navigation-drawer v-model="drawer">
+    <v-navigation-drawer v-model="drawer" :rail="drawerRail">
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
+        <v-list-item link :prepend-icon="uiIcons.job" :to="{ name: 'jobs' }"> Jobs </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.part" :to="{ name: 'parts' }"> Parts </v-list-item>
 
         <v-list-item link :prepend-icon="uiIcons.tool" :to="{ name: 'tools' }"> Tools </v-list-item>
@@ -76,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeMount, ref, watch } from 'vue';
+import { computed, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
 import { useTheme } from 'vuetify';
 import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
@@ -84,6 +94,11 @@ import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
 import onScan from '@/lib/onscan';
 import { uiIcons } from '@/lib/uiIcons';
 import router from '@/router';
+import {
+  isAppScanReady,
+  startAppFocusTracking,
+  useIdleHomeRedirectEnabled,
+} from '@/state/app_focus';
 import { deviceState, fetchCurrentDevice } from '@/state/device';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
@@ -103,6 +118,15 @@ const vendorStore = useVendorStore();
 const theme = useTheme();
 
 const THEME_STORAGE_KEY = 'shop-app-theme';
+const IDLE_HOME_REDIRECT_TIMEOUT_MS = 1000 * 60 * 5;
+const IDLE_ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
+  'pointerdown',
+  'pointermove',
+  'keydown',
+  'touchstart',
+  'wheel',
+  'scroll',
+];
 
 // onscan.js by default ignores chars other than alphanumeric
 // mappedCodes are chars we do want included in scans
@@ -131,11 +155,21 @@ document.addEventListener('scan', (e) => {
     return;
   }
 
+  // Handle production job scans from a QRCode starting with bk-job:
+  if (e.detail.scanCode.startsWith('bk-job:')) {
+    const jobNumber = e.detail.scanCode.replace('bk-job:', '');
+    // go to /job/{id}?tab=production
+    router.push({ name: 'viewJob', params: { id: jobNumber }, query: { tab: 'production' } });
+    return;
+  }
+
   // Handle Tool scans from tool sleeve barcodes
   scannerStore.scan(e.detail.scanCode);
 });
 
 const drawer = ref(true);
+const drawerRail = ref(false);
+let idleHomeRedirectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const isDarkTheme = computed(() => theme.global.name.value === 'dark');
 
@@ -147,11 +181,63 @@ const themeToggleLabel = computed(() => {
   return isDarkTheme.value ? 'Switch to light mode' : 'Switch to dark mode';
 });
 
+const scanReadyColor = computed(() => {
+  return isAppScanReady.value ? 'success' : 'error';
+});
+
+const scanReadyLabel = computed(() => {
+  return isAppScanReady.value ? 'Ready to scan' : 'Not ready to scan';
+});
+
 function toggleTheme() {
   theme.change(isDarkTheme.value ? 'light' : 'dark');
 }
 
+function clearIdleHomeRedirectTimeout() {
+  if (!idleHomeRedirectTimeoutId) return;
+  clearTimeout(idleHomeRedirectTimeoutId);
+  idleHomeRedirectTimeoutId = null;
+}
+
+function scheduleIdleHomeRedirect() {
+  if (!useIdleHomeRedirectEnabled.value) {
+    clearIdleHomeRedirectTimeout();
+    return;
+  }
+
+  clearIdleHomeRedirectTimeout();
+
+  idleHomeRedirectTimeoutId = setTimeout(() => {
+    idleHomeRedirectTimeoutId = null;
+    if (!useIdleHomeRedirectEnabled.value) return;
+    if (router.currentRoute.value.name === 'home') return;
+    void router.push({ name: 'home' });
+  }, IDLE_HOME_REDIRECT_TIMEOUT_MS);
+}
+
+function resetIdleHomeRedirectTimeout() {
+  scheduleIdleHomeRedirect();
+}
+
+function startIdleHomeRedirectTracking() {
+  if (typeof window === 'undefined') return;
+
+  for (const eventName of IDLE_ACTIVITY_EVENTS) {
+    window.addEventListener(eventName, resetIdleHomeRedirectTimeout, { passive: true });
+  }
+}
+
+function stopIdleHomeRedirectTracking() {
+  if (typeof window === 'undefined') return;
+
+  for (const eventName of IDLE_ACTIVITY_EVENTS) {
+    window.removeEventListener(eventName, resetIdleHomeRedirectTimeout);
+  }
+}
+
 onBeforeMount(() => {
+  startAppFocusTracking();
+  startIdleHomeRedirectTracking();
   void customerStore.fetch();
   void materialsStore.fetch();
   void shipperStore.fetch();
@@ -166,10 +252,28 @@ onBeforeMount(() => {
   }
 });
 
+onBeforeUnmount(() => {
+  stopIdleHomeRedirectTracking();
+  clearIdleHomeRedirectTimeout();
+});
+
 watch(
   () => theme.global.name.value,
   (value) => {
     window.localStorage.setItem(THEME_STORAGE_KEY, value);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => useIdleHomeRedirectEnabled.value,
+  (enabled) => {
+    if (!enabled) {
+      clearIdleHomeRedirectTimeout();
+      return;
+    }
+
+    scheduleIdleHomeRedirect();
   },
   { immediate: true },
 );
@@ -182,6 +286,16 @@ const showAuditTrail = computed<boolean>(() => Boolean(deviceState.current?.isAd
 </script>
 
 <style scoped>
+.app-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-bar__scan-indicator {
+  transition: color 120ms ease;
+}
+
 .scan-dialog {
   max-width: 500px;
 }

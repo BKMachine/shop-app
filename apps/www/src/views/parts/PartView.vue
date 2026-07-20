@@ -88,7 +88,7 @@
       </div>
     </teleport>
 
-    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="secondary">
+    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="yellow">
       <v-tab value="general"> General </v-tab>
       <v-tab value="material"> Material </v-tab>
       <v-tab value="cost"> Cost </v-tab>
@@ -296,7 +296,7 @@
                                 variant="text"
                                 @click.prevent.stop="removeSubComponent(String(element.partId))"
                               />
-                              <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
+                              <v-icon color="primary" icon="mdi-open-in-app" />
                             </div>
                           </template>
                         </v-list-item>
@@ -359,7 +359,7 @@
                           >
                             Uses {{ parentItem.qty }}
                           </v-chip>
-                          <v-icon color="medium-emphasis" icon="mdi-open-in-new" />
+                          <v-icon color="primary" icon="mdi-open-in-app" />
                         </div>
                       </template>
                     </v-list-item>

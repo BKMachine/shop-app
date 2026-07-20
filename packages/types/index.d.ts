@@ -54,6 +54,20 @@ declare global {
     rows: PrintShipmentQtyLabelRow[];
   }
 
+  interface PrintJobTravelerRow {
+    label: string;
+    value: string;
+  }
+
+  interface PrintJobTravelerBody {
+    jobNumber: number;
+    barcodeText: string;
+    partImageUrl?: string;
+    jobDetails: PrintJobTravelerRow[];
+    partDetails: PrintJobTravelerRow[];
+    operatorNotes?: string;
+  }
+
   interface PrintRequest {
     printerName: string;
     labelXml: string;

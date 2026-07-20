@@ -43,7 +43,7 @@
                         <v-btn
                           color="primary"
                           density="comfortable"
-                          icon="mdi-open-in-new"
+                          icon="mdi-open-in-app"
                           size="x-small"
                           variant="text"
                           @click="openSubComponent(component.partId)"
