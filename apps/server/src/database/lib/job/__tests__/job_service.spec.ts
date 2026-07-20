@@ -932,3 +932,76 @@ test('list filters by exact job number', async () => {
   expect(response.totalValue).toBe(22);
   expect(response.items.map((job) => job._id)).toEqual(['job-2']);
 });
+
+test('list sorts by job number ascending', async () => {
+  jobStore.set('job-6', {
+    _id: 'job-6',
+    jobNumber: 6,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 1,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+  jobStore.set('job-3', {
+    _id: 'job-3',
+    jobNumber: 3,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 1,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 1,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const response = await JobService.list({
+    sort: 'jobNumber',
+    order: 'asc',
+    limit: 10,
+    offset: 0,
+  });
+
+  expect(response.items.map((job) => job.jobNumber)).toEqual([1, 3, 6]);
+});

@@ -97,6 +97,8 @@ router.get('/jobs', async (req, res, next) => {
                 : undefined,
       dueBefore: normalizeQueryValue(req.query.dueBefore),
       dueAfter: normalizeQueryValue(req.query.dueAfter),
+      sort: normalizeQueryValue(req.query.sort),
+      order: normalizeQueryValue(req.query.order) === 'desc' ? 'desc' : 'asc',
       limit: Number(normalizeQueryValue(req.query.limit)),
       offset: Number(normalizeQueryValue(req.query.offset)),
     });

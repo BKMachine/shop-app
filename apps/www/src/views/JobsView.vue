@@ -365,6 +365,8 @@ async function applyFilters() {
     jobNumber: hasJobNumberFilter ? normalizedJobNumber : undefined,
     customer: filters.customer || undefined,
     status: hasJobNumberFilter || filters.status === 'all' ? undefined : filters.status,
+    sort: sortBy.value[0]?.key || undefined,
+    order: sortBy.value[0]?.order || undefined,
   });
 }
 

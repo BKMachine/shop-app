@@ -209,6 +209,26 @@ function buildListFilter(query: JobListQuery): Record<string, unknown> {
   return filter;
 }
 
+const validSortFields = new Set([
+  'jobNumber',
+  'partNumber',
+  'customerName',
+  'qty',
+  'status',
+  'priority',
+  'dueDate',
+  'completedOn',
+  'customerPo',
+]);
+
+function getSortField(query: JobListQuery): string {
+  return query.sort && validSortFields.has(query.sort) ? query.sort : 'jobNumber';
+}
+
+function getSortDirection(query: JobListQuery): 1 | -1 {
+  return query.order === 'desc' ? -1 : 1;
+}
+
 function normalizeTaskTimestamp(value: string | Date | null | undefined) {
   if (!value) return 0;
   const date = value instanceof Date ? value : new Date(value);
@@ -320,12 +340,14 @@ async function list(query: JobListQuery = {}): Promise<JobListResponse> {
   const filter = buildListFilter(query);
   const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
   const offset = Math.max(Number(query.offset) || 0, 0);
+  const sortField = getSortField(query);
+  const sortDirection = getSortDirection(query);
 
   const [items, total, matchingJobs] = await Promise.all([
     Job.find(filter)
       .populate('customer')
       .populate('part')
-      .sort({ status: -1, dueDate: 1, jobNumber: -1, createdAt: -1 })
+      .sort({ [sortField]: sortDirection, createdAt: -1 })
       .skip(offset)
       .limit(limit),
     Job.countDocuments(filter),

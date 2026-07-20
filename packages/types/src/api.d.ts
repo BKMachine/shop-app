@@ -253,6 +253,8 @@ declare global {
     status?: JobListStatusFilter;
     dueBefore?: string;
     dueAfter?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
     limit?: number;
     offset?: number;
   }
