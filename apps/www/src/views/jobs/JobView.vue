@@ -708,7 +708,8 @@ async function saveJob() {
       const createdJob = await jobsStore.create(payload);
       job.value = createdJob;
       draft.value = jobToDraft(createdJob);
-      await router.replace({ name: 'viewJob', params: { id: createdJob._id } });
+      // await router.replace({ name: 'viewJob', params: { id: createdJob._id } });
+      void router.back();
       return;
     }
 
@@ -720,7 +721,7 @@ async function saveJob() {
     });
     job.value = updatedJob;
     draft.value = jobToDraft(updatedJob);
-    router.back();
+    void router.back();
   } finally {
     saving.value = false;
   }
