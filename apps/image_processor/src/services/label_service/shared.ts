@@ -121,10 +121,29 @@ function enhancePartLabelImage(image: sharp.Sharp, targetWidth: number, targetHe
     .toBuffer();
 }
 
-export async function buildPartImageOrFallbackBuffer(
+function enhanceTravelerPartImage(image: sharp.Sharp, targetWidth: number, targetHeight: number) {
+  return image
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .normalise()
+    .resize(targetWidth, targetHeight, {
+      fit: 'contain',
+      withoutEnlargement: true,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    })
+    .sharpen({ sigma: 1.1, m1: 0.5, m2: 2 })
+    .png()
+    .toBuffer();
+}
+
+async function buildFetchedPartImageBuffer(
   imageUrl: string | undefined,
   width: number,
   height: number,
+  transformImage: (
+    image: sharp.Sharp,
+    targetWidth: number,
+    targetHeight: number,
+  ) => Promise<Buffer>,
 ) {
   const targetWidth = Math.max(1, Math.round(width * 4));
   const targetHeight = Math.max(1, Math.round(height * 4));
@@ -149,7 +168,7 @@ export async function buildPartImageOrFallbackBuffer(
       const response = await fetch(imageUrl);
       if (response.ok) {
         const imageBuffer = Buffer.from(await response.arrayBuffer());
-        const image = sharp(imageBuffer, { failOn: 'none' }).rotate().grayscale();
+        const image = sharp(imageBuffer, { failOn: 'none' }).rotate();
         const metadata = await image.metadata();
         const sourceWidth = metadata.width ?? 0;
         const sourceHeight = metadata.height ?? 0;
@@ -159,11 +178,7 @@ export async function buildPartImageOrFallbackBuffer(
           getContainScale(sourceHeight, sourceWidth, targetWidth, targetHeight) >
             getContainScale(sourceWidth, sourceHeight, targetWidth, targetHeight);
 
-        return enhancePartLabelImage(
-          image.rotate(shouldRotateToFit ? 90 : 0),
-          targetWidth,
-          targetHeight,
-        );
+        return transformImage(image.rotate(shouldRotateToFit ? 90 : 0), targetWidth, targetHeight);
       }
 
       logger.error(
@@ -208,6 +223,28 @@ export async function buildPartImageOrFallbackBuffer(
     .composite([{ input: buildMissingImageSvg(targetWidth, targetHeight), left: 0, top: 0 }])
     .png()
     .toBuffer();
+}
+
+export async function buildPartImageOrFallbackBuffer(
+  imageUrl: string | undefined,
+  width: number,
+  height: number,
+) {
+  return buildFetchedPartImageBuffer(
+    imageUrl,
+    width,
+    height,
+    async (image, targetWidth, targetHeight) =>
+      enhancePartLabelImage(image.grayscale(), targetWidth, targetHeight),
+  );
+}
+
+export async function buildTravelerPartImageOrFallbackBuffer(
+  imageUrl: string | undefined,
+  width: number,
+  height: number,
+) {
+  return buildFetchedPartImageBuffer(imageUrl, width, height, enhanceTravelerPartImage);
 }
 
 export function fitText(

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
 import {
-  buildPartImageOrFallbackBuffer,
+  buildTravelerPartImageOrFallbackBuffer,
   buildQrCodeWithCenteredLogoBuffer,
   fitText,
   inches,
@@ -367,7 +367,11 @@ export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
   }
 
   const [partImageBuffer, codeBuffer] = await Promise.all([
-    buildPartImageOrFallbackBuffer(body.partImageUrl, imageBox.width - 8, imageBox.height - 8),
+    buildTravelerPartImageOrFallbackBuffer(
+      body.partImageUrl,
+      imageBox.width - 8,
+      imageBox.height - 8,
+    ),
     buildQrCodeWithCenteredLogoBuffer(sanitize(body.barcodeText) || headerText, 800),
   ]);
   const partImage = await pdf.embedPng(partImageBuffer);
