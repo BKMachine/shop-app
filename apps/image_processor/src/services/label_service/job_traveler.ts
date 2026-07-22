@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
 import {
-  buildTravelerPartImageOrFallbackBuffer,
   buildQrCodeWithCenteredLogoBuffer,
+  buildTravelerPartImageOrFallbackBuffer,
   fitText,
   inches,
   sanitize,
