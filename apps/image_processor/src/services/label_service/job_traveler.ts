@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
+import sharp from 'sharp';
 import {
   buildQrCodeWithCenteredLogoBuffer,
   buildTravelerPartImageOrFallbackBuffer,
@@ -12,6 +13,7 @@ import {
 
 const PAGE_WIDTH = 8.5 * 72;
 const PAGE_HEIGHT = 11 * 72;
+const PAGE_BLEED = 2;
 const PAGE_MARGIN = inches(0.38);
 const HEADER_HEIGHT = inches(1.5);
 const HEADER_TITLE_TOP_OFFSET = 0;
@@ -31,6 +33,58 @@ type Box = {
   width: number;
   height: number;
 };
+
+async function buildJobTravelerBackgroundBuffer(width: number, height: number) {
+  const leftRailWidth = Math.round(width * 0.035) + Math.max(3, Math.round(width * 0.005));
+  const cornerStartX = Math.round(width * 0.54);
+  const cornerInsetStartX = Math.round(width * 0.69);
+  const cornerLowerY = Math.round(height * 0.28);
+  const cornerInsetLowerY = Math.round(height * 0.2);
+  const cornerDiagonalX = Math.round(width * 0.77);
+  const cornerInsetDiagonalX = Math.round(width * 0.82);
+  const patternSize = Math.max(18, Math.round(width * 0.022));
+  const cornerLabelX = Math.round(width * 0.79);
+  const cornerLabelTopY = Math.round(height * 0.082);
+  const cornerLabelBottomY = Math.round(height * 0.115);
+  const circleCx = Math.round(width * 0.89);
+  const circleCy = Math.round(height * 0.115);
+  const circleRadius = Math.round(height * 0.06);
+  const guideY = Math.round(height * 0.24);
+  const guideWidth = Math.round(width * 0.22);
+  const guideX = width - guideWidth - Math.round(width * 0.04);
+
+  const svg = Buffer.from(
+    `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="pageFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFFEFB"/>
+          <stop offset="100%" stop-color="#F7F4EE"/>
+        </linearGradient>
+        <linearGradient id="cornerFill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#F6B064"/>
+          <stop offset="52%" stop-color="#EE9646"/>
+          <stop offset="100%" stop-color="#DE7A32"/>
+        </linearGradient>
+        <pattern id="cornerStripes" patternUnits="userSpaceOnUse" width="${patternSize}" height="${patternSize}" patternTransform="rotate(34)">
+          <rect width="${patternSize}" height="${patternSize}" fill="transparent"/>
+          <rect x="0" y="0" width="${Math.max(6, Math.round(patternSize * 0.34))}" height="${patternSize}" fill="#FFFFFF" opacity="0.11"/>
+        </pattern>
+      </defs>
+      <rect width="${width}" height="${height}" fill="url(#pageFill)"/>
+      <rect x="0" y="0" width="${leftRailWidth}" height="${height}" fill="#EE9646"/>
+      <polygon points="${cornerStartX},0 ${width},0 ${width},${cornerLowerY} ${cornerDiagonalX},${Math.round(height * 0.2)}" fill="url(#cornerFill)"/>
+      <polygon points="${cornerInsetStartX},0 ${width},0 ${width},${cornerInsetLowerY} ${cornerInsetDiagonalX},${Math.round(height * 0.145)}" fill="#58738B" opacity="0.78"/>
+      <polygon points="${cornerStartX},0 ${width},0 ${width},${cornerLowerY} ${cornerDiagonalX},${Math.round(height * 0.2)}" fill="url(#cornerStripes)" opacity="0.28"/>
+      <circle cx="${circleCx}" cy="${circleCy}" r="${circleRadius}" fill="#FFFFFF" opacity="0.08"/>
+      <text x="${cornerLabelX}" y="${cornerLabelTopY}" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="${Math.max(19, Math.round(width * 0.034))}" font-weight="700" letter-spacing="5.5" fill="#FFF4E8">JOB</text>
+      <text x="${cornerLabelX}" y="${cornerLabelBottomY}" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="${Math.max(17, Math.round(width * 0.029))}" font-weight="700" letter-spacing="4.5" fill="#FFFFFF">TRAVELER</text>
+      <line x1="${guideX}" y1="${guideY}" x2="${guideX + guideWidth}" y2="${guideY}" stroke="#DFAE8D" stroke-width="2" opacity="0.45"/>
+      <line x1="${guideX + Math.round(guideWidth * 0.18)}" y1="${guideY + 12}" x2="${guideX + guideWidth}" y2="${guideY + 12}" stroke="#DFAE8D" stroke-width="2" opacity="0.28"/>
+    </svg>`,
+  );
+
+  return sharp(svg).png().toBuffer();
+}
 
 function drawBox(page: PDFPage, box: Box, borderWidth = 0.9, fillColor = rgb(1, 1, 1)) {
   page.drawRectangle({
@@ -399,12 +453,15 @@ export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
       partDetailsTableOptions,
     );
 
-  page.drawRectangle({
-    x: 0,
-    y: 0,
-    width: PAGE_WIDTH,
-    height: PAGE_HEIGHT,
-    color: rgb(1, 1, 1),
+  const backgroundImage = await pdf.embedPng(
+    await buildJobTravelerBackgroundBuffer(Math.round(PAGE_WIDTH * 2), Math.round(PAGE_HEIGHT * 2)),
+  );
+
+  page.drawImage(backgroundImage, {
+    x: -PAGE_BLEED,
+    y: -PAGE_BLEED,
+    width: PAGE_WIDTH + PAGE_BLEED * 2,
+    height: PAGE_HEIGHT + PAGE_BLEED * 2,
   });
 
   const headerBox: Box = {
