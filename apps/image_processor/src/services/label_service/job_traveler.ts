@@ -124,6 +124,36 @@ function wrapText(font: PDFFont, text: string, fontSize: number, maxWidth: numbe
   return lines;
 }
 
+function getWrappedTextLayout(
+  font: PDFFont,
+  text: string,
+  maxWidth: number,
+  options: { fontSize: number; lineGap?: number; minFontSize?: number },
+) {
+  const lineGap = options.lineGap ?? 3;
+  const minFontSize = options.minFontSize ?? 8;
+  let fontSize = options.fontSize;
+  let lines = wrapText(font, text, fontSize, maxWidth);
+
+  while (fontSize > minFontSize) {
+    const nextLineCount = wrapText(font, text, fontSize - 0.5, maxWidth).length;
+    if (nextLineCount > lines.length) break;
+    fontSize -= 0.5;
+    lines = wrapText(font, text, fontSize, maxWidth);
+  }
+
+  const lineHeight = font.heightAtSize(fontSize);
+  const totalHeight = lines.length * lineHeight + Math.max(0, lines.length - 1) * lineGap;
+
+  return {
+    fontSize,
+    lineGap,
+    lineHeight,
+    lines,
+    totalHeight,
+  };
+}
+
 function drawMultilineText(
   page: PDFPage,
   font: PDFFont,
@@ -131,31 +161,89 @@ function drawMultilineText(
   box: Box,
   options: { fontSize: number; lineGap?: number; minFontSize?: number },
 ) {
-  const lineGap = options.lineGap ?? 3;
-  const minFontSize = options.minFontSize ?? 8;
-  let fontSize = options.fontSize;
-  let lines = wrapText(font, text, fontSize, box.width);
+  let layout = getWrappedTextLayout(font, text, box.width, options);
 
-  while (fontSize > minFontSize) {
-    const lineHeight = font.heightAtSize(fontSize);
-    const totalHeight = lines.length * lineHeight + Math.max(0, lines.length - 1) * lineGap;
-    if (totalHeight <= box.height) break;
-    fontSize -= 0.5;
-    lines = wrapText(font, text, fontSize, box.width);
+  while (layout.fontSize > (options.minFontSize ?? 8) && layout.totalHeight > box.height) {
+    layout = getWrappedTextLayout(font, text, box.width, {
+      ...options,
+      fontSize: layout.fontSize - 0.5,
+    });
   }
 
-  let cursorY = box.y + box.height - font.heightAtSize(fontSize);
-  for (const line of lines) {
+  let cursorY = box.y + box.height - layout.lineHeight;
+  for (const line of layout.lines) {
     page.drawText(line, {
       x: box.x,
       y: cursorY,
-      size: fontSize,
+      size: layout.fontSize,
       font,
       color: BORDER_COLOR,
     });
-    cursorY -= font.heightAtSize(fontSize) + lineGap;
+    cursorY -= layout.lineHeight + layout.lineGap;
     if (cursorY < box.y - 2) break;
   }
+}
+
+function getSectionTableRowHeights(
+  font: PDFFont,
+  rows: PrintJobTravelerRow[],
+  boxWidth: number,
+  options: {
+    columns: number;
+    labelWidthRatio: number;
+    rowHeight?: number;
+    valueFontSize?: number;
+    minValueFontSize?: number;
+  },
+) {
+  if (!rows.length) return [];
+
+  const padding = 6;
+  const columnCount = Math.max(1, options.columns);
+  const columnGap = 14;
+  const columnWidth = (boxWidth - columnGap * (columnCount - 1)) / columnCount;
+  const rowsPerColumn = Math.max(1, Math.ceil(rows.length / columnCount));
+  const baseRowHeight = options.rowHeight ?? DETAIL_ROW_HEIGHT;
+  const valueBaseSize = options.valueFontSize ?? 13;
+  const minValueSize = options.minValueFontSize ?? 8.5;
+  const rowHeights = new Array<number>(rowsPerColumn).fill(baseRowHeight);
+
+  rows.forEach((row, index) => {
+    const rowIndex = index % rowsPerColumn;
+    const labelWidth = Math.max(64, columnWidth * options.labelWidthRatio);
+    const valueWidth = Math.max(20, columnWidth - labelWidth - 8 - padding);
+    const value = sanitize(row.value);
+    const shouldWrapValue = font.widthOfTextAtSize(value, minValueSize) > valueWidth;
+
+    if (!shouldWrapValue) return;
+
+    const layout = getWrappedTextLayout(font, value, valueWidth, {
+      fontSize: Math.min(valueBaseSize, 11),
+      lineGap: 2,
+      minFontSize: minValueSize,
+    });
+    rowHeights[rowIndex] = Math.max(rowHeights[rowIndex] ?? baseRowHeight, layout.totalHeight + 8);
+  });
+
+  return rowHeights;
+}
+
+function getSectionTableHeight(
+  font: PDFFont,
+  rows: PrintJobTravelerRow[],
+  boxWidth: number,
+  options: {
+    columns: number;
+    labelWidthRatio: number;
+    rowHeight?: number;
+    valueFontSize?: number;
+    minValueFontSize?: number;
+  },
+) {
+  return getSectionTableRowHeights(font, rows, boxWidth, options).reduce(
+    (sum, height) => sum + height,
+    0,
+  );
 }
 
 function drawSectionTable(
@@ -184,18 +272,23 @@ function drawSectionTable(
   const columnGap = 14;
   const columnWidth = (innerBox.width - columnGap * (columnCount - 1)) / columnCount;
   const rowsPerColumn = Math.max(1, Math.ceil(rows.length / columnCount));
-  const rowHeight = options.rowHeight ?? innerBox.height / rowsPerColumn;
   const labelSize = 8.5;
   const valueBaseSize = options.valueFontSize ?? 13;
   const minValueSize = options.minValueFontSize ?? 8.5;
   const tableTopY = innerBox.y + innerBox.height;
+  const rowHeights = getSectionTableRowHeights(font, rows, innerBox.width, options);
+  const rowTops = rowHeights.map((_, index) => {
+    const previousHeights = rowHeights.slice(0, index).reduce((sum, height) => sum + height, 0);
+    return tableTopY - previousHeights;
+  });
 
   rows.forEach((row, index) => {
     const columnIndex = Math.floor(index / rowsPerColumn);
     const rowIndex = index % rowsPerColumn;
+    const rowHeight = rowHeights[rowIndex] ?? options.rowHeight ?? innerBox.height / rowsPerColumn;
     const rowBox: Box = {
       x: innerBox.x + columnIndex * (columnWidth + columnGap),
-      y: tableTopY - (rowIndex + 1) * rowHeight,
+      y: (rowTops[rowIndex] ?? tableTopY) - rowHeight,
       width: columnWidth,
       height: rowHeight,
     };
@@ -228,13 +321,33 @@ function drawSectionTable(
       color: MUTED_COLOR,
     });
 
-    page.drawText(value, {
-      x: valueX,
-      y: valueY,
-      size: valueSize,
-      font,
-      color: BORDER_COLOR,
-    });
+    const shouldWrapValue = font.widthOfTextAtSize(value, minValueSize) > valueWidth;
+    if (shouldWrapValue) {
+      drawMultilineText(
+        page,
+        font,
+        value,
+        {
+          x: valueX,
+          y: rowBox.y + 4,
+          width: valueWidth,
+          height: Math.max(0, rowBox.height - 8),
+        },
+        {
+          fontSize: Math.min(valueBaseSize, 11),
+          lineGap: 2,
+          minFontSize: minValueSize,
+        },
+      );
+    } else {
+      page.drawText(value, {
+        x: valueX,
+        y: valueY,
+        size: valueSize,
+        font,
+        color: BORDER_COLOR,
+      });
+    }
   });
 }
 
@@ -255,20 +368,36 @@ export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
   const font = await pdf.embedFont(fs.readFileSync(segoeUiRegularPath));
   const jobDetailsColumns = 2;
   const partDetailsColumns = 1;
-  const jobDetailsRowsPerColumn = Math.max(
-    1,
-    Math.ceil(body.jobDetails.length / jobDetailsColumns),
-  );
-  const partDetailsRowsPerColumn = Math.max(
-    1,
-    Math.ceil(body.partDetails.length / partDetailsColumns),
-  );
   const detailContentPadding = 16;
   const sectionBandHeight = 22;
+  const detailSectionContentWidth = PAGE_WIDTH - PAGE_MARGIN * 2 - 24;
+  const jobDetailsTableOptions = {
+    columns: jobDetailsColumns,
+    labelWidthRatio: 0.26,
+    rowHeight: DETAIL_ROW_HEIGHT,
+    valueFontSize: 13,
+    minValueFontSize: 8.5,
+  };
+  const partDetailsTableOptions = {
+    columns: partDetailsColumns,
+    labelWidthRatio: 0.22,
+    rowHeight: DETAIL_ROW_HEIGHT,
+    valueFontSize: 13,
+    minValueFontSize: 8.5,
+  };
   const jobDetailsHeight =
-    detailContentPadding + sectionBandHeight + DETAIL_ROW_HEIGHT * jobDetailsRowsPerColumn;
+    detailContentPadding +
+    sectionBandHeight +
+    getSectionTableHeight(font, body.jobDetails, detailSectionContentWidth, jobDetailsTableOptions);
   const partDetailsHeight =
-    detailContentPadding + sectionBandHeight + DETAIL_ROW_HEIGHT * partDetailsRowsPerColumn;
+    detailContentPadding +
+    sectionBandHeight +
+    getSectionTableHeight(
+      font,
+      body.partDetails,
+      detailSectionContentWidth,
+      partDetailsTableOptions,
+    );
 
   page.drawRectangle({
     x: 0,
@@ -394,20 +523,8 @@ export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
   const partDetailsContent = drawSectionCard(page, font, 'Part Details', partDetailsBox);
   const notesContent = drawSectionCard(page, font, 'Operator Notes', notesBox);
 
-  drawSectionTable(page, font, body.jobDetails, jobDetailsContent, {
-    columns: 2,
-    labelWidthRatio: 0.26,
-    rowHeight: DETAIL_ROW_HEIGHT,
-    valueFontSize: 13,
-    minValueFontSize: 8.5,
-  });
-  drawSectionTable(page, font, body.partDetails, partDetailsContent, {
-    columns: 1,
-    labelWidthRatio: 0.22,
-    rowHeight: DETAIL_ROW_HEIGHT,
-    valueFontSize: 13,
-    minValueFontSize: 8.5,
-  });
+  drawSectionTable(page, font, body.jobDetails, jobDetailsContent, jobDetailsTableOptions);
+  drawSectionTable(page, font, body.partDetails, partDetailsContent, partDetailsTableOptions);
 
   const notesText = buildNotesText(body);
   if (!notesText) {
