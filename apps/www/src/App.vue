@@ -13,7 +13,7 @@
           :aria-label="scanReadyLabel"
           class="app-bar__scan-indicator"
           :color="scanReadyColor"
-          icon="mdi-barcode-scan"
+          icon="mdi-qrcode-scan"
           :title="scanReadyLabel"
         />
         <v-btn
@@ -100,6 +100,7 @@ import {
   useIdleHomeRedirectEnabled,
 } from '@/state/app_focus';
 import { deviceState, fetchCurrentDevice } from '@/state/device';
+import { useJobScanDestination } from '@/state/scannerSettings';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
 import { useScannerStore } from '@/stores/scanner_store';
@@ -158,8 +159,12 @@ document.addEventListener('scan', (e) => {
   // Handle production job scans from a QRCode starting with bk-job:
   if (e.detail.scanCode.startsWith('bk-job:')) {
     const jobNumber = e.detail.scanCode.replace('bk-job:', '');
-    // go to /job/{id}?tab=production
-    router.push({ name: 'viewJob', params: { id: jobNumber }, query: { tab: 'production' } });
+    const jobScanDestination = useJobScanDestination.value;
+    router.push({
+      name: 'viewJob',
+      params: { id: jobNumber },
+      query: jobScanDestination === 'general' ? {} : { tab: jobScanDestination },
+    });
     return;
   }
 

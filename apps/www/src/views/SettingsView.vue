@@ -3,6 +3,14 @@
     <v-expansion-panels>
       <v-expansion-panel>
         <v-expansion-panel-title>
+          <v-icon class="mr-2" icon="mdi-qrcode-scan" />
+          Barcode Scanner
+        </v-expansion-panel-title>
+        <v-expansion-panel-text> <SettingsScannerBarcode /> </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title>
           <v-icon class="mr-2" :icon="uiIcons.customer" />
           Customers
         </v-expansion-panel-title>
@@ -111,6 +119,7 @@ import { onMounted } from 'vue';
 import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
 import SettingsLabelLayout from '@/components/settings/SettingsLabelLayout.vue';
 import SettingsReport from '@/components/settings/SettingsReport.vue';
+import SettingsScannerBarcode from '@/components/settings/SettingsScannerBarcode.vue';
 import ShipperSettings from '@/components/settings/SettingsShipper.vue';
 import SupplierSettings from '@/components/settings/SettingsSupplier.vue';
 import ToolCategorySettings from '@/components/settings/SettingsToolCategories.vue';
