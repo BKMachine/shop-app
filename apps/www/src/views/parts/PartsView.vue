@@ -165,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { hasMissingRateInputs } from '@repo/utilities/parts';
+import { hasIncompletePartCostData } from '@repo/utilities/parts';
 import { computed, nextTick, ref, watch } from 'vue';
 import { type LocationQueryValue, type LocationQueryValueRaw, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
@@ -410,9 +410,8 @@ function toggleTotalValue() {
 
 function getTone(item: PartsListRow) {
   if (!item.price) return 'empty';
-  if (item.hasSubComponents && item.derived?.hasIncompleteSubComponentCosts) return 'neutral';
+  if (hasIncompletePartCostData(item)) return 'neutral';
   if (item.hasSubComponents) return getToneForRate(item.derived?.shopRate || 0);
-  if (hasPriceWithoutRateInputs(item)) return 'neutral';
   return getToneForRate(item.derived?.shopRate || 0);
 }
 
@@ -422,12 +421,8 @@ function getRateSwatchTitle(item: PartsListRow) {
     return 'Assembly has nested subcomponents with missing cost inputs';
   if (item.hasSubComponents)
     return item.derived?.shopRate ? `$${item.derived.shopRate.toFixed(2)}` : 'No rate';
-  if (hasPriceWithoutRateInputs(item)) return 'Price set with missing cost inputs';
+  if (hasIncompletePartCostData(item)) return 'Price set with missing cost inputs';
   return item.derived?.shopRate ? `$${item.derived.shopRate.toFixed(2)}` : 'No rate';
-}
-
-function hasPriceWithoutRateInputs(item: PartsListRow) {
-  return Boolean(item.price) && hasMissingRateInputs(item);
 }
 
 function openPart(event: unknown, { item }: { item: PartsListRow }) {

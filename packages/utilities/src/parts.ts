@@ -30,6 +30,11 @@ interface AssemblyPartInput extends MaterialCostInput {
   additionalCosts?: AdditionalCostInput[] | null;
   material?: unknown;
   subComponentIds?: unknown;
+  price?: number | null;
+  hasSubComponents?: boolean;
+  derived?: {
+    hasIncompleteSubComponentCosts?: boolean | null;
+  } | null;
 }
 
 export function calculatePartsPerBar<TPart extends MaterialUsageInput>(
@@ -178,6 +183,19 @@ export function hasMissingRateInputs<TPart extends RateInputPart>(part: TPart): 
     hasIncompleteCycleTimeEntry ||
     isMissingMaterial
   );
+}
+
+export function hasIncompletePartCostData(part: AssemblyPartInput | null | undefined): boolean {
+  if (!part || !Number(part.price)) return false;
+
+  const hasSubComponents =
+    part.hasSubComponents === true || normalizeSubComponentIds(part.subComponentIds).length > 0;
+
+  if (hasSubComponents) {
+    return Boolean(part.derived?.hasIncompleteSubComponentCosts);
+  }
+
+  return hasMissingRateInputs(part);
 }
 
 export function hasIncompleteAssemblyLeafCosts<TPart extends AssemblyPartInput>(

@@ -12,6 +12,30 @@
       <div class="details">
         <div v-if="isOnline" class="timer">
           <div v-if="!hasAlarm">
+            <div
+              :class="['job-row', { 'job-row--incomplete': hasIncompletePartData }]"
+              :title="hasIncompletePartData ? 'Part needs more cost data' : undefined"
+            >
+              <span class="job-row__label">Job:</span>
+              <RouterLink
+                v-if="data.jobId"
+                class="job-row__link"
+                :to="{ name: 'viewJob', params: { id: data.jobId } }"
+              >
+                #{{ data.jobNumber ?? '—' }}
+              </RouterLink>
+              <span v-else class="job-row__value">---</span>
+              <span class="job-row__separator">|</span>
+              <span class="job-row__label">Part:</span>
+              <RouterLink
+                v-if="data.partId && currentPartText"
+                class="job-row__link"
+                :to="{ name: 'viewPart', params: { id: data.partId }, query: { tab: 'cost' } }"
+              >
+                {{ currentPartText }}
+              </RouterLink>
+              <span v-else class="job-row__value">{{ currentPartText || '---' }}</span>
+            </div>
             <div class="d-flex justify-space-between align-center">
               <div>
                 <div v-if="hasLastCycle">
@@ -140,6 +164,18 @@ const lastCycle = computed(() => {
   return formatCycleDuration(latestLastCycle.value);
 });
 
+const currentPartText = computed(() => {
+  const partNumber = props.data.partNumber?.trim();
+  if (partNumber) return partNumber;
+
+  const partSummary = props.data.partSummary?.trim();
+  return partSummary || '';
+});
+
+const hasIncompletePartData = computed(() => {
+  return Boolean(props.data.partHasIncompleteData);
+});
+
 const hasMacroTimer = computed(() => {
   const macroTimerMachines = ['rd1', 'rd2', 'rd3', 'rd4'];
   return macroTimerMachines.includes(props.data.name.toLowerCase());
@@ -212,7 +248,7 @@ const status = computed(() => {
 <style scoped>
 .machine {
   width: 300px;
-  height: 60px;
+  height: 78px;
   color: #ffffff;
   padding: 5px;
   border-radius: 6px;
@@ -228,6 +264,27 @@ const status = computed(() => {
 
 .machine:not(.online) {
   background: #282828;
+}
+
+.job-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  line-height: 1.1;
+}
+
+.job-row__link,
+.job-row__value,
+.job-row__label,
+.job-row__separator {
+  font-size: 12px;
+}
+
+.job-row__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .header {
@@ -246,6 +303,52 @@ const status = computed(() => {
 
 .details {
   font-size: 14px;
+}
+
+.job-row {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  line-height: 1.2;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.job-row--incomplete {
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(18, 18, 18, 0.68);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
+
+.machine.online.status-green .job-row--incomplete,
+.machine.online.status-yellow .job-row--incomplete {
+  background: rgba(22, 22, 22, 0.78);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.job-row__label,
+.job-row__separator,
+.job-row__value {
+  color: rgba(255, 255, 255, 0.9);
+  flex-shrink: 0;
+}
+
+.job-row__link,
+.job-row__value:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.job-row__link {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.job-row__link:hover {
+  color: #d7ecff;
 }
 
 .offline {

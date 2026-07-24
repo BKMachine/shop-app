@@ -1,4 +1,5 @@
 import { isValidObjectId } from 'mongoose';
+import { hasIncompletePartCostData } from '@repo/utilities/parts';
 import { emit } from '../../../server/sockets.js';
 import { getEntityIdOrNull } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
@@ -257,11 +258,54 @@ function extractPartImage(value: unknown) {
   return typeof imageValue === 'string' && imageValue.trim() ? imageValue.trim() : null;
 }
 
+function extractReferencedId(value: unknown) {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object' || !('_id' in value)) return null;
+
+  const idValue = value._id;
+  if (typeof idValue === 'string' && idValue.trim()) return idValue;
+  if (idValue && typeof idValue === 'object' && 'toString' in idValue) {
+    const normalizedId = idValue.toString();
+    return normalizedId.trim() ? normalizedId : null;
+  }
+
+  return null;
+}
+
+function extractPartCostData(value: unknown): Parameters<typeof hasIncompletePartCostData>[0] {
+  if (!value || typeof value !== 'object') return null;
+
+  if (
+    'price' in value ||
+    'derived' in value ||
+    'subComponentIds' in value ||
+    'cycleTimes' in value ||
+    'additionalCosts' in value ||
+    'customerSuppliedMaterial' in value ||
+    'material' in value
+  ) {
+    return value as Parameters<typeof hasIncompletePartCostData>[0];
+  }
+
+  return null;
+}
+
 async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
   const [machines, jobs] = await Promise.all([
     Machine.find().sort({ name: 1 }),
     Job.find({ status: 'in_process' })
-      .populate('part', { img: 1 })
+      .populate('part', {
+        img: 1,
+        price: 1,
+        cycleTimes: 1,
+        additionalCosts: 1,
+        material: 1,
+        customerSuppliedMaterial: 1,
+        subComponentIds: 1,
+        hasSubComponents: 1,
+        'derived.hasIncompleteSubComponentCosts': 1,
+      })
       .sort({ dueDate: 1, jobNumber: -1 }),
   ]);
 
@@ -270,7 +314,9 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
     {
       task: JobProductionTask;
       job: Pick<Job, '_id' | 'jobNumber' | 'qty' | 'dueDate' | 'partNumber' | 'partDescription'> & {
+        partId: string | null;
         partImage: string | null;
+        partHasIncompleteData: boolean;
       };
     }
   >();
@@ -291,9 +337,11 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
             jobNumber: job.jobNumber,
             qty: job.qty,
             dueDate: job.dueDate,
+            partId: extractReferencedId(job.part),
             partNumber: job.partNumber,
             partDescription: job.partDescription,
             partImage: extractPartImage(job.part),
+            partHasIncompleteData: hasIncompletePartCostData(extractPartCostData(job.part)),
           },
         });
       }
@@ -318,9 +366,11 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
       jobNumber: activeEntry?.job.jobNumber ?? null,
       qty: activeEntry?.job.qty ?? null,
       dueDate: activeEntry?.job.dueDate ?? null,
+      partId: activeEntry?.job.partId ?? null,
       partNumber: activeEntry?.job.partNumber ?? null,
       partDescription: activeEntry?.job.partDescription ?? null,
       partImage: activeEntry?.job.partImage ?? null,
+      partHasIncompleteData: activeEntry?.job.partHasIncompleteData ?? false,
       partSummary: activeEntry
         ? toMachineDashboardPartSummary(activeEntry.job.partNumber, activeEntry.job.partDescription)
         : '',

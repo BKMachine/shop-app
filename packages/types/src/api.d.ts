@@ -278,9 +278,11 @@ declare global {
     jobNumber?: number | null;
     qty?: number | null;
     dueDate?: string | Date | null;
+    partId?: string | null;
     partNumber?: string | null;
     partDescription?: string | null;
     partImage?: string | null;
+    partHasIncompleteData?: boolean;
     partSummary: string;
   }
 

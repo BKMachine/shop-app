@@ -128,6 +128,13 @@ declare global {
     logo: string;
     status: MachineStatus;
     state: MachineState;
+    jobId?: string | null;
+    jobNumber?: number | null;
+    partId?: string | null;
+    partNumber?: string | null;
+    partDescription?: string | null;
+    partHasIncompleteData?: boolean;
+    partSummary?: string | null;
     index?: number;
   }
 

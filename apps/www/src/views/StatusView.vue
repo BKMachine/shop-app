@@ -60,6 +60,7 @@ import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import MachineTile from '@/components/MachineTile.vue';
 import { statusApi } from '@/plugins/axios';
+import { socket as appSocket } from '@/plugins/socket';
 
 const MACHINE_ORDER_STORAGE_KEY = 'status-machine-order';
 const BLANK_TILE_PREFIX = 'blank:';
@@ -102,10 +103,14 @@ socket.on('refresh-data', () => {
 
 onMounted(async () => {
   await fetchMachines();
+  appSocket.on('job', fetchMachines);
+  appSocket.on('jobDeleted', fetchMachines);
   socket.connect();
 });
 
 onBeforeUnmount(() => {
+  appSocket.off('job', fetchMachines);
+  appSocket.off('jobDeleted', fetchMachines);
   socket.disconnect();
 });
 
@@ -231,7 +236,7 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
 }
 
 .machine--blank {
-  height: 60px;
+  height: 78px;
   width: 300px;
 }
 
