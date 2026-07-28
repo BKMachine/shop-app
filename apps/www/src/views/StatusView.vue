@@ -59,17 +59,28 @@ import { useRouter } from 'vue-router';
 import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import MachineTile from '@/components/MachineTile.vue';
-import { statusApi } from '@/plugins/axios';
+import api, { statusApi } from '@/plugins/axios';
 import { socket as appSocket } from '@/plugins/socket';
 
 const MACHINE_ORDER_STORAGE_KEY = 'status-machine-order';
 const BLANK_TILE_PREFIX = 'blank:';
 
 type StatusTile = MachineInfo | BlankMachineTile;
+type MachineDashboardMetadata = Pick<
+  MachineJobDashboardRow,
+  | 'jobId'
+  | 'jobNumber'
+  | 'partId'
+  | 'partNumber'
+  | 'partDescription'
+  | 'partHasIncompleteData'
+  | 'partSummary'
+>;
 
 const router = useRouter();
 const tiles = ref<StatusTile[]>([]);
 const resetOrderConfirmVisible = ref(false);
+let cachedMachineDashboardMetadata = new Map<string, MachineDashboardMetadata>();
 
 const socket = io(import.meta.env.VITE_STATUS_API_URL, {
   transports: ['websocket', 'polling'],
@@ -105,25 +116,54 @@ onMounted(async () => {
   await fetchMachines();
   appSocket.on('job', fetchMachines);
   appSocket.on('jobDeleted', fetchMachines);
+  appSocket.on('part', fetchMachines);
   socket.connect();
 });
 
 onBeforeUnmount(() => {
   appSocket.off('job', fetchMachines);
   appSocket.off('jobDeleted', fetchMachines);
+  appSocket.off('part', fetchMachines);
   socket.disconnect();
 });
 
 async function fetchMachines() {
-  statusApi
-    .get<MachineInfo[]>('/machines')
-    .then(({ data }) => {
-      tiles.value = orderMachines(data);
+  Promise.all([statusApi.get<MachineInfo[]>('/machines'), fetchMachineDashboardMetadata()])
+    .then(([{ data: machines }, machineDashboardMetadata]) => {
+      tiles.value = orderMachines(
+        machines.map((machine) => ({ ...machine, ...machineDashboardMetadata.get(machine.id) })),
+      );
       persistMachineOrder();
     })
     .catch((error) => {
       console.error('Error fetching status:', error);
     });
+}
+
+async function fetchMachineDashboardMetadata() {
+  try {
+    const { data } = await api.get<MachineJobDashboardResponse>('/jobs/machine-dashboard');
+
+    cachedMachineDashboardMetadata = new Map<string, MachineDashboardMetadata>(
+      data.active.map((machine) => [
+        machine.machineId,
+        {
+          jobId: machine.jobId ?? null,
+          jobNumber: machine.jobNumber ?? null,
+          partId: machine.partId ?? null,
+          partNumber: machine.partNumber ?? null,
+          partDescription: machine.partDescription ?? null,
+          partHasIncompleteData: machine.partHasIncompleteData ?? false,
+          partSummary: machine.partSummary,
+        },
+      ]),
+    );
+
+    return cachedMachineDashboardMetadata;
+  } catch (error) {
+    console.warn('Unable to load machine dashboard metadata.', error);
+    return cachedMachineDashboardMetadata;
+  }
 }
 
 function orderMachines(data: MachineInfo[]) {

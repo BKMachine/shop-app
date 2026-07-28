@@ -246,11 +246,13 @@ onMounted(() => {
   void fetchMachineDashboard();
   socket.on('job', refreshMachineDashboard);
   socket.on('jobDeleted', refreshMachineDashboard);
+  socket.on('part', refreshMachineDashboard);
 });
 
 onBeforeUnmount(() => {
   socket.off('job', refreshMachineDashboard);
   socket.off('jobDeleted', refreshMachineDashboard);
+  socket.off('part', refreshMachineDashboard);
 });
 
 if (typeof window !== 'undefined') {
