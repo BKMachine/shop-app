@@ -119,6 +119,7 @@ const vendorStore = useVendorStore();
 const theme = useTheme();
 
 const THEME_STORAGE_KEY = 'shop-app-theme';
+const DRAWER_RAIL_STORAGE_KEY = 'shop-app-drawer-rail';
 const IDLE_HOME_REDIRECT_TIMEOUT_MS = 1000 * 60 * 5;
 const IDLE_ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
   'pointerdown',
@@ -255,6 +256,8 @@ onBeforeMount(() => {
   if (storedTheme === 'light' || storedTheme === 'dark') {
     theme.change(storedTheme);
   }
+
+  drawerRail.value = window.localStorage.getItem(DRAWER_RAIL_STORAGE_KEY) === 'true';
 });
 
 onBeforeUnmount(() => {
@@ -266,6 +269,14 @@ watch(
   () => theme.global.name.value,
   (value) => {
     window.localStorage.setItem(THEME_STORAGE_KEY, value);
+  },
+  { immediate: true },
+);
+
+watch(
+  drawerRail,
+  (value) => {
+    window.localStorage.setItem(DRAWER_RAIL_STORAGE_KEY, String(value));
   },
   { immediate: true },
 );
