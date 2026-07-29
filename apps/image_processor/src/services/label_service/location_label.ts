@@ -1,8 +1,6 @@
 // DYMO 30333 Label (1.0in x 1.0in) 2-up layout
 
-import fs from 'node:fs';
-import fontkit from '@pdf-lib/fontkit';
-import { degrees, PDFDocument, type PDFFont, rgb } from 'pdf-lib';
+import { degrees, PDFDocument, type PDFFont, rgb, StandardFonts } from 'pdf-lib';
 import QRCode from 'qrcode';
 import {
   dataUrlToBuffer,
@@ -10,7 +8,6 @@ import {
   inches,
   POINTS_PER_INCH,
   sanitize,
-  segoeUiRegularPath,
   toPdfY,
 } from './shared.js';
 
@@ -95,9 +92,8 @@ export async function buildLocationLabel(
   layout = DEFAULT_LOCATION_LABEL_LAYOUT,
 ) {
   const pdf = await PDFDocument.create();
-  pdf.registerFontkit(fontkit);
   const page = pdf.addPage([LOCATION_LABEL.width, LOCATION_LABEL.height]);
-  const sans = await pdf.embedFont(fs.readFileSync(segoeUiRegularPath));
+  const sans = await pdf.embedFont(StandardFonts.Helvetica);
 
   const position = sanitize(data.pos);
   const qrPayload = `Loc:${sanitize(data.loc)} | ${position}`;

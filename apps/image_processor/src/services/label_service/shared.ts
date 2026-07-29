@@ -33,7 +33,6 @@ export function resolveAssetPath(...segments: string[]) {
   throw new Error(`Missing asset: ${path.join(...segments)}`);
 }
 
-export const segoeUiRegularPath = resolveAssetPath('fonts', 'Segoe UI', 'Segoe UI.ttf');
 export const bkLogoPath = resolveAssetPath('images', 'bk_logo.png');
 
 export async function buildGrayscaleLogoBuffer(width: number, height: number) {

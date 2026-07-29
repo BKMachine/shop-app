@@ -1,8 +1,6 @@
 // DYMO Address label size 30252 (2-1/4" x 1-1/4")
 
-import fs from 'node:fs';
-import fontkit from '@pdf-lib/fontkit';
-import { degrees, PDFDocument, type PDFFont, rgb } from 'pdf-lib';
+import { degrees, PDFDocument, type PDFFont, rgb, StandardFonts } from 'pdf-lib';
 import {
   ADDRESS_LABEL,
   buildPartImageOrFallbackBuffer,
@@ -10,7 +8,6 @@ import {
   fitTextToBox,
   inches,
   sanitize,
-  segoeUiRegularPath,
   toPdfY,
 } from './shared.js';
 
@@ -388,9 +385,8 @@ function rotateClockwisePoint(x: number, y: number) {
 
 export async function buildItemLabel(data: PrintItemBody) {
   const pdf = await PDFDocument.create();
-  pdf.registerFontkit(fontkit);
   const page = pdf.addPage([ROTATED_ADDRESS_LABEL.width, ROTATED_ADDRESS_LABEL.height]);
-  const sans = await pdf.embedFont(fs.readFileSync(segoeUiRegularPath));
+  const sans = await pdf.embedFont(StandardFonts.Helvetica);
   const offsetX = Number.isFinite(data.labelOffsetX) ? Number(data.labelOffsetX) : 0;
   const offsetY = Number.isFinite(data.labelOffsetY) ? Number(data.labelOffsetY) : 0;
   const rightMargin =

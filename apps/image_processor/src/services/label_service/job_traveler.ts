@@ -1,6 +1,4 @@
-import fs from 'node:fs';
-import fontkit from '@pdf-lib/fontkit';
-import { PDFDocument, type PDFFont, type PDFPage, rgb } from 'pdf-lib';
+import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import sharp from 'sharp';
 import {
   buildQrCodeWithCenteredLogoBuffer,
@@ -8,7 +6,6 @@ import {
   fitText,
   inches,
   sanitize,
-  segoeUiRegularPath,
 } from './shared.js';
 
 const PAGE_WIDTH = 8.5 * 72;
@@ -16,7 +13,7 @@ const PAGE_HEIGHT = 11 * 72;
 const PAGE_BLEED = 2;
 const PAGE_MARGIN = inches(0.38);
 const HEADER_HEIGHT = inches(1.5);
-const HEADER_TITLE_TOP_OFFSET = 0;
+const HEADER_TITLE_TOP_OFFSET = 10;
 const SECTION_GAP = inches(0.16);
 const DETAIL_ROW_HEIGHT = 30;
 const IMAGE_BOX_SIZE = inches(1.3);
@@ -416,10 +413,9 @@ function getRowValue(rows: PrintJobTravelerRow[], label: string) {
 
 export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
   const pdf = await PDFDocument.create();
-  pdf.registerFontkit(fontkit);
 
   const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  const font = await pdf.embedFont(fs.readFileSync(segoeUiRegularPath));
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
   const jobDetailsColumns = 2;
   const partDetailsColumns = 1;
   const detailContentPadding = 16;

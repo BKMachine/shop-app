@@ -1,7 +1,5 @@
-import fs from 'node:fs';
-import fontkit from '@pdf-lib/fontkit';
-import { PDFDocument, type PDFFont, rgb } from 'pdf-lib';
-import { buildGrayscaleLogoBuffer, inches, sanitize, segoeUiRegularPath } from './shared.js';
+import { PDFDocument, type PDFFont, rgb, StandardFonts } from 'pdf-lib';
+import { buildGrayscaleLogoBuffer, inches, sanitize } from './shared.js';
 
 const LABEL_WIDTH = inches(4);
 const LABEL_HEIGHT = inches(6);
@@ -197,11 +195,9 @@ export async function buildShipmentQtyLabel(data: PrintShipmentQtyLabelBody) {
   }
 
   const pdf = await PDFDocument.create();
-  pdf.registerFontkit(fontkit);
 
   const page = pdf.addPage([LABEL_WIDTH, LABEL_HEIGHT]);
-  const fontBytes = fs.readFileSync(segoeUiRegularPath);
-  const regularFont = await pdf.embedFont(fontBytes);
+  const regularFont = await pdf.embedFont(StandardFonts.Helvetica);
   const logoBuffer = await buildGrayscaleLogoBuffer(TITLE_LOGO_WIDTH, TITLE_LOGO_HEIGHT);
   const logoImage = await pdf.embedPng(logoBuffer);
 
