@@ -1,4 +1,4 @@
-import { hasIncompletePartCostData } from '@repo/utilities/parts';
+import { hasIncompletePartCostData, hasMissingRateInputs } from '@repo/utilities/parts';
 import { isValidObjectId } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import { getEntityIdOrNull } from '../../../utilities/entities.js';
@@ -291,6 +291,21 @@ function extractPartCostData(value: unknown): Parameters<typeof hasIncompletePar
   return null;
 }
 
+function hasIncompleteMachineDashboardPartData(value: unknown) {
+  const part = extractPartCostData(value);
+  if (!part) return false;
+  if (hasIncompletePartCostData(part)) return true;
+
+  const derived =
+    value && typeof value === 'object' && 'derived' in value
+      ? (value.derived as { directParentCount?: number } | null | undefined)
+      : null;
+  const isSubComponent = Number(derived?.directParentCount) > 0;
+  if (!isSubComponent) return false;
+
+  return hasMissingRateInputs(part);
+}
+
 async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
   const [machines, jobs] = await Promise.all([
     Machine.find().sort({ name: 1 }),
@@ -304,6 +319,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         customerSuppliedMaterial: 1,
         subComponentIds: 1,
         hasSubComponents: 1,
+        'derived.directParentCount': 1,
         'derived.hasIncompleteSubComponentCosts': 1,
       })
       .sort({ dueDate: 1, jobNumber: -1 }),
@@ -341,7 +357,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
             partNumber: job.partNumber,
             partDescription: job.partDescription,
             partImage: extractPartImage(job.part),
-            partHasIncompleteData: hasIncompletePartCostData(extractPartCostData(job.part)),
+            partHasIncompleteData: hasIncompleteMachineDashboardPartData(job.part),
           },
         });
       }

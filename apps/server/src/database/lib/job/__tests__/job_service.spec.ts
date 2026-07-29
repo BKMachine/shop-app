@@ -3,12 +3,29 @@
 import { jest } from '@jest/globals';
 
 type JobRecord = Job & { __v?: number };
-type PartRecord = Pick<Part, '_id' | 'customer' | 'part' | 'description' | 'revision' | 'price'>;
+type PartRecord = Pick<Part, '_id' | 'customer' | 'part' | 'description' | 'revision' | 'price'> &
+  Partial<
+    Pick<
+      Part,
+      | 'img'
+      | 'cycleTimes'
+      | 'additionalCosts'
+      | 'material'
+      | 'customerSuppliedMaterial'
+      | 'subComponentIds'
+      | 'derived'
+    >
+  >;
 type CustomerRecord = Customer;
+type MachineRecord = Pick<
+  MachineData,
+  '_id' | 'name' | 'displayName' | 'type' | 'location'
+>;
 
 const jobStore = new Map<string, JobRecord>();
 const partStore = new Map<string, PartRecord>();
 const customerStore = new Map<string, CustomerRecord>();
+const machineStore = new Map<string, MachineRecord>();
 const emit = jest.fn();
 const addJobAudit = jest.fn(async () => undefined);
 let nextJobNumber = 1000;
@@ -333,12 +350,40 @@ const PartModelMock = {
   }),
 };
 
+const MachineModelMock = {
+  find: jest.fn(() => {
+    const records = Array.from(machineStore.values()).map((record) => cloneValue(record));
+    return {
+      sort(sortQuery?: Record<string, 1 | -1>) {
+        if (!sortQuery) return records;
+
+        return [...records].sort((left, right) => {
+          for (const [field, direction] of Object.entries(sortQuery)) {
+            const result = compareValues(
+              getNestedValue(left as unknown as Record<string, unknown>, field),
+              getNestedValue(right as unknown as Record<string, unknown>, field),
+              direction,
+            );
+            if (result !== 0) return result;
+          }
+
+          return 0;
+        });
+      },
+    };
+  }),
+};
+
 jestWithEsmMocks.unstable_mockModule('../job_model.js', () => ({
   default: MockJobModel,
 }));
 
 jestWithEsmMocks.unstable_mockModule('../../customer/customer_model.js', () => ({
   default: CustomerModelMock,
+}));
+
+jestWithEsmMocks.unstable_mockModule('../../machine/index.js', () => ({
+  default: MachineModelMock,
 }));
 
 jestWithEsmMocks.unstable_mockModule('../../part/part_model.js', () => ({
@@ -382,6 +427,28 @@ function buildPart(overrides: Partial<PartRecord> = {}): PartRecord {
     description: 'Widget',
     revision: 'A',
     price: 0,
+    cycleTimes: [],
+    additionalCosts: [],
+    material: null,
+    customerSuppliedMaterial: false,
+    subComponentIds: [],
+    derived: {
+      shopRate: 0,
+      directSubComponentCount: 0,
+      directParentCount: 0,
+      hasIncompleteSubComponentCosts: false,
+    },
+    ...overrides,
+  };
+}
+
+function buildMachine(overrides: Partial<MachineRecord> = {}): MachineRecord {
+  return {
+    _id: 'machine-1',
+    name: 'VF-2',
+    displayName: 'VF-2',
+    type: 'mill',
+    location: 'Shop',
     ...overrides,
   };
 }
@@ -391,6 +458,7 @@ beforeEach(() => {
   jobStore.clear();
   partStore.clear();
   customerStore.clear();
+  machineStore.clear();
   nextJobNumber = 1000;
   nextJobId = 1;
 });
@@ -1004,4 +1072,62 @@ test('list sorts by job number ascending', async () => {
   });
 
   expect(response.items.map((job) => job.jobNumber)).toEqual([1, 3, 6]);
+});
+
+test('listMachineDashboard flags incomplete cost data for in-process subcomponent jobs', async () => {
+  machineStore.set('machine-1', buildMachine());
+  partStore.set(
+    PART_ID_1,
+    buildPart({
+      price: 0,
+      cycleTimes: [{ operation: 'Op 10', time: 0 }],
+      derived: {
+        shopRate: 0,
+        directSubComponentCount: 0,
+        directParentCount: 1,
+        hasIncompleteSubComponentCosts: false,
+      },
+    }),
+  );
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'in_process',
+    dueDate: null,
+    startedOn: new Date('2026-07-15T00:00:00.000Z'),
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [
+      {
+        id: 'task-1',
+        machineId: 'machine-1',
+        machineName: 'VF-2',
+        machineType: 'mill',
+        startedAt: new Date('2026-07-16T14:00:00.000Z'),
+        endedAt: null,
+      },
+    ],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const response = await JobService.listMachineDashboard();
+
+  expect(response.active).toEqual([
+    expect.objectContaining({
+      machineId: 'machine-1',
+      partId: PART_ID_1,
+      partHasIncompleteData: true,
+    }),
+  ]);
 });
