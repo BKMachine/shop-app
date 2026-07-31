@@ -7,7 +7,7 @@
     "rootDir": "./src",
     "rootDirs": ["./src"],
     "sourceMap": false,
-    "types": ["@types/shop-app"]
+    "types": ["@types/image-processor"]
   },
   "include": ["src"],
   "ignore": ["node_modules", "dist"]
