@@ -309,6 +309,8 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
     Machine.find().sort({ name: 1 }),
     Job.find({ status: 'in_process' })
       .populate('part', {
+        part: 1,
+        description: 1,
         img: 1,
         price: 1,
         cycleTimes: 1,
