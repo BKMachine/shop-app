@@ -13,7 +13,10 @@
         <span class="scan-stage__corner scan-stage__corner--bottom-left" />
         <span class="scan-stage__corner scan-stage__corner--bottom-right" />
 
-        <div class="scan-stage__content">
+        <div
+          class="scan-stage__content"
+          :class="{ 'scan-stage__content--idle-collapsed': !idlePanelOpen }"
+        >
           <section class="machine-section machine-section--active">
             <div class="machine-section__header">
               <div>
@@ -34,9 +37,18 @@
                   variant="outlined"
                 />
                 <v-chip color="success" size="small" variant="flat">
-                  {{ activeMachines.length }}
-                  running
+                  {{ runningSummaryText }}
                 </v-chip>
+                <button
+                  v-if="!idlePanelOpen"
+                  :aria-expanded="idlePanelOpen"
+                  :aria-label="'Show not in progress panel'"
+                  class="idle-machine-strip__toggle idle-machine-strip__toggle--header"
+                  type="button"
+                  @click="idlePanelOpen = true"
+                >
+                  &lt;
+                </button>
               </div>
             </div>
 
@@ -120,8 +132,21 @@
             </div>
           </section>
 
-          <aside class="idle-machine-strip">
-            <div class="idle-machine-strip__header">
+          <aside
+            class="idle-machine-strip"
+            :class="{ 'idle-machine-strip--collapsed': !idlePanelOpen }"
+          >
+            <button
+              v-if="idlePanelOpen"
+              :aria-expanded="idlePanelOpen"
+              :aria-label="'Hide not in progress panel'"
+              class="idle-machine-strip__toggle"
+              type="button"
+              @click="idlePanelOpen = false"
+            >
+              &gt;
+            </button>
+            <div v-if="idlePanelOpen" class="idle-machine-strip__header">
               <h3 class="idle-machine-strip__title">Not In Process</h3>
               <v-chip v-if="idleMachines.length" color="grey-darken-1" size="small" variant="flat">
                 {{ idleMachines.length }}
@@ -129,21 +154,23 @@
               </v-chip>
             </div>
 
-            <div v-if="loading" class="idle-machine-strip__state">Loading machines...</div>
-            <div v-else-if="!idleMachines.length" class="idle-machine-strip__state">
-              <v-chip color="success" size="small" variant="flat">All machines active</v-chip>
-            </div>
-            <div v-else class="idle-machine-strip__chips">
-              <v-chip
-                v-for="machine in idleMachines"
-                :key="machine.machineId"
-                class="idle-machine-strip__chip"
-                color="grey-lighten-1"
-                size="small"
-                variant="flat"
-              >
-                {{ machine.machineName }}
-              </v-chip>
+            <div v-if="idlePanelOpen" class="idle-machine-strip__body">
+              <div v-if="loading" class="idle-machine-strip__state">Loading machines...</div>
+              <div v-else-if="!idleMachines.length" class="idle-machine-strip__state">
+                <v-chip color="success" size="small" variant="flat">All machines active</v-chip>
+              </div>
+              <div v-else class="idle-machine-strip__chips">
+                <v-chip
+                  v-for="machine in idleMachines"
+                  :key="machine.machineId"
+                  class="idle-machine-strip__chip"
+                  color="grey-lighten-1"
+                  size="small"
+                  variant="flat"
+                >
+                  {{ machine.machineName }}
+                </v-chip>
+              </div>
             </div>
           </aside>
         </div>
@@ -172,6 +199,7 @@ import { toastError } from '@/plugins/vue-toast-notification';
 import { isAppScanReady, useIdleHomeRedirectEnabled } from '@/state/app_focus';
 
 const MACHINE_SORT_STORAGE_KEY = 'home-machine-sort-mode';
+const IDLE_PANEL_OPEN_STORAGE_KEY = 'home-idle-panel-open';
 const MACHINE_SORT_OPTIONS = [
   { label: 'Due Date', value: 'dueDate' },
   { label: 'Name', value: 'machineName' },
@@ -182,6 +210,7 @@ type MachineSortMode = (typeof MACHINE_SORT_OPTIONS)[number]['value'];
 const idleHomeRedirectEnabled = useIdleHomeRedirectEnabled;
 const loading = ref(false);
 const loadFailed = ref(false);
+const idlePanelOpen = ref(readIdlePanelOpen());
 const dashboard = ref<MachineJobDashboardResponse>({ active: [], idle: [] });
 const machineSortMode = ref<MachineSortMode>(readMachineSortMode());
 
@@ -198,12 +227,23 @@ const activeMachines = computed(() =>
   }),
 );
 const idleMachines = computed(() => dashboard.value.idle);
+const totalMachineCount = computed(() => activeMachines.value.length + idleMachines.value.length);
+const runningSummaryText = computed(() => {
+  if (idlePanelOpen.value) return `${activeMachines.value.length} running`;
+  return `${activeMachines.value.length} of ${totalMachineCount.value} running`;
+});
 
 function readMachineSortMode(): MachineSortMode {
   if (typeof window === 'undefined') return 'dueDate';
 
   const storedValue = window.localStorage.getItem(MACHINE_SORT_STORAGE_KEY);
   return storedValue === 'machineName' ? 'machineName' : 'dueDate';
+}
+
+function readIdlePanelOpen(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  return window.localStorage.getItem(IDLE_PANEL_OPEN_STORAGE_KEY) === 'true';
 }
 
 function compareMachineDueDate(left: MachineJobDashboardRow, right: MachineJobDashboardRow) {
@@ -286,6 +326,11 @@ watch(machineSortMode, (value) => {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(MACHINE_SORT_STORAGE_KEY, value);
 });
+
+watch(idlePanelOpen, (value) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(IDLE_PANEL_OPEN_STORAGE_KEY, String(value));
+});
 </script>
 
 <style scoped>
@@ -367,6 +412,11 @@ watch(machineSortMode, (value) => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 240px;
   min-height: calc(100dvh - 92px);
+  transition: grid-template-columns 180ms ease;
+}
+
+.scan-stage__content--idle-collapsed {
+  grid-template-columns: minmax(0, 1fr) 0;
 }
 
 .machine-section {
@@ -612,11 +662,21 @@ watch(machineSortMode, (value) => {
 }
 
 .idle-machine-strip {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
   padding: 20px 24px 22px 18px;
+  overflow: hidden;
+  transition:
+    padding 180ms ease,
+    background-color 180ms ease;
+}
+
+.idle-machine-strip--collapsed {
+  gap: 0;
+  padding: 0;
 }
 
 .idle-machine-strip::before {
@@ -629,11 +689,50 @@ watch(machineSortMode, (value) => {
   background: linear-gradient(180deg, rgba(50, 42, 34, 0.04), rgba(50, 42, 34, 0.14));
 }
 
+.idle-machine-strip__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(125, 135, 145, 0.18);
+  color: rgba(44, 37, 31, 0.82);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.idle-machine-strip__toggle:hover {
+  background: rgba(125, 135, 145, 0.28);
+}
+
+.idle-machine-strip__toggle--header {
+  flex: 0 0 auto;
+}
+
+.idle-machine-strip__toggle:focus-visible {
+  outline: 2px solid rgba(33, 150, 243, 0.65);
+  outline-offset: 2px;
+}
+
 .idle-machine-strip__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.idle-machine-strip--collapsed .idle-machine-strip__header {
+  align-items: center;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .idle-machine-strip__title {
@@ -643,6 +742,17 @@ watch(machineSortMode, (value) => {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(79, 64, 49, 0.7);
+}
+
+.idle-machine-strip--collapsed .idle-machine-strip__title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+}
+
+.idle-machine-strip__body {
+  min-height: 0;
 }
 
 .idle-machine-strip__chips {
@@ -766,6 +876,10 @@ watch(machineSortMode, (value) => {
     min-height: calc(100dvh - 84px);
   }
 
+  .scan-stage__content--idle-collapsed {
+    grid-template-columns: 1fr;
+  }
+
   .machine-section {
     padding: 24px 18px 18px;
   }
@@ -788,8 +902,24 @@ watch(machineSortMode, (value) => {
     padding: 0 18px 18px;
   }
 
+  .idle-machine-strip--collapsed {
+    padding: 0;
+  }
+
   .idle-machine-strip::before {
     display: none;
+  }
+
+  .idle-machine-strip--collapsed .idle-machine-strip__header {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .idle-machine-strip--collapsed .idle-machine-strip__title {
+    writing-mode: initial;
+    transform: none;
+    font-size: 0.82rem;
+    letter-spacing: 0.12em;
   }
 
   .idle-machine-strip__chips {
