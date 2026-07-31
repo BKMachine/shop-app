@@ -48,8 +48,11 @@
               <article
                 v-for="machine in activeMachines"
                 :key="machine.machineId"
-                class="machine-card"
-                :style="{ '--machine-card-border': machineCardBorderColor(machine.dueDate) }"
+                :class="[
+                  'machine-card',
+                  machineCardDueDateClass(machine.dueDate),
+                  { 'machine-card--incomplete': machine.partHasIncompleteData },
+                ]"
               >
                 <div class="machine-card__header">
                   <div>
@@ -99,7 +102,17 @@
 
                 <div class="machine-card__content">
                   <!-- <span class="machine-card__content-label">Part / Description</span> -->
-                  <span class="machine-card__content-value">{{ machine.partSummary || '—' }}</span>
+                  <span class="machine-card__content-value">
+                    <RouterLink
+                      v-if="machine.partId && machine.partNumber"
+                      class="machine-card__part-link"
+                      :to="{ name: 'viewPart', params: { id: machine.partId } }"
+                    >
+                      {{ machine.partNumber }}
+                    </RouterLink>
+                    <span v-else>{{ machine.partNumber || '—' }}</span>
+                    <span v-if="machine.partDescription"> / {{ machine.partDescription }}</span>
+                  </span>
                 </div>
               </article>
             </div>
@@ -211,14 +224,14 @@ function normalizeMachineDueDate(value: string | Date | null | undefined) {
   return Number.isNaN(time) ? Number.MAX_SAFE_INTEGER : time;
 }
 
-function machineCardBorderColor(value: string | Date | null | undefined) {
+function machineCardDueDateClass(value: string | Date | null | undefined) {
   const color = dueDateColor(value);
 
-  if (color === 'error') return 'rgba(198, 40, 40, 0.95)';
-  if (color === 'warning') return 'rgba(251, 140, 0, 0.95)';
-  if (color === 'success') return 'rgba(67, 160, 71, 0.95)';
-  if (color === 'purple-lighten-2') return 'rgba(186, 104, 200, 0.95)';
-  return 'rgba(117, 117, 117, 0.85)';
+  if (color === 'error') return 'machine-card--due-error';
+  if (color === 'warning') return 'machine-card--due-warning';
+  if (color === 'success') return 'machine-card--due-success';
+  if (color === 'purple-lighten-2') return 'machine-card--due-future';
+  return 'machine-card--due-default';
 }
 
 async function fetchMachineDashboard() {
@@ -413,7 +426,8 @@ watch(machineSortMode, (value) => {
 }
 
 .machine-card {
-  --machine-card-border: rgba(117, 117, 117, 0.85);
+  --machine-card-accent: rgba(117, 117, 117, 0.85);
+  --machine-card-border: var(--machine-card-accent);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -422,6 +436,34 @@ watch(machineSortMode, (value) => {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.04);
+}
+
+.machine-card--due-default {
+  --machine-card-accent: rgba(117, 117, 117, 0.85);
+}
+
+.machine-card--due-error {
+  --machine-card-accent: rgba(198, 40, 40, 0.95);
+}
+
+.machine-card--due-warning {
+  --machine-card-accent: rgba(251, 140, 0, 0.95);
+}
+
+.machine-card--due-success {
+  --machine-card-accent: rgba(67, 160, 71, 0.95);
+}
+
+.machine-card--due-future {
+  --machine-card-accent: rgba(186, 104, 200, 0.95);
+}
+
+.machine-card--incomplete {
+  --machine-card-border: rgba(156, 163, 175, 0.95);
+  border-style: dashed;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--machine-card-accent) 50%, transparent),
+    0 10px 22px rgba(0, 0, 0, 0.04);
 }
 
 .machine-card__header {
@@ -548,6 +590,15 @@ watch(machineSortMode, (value) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.machine-card__part-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.machine-card__part-link:hover {
+  text-decoration: underline;
 }
 
 .idle-machine-strip {
