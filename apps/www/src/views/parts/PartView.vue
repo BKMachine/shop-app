@@ -56,7 +56,11 @@
         <div class="d-flex flex-column align-end justify-center">
           <v-chip
             class="mb-2 clickable-chip"
-            :class="{'header-rate-swatch--empty': hasNoProductPrice, [`text-${currentRateTone}`]: !hasNoProductPrice}"
+            :class="{
+              'header-rate-swatch--empty': hasNoProductPrice,
+              'header-rate-swatch--neutral': hasIncompleteRateData,
+              [`text-${currentRateTone}`]: !hasNoProductPrice && !hasIncompleteRateData,
+            }"
             density="comfortable"
             @click="tab = 'cost'"
           >
@@ -477,6 +481,7 @@
 </template>
 
 <script setup lang="ts">
+import { hasIncompletePartCostData } from '@repo/utilities/parts';
 import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -590,6 +595,7 @@ const printWithoutImageDialog = ref({
 const hasNoProductPrice = computed(() => {
   return part.value.price == null || part.value.price === 0;
 });
+const hasIncompleteRateData = computed(() => hasIncompletePartCostData(part.value));
 const subComponentEntries = computed<PartSubComponent[]>(() => part.value.subComponentIds || []);
 const selectedSubComponentIds = computed<string[]>({
   get() {
@@ -1545,6 +1551,11 @@ async function loadCriticalNotesCount() {
 }
 .header-rate-swatch--empty {
   background: white;
+}
+
+.header-rate-swatch--neutral {
+  background: rgb(156, 163, 175);
+  color: white;
 }
 
 .parent-components-list {
