@@ -173,8 +173,13 @@ document.addEventListener('scan', (e) => {
   scannerStore.scan(e.detail.scanCode);
 });
 
+function readStoredDrawerRail(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(DRAWER_RAIL_STORAGE_KEY) === 'true';
+}
+
 const drawer = ref(true);
-const drawerRail = ref(false);
+const drawerRail = ref(readStoredDrawerRail());
 let idleHomeRedirectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const isDarkTheme = computed(() => theme.global.name.value === 'dark');
@@ -256,8 +261,6 @@ onBeforeMount(() => {
   if (storedTheme === 'light' || storedTheme === 'dark') {
     theme.change(storedTheme);
   }
-
-  drawerRail.value = window.localStorage.getItem(DRAWER_RAIL_STORAGE_KEY) === 'true';
 });
 
 onBeforeUnmount(() => {
