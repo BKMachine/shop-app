@@ -34,7 +34,7 @@ RUN pnpm run test --filter=server
 RUN pnpm run build --filter=server
 
 FROM server-installer AS server-deploy
-RUN pnpm run build --filter=@repo/utilities
+RUN pnpm run test --filter=@repo/utilities
 RUN pnpm deploy --filter=server --prod /app/deploy/server
 
 # WWW

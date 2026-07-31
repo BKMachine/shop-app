@@ -33,8 +33,13 @@ interface AssemblyPartInput extends MaterialCostInput {
   price?: number | null;
   hasSubComponents?: boolean;
   derived?: {
+    directParentCount?: number | null;
     hasIncompleteSubComponentCosts?: boolean | null;
   } | null;
+}
+
+function hasDirectParent(part: AssemblyPartInput | null | undefined): boolean {
+  return Number(part?.derived?.directParentCount) > 0;
 }
 
 export function calculatePartsPerBar<TPart extends MaterialUsageInput>(
@@ -194,6 +199,16 @@ export function hasIncompletePartCostData(part: AssemblyPartInput | null | undef
   if (hasSubComponents) {
     return Boolean(part.derived?.hasIncompleteSubComponentCosts);
   }
+
+  return hasMissingRateInputs(part);
+}
+
+export function hasIncompleteMachineDashboardPartData(
+  part: AssemblyPartInput | null | undefined,
+): boolean {
+  if (!part) return false;
+  if (hasIncompletePartCostData(part)) return true;
+  if (!hasDirectParent(part)) return false;
 
   return hasMissingRateInputs(part);
 }

@@ -1,4 +1,4 @@
-import { hasIncompletePartCostData, hasMissingRateInputs } from '@repo/utilities/parts';
+import { hasIncompleteMachineDashboardPartData } from '@repo/utilities/parts';
 import { isValidObjectId } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import { getEntityIdOrNull } from '../../../utilities/entities.js';
@@ -273,7 +273,9 @@ function extractReferencedId(value: unknown) {
   return null;
 }
 
-function extractPartCostData(value: unknown): Parameters<typeof hasIncompletePartCostData>[0] {
+function extractPartCostData(
+  value: unknown,
+): Parameters<typeof hasIncompleteMachineDashboardPartData>[0] {
   if (!value || typeof value !== 'object') return null;
 
   if (
@@ -285,25 +287,14 @@ function extractPartCostData(value: unknown): Parameters<typeof hasIncompletePar
     'customerSuppliedMaterial' in value ||
     'material' in value
   ) {
-    return value as Parameters<typeof hasIncompletePartCostData>[0];
+    return value as Parameters<typeof hasIncompleteMachineDashboardPartData>[0];
   }
 
   return null;
 }
 
-function hasIncompleteMachineDashboardPartData(value: unknown) {
-  const part = extractPartCostData(value);
-  if (!part) return false;
-  if (hasIncompletePartCostData(part)) return true;
-
-  const derived =
-    value && typeof value === 'object' && 'derived' in value
-      ? (value.derived as { directParentCount?: number } | null | undefined)
-      : null;
-  const isSubComponent = Number(derived?.directParentCount) > 0;
-  if (!isSubComponent) return false;
-
-  return hasMissingRateInputs(part);
+function getMachineDashboardPartHasIncompleteData(value: unknown) {
+  return hasIncompleteMachineDashboardPartData(extractPartCostData(value));
 }
 
 async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
@@ -357,7 +348,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
             partNumber: job.partNumber,
             partDescription: job.partDescription,
             partImage: extractPartImage(job.part),
-            partHasIncompleteData: hasIncompleteMachineDashboardPartData(job.part),
+            partHasIncompleteData: getMachineDashboardPartHasIncompleteData(job.part),
           },
         });
       }
