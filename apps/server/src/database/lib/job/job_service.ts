@@ -293,6 +293,13 @@ function extractPartCostData(
   return null;
 }
 
+function extractPartText(value: unknown, field: 'part' | 'description') {
+  if (!value || typeof value !== 'object' || !(field in value)) return null;
+
+  const fieldValue = (value as Record<string, unknown>)[field];
+  return typeof fieldValue === 'string' && fieldValue.trim() ? fieldValue.trim() : null;
+}
+
 function getMachineDashboardPartHasIncompleteData(value: unknown) {
   return hasIncompleteMachineDashboardPartData(extractPartCostData(value));
 }
@@ -345,8 +352,8 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
             qty: job.qty,
             dueDate: job.dueDate,
             partId: extractReferencedId(job.part),
-            partNumber: job.partNumber,
-            partDescription: job.partDescription,
+            partNumber: extractPartText(job.part, 'part') ?? job.partNumber,
+            partDescription: extractPartText(job.part, 'description') ?? job.partDescription,
             partImage: extractPartImage(job.part),
             partHasIncompleteData: getMachineDashboardPartHasIncompleteData(job.part),
           },

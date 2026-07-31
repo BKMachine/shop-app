@@ -475,11 +475,13 @@ function displayCustomerName(job: Job) {
 }
 
 function displayPartNumber(job: Job) {
-  return job.partNumber || (typeof job.part === 'string' ? '' : job.part?.part || '');
+  return (typeof job.part === 'string' ? '' : job.part?.part || '') || job.partNumber || '';
 }
 
 function displayPartDescription(job: Job) {
-  return job.partDescription || (typeof job.part === 'string' ? '' : job.part?.description || '');
+  return (
+    (typeof job.part === 'string' ? '' : job.part?.description || '') || job.partDescription || ''
+  );
 }
 
 function displayPartImageSrc(job: Job) {

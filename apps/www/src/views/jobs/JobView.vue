@@ -391,10 +391,13 @@ const pageSubtitle = computed(() => {
     job.value.customerName ||
     (typeof job.value.customer === 'string' ? '' : job.value.customer?.name || '');
   const partNumber =
-    job.value.partNumber || (typeof job.value.part === 'string' ? '' : job.value.part?.part || '');
+    (typeof job.value.part === 'string' ? '' : job.value.part?.part || '') ||
+    job.value.partNumber ||
+    '';
   const partDescription =
+    (typeof job.value.part === 'string' ? '' : job.value.part?.description || '') ||
     job.value.partDescription ||
-    (typeof job.value.part === 'string' ? '' : job.value.part?.description || '');
+    '';
 
   return [customerName, [partNumber, partDescription].filter(Boolean).join(' - ')]
     .filter(Boolean)
@@ -405,10 +408,13 @@ const partHeaderTitle = computed(() => {
   if (!job.value) return 'Part details';
 
   const partNumber =
-    job.value.partNumber || (typeof job.value.part === 'string' ? '' : job.value.part?.part || '');
+    (typeof job.value.part === 'string' ? '' : job.value.part?.part || '') ||
+    job.value.partNumber ||
+    '';
   const partDescription =
+    (typeof job.value.part === 'string' ? '' : job.value.part?.description || '') ||
     job.value.partDescription ||
-    (typeof job.value.part === 'string' ? '' : job.value.part?.description || '');
+    '';
 
   return [partNumber, partDescription].filter(Boolean).join(' - ') || 'Part details';
 });

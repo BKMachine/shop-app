@@ -104,14 +104,16 @@
                   <!-- <span class="machine-card__content-label">Part / Description</span> -->
                   <span class="machine-card__content-value">
                     <RouterLink
-                      v-if="machine.partId && machine.partNumber"
+                      v-if="machine.partId && displayMachinePartNumber(machine)"
                       class="machine-card__part-link"
                       :to="{ name: 'viewPart', params: { id: machine.partId } }"
                     >
-                      {{ machine.partNumber }}
+                      {{ displayMachinePartNumber(machine) }}
                     </RouterLink>
-                    <span v-else>{{ machine.partNumber || '—' }}</span>
-                    <span v-if="machine.partDescription"> / {{ machine.partDescription }}</span>
+                    <span v-else>{{ displayMachinePartNumber(machine) || '—' }}</span>
+                    <span v-if="displayMachinePartDescription(machine)">
+                      / {{ displayMachinePartDescription(machine) }}
+                    </span>
                   </span>
                 </div>
               </article>
@@ -232,6 +234,14 @@ function machineCardDueDateClass(value: string | Date | null | undefined) {
   if (color === 'success') return 'machine-card--due-success';
   if (color === 'purple-lighten-2') return 'machine-card--due-future';
   return 'machine-card--due-default';
+}
+
+function displayMachinePartNumber(machine: MachineJobDashboardRow) {
+  return machine.partNumber?.trim() || '';
+}
+
+function displayMachinePartDescription(machine: MachineJobDashboardRow) {
+  return machine.partDescription?.trim() || '';
 }
 
 async function fetchMachineDashboard() {

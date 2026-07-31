@@ -247,7 +247,8 @@ const status = computed(() => {
 
 <style scoped>
 .machine {
-  width: 300px;
+  min-width: 280px;
+  max-width: 400px;
   height: 78px;
   color: #ffffff;
   padding: 5px;

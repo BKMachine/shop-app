@@ -76,12 +76,15 @@ function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
   const customer = typeof job.customer === 'string' ? null : job.customer;
   const jobPart = typeof job.part === 'string' ? null : job.part;
   const resolvedPart = part ?? jobPart;
+  const resolvedPartNumber = resolvedPart?.part?.trim() || job.partNumber || '';
+  const resolvedPartDescription = resolvedPart?.description?.trim() || job.partDescription || '';
+  const resolvedPartRevision = resolvedPart?.revision?.trim() || job.partRevision || '';
 
   const jobDetails: PrintJobTravelerRow[] = [
     { label: 'Customer', value: job.customerName || customer?.name || '' },
-    { label: 'Part', value: job.partNumber || (resolvedPart?.part ?? '') },
-    { label: 'Description', value: job.partDescription || (resolvedPart?.description ?? '') },
-    { label: 'Revision', value: job.partRevision || (resolvedPart?.revision ?? '') },
+    { label: 'Part', value: resolvedPartNumber },
+    { label: 'Description', value: resolvedPartDescription },
+    { label: 'Revision', value: resolvedPartRevision },
     { label: 'Qty', value: String(Math.max(1, Number(job.qty) || 1)) },
     { label: 'Priority', value: priorityLabel(job.priority) },
     { label: 'Due', value: formatTravelerDate(job.dueDate) },
