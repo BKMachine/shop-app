@@ -114,19 +114,29 @@
 
                 <div class="machine-card__content">
                   <!-- <span class="machine-card__content-label">Part / Description</span> -->
-                  <span class="machine-card__content-value">
-                    <RouterLink
-                      v-if="machine.partId && displayMachinePartNumber(machine)"
-                      class="machine-card__part-link"
-                      :to="{ name: 'viewPart', params: { id: machine.partId } }"
-                    >
-                      {{ displayMachinePartNumber(machine) }}
-                    </RouterLink>
-                    <span v-else>{{ displayMachinePartNumber(machine) || '—' }}</span>
-                    <span v-if="displayMachinePartDescription(machine)">
-                      / {{ displayMachinePartDescription(machine) }}
-                    </span>
-                  </span>
+                  <v-tooltip
+                    :disabled="!displayMachinePartText(machine)"
+                    location="top"
+                    open-delay="1500"
+                  >
+                    <template #activator="{ props }">
+                      <span v-bind="props" class="machine-card__content-value">
+                        <RouterLink
+                          v-if="machine.partId && displayMachinePartNumber(machine)"
+                          class="machine-card__part-link"
+                          :to="{ name: 'viewPart', params: { id: machine.partId } }"
+                        >
+                          {{ displayMachinePartNumber(machine) }}
+                        </RouterLink>
+                        <span v-else>{{ displayMachinePartNumber(machine) || '—' }}</span>
+                        <span v-if="displayMachinePartDescription(machine)">
+                          / {{ displayMachinePartDescription(machine) }}
+                        </span>
+                      </span>
+                    </template>
+
+                    <span style="white-space: nowrap">{{ displayMachinePartText(machine) }}</span>
+                  </v-tooltip>
                 </div>
               </article>
             </div>
@@ -282,6 +292,14 @@ function displayMachinePartNumber(machine: MachineJobDashboardRow) {
 
 function displayMachinePartDescription(machine: MachineJobDashboardRow) {
   return machine.partDescription?.trim() || '';
+}
+
+function displayMachinePartText(machine: MachineJobDashboardRow) {
+  const partNumber = displayMachinePartNumber(machine);
+  const partDescription = displayMachinePartDescription(machine);
+
+  if (partNumber && partDescription) return `${partNumber} / ${partDescription}`;
+  return partNumber || partDescription;
 }
 
 async function fetchMachineDashboard() {
