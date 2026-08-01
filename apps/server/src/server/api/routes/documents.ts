@@ -147,11 +147,7 @@ router.delete(
 
     try {
       const document = await DocumentService.findById(documentId);
-      if (
-        !document ||
-        document.entityType !== 'part' ||
-        document.entityId?.toString() !== entityId
-      ) {
+      if (document?.entityType !== 'part' || document.entityId?.toString() !== entityId) {
         return next(new HttpError(404, 'Document not found'));
       }
 

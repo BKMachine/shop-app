@@ -17,10 +17,7 @@ type PartRecord = Pick<Part, '_id' | 'customer' | 'part' | 'description' | 'revi
     >
   >;
 type CustomerRecord = Customer;
-type MachineRecord = Pick<
-  MachineData,
-  '_id' | 'name' | 'displayName' | 'type' | 'location'
->;
+type MachineRecord = Pick<MachineData, '_id' | 'name' | 'displayName' | 'type' | 'location'>;
 
 const jobStore = new Map<string, JobRecord>();
 const partStore = new Map<string, PartRecord>();

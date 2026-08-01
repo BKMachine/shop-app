@@ -290,7 +290,7 @@ function toLineLayout(lineItems: ItemRect[]): LineLayout {
 
   for (let index = 0; index < lineItems.length; index++) {
     const item = lineItems[index];
-    if (!item || !item.text) continue;
+    if (!item?.text) continue;
 
     const previous = lineItems[index - 1];
     if (previous && shouldInsertSpace(previous, item) && text.length > 0) {

@@ -31,15 +31,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import {
   decodeIsoMaterialValue,
   encodeIsoMaterialValue,
-  isoMaterialGroups,
-  isoMaterialStateLabels,
   type IsoMaterialCode,
   type IsoMaterialState,
+  isoMaterialGroups,
+  isoMaterialStateLabels,
 } from '@repo/utilities/materials';
+import { computed } from 'vue';
 import IsoMaterialBadge from '@/components/materials/IsoMaterialBadge.vue';
 
 const props = withDefaults(
