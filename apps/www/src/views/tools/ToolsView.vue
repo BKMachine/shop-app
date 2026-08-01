@@ -21,6 +21,7 @@
       :cutting-dia="cuttingDia"
       :has-more="toolStore.hasMore"
       :headers="currentHeaders"
+      :iso-material="isoMaterial"
       :items="toolStore.tools"
       :loading-more="toolStore.loadingMore"
       :min-flute-length="minFluteLength"
@@ -34,6 +35,7 @@
       @load-more="toolStore.fetchNextPage"
       @update-cutting-dia="updateCuttingDia"
       @update-hidden-tool-types="updateHiddenToolTypes"
+      @update-iso-material="updateIsoMaterial"
       @update-min-flute-length="updateMinFluteLength"
       @update-search="updateSearch"
       @update-search-by="updateSearchBy"
@@ -43,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import { type IsoMaterialCode, isIsoMaterialCode } from '@repo/utilities/materials';
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ToolsTable from '@/components/tools/ToolsTable.vue';
@@ -60,6 +63,7 @@ useDocumentScrollLock();
 const tab = ref<ToolFilterCategory>('milling');
 const search = ref<string>('');
 const toolType = ref<string | null>(null);
+const isoMaterial = ref<IsoMaterialCode | null>(null);
 const hiddenToolTypes = ref<string[]>([]);
 const cuttingDia = ref<string>('');
 const minFluteLength = ref<string>('');
@@ -69,6 +73,7 @@ const FILTER_QUERY_KEYS = [
   'tab',
   'search',
   'toolType',
+  'isoMaterial',
   'cuttingDia',
   'minFluteLength',
   'sort',
@@ -82,6 +87,11 @@ function updateSearch(text: string) {
 
 function updateToolType(value: string | null) {
   toolType.value = value;
+  syncFiltersToQuery();
+}
+
+function updateIsoMaterial(value: IsoMaterialCode | null) {
+  isoMaterial.value = value;
   syncFiltersToQuery();
 }
 
@@ -141,6 +151,7 @@ function applyRouteFilters() {
 
   search.value = normalizeQueryValue(route.query.search) ?? '';
   toolType.value = normalizeQueryValue(route.query.toolType) ?? null;
+  isoMaterial.value = parseIsoMaterial(normalizeQueryValue(route.query.isoMaterial));
   cuttingDia.value = normalizeQueryValue(route.query.cuttingDia) ?? '';
   minFluteLength.value = normalizeQueryValue(route.query.minFluteLength) ?? '';
   sortBy.value = normalizeQueryValue(route.query.sort) ?? '';
@@ -153,6 +164,7 @@ async function fetchTools() {
     search: search.value || undefined,
     hiddenToolTypes:
       tab.value === 'all' || !hiddenToolTypes.value.length ? undefined : hiddenToolTypes.value,
+    isoMaterial: isoMaterial.value || undefined,
     toolType: toolType.value || undefined,
     cuttingDia: tab.value === 'milling' ? cuttingDia.value || undefined : undefined,
     minFluteLength: tab.value === 'milling' ? minFluteLength.value || undefined : undefined,
@@ -174,6 +186,7 @@ function syncFiltersToQuery() {
       tab: tab.value,
       ...(search.value ? { search: search.value } : {}),
       ...(toolType.value ? { toolType: toolType.value } : {}),
+      ...(isoMaterial.value ? { isoMaterial: isoMaterial.value } : {}),
       ...(cuttingDia.value && tab.value === 'milling' ? { cuttingDia: cuttingDia.value } : {}),
       ...(minFluteLength.value && tab.value === 'milling'
         ? { minFluteLength: minFluteLength.value }
@@ -186,9 +199,15 @@ function syncFiltersToQuery() {
 function clearAllFilters() {
   search.value = '';
   toolType.value = null;
+  isoMaterial.value = null;
   cuttingDia.value = '';
   minFluteLength.value = '';
   syncFiltersToQuery();
+}
+
+function parseIsoMaterial(value: string | undefined): IsoMaterialCode | null {
+  if (!value) return null;
+  return isIsoMaterialCode(value) ? value : null;
 }
 
 const currentHeaders = computed(() => {
@@ -233,6 +252,12 @@ const millingHeaders = [
     defaultVisible: false,
   },
   {
+    title: 'ISO',
+    key: 'isoMaterials',
+    width: 88,
+    align: 'center',
+  },
+  {
     title: 'Cost',
     key: 'cost',
   },
@@ -275,6 +300,12 @@ const turningHeaders = [
     defaultVisible: false,
   },
   {
+    title: 'ISO',
+    key: 'isoMaterials',
+    width: 88,
+    align: 'center',
+  },
+  {
     title: 'Cost',
     key: 'cost',
   },
@@ -311,6 +342,12 @@ const otherHeaders = [
     title: 'Tool Type',
     key: 'toolType',
     defaultVisible: false,
+  },
+  {
+    title: 'ISO',
+    key: 'isoMaterials',
+    width: 88,
+    align: 'center',
   },
   {
     title: 'Cost',

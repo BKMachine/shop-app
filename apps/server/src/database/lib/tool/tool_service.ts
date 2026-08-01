@@ -1,3 +1,4 @@
+import { isIsoMaterialCode, isoMaterialGroupIndexByCode } from '@repo/utilities/materials';
 import { emit } from '../../../server/sockets.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Audit from '../audit/audit_service.js';
@@ -43,6 +44,13 @@ function buildToolQuery(filters: ToolListFilters) {
   if (filters.search?.trim()) {
     const regex = new RegExp(escapeRegExp(filters.search.trim()), 'i');
     query.$or = [{ description: regex }, { item: regex }, { barcode: regex }, { coating: regex }];
+  }
+
+  if (isIsoMaterialCode(filters.isoMaterial)) {
+    const divisor = 3 ** isoMaterialGroupIndexByCode[filters.isoMaterial];
+    exprConditions.push({
+      $gt: [{ $mod: [{ $floor: { $divide: ['$isoMaterials', divisor] } }, 3] }, 0],
+    });
   }
 
   if (filters.cuttingDia?.trim()) {

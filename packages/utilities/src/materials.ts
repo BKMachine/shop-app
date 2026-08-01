@@ -92,3 +92,72 @@ export const materials: MaterialList = {
   Bronze: { density: 0.317928, category: 'other' },
   Copper: { density: 0.323706, category: 'other' },
 };
+
+export const isoMaterialGroups = [
+  { code: 'P', label: 'Steel', color: '#15a9df' },
+  { code: 'M', label: 'Stainless Steel', color: '#ffd51e' },
+  { code: 'K', label: 'Cast Iron', color: '#f54a36' },
+  { code: 'N', label: 'Nonferrous', color: '#11b56c' },
+  { code: 'S', label: 'Superalloys', color: '#f9843f' },
+  { code: 'H', label: 'Hardened Steel', color: '#b7b7b7' },
+] as const;
+
+export type IsoMaterialGroup = (typeof isoMaterialGroups)[number];
+export type IsoMaterialCode = IsoMaterialGroup['code'];
+export type IsoMaterialState = 0 | 1 | 2;
+export type IsoMaterialStateMap = Record<IsoMaterialCode, IsoMaterialState>;
+export const isoMaterialGroupIndexByCode = Object.fromEntries(
+  isoMaterialGroups.map((group, index) => [group.code, index]),
+) as Record<IsoMaterialCode, number>;
+
+export function isIsoMaterialCode(value: string | null | undefined): value is IsoMaterialCode {
+  return isoMaterialGroups.some((group) => group.code === value);
+}
+
+export const isoMaterialStateLabels: Record<IsoMaterialState, string> = {
+  0: 'Off',
+  1: 'Acceptable',
+  2: 'Recommended',
+};
+
+export const MAX_ISO_MATERIAL_VALUE = 3 ** isoMaterialGroups.length - 1;
+
+function normalizeIsoMaterialState(value: number | null | undefined): IsoMaterialState {
+  if (value === 2) return 2;
+  if (value === 1) return 1;
+  return 0;
+}
+
+export function normalizeIsoMaterialValue(value: number | null | undefined): number {
+  if (!Number.isFinite(value)) return 0;
+  const normalizedValue = value as number;
+  return Math.min(MAX_ISO_MATERIAL_VALUE, Math.max(0, Math.trunc(normalizedValue)));
+}
+
+export function decodeIsoMaterialValue(value: number | null | undefined): IsoMaterialStateMap {
+  let remainder = normalizeIsoMaterialValue(value);
+  const states = {} as IsoMaterialStateMap;
+
+  for (const group of isoMaterialGroups) {
+    states[group.code] = normalizeIsoMaterialState(remainder % 3);
+    remainder = Math.floor(remainder / 3);
+  }
+
+  return states;
+}
+
+export function encodeIsoMaterialValue(
+  states: Partial<Record<IsoMaterialCode, IsoMaterialState | number>>,
+): number {
+  return isoMaterialGroups.reduce((value, group, index) => {
+    const state = normalizeIsoMaterialState(states[group.code]);
+    return value + state * 3 ** index;
+  }, 0);
+}
+
+export function getIsoMaterialState(
+  value: number | null | undefined,
+  code: IsoMaterialCode,
+): IsoMaterialState {
+  return decodeIsoMaterialValue(value)[code];
+}

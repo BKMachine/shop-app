@@ -111,7 +111,7 @@
               </v-col>
               <v-col cols="7">
                 <v-row>
-                  <v-col cols="6">
+                  <v-col cols="4">
                     <v-autocomplete
                       v-model="selectedToolType"
                       clearable
@@ -119,6 +119,9 @@
                       label="Tool Type"
                       variant="outlined"
                     />
+                  </v-col>
+                  <v-col cols="2">
+                    <IsoMaterialFilterSelect v-model="selectedIsoMaterial" label="ISO" />
                   </v-col>
                   <v-col cols="3">
                     <v-text-field
@@ -175,6 +178,9 @@
                   variant="outlined"
                 />
               </v-col>
+              <v-col cols="6">
+                <IsoMaterialFilterSelect v-model="selectedIsoMaterial" label="ISO Material" />
+              </v-col>
             </v-row>
           </div>
           <div v-else>
@@ -201,7 +207,7 @@
                   </template>
                 </v-text-field>
               </v-col>
-              <v-col cols="6">
+              <v-col cols="3">
                 <v-autocomplete
                   v-model="selectedToolType"
                   clearable
@@ -209,6 +215,9 @@
                   label="Tool Type"
                   variant="outlined"
                 />
+              </v-col>
+              <v-col cols="3">
+                <IsoMaterialFilterSelect v-model="selectedIsoMaterial" label="ISO Material" />
               </v-col>
             </v-row>
           </div>
@@ -235,6 +244,11 @@
             <span class="stock">${{ formatCost(item.cost) }}</span>
           </template>
           <template #['item.location']="{ item }"> {{ location(item) }} </template>
+          <template #['item.isoMaterials']="{ item }">
+            <div class="iso-material-cell">
+              <IsoMaterialBadgesGrid :value="item.isoMaterials" />
+            </div>
+          </template>
           <template #['item.stock']="{ item }">
             <span class="stock">{{ item.stock }}</span>
           </template>
@@ -245,9 +259,12 @@
 </template>
 
 <script setup lang="ts">
+import { type IsoMaterialCode } from '@repo/utilities/materials';
 import { computed, nextTick, ref, watch } from 'vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
+import IsoMaterialBadgesGrid from '@/components/materials/IsoMaterialBadgesGrid.vue';
+import IsoMaterialFilterSelect from '@/components/materials/IsoMaterialFilterSelect.vue';
 import { formatCost, isNumber } from '@/plugins/utils';
 import router from '@/router';
 import { useToolCategoryStore } from '@/stores/tool_category_store';
@@ -263,6 +280,7 @@ const props = defineProps<{
   category: ToolFilterCategory;
   search: string;
   toolType: string | null;
+  isoMaterial: IsoMaterialCode | null;
   cuttingDia: string;
   minFluteLength: string;
   sortBy: string;
@@ -273,6 +291,7 @@ const emits = defineEmits([
   'updateSearch',
   'updateToolType',
   'updateHiddenToolTypes',
+  'updateIsoMaterial',
   'updateCuttingDia',
   'updateMinFluteLength',
   'updateSearchBy',
@@ -286,6 +305,7 @@ const searchText = ref<string>(props.search);
 const cuttingDiaFilter = ref<string>(props.cuttingDia);
 const minFluteLengthFilter = ref<string>(props.minFluteLength);
 const selectedToolType = ref<string | null>(props.toolType);
+const selectedIsoMaterial = ref<IsoMaterialCode | null>(props.isoMaterial);
 const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const visibleHeaderKeys = ref<string[]>([]);
 const hiddenToolTypeKeys = ref<string[]>([]);
@@ -423,6 +443,10 @@ watch(selectedToolType, () => {
   emits('updateToolType', selectedToolType.value);
 });
 
+watch(selectedIsoMaterial, () => {
+  emits('updateIsoMaterial', selectedIsoMaterial.value);
+});
+
 watch(hiddenToolTypeKeys, () => {
   emits('updateHiddenToolTypes', props.category === 'all' ? [] : [...hiddenToolTypeKeys.value]);
   persistHiddenToolTypes();
@@ -469,6 +493,13 @@ watch(
   () => props.toolType,
   (value) => {
     if (selectedToolType.value !== value) selectedToolType.value = value;
+  },
+);
+
+watch(
+  () => props.isoMaterial,
+  (value) => {
+    if (selectedIsoMaterial.value !== value) selectedIsoMaterial.value = value;
   },
 );
 
@@ -612,6 +643,12 @@ function toggleHiddenToolType(toolTypeOption: string, enabled: boolean) {
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
+}
+
+.iso-material-cell {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 </style>
 

@@ -35,6 +35,7 @@ const schema = new Schema<ToolDocumentFields>({
   cuttingDia: Number,
   fluteLength: Number,
   toolType: String,
+  isoMaterials: { type: Number, default: 0 },
 });
 
 export default model<ToolDocumentFields>('tools', schema);

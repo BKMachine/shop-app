@@ -367,6 +367,19 @@
               />
             </v-col>
           </v-row>
+          <v-row>
+            <v-col cols="12">
+              <IsoMaterialSelector v-model="tool.isoMaterials" />
+              <div class="d-flex align-center justify-space-between flex-wrap ga-3 pt-2">
+                <div class="text-caption text-medium-emphasis">
+                  Click each ISO group to cycle through Off, Acceptable, and Recommended.
+                </div>
+                <div class="text-caption text-medium-emphasis">
+                  Debug value: {{ isoMaterialDebugValue }} | States: {{ isoMaterialStateDigits }}
+                </div>
+              </div>
+            </v-col>
+          </v-row>
         </v-window-item>
       </v-window>
     </v-form>
@@ -407,6 +420,11 @@
 </template>
 
 <script setup lang="ts">
+import {
+  decodeIsoMaterialValue,
+  isoMaterialGroups,
+  normalizeIsoMaterialValue,
+} from '@repo/utilities/materials';
 import isEqual from 'lodash/isEqual';
 import { DateTime } from 'luxon';
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -416,6 +434,7 @@ import CurrencyInput from '@/components/CurrencyInput.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
+import IsoMaterialSelector from '@/components/materials/IsoMaterialSelector.vue';
 import SupplierSelect from '@/components/SupplierSelect.vue';
 import ToolStockGraph from '@/components/ToolStockGraph.vue';
 import ToolLocationSelect from '@/components/tools/ToolLocationSelect.vue';
@@ -444,6 +463,7 @@ const defaultToolValues: Partial<Tool> = {
   onOrder: false,
   flutes: 0,
   cost: 0,
+  isoMaterials: 0,
 };
 
 const tool = ref<Tool>({ ...defaultToolValues } as Tool);
@@ -1195,6 +1215,18 @@ const showMillingOpts = computed<boolean>(() => {
     return tool.value.category === 'milling';
   }
   return category.value === 'milling';
+});
+
+const decodedIsoMaterials = computed(() => {
+  return decodeIsoMaterialValue(tool.value.isoMaterials);
+});
+
+const isoMaterialDebugValue = computed(() => {
+  return normalizeIsoMaterialValue(tool.value.isoMaterials);
+});
+
+const isoMaterialStateDigits = computed(() => {
+  return isoMaterialGroups.map(({ code }) => decodedIsoMaterials.value[code]).join('');
 });
 </script>
 

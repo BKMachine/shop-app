@@ -24,6 +24,7 @@ declare global {
     position?: string;
     cuttingDia?: number;
     fluteLength?: number;
+    isoMaterials?: number;
   }
 
   interface Tool extends ToolFields {
@@ -68,6 +69,7 @@ declare global {
     category?: ToolFilterCategory;
     search?: string;
     toolType?: string;
+    isoMaterial?: string;
     hiddenToolTypes?: string[];
     location?: string;
     position?: string;

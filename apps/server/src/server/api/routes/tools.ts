@@ -1,3 +1,4 @@
+import { isIsoMaterialCode, MAX_ISO_MATERIAL_VALUE } from '@repo/utilities/materials';
 import { Router } from 'express';
 import * as z from 'zod';
 import { isValidId } from '../../../database/index.js';
@@ -35,6 +36,7 @@ const ToolFieldsSchema = z.strictObject({
   position: z.string().optional(),
   cuttingDia: z.number().optional(),
   fluteLength: z.number().optional(),
+  isoMaterials: z.number().int().min(0).max(MAX_ISO_MATERIAL_VALUE).optional(),
 });
 
 const CreateToolRequest = z.strictObject({
@@ -64,10 +66,12 @@ function normalizeQueryValues(value: unknown): string[] | undefined {
 // Pagination, filtering, and sorting for the tools table. All query parameters are optional.
 router.get('/tools', async (req, res, next) => {
   try {
+    const isoMaterial = normalizeQueryValue(req.query.isoMaterial);
     const data = await Tools.list({
       category: normalizeQueryValue(req.query.category) as ToolFilterCategory | undefined,
       search: normalizeQueryValue(req.query.search),
       hiddenToolTypes: normalizeQueryValues(req.query.hiddenToolTypes),
+      isoMaterial: isIsoMaterialCode(isoMaterial) ? isoMaterial : undefined,
       toolType: normalizeQueryValue(req.query.toolType),
       location: normalizeQueryValue(req.query.location),
       position: normalizeQueryValue(req.query.position),
