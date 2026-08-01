@@ -2,8 +2,15 @@ packages:
   - apps/*
   - packages/*
 
-ignoredBuildDependencies: 
-  - onnxruntime-node  
+allowBuilds:
+  esbuild: true
+  onnxruntime-node: false
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+
+ignoredBuildDependencies:
+  - onnxruntime-node
 
 onlyBuiltDependencies:
   - esbuild
