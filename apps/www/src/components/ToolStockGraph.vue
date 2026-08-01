@@ -88,7 +88,7 @@ const data = computed<{ stock: Data[]; cost: Data[] }>(() => {
 
   const initCost: Data = { x: from.value.toMillis(), y: props.currentCost || 0 };
   const lastCost: Data = { x: to.value.toMillis(), y: props.currentCost || 0 };
-  if (!items.value || !items.value.length)
+  if (!items.value?.length)
     return {
       stock: [initStock, lastStock],
       cost: [initCost, lastCost],

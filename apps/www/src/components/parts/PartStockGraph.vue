@@ -80,7 +80,7 @@ const data = computed<Data[]>(() => {
   // If there are no audits just show a straight line at the current stock value
   const init: Data = { x: firstDate.toMillis(), y: props.currentStock || 0 };
   const last: Data = { x: to.value.toMillis(), y: props.currentStock || 0 };
-  if (!items.value || !items.value.length) return [init, last];
+  if (!items.value?.length) return [init, last];
 
   // Create a starting datum for when we started doing tool audits
   const startingDatum: Audit[] = [];
