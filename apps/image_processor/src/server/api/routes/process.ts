@@ -21,6 +21,10 @@ import HttpError from '../../middleware/httpError.js';
 
 const router: Router = Router();
 const imageOcrEnabled = process.env.IMAGE_OCR_ENABLED !== 'false';
+const DEFAULT_MAX_UPLOAD_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+const MAX_ACCEPTED_UPLOAD_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+const MAX_IMAGE_WIDTH = 1920;
+const MAX_IMAGE_HEIGHT = 1080;
 const supportedUploadMimeTypes = new Set([
   'image/jpeg',
   'image/jpg',
@@ -31,7 +35,7 @@ const supportedUploadMimeTypes = new Set([
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 15 * 1024 * 1024,
+    fileSize: MAX_ACCEPTED_UPLOAD_FILE_SIZE_BYTES,
     files: 1,
   },
   fileFilter: (_req, file, cb) => {
@@ -52,37 +56,99 @@ function getMimeTypeForSharpFormat(format: string | undefined): string | null {
   return null;
 }
 
+function shouldResizeUploadedImage(
+  fileSize: number,
+  width: number | undefined,
+  height: number | undefined,
+) {
+  return (
+    fileSize > DEFAULT_MAX_UPLOAD_FILE_SIZE_BYTES ||
+    (typeof width === 'number' && width > MAX_IMAGE_WIDTH) ||
+    (typeof height === 'number' && height > MAX_IMAGE_HEIGHT)
+  );
+}
+
+async function normalizeUploadedImage(
+  buffer: Buffer,
+  format: string | undefined,
+  filename: string,
+  mimeType: string,
+  width: number | undefined,
+  height: number | undefined,
+  fileSize: number,
+): Promise<InputImage> {
+  const parsedName = path.parse(filename);
+
+  if (format === 'gif' || mimeType === 'image/gif' || path.extname(filename).toLowerCase() === '.gif') {
+    let transformer = sharp(buffer, { animated: true, failOn: 'none', pages: 1 });
+
+    if (shouldResizeUploadedImage(fileSize, width, height)) {
+      transformer = transformer.resize({
+        width: MAX_IMAGE_WIDTH,
+        height: MAX_IMAGE_HEIGHT,
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
+    }
+
+    return {
+      buffer: await transformer.png().toBuffer(),
+      filename: `${parsedName.name || 'image'}.png`,
+      mimeType: 'image/png',
+    };
+  }
+
+  if (!shouldResizeUploadedImage(fileSize, width, height)) {
+    return {
+      buffer,
+      filename,
+      mimeType,
+    };
+  }
+
+  const outputFormat = format === 'jpeg' || format === 'png' || format === 'webp' ? format : 'png';
+  let transformer = sharp(buffer, { failOn: 'none' }).rotate().resize({
+    width: MAX_IMAGE_WIDTH,
+    height: MAX_IMAGE_HEIGHT,
+    fit: 'inside',
+    withoutEnlargement: true,
+  });
+
+  if (outputFormat === 'jpeg') {
+    transformer = transformer.jpeg({ quality: 85 });
+  } else if (outputFormat === 'png') {
+    transformer = transformer.png();
+  } else if (outputFormat === 'webp') {
+    transformer = transformer.webp({ quality: 85 });
+  }
+
+  const normalizedBuffer = await transformer.toBuffer();
+  const normalizedMimeType = getMimeTypeForSharpFormat(outputFormat) || mimeType;
+  const normalizedExtension = outputFormat === 'jpeg' ? '.jpg' : `.${outputFormat}`;
+
+  return {
+    buffer: normalizedBuffer,
+    filename: `${parsedName.name || 'image'}${normalizedExtension}`,
+    mimeType: normalizedMimeType,
+  };
+}
+
 async function getUploadedImage(file: Express.Multer.File | undefined): Promise<InputImage> {
   if (!file) {
     throw new HttpError(400, 'image file is required');
   }
 
-  const normalizedMimeType = file.mimetype.trim().toLowerCase().split(';')[0] ?? '';
-  const filenameExtension = path.extname(file.originalname).toLowerCase();
-
   try {
     const metadata = await sharp(file.buffer, { animated: true, failOn: 'none' }).metadata();
-    if (
-      metadata.format === 'gif' ||
-      normalizedMimeType === 'image/gif' ||
-      filenameExtension === '.gif'
-    ) {
-      const parsedName = path.parse(file.originalname);
-
-      return {
-        buffer: await sharp(file.buffer, { animated: true, failOn: 'none', pages: 1 })
-          .png()
-          .toBuffer(),
-        filename: `${parsedName.name || 'image'}.png`,
-        mimeType: 'image/png',
-      };
-    }
-
-    return {
-      buffer: file.buffer,
-      filename: file.originalname,
-      mimeType: getMimeTypeForSharpFormat(metadata.format) || file.mimetype,
-    };
+    return normalizeUploadedImage(
+      file.buffer,
+      metadata.format,
+      file.originalname,
+      getMimeTypeForSharpFormat(metadata.format) || file.mimetype,
+      metadata.width,
+      metadata.height,
+      file.size,
+    );
   } catch {
     return {
       buffer: file.buffer,
