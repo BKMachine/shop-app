@@ -72,6 +72,8 @@ COPY packages packages
 FROM folder-helper-installer AS folder-helper-builder
 RUN apt-get update && apt-get install -y --no-install-recommends nsis && rm -rf /var/lib/apt/lists/*
 COPY apps/folder_helper apps/folder_helper
+RUN pnpm run format --filter=folder_helper  
+RUN pnpm run check --filter=folder_helper 
 RUN pnpm --filter folder_helper run build:installer
 RUN pnpm --filter folder_helper run stage:server
 
