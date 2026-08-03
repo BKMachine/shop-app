@@ -79,7 +79,11 @@ async function normalizeUploadedImage(
 ): Promise<InputImage> {
   const parsedName = path.parse(filename);
 
-  if (format === 'gif' || mimeType === 'image/gif' || path.extname(filename).toLowerCase() === '.gif') {
+  if (
+    format === 'gif' ||
+    mimeType === 'image/gif' ||
+    path.extname(filename).toLowerCase() === '.gif'
+  ) {
     let transformer = sharp(buffer, { animated: true, failOn: 'none', pages: 1 });
 
     if (shouldResizeUploadedImage(fileSize, width, height)) {
