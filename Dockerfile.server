@@ -54,6 +54,7 @@ COPY packages packages
 FROM www-installer AS www-builder
 COPY apps/www apps/www
 RUN pnpm run format --filter=www
+RUN pnpm run check --filter=www 
 RUN pnpm run ci --filter=www 
 RUN pnpm run build --filter=www
 
