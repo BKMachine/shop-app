@@ -16,6 +16,7 @@ const schema = new Schema<ToolDocumentFields>({
   supplier: { type: Types.ObjectId, ref: 'suppliers' },
   item: { type: String, unique: true },
   barcode: { type: String, unique: true },
+  barcodes: { type: [String], default: [] },
   stock: { type: Number, default: 0 },
   img: String,
   category: { type: String, required: true },

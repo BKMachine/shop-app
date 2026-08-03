@@ -17,6 +17,7 @@ const ToolFieldsSchema = z.strictObject({
   supplier: mongoObjectId.optional(),
   item: z.string().optional(),
   barcode: z.string().optional(),
+  barcodes: z.array(z.string().trim()).optional(),
   stock: z.number(),
   img: z.string().optional(),
   category: z.enum(['milling', 'turning', 'swiss', 'other']),
@@ -61,6 +62,29 @@ function normalizeQueryValues(value: unknown): string[] | undefined {
     .filter((entry): entry is string => Boolean(entry));
 
   return normalized.length ? normalized : undefined;
+}
+
+function normalizeToolScanCodes(tool: Pick<ToolFields, 'item' | 'barcode' | 'barcodes'>) {
+  return [tool.item, tool.barcode, ...(tool.barcodes ?? [])]
+    .map((scanCode) => normalizeQueryValue(scanCode))
+    .filter((scanCode): scanCode is string => Boolean(scanCode));
+}
+
+async function assertUniqueToolScanCodes(
+  tool: Pick<ToolFields, 'item' | 'barcode' | 'barcodes'>,
+  currentToolId?: string,
+) {
+  const scanCodes = normalizeToolScanCodes(tool);
+  if (new Set(scanCodes).size !== scanCodes.length) {
+    throw new HttpError(400, 'Tool scan codes must be unique.');
+  }
+
+  for (const scanCode of scanCodes) {
+    const existingTool = await Tools.findByScanCode(scanCode);
+    if (!existingTool) continue;
+    if (currentToolId && String(existingTool._id) === currentToolId) continue;
+    throw new HttpError(400, `Scan code already exists: ${scanCode}`);
+  }
 }
 
 // Pagination, filtering, and sorting for the tools table. All query parameters are optional.
@@ -158,6 +182,7 @@ router.post('/tools', requireKnownDevice, async (req, res, next) => {
   }
 
   try {
+    await assertUniqueToolScanCodes(data.tool);
     const doc = await Tools.create(data.tool, req.deviceId);
     res.status(200).json(doc);
   } catch (e) {
@@ -175,6 +200,7 @@ router.put('/tools', requireKnownDevice, async (req, res, next) => {
   }
 
   try {
+    await assertUniqueToolScanCodes(data.tool, data.tool._id);
     const response = await Tools.update(data.tool, req.deviceId);
     res.status(200).json(response);
   } catch (e) {

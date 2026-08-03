@@ -43,7 +43,13 @@ function buildToolQuery(filters: ToolListFilters) {
 
   if (filters.search?.trim()) {
     const regex = new RegExp(escapeRegExp(filters.search.trim()), 'i');
-    query.$or = [{ description: regex }, { item: regex }, { barcode: regex }, { coating: regex }];
+    query.$or = [
+      { description: regex },
+      { item: regex },
+      { barcode: regex },
+      { barcodes: regex },
+      { coating: regex },
+    ];
   }
 
   if (isIsoMaterialCode(filters.isoMaterial)) {
@@ -174,7 +180,7 @@ async function findById(id: string): Promise<ToolPopulatedDoc | null> {
 
 async function findByScanCode(scanCode: string): Promise<ToolPopulatedDoc | null> {
   return Tool.findOne({
-    $or: [{ item: scanCode }, { barcode: scanCode }],
+    $or: [{ item: scanCode }, { barcode: scanCode }, { barcodes: scanCode }],
   })
     .populate<{ vendor?: Vendor | null }>('vendor')
     .populate<{ supplier?: Supplier | null }>('supplier');

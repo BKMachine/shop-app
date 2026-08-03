@@ -5,6 +5,7 @@ declare global {
     description: string;
     item?: string;
     barcode?: string;
+    barcodes?: string[];
     stock: number;
     img?: string;
     category: ToolCategory;

@@ -111,21 +111,27 @@
               </v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-text-field
-                v-model="tool.barcode"
+              <v-combobox
+                v-model="barcodeEntries"
+                chips
                 class="ml-2"
                 :error-messages="barcodeUniqueError ? [barcodeUniqueError] : []"
-                label="Barcode"
+                label="Barcodes"
                 :loading="checkingBarcodeUnique"
-                :rules="[rules.barcode, rules.uniqueBarcode]"
+                multiple
+                :rules="[rules.barcodeEntries, rules.uniqueBarcodes]"
                 @blur="checkBarcodeUnique"
               >
                 <template #append-inner>
                   <v-icon icon="mdi-barcode" />
                   <v-icon class="ml-2" icon="mdi-printer-outline" @click="requestPrintItem" />
-                  <v-icon class="ml-2" icon="mdi-content-copy" @click="copyItem(tool.barcode)" />
+                  <v-icon
+                    class="ml-2"
+                    icon="mdi-content-copy"
+                    @click="copyItem(barcodeEntries.join('\n'))"
+                  />
                 </template>
-              </v-text-field>
+              </v-combobox>
             </v-col>
           </v-row>
           <v-row no-gutters>
@@ -565,13 +571,6 @@ watch(
   },
 );
 
-watch(
-  () => tool.value.barcode,
-  () => {
-    barcodeUniqueError.value = '';
-  },
-);
-
 onBeforeUnmount(() => {
   // Store the tool we were viewing to slightly highlight the row in the tool list
   toolStore.setLastId(tool.value._id);
@@ -749,6 +748,10 @@ function normalizeComparableEntity(value: { _id: string } | string | undefined |
   return typeof value === 'string' ? value : value._id;
 }
 
+function normalizeComparableScanCodes(values: Array<string | undefined | null>) {
+  return [...new Set(values.map((value) => normalizeScanCode(value)).filter(Boolean))];
+}
+
 function formatComparableEntityName(
   value: { _id: string; name?: string } | string | undefined | null,
   entities: Array<{ _id: string; name: string }>,
@@ -765,7 +768,10 @@ function toComparableTool(toolValue: Tool) {
     ...toolValue,
     description: normalizeComparableString(toolValue.description),
     item: normalizeComparableString(toolValue.item),
-    barcode: normalizeComparableString(toolValue.barcode),
+    barcodeEntries: normalizeComparableScanCodes([
+      toolValue.barcode,
+      ...(toolValue.barcodes ?? []),
+    ]),
     coating: normalizeComparableString(toolValue.coating),
     toolType: normalizeComparableString(toolValue.toolType),
     productLink: normalizeComparableString(toolValue.productLink),
@@ -785,12 +791,23 @@ function toComparableTool(toolValue: Tool) {
 const comparableTool = computed(() => toComparableTool(tool.value));
 const comparableOriginalTool = computed(() => toComparableTool(toolOriginal.value));
 
+const barcodeEntries = computed<string[]>({
+  get() {
+    return normalizeComparableScanCodes([tool.value.barcode, ...(tool.value.barcodes ?? [])]);
+  },
+  set(values) {
+    const normalizedValues = normalizeComparableScanCodes(values);
+    tool.value.barcode = normalizedValues[0] || '';
+    tool.value.barcodes = normalizedValues.slice(1);
+  },
+});
+
 const REQUIRED_MESSAGE = 'Required';
 
 const comparableFieldLabels = {
   description: 'Description',
   item: 'Product Number',
-  barcode: 'Barcode',
+  barcodeEntries: 'Barcodes',
   vendor: 'Vendor',
   coating: 'Coating',
   productLink: 'Product Page Link',
@@ -818,6 +835,9 @@ function formatChangedFieldValue(
   rawValue: unknown,
 ) {
   if (value == null || value === '') return 'Empty';
+  if (Array.isArray(value)) {
+    return value.length ? value.join(', ') : 'Empty';
+  }
   if (key === 'cost') {
     return `$${formatCost(typeof value === 'number' ? value : Number(value))}`;
   }
@@ -842,11 +862,14 @@ function getToolFieldsBlockingSave() {
 
   if (!tool.value.description?.trim()) blocked.set('description', REQUIRED_MESSAGE);
   if (!tool.value.item?.trim()) blocked.set('item', REQUIRED_MESSAGE);
-  if (tool.value.item && tool.value.barcode === tool.value.item) {
-    blocked.set('barcode', 'Not needed if the same as Product Number');
+  if (
+    tool.value.item &&
+    barcodeEntries.value.some((scanCode) => scanCode === normalizeScanCode(tool.value.item))
+  ) {
+    blocked.set('barcodeEntries', 'Not needed if the same as Product Number');
   }
   if (itemUniqueError.value) blocked.set('item', itemUniqueError.value);
-  if (barcodeUniqueError.value) blocked.set('barcode', barcodeUniqueError.value);
+  if (barcodeUniqueError.value) blocked.set('barcodeEntries', barcodeUniqueError.value);
 
   return blocked;
 }
@@ -861,14 +884,12 @@ function getChangedToolFields() {
     })
     .map(([key, label]) => {
       const fieldKey = key as keyof ReturnType<typeof toComparableTool>;
+      const currentValue =
+        fieldKey === 'barcodeEntries' ? barcodeEntries.value : tool.value[fieldKey as keyof Tool];
       return {
         label,
         blockReason: blockedFields.get(fieldKey),
-        value: formatChangedFieldValue(
-          fieldKey,
-          comparableTool.value[fieldKey],
-          tool.value[fieldKey],
-        ),
+        value: formatChangedFieldValue(fieldKey, comparableTool.value[fieldKey], currentValue),
       };
     });
 }
@@ -941,21 +962,33 @@ const rules = {
     }
     return !!val || REQUIRED_MESSAGE;
   },
-  barcode: (val) => {
+  barcodeEntries: (val) => {
     if (!tool.value.item) return true;
-    return val !== tool.value.item || 'Not needed if the same as Product Number';
+    const item = normalizeScanCode(tool.value.item);
+    const scanCodes = Array.isArray(val) ? val : [];
+    return (
+      !scanCodes.some((scanCode) => normalizeScanCode(scanCode) === item) ||
+      'Not needed if the same as Product Number'
+    );
   },
   uniqueItem: (val) => {
     if (!tool.value.item) return true;
     return !itemUniqueError.value || itemUniqueError.value;
   },
-  uniqueBarcode: (val) => {
-    if (!tool.value.barcode) return true;
+  uniqueBarcodes: (val) => {
+    if (!Array.isArray(val) || !val.length) return true;
     return !barcodeUniqueError.value || barcodeUniqueError.value;
   },
 } satisfies Rules;
 
-function normalizeScanCode(value: string | undefined) {
+watch(
+  () => barcodeEntries.value,
+  () => {
+    barcodeUniqueError.value = '';
+  },
+);
+
+function normalizeScanCode(value: string | undefined | null) {
   return value?.trim() || '';
 }
 
@@ -1054,23 +1087,26 @@ async function checkItemUnique() {
 }
 
 async function checkBarcodeUnique() {
-  const normalizedBarcode = normalizeScanCode(tool.value.barcode);
-  if (!normalizedBarcode) {
+  const scanCodes = barcodeEntries.value;
+  if (!scanCodes.length) {
     barcodeUniqueError.value = '';
     return;
   }
 
-  if (normalizedBarcode === normalizeScanCode(tool.value.item)) {
-    barcodeUniqueError.value = '';
-    return;
-  }
+  for (const scanCode of scanCodes) {
+    if (scanCode === normalizeScanCode(tool.value.item)) {
+      barcodeUniqueError.value = '';
+      return;
+    }
 
-  await validateUniqueScanCode(
-    normalizedBarcode,
-    checkingBarcodeUnique,
-    barcodeUniqueError,
-    'Barcode already exists',
-  );
+    await validateUniqueScanCode(
+      scanCode,
+      checkingBarcodeUnique,
+      barcodeUniqueError,
+      'Barcode already exists',
+    );
+    if (barcodeUniqueError.value) return;
+  }
 }
 /* GENERAL TAB LOGIC */
 
@@ -1083,7 +1119,7 @@ const coatings = computed(() => {
 });
 
 function buildPrintItemBody() {
-  const identifier = tool.value.barcode || tool.value.item;
+  const identifier = barcodeEntries.value[0] || tool.value.item;
   const description = tool.value.description;
   const entity = typeof tool.value.vendor === 'string' ? '' : tool.value.vendor?.name || 'Unknown';
   const loc = tool.value.location;

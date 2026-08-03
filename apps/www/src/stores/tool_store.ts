@@ -122,9 +122,27 @@ export const useToolStore = defineStore('tools', () => {
     return typeof value === 'string' ? value : value._id;
   }
 
+  function normalizeScanCode(value: string | undefined | null) {
+    return value?.trim() || '';
+  }
+
+  function normalizeScanCodeList(values: Array<string | undefined | null>) {
+    return [...new Set(values.map((value) => normalizeScanCode(value)).filter(Boolean))];
+  }
+
+  function normalizeToolScanCodes(tool: Pick<Tool, 'barcode' | 'barcodes'>) {
+    const scanCodes = normalizeScanCodeList([tool.barcode, ...(tool.barcodes ?? [])]);
+    return {
+      barcode: scanCodes[0],
+      barcodes: scanCodes.slice(1),
+    };
+  }
+
   async function add(tool: Tool, tempImageId?: string) {
+    const scanCodes = normalizeToolScanCodes(tool);
     const payload: ToolCreate = {
       ...tool,
+      ...scanCodes,
       vendor: toEntityId(tool.vendor),
       supplier: toEntityId(tool.supplier) ?? UNKNOWN_SUPPLIER_ID,
     };
@@ -145,8 +163,10 @@ export const useToolStore = defineStore('tools', () => {
   }
 
   async function update(tool: Tool) {
+    const scanCodes = normalizeToolScanCodes(tool);
     const payload: ToolUpdate = {
       ...tool,
+      ...scanCodes,
       vendor: toEntityId(tool.vendor),
       supplier: toEntityId(tool.supplier) ?? UNKNOWN_SUPPLIER_ID,
     };
