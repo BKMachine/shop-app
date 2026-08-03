@@ -257,7 +257,6 @@
                         <v-list-item
                           :subtitle="resolveSubComponentItem(element)?.part.description"
                           :title="resolveSubComponentItem(element)?.part.part"
-                          :to="{ name: 'viewPart', params: { id: resolveSubComponentItem(element)?.part._id } }"
                         >
                           <template #prepend>
                             <div class="d-flex align-center ga-3">
@@ -280,7 +279,12 @@
                           </template>
                           <template #append>
                             <div class="d-flex align-center ga-2">
-                              <div class="sub-component-qty-field" @click.stop>
+                              <div
+                                class="sub-component-qty-field"
+                                @click.stop
+                                @pointerdown.stop
+                                @pointerup.stop
+                              >
                                 <v-text-field
                                   v-model.number="element.qty"
                                   density="compact"
@@ -291,6 +295,9 @@
                                   variant="outlined"
                                   @click.stop
                                   @keydown="onlyAllowNumeric($event)"
+                                  @mousedown.stop
+                                  @pointerdown.stop
+                                  @pointerup.stop
                                 />
                               </div>
                               <v-btn
@@ -300,7 +307,16 @@
                                 variant="text"
                                 @click.prevent.stop="removeSubComponent(String(element.partId))"
                               />
-                              <v-icon color="primary" icon="mdi-open-in-app" />
+                              <v-btn
+                                color="primary"
+                                icon="mdi-open-in-app"
+                                size="small"
+                                :to="{
+                                  name: 'viewPart',
+                                  params: { id: resolveSubComponentItem(element)?.part._id },
+                                }"
+                                variant="text"
+                              />
                             </div>
                           </template>
                         </v-list-item>
