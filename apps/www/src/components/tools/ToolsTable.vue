@@ -246,7 +246,7 @@
           <template #['item.location']="{ item }"> {{ location(item) }} </template>
           <template #['item.isoMaterials']="{ item }">
             <div class="iso-material-cell">
-              <IsoMaterialBadgesGrid :value="item.isoMaterials" />
+              <IsoMaterialBadgesGrid :columns="4" :value="item.isoMaterials" />
             </div>
           </template>
           <template #['item.stock']="{ item }">

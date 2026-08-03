@@ -1,5 +1,5 @@
 <template>
-  <div class="iso-material-grid" :title="tooltipText">
+  <div class="iso-material-grid" :style="gridStyle" :title="tooltipText">
     <IsoMaterialBadge
       v-for="group in activeGroups"
       :key="group.code"
@@ -17,6 +17,7 @@ import IsoMaterialBadge from '@/components/materials/IsoMaterialBadge.vue';
 
 const props = defineProps<{
   value?: number;
+  columns?: number;
 }>();
 
 const states = computed(() => decodeIsoMaterialValue(props.value));
@@ -34,12 +35,17 @@ const tooltipText = computed(() => {
     )
     .join(' | ');
 });
+
+const gridStyle = computed(() => {
+  const columns = Math.max(1, Math.floor(props.columns || 3));
+  return { '--iso-grid-columns': String(columns) };
+});
 </script>
 
 <style scoped>
 .iso-material-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, max-content));
+  grid-template-columns: repeat(var(--iso-grid-columns, 3), minmax(0, max-content));
   gap: 0.22rem;
   min-width: 4.3rem;
   justify-content: center;
