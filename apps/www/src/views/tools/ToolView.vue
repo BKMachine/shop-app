@@ -114,7 +114,8 @@
               <v-combobox
                 v-model="barcodeEntries"
                 chips
-                class="ml-2"
+                class="barcode-combobox ml-2"
+                closable-chips
                 :error-messages="barcodeUniqueError ? [barcodeUniqueError] : []"
                 label="Barcodes"
                 :loading="checkingBarcodeUnique"
@@ -610,8 +611,8 @@ async function persistTool() {
         tool.value = { ...savedTool };
         toastSuccess('Tool added successfully');
       })
-      .catch(() => {
-        toastError('Unable to add tool');
+      .catch((error: unknown) => {
+        toastError(getToolSaveErrorMessage(error, 'Unable to add tool'));
       });
   } else if (routeName === 'viewTool') {
     await toolStore
@@ -620,8 +621,8 @@ async function persistTool() {
         saved = true;
         toastSuccess('Tool updated successfully');
       })
-      .catch(() => {
-        toastError('Unable to update tool');
+      .catch((error: unknown) => {
+        toastError(getToolSaveErrorMessage(error, 'Unable to update tool'));
       });
   }
   saveFlag.value = false;
@@ -729,6 +730,28 @@ async function removeToolImage() {
 function openLink(link: string | undefined) {
   if (!link) return;
   window.open(link, '_blank');
+}
+
+function getToolSaveErrorMessage(error: unknown, fallback: string) {
+  const axiosError = error as {
+    response?: { data?: { error?: string; message?: string } };
+    message?: string;
+  };
+  const responseMessage = axiosError.response?.data?.error || axiosError.response?.data?.message;
+
+  if (responseMessage?.startsWith('Scan code already exists:')) {
+    const duplicateScanCode = responseMessage.replace('Scan code already exists:', '').trim();
+    if (duplicateScanCode) {
+      return `Barcode ${duplicateScanCode} already exists on another tool.`;
+    }
+    return 'This barcode already exists on another tool.';
+  }
+
+  if (responseMessage === 'Tool scan codes must be unique.') {
+    return 'Each barcode on a tool must be unique.';
+  }
+
+  return responseMessage || axiosError.message || fallback;
 }
 
 /* FORM VALIDATION */
@@ -1292,6 +1315,7 @@ const isoMaterialStateDigits = computed(() => {
   margin: 4px 0;
   border-radius: 8px;
 }
+
 .stock {
   font-weight: bolder;
   font-size: 3em;
