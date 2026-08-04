@@ -537,6 +537,26 @@ function currentTimestampValue() {
   return new Date().toISOString();
 }
 
+function firstRouteQueryValue(value: unknown) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function createDraftFromRouteQuery() {
+  const nextDraft = createEmptyDraft();
+  const customerQuery = firstRouteQueryValue(route.query.customer);
+  const partQuery = firstRouteQueryValue(route.query.part);
+
+  if (typeof customerQuery === 'string' && customerQuery.trim()) {
+    nextDraft.customer = customerQuery.trim();
+  }
+
+  if (typeof partQuery === 'string' && partQuery.trim()) {
+    nextDraft.part = partQuery.trim();
+  }
+
+  return nextDraft;
+}
+
 function serializeDraft(value: JobDraft) {
   return JSON.stringify({
     customer: value.customer || null,
@@ -650,7 +670,7 @@ async function syncRouteState() {
 
   if (isCreateRoute.value) {
     job.value = null;
-    draft.value = createEmptyDraft();
+    draft.value = createDraftFromRouteQuery();
     loading.value = false;
     return;
   }

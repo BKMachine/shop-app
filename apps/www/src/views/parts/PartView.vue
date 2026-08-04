@@ -97,9 +97,10 @@
       <v-tab value="material"> Material </v-tab>
       <v-tab value="cost"> Cost </v-tab>
       <v-tab value="stock"> Stock </v-tab>
-      <v-tab value="docs"> Documents </v-tab>
+      <v-tab value="docs"> Docs </v-tab>
       <v-tab value="images"> Images </v-tab>
       <v-tab value="notes"> Notes </v-tab>
+      <v-tab value="jobs"> Jobs </v-tab>
       <v-spacer />
       <div class="d-flex align-center">
         <v-checkbox
@@ -481,6 +482,66 @@
         <v-window-item value="notes">
           <PartNotesDetails :part="part" @notes-changed="loadCriticalNotesCount" />
         </v-window-item>
+        <v-window-item value="jobs">
+          <v-card class="part-jobs-card" variant="outlined">
+            <v-card-title class="d-flex align-center justify-space-between flex-wrap ga-2">
+              <span>Job History</span>
+              <div class="d-flex align-center ga-2">
+                <v-btn
+                  color="primary"
+                  :disabled="!canCreateJobFromPart"
+                  prepend-icon="mdi-plus"
+                  @click="openCreateJob"
+                >
+                  Create a new Job with this part
+                </v-btn>
+              </div>
+            </v-card-title>
+            <v-card-text>
+              <div v-if="!part._id" class="text-body-2 text-medium-emphasis">
+                Save this part first to view related jobs.
+              </div>
+              <div v-else-if="partJobsLoading" class="d-flex justify-center py-6">
+                <v-progress-circular color="primary" indeterminate />
+              </div>
+              <div v-else-if="partJobsError" class="text-body-2 text-error">
+                {{ partJobsError }}
+              </div>
+              <div v-else-if="!partJobs.length" class="text-body-2 text-medium-emphasis">
+                No jobs found for this part yet.
+              </div>
+              <InfiniteScrollDataTable
+                v-if="partJobs.length"
+                :has-more="partJobsHasMore"
+                :headers="partJobsHeaders"
+                :items="partJobs"
+                :loading="partJobsLoading"
+                :loading-more="partJobsLoadingMore"
+                :min-height="380"
+                @click:row="openPartJobRow"
+                @load-more="loadMorePartJobs"
+              >
+                <template #['item.jobNumber']="{ item }">
+                  <span class="job-number">#{{ item.jobNumber }}</span>
+                </template>
+                <template #['item.customerName']="{ item }">
+                  {{ getJobCustomerName(item) }}
+                </template>
+                <template #['item.status']="{ item }">
+                  <v-chip :color="jobStatusColor(item.status)" size="small">
+                    {{ jobStatusLabel(item.status) }}
+                  </v-chip>
+                </template>
+                <template #['item.dueDate']="{ item }">
+                  {{ formatJobDate(item.dueDate) }}
+                </template>
+                <template #['item.completedOn']="{ item }">
+                  {{ formatJobDate(item.completedOn) }}
+                </template>
+              </InfiniteScrollDataTable>
+            </v-card-text>
+          </v-card>
+        </v-window-item>
       </v-window>
     </v-form>
 
@@ -506,6 +567,7 @@ import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
+import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import LeaveUnsavedChangesDialog from '@/components/LeaveUnsavedChangesDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartCostDetails from '@/components/parts/PartCostDetails.vue';
@@ -577,8 +639,22 @@ const partOriginal = ref<Part>({} as Part);
 const searchedPartDetails = ref<Part[]>([]);
 const relatedSubComponents = ref<PartRelationItem[]>([]);
 const relatedParentAssemblies = ref<PartRelationItem[]>([]);
+const partJobs = ref<Job[]>([]);
+const partJobsLoading = ref(false);
+const partJobsLoadingMore = ref(false);
+const partJobsHasMore = ref(false);
+const partJobsError = ref('');
+const PART_JOBS_PAGE_SIZE = 50;
+const partJobsHeaders = [
+  { title: 'Job#', key: 'jobNumber', width: 110 },
+  { title: 'Customer', key: 'customerName' },
+  { title: 'Qty', key: 'qty', width: 90 },
+  { title: 'Status', key: 'status', width: 120, align: 'center' },
+  { title: 'Due', key: 'dueDate', width: 130 },
+  { title: 'Completed', key: 'completedOn', width: 130 },
+];
 
-const tab = ref<'general' | 'material' | 'cost' | 'stock' | 'docs' | 'notes' | 'images'>(
+const tab = ref<'general' | 'material' | 'cost' | 'stock' | 'docs' | 'notes' | 'images' | 'jobs'>(
   import.meta.env.PROD ? 'general' : 'general',
 );
 const id = computed(() => router.currentRoute.value.params.id);
@@ -800,10 +876,22 @@ const canSaveAndPrint = computed(() => {
     Boolean(part.value.position)
   );
 });
+const canCreateJobFromPart = computed(() => {
+  return Boolean(part.value._id && getCustomerId(part.value.customer));
+});
 
 function setTabFromQuery() {
   const routeTab = router.currentRoute.value.query.tab;
-  const validTabs = ['general', 'material', 'cost', 'stock', 'docs', 'notes', 'images'] as const;
+  const validTabs = [
+    'general',
+    'material',
+    'cost',
+    'stock',
+    'docs',
+    'notes',
+    'images',
+    'jobs',
+  ] as const;
 
   if (typeof routeTab === 'string' && validTabs.includes(routeTab as (typeof validTabs)[number])) {
     tab.value = routeTab as typeof tab.value;
@@ -855,6 +943,10 @@ onMounted(() => {
 watch(tab, (newTab) => {
   const query = router.currentRoute.value.query;
   if (query.tab === newTab) return;
+
+  if (newTab === 'jobs') {
+    void loadPartJobs();
+  }
 
   router.replace({
     query: {
@@ -950,6 +1042,134 @@ function applyFetchedPart(source: Part, relations?: PartRelationsResponse) {
   part.value = cloneDeep(mergedPart);
   partOriginal.value = cloneDeep(mergedPart);
   void loadCriticalNotesCount();
+  if (tab.value === 'jobs') {
+    void loadPartJobs();
+  }
+}
+
+function jobStatusLabel(status: JobStatus) {
+  if (status === 'in_process') return 'In Process';
+  if (status === 'closed') return 'Closed';
+  return 'Open';
+}
+
+function jobStatusColor(status: JobStatus) {
+  if (status === 'in_process') return 'warning';
+  if (status === 'closed') return 'success';
+  return 'info';
+}
+
+function formatJobDate(value: string | Date | null | undefined) {
+  if (!value) return '-';
+  const parsedDate = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) return '-';
+
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(parsedDate);
+}
+
+function getJobCustomerName(jobItem: Job) {
+  if (jobItem.customerName) return jobItem.customerName;
+  if (typeof jobItem.customer === 'string') return '';
+  return jobItem.customer?.name || '';
+}
+
+function openPartJob(jobId: string) {
+  void router.push({ name: 'viewJob', params: { id: jobId } });
+}
+
+function openPartJobRow(_event: unknown, payload: { item: Job }) {
+  const jobId = payload?.item?._id;
+  if (!jobId) return;
+
+  openPartJob(jobId);
+}
+
+function openCreateJob() {
+  if (!part.value._id) return;
+
+  const customerId = getCustomerId(part.value.customer);
+  if (!customerId) return;
+
+  void router.push({
+    name: 'createJob',
+    query: {
+      customer: customerId,
+      part: part.value._id,
+    },
+  });
+}
+
+async function loadPartJobs() {
+  await fetchPartJobs();
+}
+
+async function loadMorePartJobs() {
+  if (!partJobsHasMore.value || partJobsLoading.value || partJobsLoadingMore.value) return;
+  await fetchPartJobs(true);
+}
+
+function resetPartJobsState() {
+  partJobs.value = [];
+  partJobsLoading.value = false;
+  partJobsLoadingMore.value = false;
+  partJobsHasMore.value = false;
+  partJobsError.value = '';
+}
+
+async function fetchPartJobs(append = false) {
+  if (!part.value._id) {
+    resetPartJobsState();
+    return;
+  }
+
+  if (!append) {
+    partJobsLoading.value = true;
+    partJobsError.value = '';
+  } else {
+    partJobsLoadingMore.value = true;
+  }
+
+  try {
+    const { data } = await axios.get<JobHistoryListResponse>(
+      `/jobs/history/part/${part.value._id}`,
+      {
+        params: {
+          sort: 'jobNumber',
+          order: 'desc',
+          limit: PART_JOBS_PAGE_SIZE,
+          offset: append ? partJobs.value.length : 0,
+        },
+      },
+    );
+
+    if (append) {
+      const existingIds = new Set(partJobs.value.map((jobItem) => jobItem._id));
+      partJobs.value = [
+        ...partJobs.value,
+        ...data.items.filter((jobItem) => !existingIds.has(jobItem._id)),
+      ];
+    } else {
+      partJobs.value = data.items;
+    }
+
+    partJobsHasMore.value = data.hasMore;
+  } catch {
+    if (!append) {
+      partJobs.value = [];
+      partJobsHasMore.value = false;
+    }
+    partJobsError.value = 'Unable to load job history for this part.';
+  } finally {
+    if (!append) {
+      partJobsLoading.value = false;
+    } else {
+      partJobsLoadingMore.value = false;
+    }
+  }
 }
 
 async function loadSubComponentSearchResults(search: string) {
@@ -1477,6 +1697,18 @@ async function loadCriticalNotesCount() {
   position: relative;
   bottom: 8px;
   font-weight: normal;
+}
+
+.part-jobs-card {
+  border-color: #d7d7d7;
+}
+
+.part-jobs-row {
+  cursor: pointer;
+}
+
+.part-jobs-row:hover {
+  background-color: rgb(var(--v-theme-surface-variant));
 }
 
 .part-img {

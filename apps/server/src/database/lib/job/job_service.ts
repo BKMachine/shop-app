@@ -438,6 +438,35 @@ async function list(query: JobListQuery = {}): Promise<JobListResponse> {
   };
 }
 
+async function listHistoryByPart(
+  partId: string,
+  query: Pick<JobListQuery, 'sort' | 'order' | 'limit' | 'offset'> = {},
+): Promise<JobHistoryListResponse> {
+  const filter = { part: partId };
+  const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
+  const offset = Math.max(Number(query.offset) || 0, 0);
+  const sortField = getSortField(query as JobListQuery);
+  const sortDirection = getSortDirection(query as JobListQuery);
+
+  const [items, total] = await Promise.all([
+    Job.find(filter)
+      .populate('customer')
+      .populate('part')
+      .sort({ [sortField]: sortDirection, createdAt: -1 })
+      .skip(offset)
+      .limit(limit),
+    Job.countDocuments(filter),
+  ]);
+
+  return {
+    items: items as unknown as Job[],
+    total,
+    limit,
+    offset,
+    hasMore: offset + items.length < total,
+  };
+}
+
 async function findById(id: string): Promise<JobDoc | null> {
   return Job.findById(id).populate('customer').populate('part');
 }
@@ -490,6 +519,7 @@ async function remove(id: string, deviceId: string): Promise<boolean> {
 
 export default {
   list,
+  listHistoryByPart,
   listMachineDashboard,
   findById,
   create,

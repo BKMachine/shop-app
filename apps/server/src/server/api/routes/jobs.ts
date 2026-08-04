@@ -117,6 +117,23 @@ router.get('/jobs/machine-dashboard', async (_req, res, next) => {
   }
 });
 
+router.get('/jobs/history/part/:partId', async (req, res, next) => {
+  const { partId } = req.params;
+  if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
+
+  try {
+    const data = await Jobs.listHistoryByPart(partId, {
+      sort: normalizeQueryValue(req.query.sort),
+      order: normalizeQueryValue(req.query.order) === 'desc' ? 'desc' : 'asc',
+      limit: Number(normalizeQueryValue(req.query.limit)),
+      offset: Number(normalizeQueryValue(req.query.offset)),
+    });
+    res.status(200).json(data);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/jobs/:id', async (req, res, next) => {
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid job id'));

@@ -26,12 +26,17 @@
     </template>
 
     <template #selection="{ item }">
-      <div class="part-selection">
-        <span class="part-selection__part">{{ item.part }}</span>
-        <span v-if="item.description" class="part-selection__description">
-          {{ item.description }}
-        </span>
-      </div>
+      <template v-if="optionFromSlot(item).part">
+        <div class="part-selection">
+          <span class="part-selection__part">{{ optionFromSlot(item).part }}</span>
+          <span v-if="optionFromSlot(item).description" class="part-selection__description">
+            {{ optionFromSlot(item).description }}
+          </span>
+        </div>
+      </template>
+      <template v-else>
+        <span>{{ optionFromSlot(item).label }}</span>
+      </template>
     </template>
 
     <template #append-inner>

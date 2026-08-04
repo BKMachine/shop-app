@@ -268,6 +268,14 @@ declare global {
     hasMore: boolean;
   }
 
+  interface JobHistoryListResponse {
+    items: Job[];
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }
+
   interface MachineJobDashboardRow {
     machineId: string;
     machineName: string;

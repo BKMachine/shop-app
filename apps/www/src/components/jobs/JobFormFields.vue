@@ -245,13 +245,35 @@ async function loadSelectedPart(partId: string | null) {
 watch(
   () => draft.value.customer,
   (nextValue, previousValue) => {
-    if (nextValue !== previousValue) {
-      selectedPart.value = null;
-      draft.value = {
-        ...draft.value,
-        part: null,
-      };
+    if (nextValue === previousValue) return;
+
+    // During create-route prefill, customer and part can be set together.
+    // Skip clearing on this initial hydration transition.
+    if (!previousValue && nextValue && draft.value.part) {
+      return;
     }
+
+    // Keep the part selection when it still belongs to the selected customer.
+    const selectedPartCustomer = selectedPart.value?.customer;
+    const selectedPartCustomerId =
+      typeof selectedPartCustomer === 'string'
+        ? selectedPartCustomer
+        : selectedPartCustomer?._id || null;
+
+    if (
+      draft.value.part &&
+      nextValue &&
+      selectedPartCustomerId &&
+      String(selectedPartCustomerId) === String(nextValue)
+    ) {
+      return;
+    }
+
+    selectedPart.value = null;
+    draft.value = {
+      ...draft.value,
+      part: null,
+    };
   },
 );
 

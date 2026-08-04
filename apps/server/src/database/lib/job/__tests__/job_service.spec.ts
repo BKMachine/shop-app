@@ -17,7 +17,9 @@ type PartRecord = Pick<Part, '_id' | 'customer' | 'part' | 'description' | 'revi
     >
   >;
 type CustomerRecord = Customer;
-type MachineRecord = Pick<MachineData, '_id' | 'name' | 'displayName' | 'type' | 'location'>;
+type MachineRecord = Pick<MachineData, 'name' | 'displayName' | 'type' | 'location'> & {
+  _id: string;
+};
 
 const jobStore = new Map<string, JobRecord>();
 const partStore = new Map<string, PartRecord>();
@@ -426,7 +428,7 @@ function buildPart(overrides: Partial<PartRecord> = {}): PartRecord {
     price: 0,
     cycleTimes: [],
     additionalCosts: [],
-    material: null,
+    material: undefined,
     customerSuppliedMaterial: false,
     subComponentIds: [],
     derived: {
