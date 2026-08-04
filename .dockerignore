@@ -30,5 +30,8 @@ apps/printer
 **/.env
 
 **/*/downloads
+!apps/server/public/downloads/
+!apps/server/public/downloads/folder_helper/
+!apps/server/public/downloads/folder_helper/**
 **/*/.venv-*
 **/*/models
