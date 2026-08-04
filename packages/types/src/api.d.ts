@@ -282,6 +282,8 @@ declare global {
     machineType: MachineType;
     location: string;
     hasInProcessJob: boolean;
+    taskId?: string | null;
+    taskStartedAt?: string | Date | null;
     jobId?: string | null;
     jobNumber?: number | null;
     qty?: number | null;

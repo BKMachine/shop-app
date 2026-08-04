@@ -59,7 +59,7 @@
             <div v-else class="machine-cards-grid">
               <article
                 v-for="machine in activeMachines"
-                :key="machine.machineId"
+                :key="activeMachineCardKey(machine)"
                 :class="[
                   'machine-card',
                   machineCardDueDateClass(machine.dueDate),
@@ -237,11 +237,18 @@ const activeMachines = computed(() =>
   }),
 );
 const idleMachines = computed(() => dashboard.value.idle);
-const totalMachineCount = computed(() => activeMachines.value.length + idleMachines.value.length);
-const runningSummaryText = computed(() => {
-  if (idlePanelOpen.value) return `${activeMachines.value.length} running`;
-  return `${activeMachines.value.length} of ${totalMachineCount.value} running`;
+const activeMachineCount = computed(() => {
+  return new Set(activeMachines.value.map((machine) => machine.machineId)).size;
 });
+const totalMachineCount = computed(() => activeMachineCount.value + idleMachines.value.length);
+const runningSummaryText = computed(() => {
+  if (idlePanelOpen.value) return `${activeMachines.value.length} tasks in process`;
+  return `${activeMachines.value.length} tasks on ${activeMachineCount.value} machines`;
+});
+
+function activeMachineCardKey(machine: MachineJobDashboardRow) {
+  return machine.taskId || machine.jobId || `${machine.machineId}-${machine.jobNumber ?? 'none'}`;
+}
 
 function readMachineSortMode(): MachineSortMode {
   if (typeof window === 'undefined') return 'dueDate';

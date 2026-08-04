@@ -325,42 +325,37 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
       .sort({ dueDate: 1, jobNumber: -1 }),
   ]);
 
-  const activeJobByMachineId = new Map<
+  const activeJobsByMachineId = new Map<
     string,
-    {
+    Array<{
       task: JobProductionTask;
       job: Pick<Job, '_id' | 'jobNumber' | 'qty' | 'dueDate' | 'partNumber' | 'partDescription'> & {
         partId: string | null;
         partImage: string | null;
         partHasIncompleteData: boolean;
       };
-    }
+    }>
   >();
 
   for (const job of jobs) {
     const openTasks = (job.productionTasks ?? []).filter((task) => !task.endedAt);
     for (const task of openTasks) {
-      const existingEntry = activeJobByMachineId.get(task.machineId);
-      if (
-        !existingEntry ||
-        normalizeTaskTimestamp(task.startedAt) >
-          normalizeTaskTimestamp(existingEntry.task.startedAt)
-      ) {
-        activeJobByMachineId.set(task.machineId, {
-          task,
-          job: {
-            _id: job._id.toString(),
-            jobNumber: job.jobNumber,
-            qty: job.qty,
-            dueDate: job.dueDate,
-            partId: extractReferencedId(job.part),
-            partNumber: extractPartText(job.part, 'part') ?? job.partNumber,
-            partDescription: extractPartText(job.part, 'description') ?? job.partDescription,
-            partImage: extractPartImage(job.part),
-            partHasIncompleteData: getMachineDashboardPartHasIncompleteData(job.part),
-          },
-        });
-      }
+      const existingEntries = activeJobsByMachineId.get(task.machineId) ?? [];
+      existingEntries.push({
+        task,
+        job: {
+          _id: job._id.toString(),
+          jobNumber: job.jobNumber,
+          qty: job.qty,
+          dueDate: job.dueDate,
+          partId: extractReferencedId(job.part),
+          partNumber: extractPartText(job.part, 'part') ?? job.partNumber,
+          partDescription: extractPartText(job.part, 'description') ?? job.partDescription,
+          partImage: extractPartImage(job.part),
+          partHasIncompleteData: getMachineDashboardPartHasIncompleteData(job.part),
+        },
+      });
+      activeJobsByMachineId.set(task.machineId, existingEntries);
     }
   }
 
@@ -370,32 +365,57 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
   for (const machine of machines) {
     const machineId = machine._id.toString();
     const machineName = machine.displayName?.trim() || machine.name;
-    const activeEntry = activeJobByMachineId.get(machineId);
+    const activeEntries = activeJobsByMachineId.get(machineId) ?? [];
 
-    const row: MachineJobDashboardRow = {
-      machineId,
-      machineName,
-      machineType: machine.type,
-      location: machine.location,
-      hasInProcessJob: Boolean(activeEntry),
-      jobId: activeEntry?.job._id ?? null,
-      jobNumber: activeEntry?.job.jobNumber ?? null,
-      qty: activeEntry?.job.qty ?? null,
-      dueDate: activeEntry?.job.dueDate ?? null,
-      partId: activeEntry?.job.partId ?? null,
-      partNumber: activeEntry?.job.partNumber ?? null,
-      partDescription: activeEntry?.job.partDescription ?? null,
-      partImage: activeEntry?.job.partImage ?? null,
-      partHasIncompleteData: activeEntry?.job.partHasIncompleteData ?? false,
-      partSummary: activeEntry
-        ? toMachineDashboardPartSummary(activeEntry.job.partNumber, activeEntry.job.partDescription)
-        : '',
-    };
+    if (activeEntries.length) {
+      const sortedEntries = [...activeEntries].sort(
+        (left, right) =>
+          normalizeTaskTimestamp(right.task.startedAt) -
+          normalizeTaskTimestamp(left.task.startedAt),
+      );
 
-    if (activeEntry) {
-      active.push(row);
+      for (const activeEntry of sortedEntries) {
+        active.push({
+          machineId,
+          machineName,
+          machineType: machine.type,
+          location: machine.location,
+          hasInProcessJob: true,
+          taskId: activeEntry.task.id,
+          taskStartedAt: activeEntry.task.startedAt,
+          jobId: activeEntry.job._id,
+          jobNumber: activeEntry.job.jobNumber,
+          qty: activeEntry.job.qty,
+          dueDate: activeEntry.job.dueDate ?? null,
+          partId: activeEntry.job.partId ?? null,
+          partNumber: activeEntry.job.partNumber ?? null,
+          partDescription: activeEntry.job.partDescription ?? null,
+          partImage: activeEntry.job.partImage ?? null,
+          partHasIncompleteData: activeEntry.job.partHasIncompleteData,
+          partSummary: toMachineDashboardPartSummary(
+            activeEntry.job.partNumber,
+            activeEntry.job.partDescription,
+          ),
+        });
+      }
     } else {
-      idle.push(row);
+      idle.push({
+        machineId,
+        machineName,
+        machineType: machine.type,
+        location: machine.location,
+        hasInProcessJob: false,
+        jobId: null,
+        jobNumber: null,
+        qty: null,
+        dueDate: null,
+        partId: null,
+        partNumber: null,
+        partDescription: null,
+        partImage: null,
+        partHasIncompleteData: false,
+        partSummary: '',
+      });
     }
   }
 
