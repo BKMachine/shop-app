@@ -191,7 +191,11 @@ export function hasMissingRateInputs<TPart extends RateInputPart>(part: TPart): 
 }
 
 export function hasIncompletePartCostData(part: AssemblyPartInput | null | undefined): boolean {
-  if (!part || !Number(part.price)) return false;
+  if (!part) return false;
+
+  if (!Number(part.price)) {
+    return !hasDirectParent(part);
+  }
 
   const hasSubComponents =
     part.hasSubComponents === true || normalizeSubComponentIds(part.subComponentIds).length > 0;

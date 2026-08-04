@@ -56,7 +56,7 @@ test('machine dashboard helper flags subcomponents with missing direct inputs ev
   assert.equal(hasIncompleteMachineDashboardPartData(subComponent), true);
 });
 
-test('machine dashboard helper does not flag top-level parts with no price unless shared cost helper does', () => {
+test('hasIncompletePartCostData flags top-level parts with no price', () => {
   const topLevelPart = {
     price: 0,
     cycleTimes: [{ operation: 'Op 10', time: 0 }],
@@ -70,6 +70,6 @@ test('machine dashboard helper does not flag top-level parts with no price unles
     },
   };
 
-  assert.equal(hasIncompletePartCostData(topLevelPart), false);
-  assert.equal(hasIncompleteMachineDashboardPartData(topLevelPart), false);
+  assert.equal(hasIncompletePartCostData(topLevelPart), true);
+  assert.equal(hasIncompleteMachineDashboardPartData(topLevelPart), true);
 });
