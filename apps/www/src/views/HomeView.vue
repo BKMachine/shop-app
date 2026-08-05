@@ -313,6 +313,7 @@ const dashboard = ref<MachineJobDashboardResponse>({ active: [], idle: [] });
 const machineSortMode = ref<MachineSortMode>(readMachineSortMode());
 const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
 const departmentOptions = ref<string[]>([]);
+const departmentOptionsLoaded = ref(false);
 const hasDepartmentFilter = computed(() => {
   return (
     departmentOptions.value.length > 0 &&
@@ -546,7 +547,23 @@ async function fetchDepartmentOptions() {
   } catch (error) {
     departmentOptions.value = [];
     console.warn('Unable to load machine department options.', error);
+  } finally {
+    departmentOptionsLoaded.value = true;
   }
+}
+
+function syncIncludedDepartments(options: string[]) {
+  if (!departmentOptionsLoaded.value) return;
+
+  if (!options.length) {
+    includedDepartmentKeys.value = [];
+    return;
+  }
+
+  const nextIncluded = includedDepartmentKeys.value.filter((department) =>
+    options.includes(department),
+  );
+  includedDepartmentKeys.value = nextIncluded.length ? nextIncluded : [...options];
 }
 
 function refreshMachineDashboard() {
@@ -584,18 +601,15 @@ watch(idlePanelOpen, (value) => {
 watch(
   departmentOptions,
   (options) => {
-    if (!options.length) {
-      includedDepartmentKeys.value = [];
-      return;
-    }
-
-    const nextIncluded = includedDepartmentKeys.value.filter((department) =>
-      options.includes(department),
-    );
-    includedDepartmentKeys.value = nextIncluded.length ? nextIncluded : [...options];
+    syncIncludedDepartments(options);
   },
   { immediate: true },
 );
+
+watch(departmentOptionsLoaded, (loaded) => {
+  if (!loaded) return;
+  syncIncludedDepartments(departmentOptions.value);
+});
 
 watch(includedDepartmentKeys, (value) => {
   if (typeof window === 'undefined') return;
