@@ -264,7 +264,31 @@
                 label="Mill"
                 :model-value="selectedStartTaskMachineIds.mill"
                 @update:model-value="updateStartTaskMachineSelection('mill', $event)"
-              />
+              >
+                <template #item="{ props, item }">
+                  <v-list-item v-bind="props" title="">
+                    <div class="machine-option__row">
+                      <span>{{ machineDisplayName(item) }}</span>
+                      <v-chip
+                        :color="machineAvailabilityColor(item)"
+                        size="x-small"
+                        variant="tonal"
+                      >
+                        {{ machineAvailabilityLabel(item) }}
+                      </v-chip>
+                    </div>
+                  </v-list-item>
+                </template>
+
+                <template #selection="{ item }">
+                  <div class="machine-option__row machine-option__row--selection">
+                    <span>{{ machineDisplayName(item) }}</span>
+                    <v-chip :color="machineAvailabilityColor(item)" size="x-small" variant="tonal">
+                      {{ machineAvailabilityLabel(item) }}
+                    </v-chip>
+                  </div>
+                </template>
+              </v-select>
             </v-col>
             <v-col cols="12" md="4">
               <v-select
@@ -276,7 +300,31 @@
                 label="Lathe"
                 :model-value="selectedStartTaskMachineIds.lathe"
                 @update:model-value="updateStartTaskMachineSelection('lathe', $event)"
-              />
+              >
+                <template #item="{ props, item }">
+                  <v-list-item v-bind="props" title="">
+                    <div class="machine-option__row">
+                      <span>{{ machineDisplayName(item) }}</span>
+                      <v-chip
+                        :color="machineAvailabilityColor(item)"
+                        size="x-small"
+                        variant="tonal"
+                      >
+                        {{ machineAvailabilityLabel(item) }}
+                      </v-chip>
+                    </div>
+                  </v-list-item>
+                </template>
+
+                <template #selection="{ item }">
+                  <div class="machine-option__row machine-option__row--selection">
+                    <span>{{ machineDisplayName(item) }}</span>
+                    <v-chip :color="machineAvailabilityColor(item)" size="x-small" variant="tonal">
+                      {{ machineAvailabilityLabel(item) }}
+                    </v-chip>
+                  </div>
+                </template>
+              </v-select>
             </v-col>
             <v-col cols="12" md="4">
               <v-select
@@ -288,7 +336,31 @@
                 label="Swiss"
                 :model-value="selectedStartTaskMachineIds.swiss"
                 @update:model-value="updateStartTaskMachineSelection('swiss', $event)"
-              />
+              >
+                <template #item="{ props, item }">
+                  <v-list-item v-bind="props" title="">
+                    <div class="machine-option__row">
+                      <span>{{ machineDisplayName(item) }}</span>
+                      <v-chip
+                        :color="machineAvailabilityColor(item)"
+                        size="x-small"
+                        variant="tonal"
+                      >
+                        {{ machineAvailabilityLabel(item) }}
+                      </v-chip>
+                    </div>
+                  </v-list-item>
+                </template>
+
+                <template #selection="{ item }">
+                  <div class="machine-option__row machine-option__row--selection">
+                    <span>{{ machineDisplayName(item) }}</span>
+                    <v-chip :color="machineAvailabilityColor(item)" size="x-small" variant="tonal">
+                      {{ machineAvailabilityLabel(item) }}
+                    </v-chip>
+                  </div>
+                </template>
+              </v-select>
             </v-col>
           </v-row>
 
@@ -345,7 +417,7 @@ import { useRoute } from 'vue-router';
 import JobFormFields, { type JobDraft } from '@/components/jobs/JobFormFields.vue';
 import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
 import { dueDateColor } from '@/lib/job_dates';
-import { statusApi } from '@/plugins/axios';
+import api, { statusApi } from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { toastError } from '@/plugins/vue-toast-notification';
 import router from '@/router';
@@ -353,6 +425,13 @@ import { isAdmin } from '@/state/device';
 import { useJobsStore } from '@/stores/jobs_store';
 
 const JOB_TAB_VALUES = ['general', 'production', 'shipments'] as const;
+
+type StartTaskMachineOption = MachineInfo & {
+  hasRunningTask: boolean;
+  runningTaskJobNumber: number | null;
+};
+
+type MachineDashboardActivity = Pick<MachineJobDashboardRow, 'machineId' | 'jobNumber'>;
 
 const route = useRoute();
 const jobsStore = useJobsStore();
@@ -363,7 +442,7 @@ const deleting = ref(false);
 const travelerLoading = ref(false);
 const deleteConfirm = ref(false);
 const printClosedConfirm = ref(false);
-const machines = ref<MachineInfo[]>([]);
+const machines = ref<StartTaskMachineOption[]>([]);
 const machinesLoading = ref(false);
 const machinesLoadFailed = ref(false);
 const productionTaskLoading = ref(false);
@@ -461,7 +540,7 @@ const sortedMachines = computed(() =>
     (left.displayName || left.name).localeCompare(right.displayName || right.name),
   ),
 );
-const machineOptionsByType = computed<Record<MachineType, MachineInfo[]>>(() => ({
+const machineOptionsByType = computed<Record<MachineType, StartTaskMachineOption[]>>(() => ({
   mill: sortedMachines.value.filter((machine) => machine.type === 'mill'),
   lathe: sortedMachines.value.filter((machine) => machine.type === 'lathe'),
   swiss: sortedMachines.value.filter((machine) => machine.type === 'swiss'),
@@ -728,8 +807,18 @@ async function fetchMachines() {
   machinesLoadFailed.value = false;
 
   try {
-    const { data } = await statusApi.get<MachineInfo[]>('/machines');
-    machines.value = data;
+    const [{ data: machineData }, machineActivityMap] = await Promise.all([
+      statusApi.get<MachineInfo[]>('/machines'),
+      fetchMachineActivityMap(),
+    ]);
+    machines.value = machineData.map((machine) => {
+      const activity = machineActivityMap.get(machine.id) ?? null;
+      return {
+        ...machine,
+        hasRunningTask: Boolean(activity),
+        runningTaskJobNumber: activity?.jobNumber ?? null,
+      };
+    });
   } catch {
     machines.value = [];
     machinesLoadFailed.value = true;
@@ -737,6 +826,19 @@ async function fetchMachines() {
   } finally {
     machinesLoading.value = false;
   }
+}
+
+async function fetchMachineActivityMap() {
+  const { data } = await api.get<MachineJobDashboardResponse>('/jobs/machine-dashboard');
+  return new Map<string, MachineDashboardActivity>(
+    data.active.map((machine) => [
+      machine.machineId,
+      {
+        machineId: machine.machineId,
+        jobNumber: machine.jobNumber ?? null,
+      },
+    ]),
+  );
 }
 
 async function saveJob() {
@@ -974,6 +1076,18 @@ function machineTypeLabel(machineType: MachineType) {
   if (machineType === 'lathe') return 'Lathe';
   return 'Swiss';
 }
+
+function machineDisplayName(machine: StartTaskMachineOption) {
+  return machine.displayName || machine.name;
+}
+
+function machineAvailabilityLabel(machine: StartTaskMachineOption) {
+  return machine.hasRunningTask ? 'Running' : 'Available';
+}
+
+function machineAvailabilityColor(machine: StartTaskMachineOption) {
+  return machine.hasRunningTask ? 'warning' : 'success';
+}
 </script>
 
 <style scoped>
@@ -1158,5 +1272,18 @@ function machineTypeLabel(machineType: MachineType) {
   .production-entry__action {
     justify-content: flex-start;
   }
+}
+
+.machine-option__row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+  width: 100%;
+}
+
+.machine-option__row--selection {
+  padding-right: 4px;
 }
 </style>
