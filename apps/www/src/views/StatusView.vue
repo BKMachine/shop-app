@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <draggable
-      v-model="tiles"
+      v-model="visibleTiles"
       class="inner-container"
       drag-class="machine--dragging"
       ghost-class="machine--ghost"
@@ -9,9 +9,30 @@
       @change="persistMachineOrder"
     >
       <template #item="{ element }">
-        <div :class="['machine', { 'machine--blank': isBlankTile(element) }]">
+        <div
+          :class="[
+            'machine',
+            {
+              'machine--blank': isBlankTile(element),
+              'machine--blank-revealed': isBlankTile(element) && revealedBlankTileId === element.id,
+            },
+          ]"
+          @pointercancel="handleBlankPressCancel()"
+          @pointerdown="isBlankTile(element) ? handleBlankPressStart(element.id) : undefined"
+          @pointerleave="handleBlankPressCancel()"
+          @pointerup="handleBlankPressCancel()"
+        >
           <MachineTile v-if="!isBlankTile(element)" :data="element" />
-          <div v-else class="blank-tile"><span class="blank-tile__label">Blank Tile</span></div>
+          <div v-else class="blank-tile">
+            <button
+              aria-label="Delete blank tile"
+              class="blank-tile__delete"
+              type="button"
+              @click.stop="removeBlankTile(element.id)"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </template>
     </draggable>
@@ -28,6 +49,46 @@
       </template>
 
       <v-list density="comfortable" min-width="220">
+        <v-menu :close-on-content-click="false" location="start center">
+          <template #activator="{ props }">
+            <v-list-item
+              v-bind="props"
+              append-icon="mdi-menu-left"
+              prepend-icon="mdi-domain-switch"
+              title="Departments"
+            />
+          </template>
+
+          <v-list density="compact" min-width="260">
+            <v-list-subheader>Included Departments</v-list-subheader>
+            <v-list-item v-if="departmentOptions.length" density="compact">
+              <template #prepend>
+                <v-checkbox-btn
+                  :indeterminate="hasDepartmentFilter"
+                  :model-value="areAllDepartmentsIncluded"
+                  @update:model-value="toggleAllDepartments($event)"
+                />
+              </template>
+              <v-list-item-title>All Departments</v-list-item-title>
+            </v-list-item>
+            <v-list-item
+              v-for="department in departmentOptions"
+              :key="department"
+              density="compact"
+            >
+              <template #prepend>
+                <v-checkbox-btn
+                  :model-value="includedDepartmentKeys.includes(department)"
+                  @update:model-value="toggleDepartment(department, $event)"
+                />
+              </template>
+              <v-list-item-title>{{ department }}</v-list-item-title>
+            </v-list-item>
+            <v-list-item v-if="!departmentOptions.length" density="compact">
+              <v-list-item-title>No departments available</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
         <v-list-item
           prepend-icon="mdi-plus-box-outline"
           title="Add Blank Tile"
@@ -54,7 +115,7 @@
 
 <script setup lang="ts">
 import { io } from 'socket.io-client';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
@@ -63,6 +124,7 @@ import api, { statusApi } from '@/plugins/axios';
 import { socket as appSocket } from '@/plugins/socket';
 
 const MACHINE_ORDER_STORAGE_KEY = 'status-machine-order';
+const INCLUDED_DEPARTMENTS_STORAGE_KEY = 'status-included-departments';
 const BLANK_TILE_PREFIX = 'blank:';
 
 type StatusTile = MachineInfo | BlankMachineTile;
@@ -80,7 +142,59 @@ type MachineDashboardMetadata = Pick<
 const router = useRouter();
 const tiles = ref<StatusTile[]>([]);
 const resetOrderConfirmVisible = ref(false);
+const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
+const revealedBlankTileId = ref<string | null>(null);
 let cachedMachineDashboardMetadata = new Map<string, MachineDashboardMetadata>();
+let blankTilePressTimer: ReturnType<typeof setTimeout> | null = null;
+
+const departmentOptions = computed(() => {
+  return [
+    ...new Set(
+      tiles.value
+        .filter((tile): tile is MachineInfo => !isBlankTile(tile))
+        .map((machine) => machine.department?.trim() || '')
+        .filter(Boolean),
+    ),
+  ].sort((left, right) => left.localeCompare(right));
+});
+
+const hasDepartmentFilter = computed(() => {
+  return (
+    departmentOptions.value.length > 0 &&
+    includedDepartmentKeys.value.length !== departmentOptions.value.length
+  );
+});
+
+const areAllDepartmentsIncluded = computed(() => {
+  return (
+    departmentOptions.value.length > 0 &&
+    includedDepartmentKeys.value.length === departmentOptions.value.length
+  );
+});
+
+const visibleTiles = computed<StatusTile[]>({
+  get() {
+    if (!departmentOptions.value.length) return tiles.value;
+
+    const includedDepartments = new Set(includedDepartmentKeys.value);
+    return tiles.value.filter((tile) => {
+      if (isBlankTile(tile)) return true;
+
+      const department = tile.department?.trim() || '';
+      return Boolean(department) && includedDepartments.has(department);
+    });
+  },
+  set(reorderedVisibleTiles) {
+    const visibleIds = new Set(reorderedVisibleTiles.map((tile) => tile.id));
+    const nextVisibleTiles = [...reorderedVisibleTiles];
+
+    tiles.value = tiles.value.map((tile) => {
+      if (!visibleIds.has(tile.id)) return tile;
+      const nextTile = nextVisibleTiles.shift();
+      return nextTile ?? tile;
+    });
+  },
+});
 
 const socket = io(import.meta.env.VITE_STATUS_API_URL, {
   transports: ['websocket', 'polling'],
@@ -125,6 +239,7 @@ onBeforeUnmount(() => {
   appSocket.off('jobDeleted', fetchMachines);
   appSocket.off('part', fetchMachines);
   socket.disconnect();
+  clearBlankTilePressTimer();
 });
 
 async function fetchMachines() {
@@ -133,6 +248,7 @@ async function fetchMachines() {
       tiles.value = orderMachines(
         machines.map((machine) => ({ ...machine, ...machineDashboardMetadata.get(machine.id) })),
       );
+      syncIncludedDepartments();
       persistMachineOrder();
     })
     .catch((error) => {
@@ -218,6 +334,24 @@ function getStoredMachineOrder() {
   }
 }
 
+function readIncludedDepartments() {
+  const storedValue = window.localStorage.getItem(INCLUDED_DEPARTMENTS_STORAGE_KEY);
+
+  if (!storedValue) {
+    return [] as string[];
+  }
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter((value): value is string => typeof value === 'string')
+      : [];
+  } catch (error) {
+    console.warn('Unable to parse stored department filter.', error);
+    return [] as string[];
+  }
+}
+
 function persistMachineOrder() {
   window.localStorage.setItem(
     MACHINE_ORDER_STORAGE_KEY,
@@ -225,9 +359,75 @@ function persistMachineOrder() {
   );
 }
 
+function persistIncludedDepartments() {
+  window.localStorage.setItem(
+    INCLUDED_DEPARTMENTS_STORAGE_KEY,
+    JSON.stringify(includedDepartmentKeys.value),
+  );
+}
+
+function syncIncludedDepartments() {
+  if (!departmentOptions.value.length) {
+    includedDepartmentKeys.value = [];
+    persistIncludedDepartments();
+    return;
+  }
+
+  const nextIncluded = includedDepartmentKeys.value.filter((department) =>
+    departmentOptions.value.includes(department),
+  );
+  includedDepartmentKeys.value = nextIncluded.length ? nextIncluded : [...departmentOptions.value];
+  persistIncludedDepartments();
+}
+
+function toggleDepartment(department: string, included: boolean | null) {
+  if (included) {
+    includedDepartmentKeys.value = [...new Set([...includedDepartmentKeys.value, department])].sort(
+      (left, right) => left.localeCompare(right),
+    );
+  } else {
+    includedDepartmentKeys.value = includedDepartmentKeys.value.filter(
+      (value) => value !== department,
+    );
+  }
+
+  persistIncludedDepartments();
+}
+
+function toggleAllDepartments(included: boolean | null) {
+  includedDepartmentKeys.value = included ? [...departmentOptions.value] : [];
+  persistIncludedDepartments();
+}
+
 function addBlankTile() {
   tiles.value = [...tiles.value, createBlankTile()];
   persistMachineOrder();
+}
+
+function removeBlankTile(id: string) {
+  tiles.value = tiles.value.filter((tile) => tile.id !== id);
+  if (revealedBlankTileId.value === id) {
+    revealedBlankTileId.value = null;
+  }
+  persistMachineOrder();
+}
+
+function handleBlankPressStart(id: string) {
+  clearBlankTilePressTimer();
+  blankTilePressTimer = setTimeout(() => {
+    revealedBlankTileId.value = id;
+    blankTilePressTimer = null;
+  }, 450);
+}
+
+function handleBlankPressCancel() {
+  clearBlankTilePressTimer();
+}
+
+function clearBlankTilePressTimer() {
+  if (!blankTilePressTimer) return;
+  clearTimeout(blankTilePressTimer);
+  blankTilePressTimer = null;
 }
 
 function openSettings() {
@@ -264,6 +464,7 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
   display: flex;
   padding: 20px;
 }
+
 .inner-container {
   align-content: flex-start;
   display: flex;
@@ -277,7 +478,8 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
 
 .machine--blank {
   height: 78px;
-  width: 300px;
+  min-width: 280px;
+  max-width: 400px;
 }
 
 .machine--dragging {
@@ -294,6 +496,7 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
   border-radius: 6px;
   display: flex;
   height: 100%;
+  gap: 10px;
   justify-content: center;
   opacity: 0;
   transition:
@@ -303,6 +506,12 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
   width: 100%;
 }
 
+.machine--blank-revealed .blank-tile {
+  background-color: rgba(var(--v-theme-on-surface), 0.06);
+  border-color: rgba(var(--v-theme-error), 0.4);
+  opacity: 1;
+}
+
 .blank-tile__label {
   color: rgb(var(--v-theme-on-surface-variant));
   font-size: 0.875rem;
@@ -310,11 +519,51 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
   letter-spacing: 0.02em;
 }
 
+.blank-tile__delete {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-error), 0.12);
+  color: rgb(var(--v-theme-error));
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0;
+  padding: 4px 10px;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 0.15s ease,
+    visibility 0s linear 0.15s,
+    background-color 0.15s ease;
+  transition-delay: 0s;
+}
+
+.blank-tile__delete:hover {
+  background: rgba(var(--v-theme-error), 0.18);
+}
+
 .machine--blank:hover .blank-tile,
 .machine--blank:focus-within .blank-tile {
   background-color: rgba(var(--v-theme-on-surface), 0.04);
   border-color: rgba(var(--v-theme-on-surface), 0.18);
   opacity: 1;
+}
+
+.machine--blank:hover .blank-tile__delete,
+.machine--blank:focus-within .blank-tile__delete,
+.machine--blank-revealed .blank-tile__delete {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.machine--blank:hover .blank-tile__delete,
+.machine--blank:focus-within .blank-tile__delete {
+  transition-delay: 3s, 3s, 3s;
+}
+
+.machine--blank-revealed .blank-tile__delete {
+  transition-delay: 0s, 0s, 0s;
 }
 
 .settings-button {
