@@ -1,9 +1,14 @@
-type HasDepartment = {
-  department?: string | null;
-};
+import api from '@/plugins/axios';
 
-export function getMachineDepartmentOptions<T extends HasDepartment>(machines: T[]): string[] {
-  return [
-    ...new Set(machines.map((machine) => machine.department?.trim() || '').filter(Boolean)),
-  ].sort((left, right) => left.localeCompare(right));
+export async function fetchDepartments(): Promise<Department[]> {
+  const { data } = await api.get<Department[]>('/departments');
+  return [...data].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+export async function fetchMachineDepartmentOptions(): Promise<string[]> {
+  const data = await fetchDepartments();
+  return data
+    .map((department) => department.name?.trim() || '')
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right));
 }

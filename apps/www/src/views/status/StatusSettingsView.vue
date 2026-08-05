@@ -118,9 +118,11 @@
                   />
                 </v-col>
                 <v-col cols="12" md="6">
-                  <v-combobox
-                    v-model="form.department"
+                  <v-select
+                    v-model="form.departmentId"
                     clearable
+                    item-title="name"
+                    item-value="_id"
                     :items="departmentOptions"
                     label="Department"
                     variant="outlined"
@@ -159,7 +161,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { getMachineDepartmentOptions } from '@/lib/machineDepartments';
+import { fetchDepartments } from '@/lib/machineDepartments';
 import { statusApi } from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
@@ -172,7 +174,7 @@ type MachineForm = {
   source: MachineSource | null;
   type: MachineType | null;
   paths: '1' | '2';
-  department: string;
+  departmentId: string | null;
   location: string;
 };
 
@@ -194,7 +196,7 @@ const machines = ref<MachineInfo[]>([]);
 const selectedMachineId = ref<string | null>(null);
 const savePending = ref(false);
 const form = ref<MachineForm>(createEmptyForm());
-const departmentOptions = computed(() => getMachineDepartmentOptions(machines.value));
+const departmentOptions = ref<Department[]>([]);
 
 const canSave = computed(() =>
   Boolean(
@@ -216,8 +218,13 @@ onMounted(async () => {
 
 async function fetchMachines() {
   try {
-    const { data } = await statusApi.get<MachineInfo[]>('/machines');
+    const [{ data }, departments] = await Promise.all([
+      statusApi.get<MachineInfo[]>('/machines'),
+      fetchDepartments(),
+    ]);
+
     machines.value = [...data].sort((a, b) => a.name.localeCompare(b.name));
+    departmentOptions.value = departments;
 
     if (selectedMachineId.value) {
       const selected = machines.value.find((machine) => machine.id === selectedMachineId.value);
@@ -257,7 +264,7 @@ function applyMachineToForm(machine: MachineInfo) {
     source: machine.source,
     type: machine.type,
     paths: machine.paths,
-    department: machine.department || '',
+    departmentId: machine.departmentId ?? null,
     location: machine.location,
   };
 }
@@ -280,7 +287,7 @@ async function saveMachine() {
       source: form.value.source,
       type: form.value.type,
       paths: form.value.paths,
-      department: form.value.department.trim(),
+      department: form.value.departmentId,
       location: form.value.location.trim(),
     };
 
@@ -319,7 +326,7 @@ function createEmptyForm(): MachineForm {
     source: null,
     type: null,
     paths: '1',
-    department: '',
+    departmentId: null,
     location: '',
   };
 }

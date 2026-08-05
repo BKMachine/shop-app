@@ -1,4 +1,5 @@
 import { model, Schema, type Types } from 'mongoose';
+import type { DepartmentDoc } from '../department/department_model.js';
 
 export interface MachineDoc {
   _id: Types.ObjectId;
@@ -10,7 +11,7 @@ export interface MachineDoc {
   source: MachineSource;
   type: MachineType;
   paths: '1' | '2';
-  department: string;
+  department: Types.ObjectId | DepartmentDoc | string | null;
   location: string;
 }
 
@@ -23,7 +24,7 @@ const schema = new Schema<MachineDoc>({
   source: String,
   type: String,
   paths: String,
-  department: { type: String, default: '' },
+  department: { type: Schema.Types.ObjectId, ref: 'departments', default: null },
   location: { type: String, unique: true },
 });
 

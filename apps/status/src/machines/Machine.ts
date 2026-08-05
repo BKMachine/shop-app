@@ -17,6 +17,7 @@ class Machine {
 
   getMachine(): MachineData {
     const displayName = this.doc.displayName || this.doc.name;
+    const { departmentId, departmentName } = getMachineDepartment(this.doc.department);
 
     return {
       id: this.doc._id.toString(),
@@ -28,7 +29,8 @@ class Machine {
       model: this.doc.model,
       type: this.doc.type,
       paths: this.doc.paths,
-      department: this.doc.department,
+      departmentId,
+      department: departmentName,
       location: this.doc.location,
       logo: this.logo,
       state: this.state,
@@ -71,6 +73,25 @@ class Machine {
       emit('status', { id: this.doc._id, status: this.status });
     }
   }
+}
+
+function getMachineDepartment(value: MachineDoc['department']): {
+  departmentId: string | null;
+  departmentName: string;
+} {
+  if (!value) {
+    return { departmentId: null, departmentName: '' };
+  }
+
+  if (typeof value === 'string') {
+    return { departmentId: null, departmentName: value };
+  }
+
+  if ('name' in value && typeof value.name === 'string') {
+    return { departmentId: value._id.toString(), departmentName: value.name.trim() };
+  }
+
+  return { departmentId: value.toString(), departmentName: '' };
 }
 
 export default Machine;

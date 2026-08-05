@@ -56,6 +56,24 @@ declare global {
     __v?: number;
   }
 
+  /* DEPARTMENT */
+
+  interface DepartmentFields {
+    name: string;
+  }
+
+  interface Department extends DepartmentFields {
+    _id: string;
+    __v?: number;
+  }
+
+  interface DepartmentCreate extends DepartmentFields {}
+
+  interface DepartmentUpdate extends DepartmentFields {
+    _id: string;
+    __v?: number;
+  }
+
   /* REPORT */
 
   interface Email {

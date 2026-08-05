@@ -281,7 +281,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import logo from '@/assets/img/bk_logo.png';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
-import { getMachineDepartmentOptions } from '@/lib/machineDepartments';
+import { fetchMachineDepartmentOptions } from '@/lib/machineDepartments';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import { toastError } from '@/plugins/vue-toast-notification';
@@ -312,10 +312,7 @@ const idlePanelOpen = ref(readIdlePanelOpen());
 const dashboard = ref<MachineJobDashboardResponse>({ active: [], idle: [] });
 const machineSortMode = ref<MachineSortMode>(readMachineSortMode());
 const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
-
-const departmentOptions = computed(() => {
-  return getMachineDepartmentOptions([...dashboard.value.active, ...dashboard.value.idle]);
-});
+const departmentOptions = ref<string[]>([]);
 const hasDepartmentFilter = computed(() => {
   return (
     departmentOptions.value.length > 0 &&
@@ -335,6 +332,7 @@ const filteredDashboard = computed<MachineJobDashboardResponse>(() => {
     if (!shouldFilter) return true;
 
     const department = machine.department?.trim() || '';
+    if (department && !departmentOptions.value.includes(department)) return true;
     if (!department) return includedDepartments.size === 0;
     return includedDepartments.has(department);
   };
@@ -542,12 +540,22 @@ async function fetchMachineDashboard() {
   }
 }
 
+async function fetchDepartmentOptions() {
+  try {
+    departmentOptions.value = await fetchMachineDepartmentOptions();
+  } catch (error) {
+    departmentOptions.value = [];
+    console.warn('Unable to load machine department options.', error);
+  }
+}
+
 function refreshMachineDashboard() {
   void fetchMachineDashboard();
 }
 
 onMounted(() => {
   void fetchMachineDashboard();
+  void fetchDepartmentOptions();
   socket.on('job', refreshMachineDashboard);
   socket.on('jobDeleted', refreshMachineDashboard);
   socket.on('part', refreshMachineDashboard);

@@ -19,6 +19,14 @@
 
       <v-expansion-panel>
         <v-expansion-panel-title>
+          <v-icon class="mr-2" icon="mdi-domain" />
+          Departments
+        </v-expansion-panel-title>
+        <v-expansion-panel-text> <SettingsDepartments /> </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title>
           <v-icon class="mr-2" :icon="uiIcons.report" />
           Email Reports
         </v-expansion-panel-title>
@@ -117,6 +125,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import CustomerSettings from '@/components/settings/SettingsCustomer.vue';
+import SettingsDepartments from '@/components/settings/SettingsDepartments.vue';
 import SettingsLabelLayout from '@/components/settings/SettingsLabelLayout.vue';
 import SettingsReport from '@/components/settings/SettingsReport.vue';
 import SettingsScannerBarcode from '@/components/settings/SettingsScannerBarcode.vue';

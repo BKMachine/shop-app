@@ -1,8 +1,9 @@
 import { initMachines } from '../../../machines/index.js';
+import '../department/department_model.js';
 import Machine, { type MachineDoc } from './machine_model.js';
 
 function list(): Promise<MachineDoc[]> {
-  return Machine.find().sort('-1');
+  return Machine.find().populate('department').sort('-1');
 }
 
 async function create(data: unknown): Promise<MachineDoc> {

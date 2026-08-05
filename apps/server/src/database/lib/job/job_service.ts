@@ -6,6 +6,7 @@ import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import AuditService from '../audit/audit_service.js';
 import Customer from '../customer/customer_model.js';
 import Machine from '../machine/index.js';
+import type { MachineDoc } from '../machine/machine_model.js';
 import Part from '../part/part_model.js';
 import SequenceService from '../sequence/sequence_service.js';
 import Job, { type JobDoc } from './job_model.js';
@@ -304,9 +305,16 @@ function getMachineDashboardPartHasIncompleteData(value: unknown) {
   return hasIncompleteMachineDashboardPartData(extractPartCostData(value));
 }
 
+function getMachineDepartmentName(value: MachineDoc['department']): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if ('name' in value && typeof value.name === 'string') return value.name.trim();
+  return '';
+}
+
 async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
   const [machines, jobs] = await Promise.all([
-    Machine.find().sort({ name: 1 }),
+    Machine.find().populate('department').sort({ name: 1 }),
     Job.find({ status: 'in_process' })
       .populate('part', {
         part: 1,
@@ -383,7 +391,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
           machineId,
           machineName,
           machineType: machine.type,
-          department: machine.department ?? '',
+          department: getMachineDepartmentName(machine.department),
           location: machine.location,
           hasInProcessJob: true,
           priority: activeEntry.job.priority ?? 'normal',
@@ -409,7 +417,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         machineId,
         machineName,
         machineType: machine.type,
-        department: machine.department ?? '',
+        department: getMachineDepartmentName(machine.department),
         location: machine.location,
         hasInProcessJob: false,
         priority: null,

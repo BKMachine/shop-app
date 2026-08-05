@@ -39,13 +39,18 @@
 
     <v-menu location="top end">
       <template #activator="{ props }">
-        <v-btn
-          v-bind="props"
+        <v-badge
           class="settings-button"
-          color="surface"
-          elevation="8"
-          icon="mdi-cog-outline"
-        />
+          color="error"
+          dot
+          location="top end"
+          :model-value="hasMachineMissingDepartment"
+          offset-x="2"
+          offset-y="2"
+          size="small"
+        >
+          <v-btn v-bind="props" color="surface" elevation="8" icon="mdi-cog-outline" />
+        </v-badge>
       </template>
 
       <v-list density="comfortable" min-width="220">
@@ -120,7 +125,7 @@ import { useRouter } from 'vue-router';
 import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import MachineTile from '@/components/MachineTile.vue';
-import { getMachineDepartmentOptions } from '@/lib/machineDepartments';
+import { fetchMachineDepartmentOptions } from '@/lib/machineDepartments';
 import api, { statusApi } from '@/plugins/axios';
 import { socket as appSocket } from '@/plugins/socket';
 
@@ -144,15 +149,10 @@ const router = useRouter();
 const tiles = ref<StatusTile[]>([]);
 const resetOrderConfirmVisible = ref(false);
 const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
+const departmentOptions = ref<string[]>([]);
 const revealedBlankTileId = ref<string | null>(null);
 let cachedMachineDashboardMetadata = new Map<string, MachineDashboardMetadata>();
 let blankTilePressTimer: ReturnType<typeof setTimeout> | null = null;
-
-const departmentOptions = computed(() => {
-  return getMachineDepartmentOptions(
-    tiles.value.filter((tile): tile is MachineInfo => !isBlankTile(tile)),
-  );
-});
 
 const hasDepartmentFilter = computed(() => {
   return (
@@ -168,6 +168,10 @@ const areAllDepartmentsIncluded = computed(() => {
   );
 });
 
+const hasMachineMissingDepartment = computed(() => {
+  return tiles.value.some((tile) => !isBlankTile(tile) && !tile.departmentId);
+});
+
 const visibleTiles = computed<StatusTile[]>({
   get() {
     if (!departmentOptions.value.length) return tiles.value;
@@ -177,6 +181,7 @@ const visibleTiles = computed<StatusTile[]>({
       if (isBlankTile(tile)) return true;
 
       const department = tile.department?.trim() || '';
+      if (department && !departmentOptions.value.includes(department)) return true;
       return Boolean(department) && includedDepartments.has(department);
     });
   },
@@ -239,11 +244,16 @@ onBeforeUnmount(() => {
 });
 
 async function fetchMachines() {
-  Promise.all([statusApi.get<MachineInfo[]>('/machines'), fetchMachineDashboardMetadata()])
-    .then(([{ data: machines }, machineDashboardMetadata]) => {
+  Promise.all([
+    statusApi.get<MachineInfo[]>('/machines'),
+    fetchMachineDashboardMetadata(),
+    fetchMachineDepartmentOptions(),
+  ])
+    .then(([{ data: machines }, machineDashboardMetadata, departments]) => {
       tiles.value = orderMachines(
         machines.map((machine) => ({ ...machine, ...machineDashboardMetadata.get(machine.id) })),
       );
+      departmentOptions.value = departments;
       syncIncludedDepartments();
       persistMachineOrder();
     })
