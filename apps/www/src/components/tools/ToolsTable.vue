@@ -169,7 +169,7 @@
                   </template>
                 </v-text-field>
               </v-col>
-              <v-col cols="6">
+              <v-col cols="4">
                 <v-autocomplete
                   v-model="selectedToolType"
                   clearable
@@ -178,7 +178,7 @@
                   variant="outlined"
                 />
               </v-col>
-              <v-col cols="6">
+              <v-col cols="2">
                 <IsoMaterialFilterSelect v-model="selectedIsoMaterial" label="ISO Material" />
               </v-col>
             </v-row>
@@ -207,7 +207,7 @@
                   </template>
                 </v-text-field>
               </v-col>
-              <v-col cols="3">
+              <v-col cols="4">
                 <v-autocomplete
                   v-model="selectedToolType"
                   clearable
@@ -216,7 +216,7 @@
                   variant="outlined"
                 />
               </v-col>
-              <v-col cols="3">
+              <v-col cols="2">
                 <IsoMaterialFilterSelect v-model="selectedIsoMaterial" label="ISO Material" />
               </v-col>
             </v-row>

@@ -302,7 +302,7 @@ const turningHeaders = [
   {
     title: 'ISO',
     key: 'isoMaterials',
-    width: 88,
+    width: 120,
     align: 'center',
   },
   {
@@ -346,7 +346,7 @@ const otherHeaders = [
   {
     title: 'ISO',
     key: 'isoMaterials',
-    width: 88,
+    width: 120,
     align: 'center',
   },
   {
