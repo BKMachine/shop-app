@@ -120,6 +120,7 @@ import { useRouter } from 'vue-router';
 import draggable from 'vuedraggable';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import MachineTile from '@/components/MachineTile.vue';
+import { getMachineDepartmentOptions } from '@/lib/machineDepartments';
 import api, { statusApi } from '@/plugins/axios';
 import { socket as appSocket } from '@/plugins/socket';
 
@@ -148,14 +149,9 @@ let cachedMachineDashboardMetadata = new Map<string, MachineDashboardMetadata>()
 let blankTilePressTimer: ReturnType<typeof setTimeout> | null = null;
 
 const departmentOptions = computed(() => {
-  return [
-    ...new Set(
-      tiles.value
-        .filter((tile): tile is MachineInfo => !isBlankTile(tile))
-        .map((machine) => machine.department?.trim() || '')
-        .filter(Boolean),
-    ),
-  ].sort((left, right) => left.localeCompare(right));
+  return getMachineDepartmentOptions(
+    tiles.value.filter((tile): tile is MachineInfo => !isBlankTile(tile)),
+  );
 });
 
 const hasDepartmentFilter = computed(() => {

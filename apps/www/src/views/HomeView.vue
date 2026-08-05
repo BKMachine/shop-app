@@ -281,6 +281,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import logo from '@/assets/img/bk_logo.png';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
+import { getMachineDepartmentOptions } from '@/lib/machineDepartments';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import { toastError } from '@/plugins/vue-toast-notification';
@@ -313,13 +314,7 @@ const machineSortMode = ref<MachineSortMode>(readMachineSortMode());
 const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
 
 const departmentOptions = computed(() => {
-  return [
-    ...new Set(
-      [...dashboard.value.active, ...dashboard.value.idle]
-        .map((machine) => machine.department?.trim() || '')
-        .filter(Boolean),
-    ),
-  ].sort((left, right) => left.localeCompare(right));
+  return getMachineDepartmentOptions([...dashboard.value.active, ...dashboard.value.idle]);
 });
 const hasDepartmentFilter = computed(() => {
   return (

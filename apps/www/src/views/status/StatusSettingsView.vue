@@ -159,6 +159,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { getMachineDepartmentOptions } from '@/lib/machineDepartments';
 import { statusApi } from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
 
@@ -193,11 +194,7 @@ const machines = ref<MachineInfo[]>([]);
 const selectedMachineId = ref<string | null>(null);
 const savePending = ref(false);
 const form = ref<MachineForm>(createEmptyForm());
-const departmentOptions = computed(() => {
-  return [
-    ...new Set(machines.value.map((machine) => machine.department?.trim() || '').filter(Boolean)),
-  ].sort((left, right) => left.localeCompare(right));
-});
+const departmentOptions = computed(() => getMachineDepartmentOptions(machines.value));
 
 const canSave = computed(() =>
   Boolean(
