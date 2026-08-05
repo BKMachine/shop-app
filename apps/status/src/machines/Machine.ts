@@ -28,6 +28,7 @@ class Machine {
       model: this.doc.model,
       type: this.doc.type,
       paths: this.doc.paths,
+      department: this.doc.department,
       location: this.doc.location,
       logo: this.logo,
       state: this.state,

@@ -24,11 +24,11 @@
       </v-card-title>
     </v-card>
 
-    <v-row>
-      <v-col cols="12" md="4">
-        <v-card rounded="lg">
+    <v-row class="status-settings__content-row">
+      <v-col class="status-settings__column" cols="12" md="4">
+        <v-card class="status-settings__machine-card" rounded="lg">
           <v-card-title>Machines</v-card-title>
-          <v-card-text>
+          <v-card-text class="status-settings__machine-card-body">
             <v-list v-if="machines.length" class="status-settings__machine-list" lines="two">
               <v-list-item
                 v-for="machine in machines"
@@ -41,7 +41,9 @@
                 <v-list-item-subtitle>
                   {{ machine.name }}
                   • {{ machine.brand }}
-                  • {{ machine.type }} • {{ machine.location }}
+                  • {{ machine.type }}
+                  <template v-if="machine.department"> • {{ machine.department }} </template>
+                  • {{ machine.location }}
                 </v-list-item-subtitle>
               </v-list-item>
             </v-list>
@@ -115,7 +117,16 @@
                     variant="outlined"
                   />
                 </v-col>
-                <v-col cols="12">
+                <v-col cols="12" md="6">
+                  <v-combobox
+                    v-model="form.department"
+                    clearable
+                    :items="departmentOptions"
+                    label="Department"
+                    variant="outlined"
+                  />
+                </v-col>
+                <v-col cols="12" md="6">
                   <v-text-field
                     v-model="form.location"
                     label="Location"
@@ -160,6 +171,7 @@ type MachineForm = {
   source: MachineSource | null;
   type: MachineType | null;
   paths: '1' | '2';
+  department: string;
   location: string;
 };
 
@@ -181,6 +193,11 @@ const machines = ref<MachineInfo[]>([]);
 const selectedMachineId = ref<string | null>(null);
 const savePending = ref(false);
 const form = ref<MachineForm>(createEmptyForm());
+const departmentOptions = computed(() => {
+  return [
+    ...new Set(machines.value.map((machine) => machine.department?.trim() || '').filter(Boolean)),
+  ].sort((left, right) => left.localeCompare(right));
+});
 
 const canSave = computed(() =>
   Boolean(
@@ -243,6 +260,7 @@ function applyMachineToForm(machine: MachineInfo) {
     source: machine.source,
     type: machine.type,
     paths: machine.paths,
+    department: machine.department || '',
     location: machine.location,
   };
 }
@@ -265,6 +283,7 @@ async function saveMachine() {
       source: form.value.source,
       type: form.value.type,
       paths: form.value.paths,
+      department: form.value.department.trim(),
       location: form.value.location.trim(),
     };
 
@@ -303,6 +322,7 @@ function createEmptyForm(): MachineForm {
     source: null,
     type: null,
     paths: '1',
+    department: '',
     location: '',
   };
 }
@@ -327,6 +347,27 @@ function createEmptyForm(): MachineForm {
   gap: 12px;
 }
 
+.status-settings__content-row {
+  align-items: stretch;
+}
+
+.status-settings__column {
+  display: flex;
+}
+
+.status-settings__machine-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  max-height: calc(100dvh - 170px);
+}
+
+.status-settings__machine-card-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .status-settings__machine-list {
   padding: 0;
 }
@@ -338,6 +379,18 @@ function createEmptyForm(): MachineForm {
 }
 
 @media (max-width: 960px) {
+  .status-settings__column {
+    display: block;
+  }
+
+  .status-settings__machine-card {
+    max-height: none;
+  }
+
+  .status-settings__machine-card-body {
+    overflow-y: visible;
+  }
+
   .status-settings__header {
     align-items: flex-start;
     flex-direction: column;

@@ -124,6 +124,7 @@ declare global {
     type: MachineType;
     source: MachineSource;
     paths: '1' | '2';
+    department: string;
     location: string;
     logo: string;
     status: MachineStatus;

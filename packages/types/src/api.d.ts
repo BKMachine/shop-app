@@ -286,6 +286,7 @@ declare global {
     machineId: string;
     machineName: string;
     machineType: MachineType;
+    department: string;
     location: string;
     hasInProcessJob: boolean;
     priority?: JobPriority | null;

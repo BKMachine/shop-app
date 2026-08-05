@@ -23,6 +23,63 @@
                 <h2 class="machine-section__title">Machines In Process</h2>
               </div>
               <div class="machine-section__header-actions">
+                <v-menu :close-on-content-click="false" location="bottom end">
+                  <template #activator="{ props: activatorProps }">
+                    <v-badge
+                      :class="[
+                        'machine-section__department-filter',
+                        {
+                          'machine-section__department-filter--active': hasDepartmentFilter,
+                        },
+                      ]"
+                      color="primary"
+                      dot
+                      location="top end"
+                      :model-value="hasDepartmentFilter"
+                      offset-x="-3"
+                      offset-y="1"
+                      size="xs-small"
+                    >
+                      <v-icon
+                        v-bind="activatorProps"
+                        aria-label="Filter departments"
+                        color="grey-darken-2"
+                        icon="mdi-domain-switch"
+                        size="24"
+                      />
+                    </v-badge>
+                  </template>
+
+                  <v-list density="compact" min-width="260">
+                    <v-list-subheader>Included Departments</v-list-subheader>
+                    <v-list-item v-if="departmentOptions.length" density="compact">
+                      <template #prepend>
+                        <v-checkbox-btn
+                          :indeterminate="hasDepartmentFilter"
+                          :model-value="areAllDepartmentsIncluded"
+                          @update:model-value="toggleAllDepartments($event)"
+                        />
+                      </template>
+                      <v-list-item-title>All Departments</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item
+                      v-for="department in departmentOptions"
+                      :key="department"
+                      density="compact"
+                    >
+                      <template #prepend>
+                        <v-checkbox-btn
+                          :model-value="includedDepartmentKeys.includes(department)"
+                          @update:model-value="toggleDepartment(department, $event)"
+                        />
+                      </template>
+                      <v-list-item-title>{{ department }}</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item v-if="!departmentOptions.length" density="compact">
+                      <v-list-item-title>No departments available</v-list-item-title>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
                 <v-select
                   v-model="machineSortMode"
                   base-color="grey-darken-3"
@@ -231,6 +288,7 @@ import { isAppScanReady, useIdleHomeRedirectEnabled } from '@/state/app_focus';
 
 const MACHINE_SORT_STORAGE_KEY = 'home-machine-sort-mode';
 const IDLE_PANEL_OPEN_STORAGE_KEY = 'home-idle-panel-open';
+const INCLUDED_DEPARTMENTS_STORAGE_KEY = 'home-included-departments';
 const MACHINE_SORT_OPTIONS = [
   { label: 'Due Date', value: 'dueDate' },
   { label: 'Name', value: 'machineName' },
@@ -252,8 +310,49 @@ const loadFailed = ref(false);
 const idlePanelOpen = ref(readIdlePanelOpen());
 const dashboard = ref<MachineJobDashboardResponse>({ active: [], idle: [] });
 const machineSortMode = ref<MachineSortMode>(readMachineSortMode());
+const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
 
-const activeMachines = computed(() => [...dashboard.value.active].sort(compareActiveMachines));
+const departmentOptions = computed(() => {
+  return [
+    ...new Set(
+      [...dashboard.value.active, ...dashboard.value.idle]
+        .map((machine) => machine.department?.trim() || '')
+        .filter(Boolean),
+    ),
+  ].sort((left, right) => left.localeCompare(right));
+});
+const hasDepartmentFilter = computed(() => {
+  return (
+    departmentOptions.value.length > 0 &&
+    includedDepartmentKeys.value.length !== departmentOptions.value.length
+  );
+});
+const areAllDepartmentsIncluded = computed(() => {
+  return (
+    departmentOptions.value.length > 0 &&
+    includedDepartmentKeys.value.length === departmentOptions.value.length
+  );
+});
+const filteredDashboard = computed<MachineJobDashboardResponse>(() => {
+  const includedDepartments = new Set(includedDepartmentKeys.value);
+  const shouldFilter = departmentOptions.value.length > 0;
+  const matchesDepartment = (machine: MachineJobDashboardRow) => {
+    if (!shouldFilter) return true;
+
+    const department = machine.department?.trim() || '';
+    if (!department) return includedDepartments.size === 0;
+    return includedDepartments.has(department);
+  };
+
+  return {
+    active: dashboard.value.active.filter(matchesDepartment),
+    idle: dashboard.value.idle.filter(matchesDepartment),
+  };
+});
+
+const activeMachines = computed(() =>
+  [...filteredDashboard.value.active].sort(compareActiveMachines),
+);
 const rushActiveMachines = computed(() =>
   activeMachines.value.filter((machine) => machine.priority === 'rush'),
 );
@@ -301,7 +400,7 @@ const activeMachineItems = computed<ActiveMachineListItem[]>(() => {
     ...normalItems,
   ];
 });
-const idleMachines = computed(() => dashboard.value.idle);
+const idleMachines = computed(() => filteredDashboard.value.idle);
 const activeMachineCount = computed(() => {
   return new Set(activeMachines.value.map((machine) => machine.machineId)).size;
 });
@@ -330,6 +429,39 @@ function readIdlePanelOpen(): boolean {
   if (typeof window === 'undefined') return false;
 
   return window.localStorage.getItem(IDLE_PANEL_OPEN_STORAGE_KEY) === 'true';
+}
+
+function readIncludedDepartments(): string[] {
+  if (typeof window === 'undefined') return [];
+
+  const storedValue = window.localStorage.getItem(INCLUDED_DEPARTMENTS_STORAGE_KEY);
+  if (!storedValue) return [];
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter((value): value is string => typeof value === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function toggleDepartment(department: string, included: boolean | null) {
+  if (included) {
+    includedDepartmentKeys.value = [...new Set([...includedDepartmentKeys.value, department])].sort(
+      (left, right) => left.localeCompare(right),
+    );
+    return;
+  }
+
+  includedDepartmentKeys.value = includedDepartmentKeys.value.filter(
+    (value) => value !== department,
+  );
+}
+
+function toggleAllDepartments(included: boolean | null) {
+  includedDepartmentKeys.value = included ? [...departmentOptions.value] : [];
 }
 
 function compareMachineDueDate(left: MachineJobDashboardRow, right: MachineJobDashboardRow) {
@@ -444,6 +576,27 @@ watch(machineSortMode, (value) => {
 watch(idlePanelOpen, (value) => {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(IDLE_PANEL_OPEN_STORAGE_KEY, String(value));
+});
+
+watch(
+  departmentOptions,
+  (options) => {
+    if (!options.length) {
+      includedDepartmentKeys.value = [];
+      return;
+    }
+
+    const nextIncluded = includedDepartmentKeys.value.filter((department) =>
+      options.includes(department),
+    );
+    includedDepartmentKeys.value = nextIncluded.length ? nextIncluded : [...options];
+  },
+  { immediate: true },
+);
+
+watch(includedDepartmentKeys, (value) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(INCLUDED_DEPARTMENTS_STORAGE_KEY, JSON.stringify(value));
 });
 </script>
 
@@ -562,6 +715,15 @@ watch(idlePanelOpen, (value) => {
 .machine-section__sort {
   width: 156px;
   color: rgba(50, 42, 34, 0.88);
+}
+
+.machine-section__department-filter {
+  margin-right: 0;
+  transition: margin-right 180ms ease;
+}
+
+.machine-section__department-filter--active {
+  margin-right: 4px;
 }
 
 .machine-section__eyebrow {

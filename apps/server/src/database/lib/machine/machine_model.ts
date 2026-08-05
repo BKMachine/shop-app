@@ -10,6 +10,7 @@ export interface MachineDoc {
   source: MachineSource;
   type: MachineType;
   paths: '1' | '2';
+  department: string;
   location: string;
 }
 
@@ -22,6 +23,7 @@ const schema = new Schema<MachineDoc>({
   source: String,
   type: String,
   paths: String,
+  department: { type: String, default: '' },
   location: { type: String, unique: true },
 });
 
