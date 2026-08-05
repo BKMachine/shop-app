@@ -1127,6 +1127,7 @@ test('listMachineDashboard flags incomplete cost data for in-process subcomponen
       machineId: 'machine-1',
       partId: PART_ID_1,
       partHasIncompleteData: true,
+      priority: 'normal',
     }),
   ]);
 });

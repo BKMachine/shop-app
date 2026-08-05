@@ -329,7 +329,10 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
     string,
     Array<{
       task: JobProductionTask;
-      job: Pick<Job, '_id' | 'jobNumber' | 'qty' | 'dueDate' | 'partNumber' | 'partDescription'> & {
+      job: Pick<
+        Job,
+        '_id' | 'jobNumber' | 'qty' | 'dueDate' | 'partNumber' | 'partDescription' | 'priority'
+      > & {
         partId: string | null;
         partImage: string | null;
         partHasIncompleteData: boolean;
@@ -348,6 +351,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
           jobNumber: job.jobNumber,
           qty: job.qty,
           dueDate: job.dueDate,
+          priority: job.priority,
           partId: extractReferencedId(job.part),
           partNumber: extractPartText(job.part, 'part') ?? job.partNumber,
           partDescription: extractPartText(job.part, 'description') ?? job.partDescription,
@@ -381,6 +385,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
           machineType: machine.type,
           location: machine.location,
           hasInProcessJob: true,
+          priority: activeEntry.job.priority ?? 'normal',
           taskId: activeEntry.task.id,
           taskStartedAt: activeEntry.task.startedAt,
           jobId: activeEntry.job._id,
@@ -405,6 +410,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         machineType: machine.type,
         location: machine.location,
         hasInProcessJob: false,
+        priority: null,
         jobId: null,
         jobNumber: null,
         qty: null,

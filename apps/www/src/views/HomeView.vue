@@ -57,88 +57,109 @@
               No machines currently have in-process jobs.
             </div>
             <div v-else class="machine-cards-grid">
-              <article
-                v-for="machine in activeMachines"
-                :key="activeMachineCardKey(machine)"
-                :class="[
-                  'machine-card',
-                  machineCardDueDateClass(machine.dueDate),
-                  { 'machine-card--incomplete': machine.partHasIncompleteData },
-                ]"
-              >
-                <div class="machine-card__header">
-                  <div>
-                    <h3 class="machine-card__title">{{ machine.machineName }}</h3>
-                  </div>
-                  <RouterLink
-                    v-if="machine.jobId"
-                    class="machine-card__job-link"
-                    :to="{ name: 'viewJob', params: { id: machine.jobId } }"
-                  >
-                    Job #{{ machine.jobNumber ?? '—' }}
-                  </RouterLink>
-                  <p v-else class="machine-card__subtitle">Job {{ machine.jobNumber ?? '—' }}</p>
+              <template v-for="item in activeMachineItems" :key="activeMachineItemKey(item)">
+                <div
+                  v-if="item.type === 'divider'"
+                  :class="[
+                    'machine-cards-divider',
+                    item.variant === 'rush'
+                      ? 'machine-cards-divider--rush'
+                      : 'machine-cards-divider--normal',
+                  ]"
+                >
+                  <span class="machine-cards-divider__label">{{ item.label }}</span>
                 </div>
 
-                <div class="machine-card__body">
-                  <div v-if="machine.partImage" class="machine-card__image-wrap">
-                    <v-img class="machine-card__image" contain :src="machine.partImage" />
+                <article
+                  v-else
+                  :class="[
+                    'machine-card',
+                    machineCardDueDateClass(item.machine.dueDate),
+                    { 'machine-card--incomplete': item.machine.partHasIncompleteData },
+                  ]"
+                >
+                  <div class="machine-card__header">
+                    <div>
+                      <h3 class="machine-card__title">
+                        <span>{{ item.machine.machineName }}</span>
+                      </h3>
+                    </div>
+                    <RouterLink
+                      v-if="item.machine.jobId"
+                      class="machine-card__job-link"
+                      :to="{ name: 'viewJob', params: { id: item.machine.jobId } }"
+                    >
+                      Job #{{ item.machine.jobNumber ?? '—' }}
+                    </RouterLink>
+                    <p v-else class="machine-card__subtitle">
+                      Job {{ item.machine.jobNumber ?? '—' }}
+                    </p>
                   </div>
 
-                  <div class="machine-card__body-main">
-                    <div class="machine-card__meta-row">
-                      <div class="machine-card__meta-block">
-                        <span class="machine-card__meta-label">Qty</span>
-                        <span class="machine-card__meta-value">{{ machine.qty ?? '—' }}</span>
-                      </div>
-                      <div class="machine-card__meta-block machine-card__meta-block--due">
-                        <span class="machine-card__meta-label">Due</span>
-                        <v-chip
-                          v-if="machine.dueDate"
-                          :color="dueDateColor(machine.dueDate)"
-                          size="small"
-                          variant="tonal"
-                        >
-                          {{ formatRelativeDate(machine.dueDate) }}
-                        </v-chip>
-                        <span
-                          v-else
-                          class="machine-card__meta-value machine-card__meta-value--empty"
-                        >
-                          —
-                        </span>
+                  <div class="machine-card__body">
+                    <div v-if="item.machine.partImage" class="machine-card__image-wrap">
+                      <v-img class="machine-card__image" contain :src="item.machine.partImage" />
+                    </div>
+
+                    <div class="machine-card__body-main">
+                      <div class="machine-card__meta-row">
+                        <div class="machine-card__meta-block">
+                          <span class="machine-card__meta-label">Qty</span>
+                          <span class="machine-card__meta-value"
+                            >{{ item.machine.qty ?? '—' }}</span
+                          >
+                        </div>
+                        <div class="machine-card__meta-block machine-card__meta-block--due">
+                          <span class="machine-card__meta-label">Due</span>
+                          <v-chip
+                            v-if="item.machine.dueDate"
+                            :color="dueDateColor(item.machine.dueDate)"
+                            size="small"
+                            variant="tonal"
+                          >
+                            {{ formatRelativeDate(item.machine.dueDate) }}
+                          </v-chip>
+                          <span
+                            v-else
+                            class="machine-card__meta-value machine-card__meta-value--empty"
+                          >
+                            —
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div class="machine-card__content">
-                  <!-- <span class="machine-card__content-label">Part / Description</span> -->
-                  <v-tooltip
-                    :disabled="!displayMachinePartText(machine)"
-                    location="top"
-                    open-delay="1500"
-                  >
-                    <template #activator="{ props }">
-                      <span v-bind="props" class="machine-card__content-value">
-                        <RouterLink
-                          v-if="machine.partId && displayMachinePartNumber(machine)"
-                          class="machine-card__part-link"
-                          :to="{ name: 'viewPart', params: { id: machine.partId } }"
-                        >
-                          {{ displayMachinePartNumber(machine) }}
-                        </RouterLink>
-                        <span v-else>{{ displayMachinePartNumber(machine) || '—' }}</span>
-                        <span v-if="displayMachinePartDescription(machine)">
-                          / {{ displayMachinePartDescription(machine) }}
+                  <div class="machine-card__content">
+                    <!-- <span class="machine-card__content-label">Part / Description</span> -->
+                    <v-tooltip
+                      :disabled="!displayMachinePartText(item.machine)"
+                      location="top"
+                      open-delay="1500"
+                    >
+                      <template #activator="{ props }">
+                        <span v-bind="props" class="machine-card__content-value">
+                          <RouterLink
+                            v-if="item.machine.partId && displayMachinePartNumber(item.machine)"
+                            class="machine-card__part-link"
+                            :to="{ name: 'viewPart', params: { id: item.machine.partId } }"
+                          >
+                            {{ displayMachinePartNumber(item.machine) }}
+                          </RouterLink>
+                          <span v-else>{{ displayMachinePartNumber(item.machine) || '—' }}</span>
+                          <span v-if="displayMachinePartDescription(item.machine)">
+                            / {{ displayMachinePartDescription(item.machine) }}
+                          </span>
                         </span>
-                      </span>
-                    </template>
+                      </template>
 
-                    <span style="white-space: nowrap">{{ displayMachinePartText(machine) }}</span>
-                  </v-tooltip>
-                </div>
-              </article>
+                      <span style="white-space: nowrap"
+                        >{{ displayMachinePartText(item.machine) }}</span
+                      >
+                    </v-tooltip>
+                  </div>
+                </article>
+              </template>
             </div>
           </section>
 
@@ -216,6 +237,14 @@ const MACHINE_SORT_OPTIONS = [
 ] as const;
 
 type MachineSortMode = (typeof MACHINE_SORT_OPTIONS)[number]['value'];
+type ActiveMachineListItem =
+  | { type: 'machine'; machine: MachineJobDashboardRow }
+  | {
+      type: 'divider';
+      key: 'rush-priority-divider' | 'normal-priority-divider';
+      label: 'Rush Jobs' | 'Normal Jobs';
+      variant: 'rush' | 'normal';
+    };
 
 const idleHomeRedirectEnabled = useIdleHomeRedirectEnabled;
 const loading = ref(false);
@@ -224,18 +253,54 @@ const idlePanelOpen = ref(readIdlePanelOpen());
 const dashboard = ref<MachineJobDashboardResponse>({ active: [], idle: [] });
 const machineSortMode = ref<MachineSortMode>(readMachineSortMode());
 
-const activeMachines = computed(() =>
-  [...dashboard.value.active].sort((left, right) => {
-    if (machineSortMode.value === 'machineName') {
-      const nameOrder = left.machineName.localeCompare(right.machineName);
-      if (nameOrder !== 0) return nameOrder;
-
-      return compareMachineDueDate(left, right);
-    }
-
-    return compareMachineDueDate(left, right);
-  }),
+const activeMachines = computed(() => [...dashboard.value.active].sort(compareActiveMachines));
+const rushActiveMachines = computed(() =>
+  activeMachines.value.filter((machine) => machine.priority === 'rush'),
 );
+const normalActiveMachines = computed(() =>
+  activeMachines.value.filter((machine) => machine.priority !== 'rush'),
+);
+const activeMachineItems = computed<ActiveMachineListItem[]>(() => {
+  const rushItems = rushActiveMachines.value.map((machine) => ({
+    type: 'machine' as const,
+    machine,
+  }));
+  const normalItems = normalActiveMachines.value.map((machine) => ({
+    type: 'machine' as const,
+    machine,
+  }));
+
+  if (!rushItems.length || !normalItems.length) {
+    if (!rushItems.length) return normalItems;
+
+    return [
+      {
+        type: 'divider',
+        key: 'rush-priority-divider',
+        label: 'Rush Jobs',
+        variant: 'rush',
+      },
+      ...rushItems,
+    ];
+  }
+
+  return [
+    {
+      type: 'divider',
+      key: 'rush-priority-divider',
+      label: 'Rush Jobs',
+      variant: 'rush',
+    },
+    ...rushItems,
+    {
+      type: 'divider',
+      key: 'normal-priority-divider',
+      label: 'Normal Jobs',
+      variant: 'normal',
+    },
+    ...normalItems,
+  ];
+});
 const idleMachines = computed(() => dashboard.value.idle);
 const activeMachineCount = computed(() => {
   return new Set(activeMachines.value.map((machine) => machine.machineId)).size;
@@ -248,6 +313,10 @@ const runningSummaryText = computed(() => {
 
 function activeMachineCardKey(machine: MachineJobDashboardRow) {
   return machine.taskId || machine.jobId || `${machine.machineId}-${machine.jobNumber ?? 'none'}`;
+}
+
+function activeMachineItemKey(item: ActiveMachineListItem) {
+  return item.type === 'divider' ? item.key : activeMachineCardKey(item.machine);
 }
 
 function readMachineSortMode(): MachineSortMode {
@@ -273,6 +342,26 @@ function compareMachineDueDate(left: MachineJobDashboardRow, right: MachineJobDa
   if (leftJobNumber !== rightJobNumber) return leftJobNumber - rightJobNumber;
 
   return left.machineName.localeCompare(right.machineName);
+}
+
+function compareActiveMachines(left: MachineJobDashboardRow, right: MachineJobDashboardRow) {
+  const priorityOrder = compareMachinePriority(left, right);
+  if (priorityOrder !== 0) return priorityOrder;
+
+  if (machineSortMode.value === 'machineName') {
+    const nameOrder = left.machineName.localeCompare(right.machineName);
+    if (nameOrder !== 0) return nameOrder;
+
+    return compareMachineDueDate(left, right);
+  }
+
+  return compareMachineDueDate(left, right);
+}
+
+function compareMachinePriority(left: MachineJobDashboardRow, right: MachineJobDashboardRow) {
+  const leftRank = left.priority === 'rush' ? 0 : 1;
+  const rightRank = right.priority === 'rush' ? 0 : 1;
+  return leftRank - rightRank;
 }
 
 function normalizeMachineDueDate(value: string | Date | null | undefined) {
@@ -499,6 +588,44 @@ watch(idlePanelOpen, (value) => {
   align-content: flex-start;
 }
 
+.machine-cards-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0;
+  color: rgba(88, 77, 65, 0.76);
+}
+
+.machine-cards-divider--rush {
+  color: rgba(183, 28, 28, 0.92);
+}
+
+.machine-cards-divider--normal {
+  color: rgba(88, 77, 65, 0.76);
+}
+
+.machine-cards-divider::before,
+.machine-cards-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(88, 77, 65, 0.12), rgba(88, 77, 65, 0.3));
+}
+
+.machine-cards-divider--rush::before,
+.machine-cards-divider--rush::after {
+  background: linear-gradient(90deg, rgba(198, 40, 40, 0.2), rgba(198, 40, 40, 0.72));
+}
+
+.machine-cards-divider__label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 @media (min-width: 1800px) {
   .machine-cards-grid {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -559,6 +686,9 @@ watch(idlePanelOpen, (value) => {
 }
 
 .machine-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   font-size: 0.96rem;
   font-weight: 700;

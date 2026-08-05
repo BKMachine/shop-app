@@ -288,6 +288,7 @@ declare global {
     machineType: MachineType;
     location: string;
     hasInProcessJob: boolean;
+    priority?: JobPriority | null;
     taskId?: string | null;
     taskStartedAt?: string | Date | null;
     jobId?: string | null;
