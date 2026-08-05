@@ -352,7 +352,10 @@ const PartModelMock = {
 const MachineModelMock = {
   find: jest.fn(() => {
     const records = Array.from(machineStore.values()).map((record) => cloneValue(record));
-    return {
+    const query = {
+      populate(_path?: string) {
+        return query;
+      },
       sort(sortQuery?: Record<string, 1 | -1>) {
         if (!sortQuery) return records;
 
@@ -370,6 +373,8 @@ const MachineModelMock = {
         });
       },
     };
+
+    return query;
   }),
 };
 
