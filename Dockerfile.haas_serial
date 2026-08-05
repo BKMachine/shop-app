@@ -1,8 +1,8 @@
 FROM node:22 AS base
 WORKDIR /app
 ENV PNPM_HOME="/root/.local/share/pnpm"
-ENV PATH="${PATH}:${PNPM_HOME}"
-RUN npm install -g pnpm@latest-10
+ENV PATH="${PATH}:${PNPM_HOME}/bin"
+RUN npm install -g pnpm@11.18.0
 RUN pnpm add turbo --global
 COPY .npmrc .npmrc
 COPY package.json package.json
@@ -20,19 +20,21 @@ RUN turbo prune haas_serial --docker
 
 FROM haas_serial-prune AS haas_serial-installer
 COPY --from=haas_serial-prune /app/out/json/ .
-RUN pnpm install
+RUN grep -q '^  injectWorkspacePackages: true$' pnpm-lock.yaml || sed -i "/^settings:$/a\\  injectWorkspacePackages: true" pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile --config.inject-workspace-packages=true
 COPY --from=haas_serial-prune /app/out/full/ .
 COPY packages packages  
 
 FROM haas_serial-installer AS haas_serial-builder
 COPY apps/haas_serial apps/haas_serial
 RUN pnpm run format --filter=haas_serial
+RUN pnpm run check --filter=haas_serial
 RUN pnpm run ci --filter=haas_serial
 RUN pnpm run build --filter=haas_serial
 
 FROM haas_serial-installer AS haas_serial-deploy
 RUN pnpm run build --filter=@repo/utilities
-RUN pnpm deploy --filter=haas_serial --prod /app/deploy/haas_serial
+RUN pnpm deploy --filter=haas_serial --prod --config.inject-workspace-packages=true /app/deploy/haas_serial
 
 FROM node:22-slim AS runner
 WORKDIR /app
