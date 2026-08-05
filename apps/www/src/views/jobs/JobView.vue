@@ -339,6 +339,7 @@
 </template>
 
 <script setup lang="ts">
+import { calculateTaskBusinessDurationMs } from '@repo/utilities/time';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import JobFormFields, { type JobDraft } from '@/components/jobs/JobFormFields.vue';
@@ -944,13 +945,22 @@ function formatTaskDateTime(value: string | Date | null | undefined) {
 }
 
 function formatTaskDuration(task: JobProductionTask) {
-  if (!task.endedAt) return 'In progress';
+  const totalMs = calculateTaskBusinessDurationMs(
+    task,
+    {
+      timeZone: 'America/Denver',
+    },
+    new Date(),
+  );
 
-  const startedAt = new Date(task.startedAt);
-  const endedAt = new Date(task.endedAt);
-  if (Number.isNaN(startedAt.getTime()) || Number.isNaN(endedAt.getTime())) return '';
+  if (!task.endedAt) return `${formatElapsedDuration(totalMs)} (in progress)`;
+  if (!totalMs) return '';
 
-  const totalMinutes = Math.max(0, Math.round((endedAt.getTime() - startedAt.getTime()) / 60000));
+  return formatElapsedDuration(totalMs);
+}
+
+function formatElapsedDuration(valueMs: number) {
+  const totalMinutes = Math.max(0, Math.round(valueMs / 60000));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 

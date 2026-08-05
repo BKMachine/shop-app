@@ -63,9 +63,15 @@ declare global {
     cc: boolean;
   }
 
+  interface JobReportSchedule {
+    daily: boolean;
+    weekly: boolean;
+  }
+
   interface EmailReportFields {
     email: string;
     tooling: Email;
+    jobs: JobReportSchedule;
   }
 
   interface EmailReport extends EmailReportFields {

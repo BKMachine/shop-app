@@ -19,6 +19,14 @@
           {{ ccCount }}
           cc
         </v-chip>
+        <v-chip color="info" prepend-icon="mdi-briefcase-clock-outline" variant="tonal">
+          {{ jobDailyCount }}
+          daily job
+        </v-chip>
+        <v-chip color="warning" prepend-icon="mdi-calendar-week-outline" variant="tonal">
+          {{ jobWeeklyCount }}
+          weekly job
+        </v-chip>
       </div>
     </div>
 
@@ -65,10 +73,12 @@
             <tr>
               <th class="report-settings__recipient-header" rowspan="2">Recipient</th>
               <th class="report-settings__group-header text-center">Tooling Report</th>
+              <th class="report-settings__group-header text-center">Job Report</th>
               <th class="report-settings__actions-header text-right" rowspan="2">Actions</th>
             </tr>
             <tr>
               <th class="report-settings__group-subheader text-center">To/Cc</th>
+              <th class="report-settings__group-subheader text-center">Daily/Weekly</th>
             </tr>
           </thead>
 
@@ -112,6 +122,31 @@
                   />
                 </div>
               </td>
+              <td class="report-settings__report-cell text-center">
+                <div
+                  aria-label="Job report recipients"
+                  class="report-settings__report-toggle-group"
+                  role="group"
+                >
+                  <v-checkbox
+                    class="report-settings__checkbox"
+                    color="info"
+                    density="compact"
+                    hide-details
+                    :model-value="email.jobs.daily"
+                    @update:model-value="updateJobDaily(email, Boolean($event))"
+                  />
+
+                  <v-checkbox
+                    class="report-settings__checkbox"
+                    color="warning"
+                    density="compact"
+                    hide-details
+                    :model-value="email.jobs.weekly"
+                    @update:model-value="updateJobWeekly(email, Boolean($event))"
+                  />
+                </div>
+              </td>
               <td class="report-settings__actions-cell text-right">
                 <v-btn
                   color="error"
@@ -130,7 +165,7 @@
         <div class="report-settings__empty-title">No recipients configured yet</div>
         <p class="report-settings__empty-copy">
           Add the first address above, then choose whether it should receive tooling reorder emails
-          as a direct recipient or carbon copy.
+          or daily/weekly job reports.
         </p>
       </v-card-text>
     </v-card>
@@ -165,6 +200,8 @@ const deleteTarget = ref<EmailReport | null>(null);
 const recipientCount = computed(() => emails.value.length);
 const toCount = computed(() => emails.value.filter((email) => email.tooling.to).length);
 const ccCount = computed(() => emails.value.filter((email) => email.tooling.cc).length);
+const jobDailyCount = computed(() => emails.value.filter((email) => email.jobs.daily).length);
+const jobWeeklyCount = computed(() => emails.value.filter((email) => email.jobs.weekly).length);
 
 onMounted(() => {
   void fetchEmails();
@@ -240,6 +277,10 @@ async function addEmail() {
           to: toCount.value === 0,
           cc: false,
         },
+        jobs: {
+          daily: false,
+          weekly: false,
+        },
       },
     });
 
@@ -267,6 +308,16 @@ async function updateToolingTo(email: EmailReport, nextValue: boolean) {
 
 async function updateToolingCc(email: EmailReport, nextValue: boolean) {
   email.tooling.cc = nextValue;
+  await saveEmail(email);
+}
+
+async function updateJobDaily(email: EmailReport, nextValue: boolean) {
+  email.jobs.daily = nextValue;
+  await saveEmail(email);
+}
+
+async function updateJobWeekly(email: EmailReport, nextValue: boolean) {
+  email.jobs.weekly = nextValue;
   await saveEmail(email);
 }
 
@@ -307,6 +358,10 @@ function normalizeEmailReport(email: EmailReport): EmailReport {
     tooling: {
       to: Boolean(email.tooling?.to),
       cc: Boolean(email.tooling?.cc),
+    },
+    jobs: {
+      daily: Boolean(email.jobs?.daily),
+      weekly: Boolean(email.jobs?.weekly),
     },
   };
 }

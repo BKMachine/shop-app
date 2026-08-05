@@ -13,9 +13,15 @@ const EmailSchema = z.strictObject({
   cc: z.boolean(),
 });
 
+const JobReportSchema = z.strictObject({
+  daily: z.boolean(),
+  weekly: z.boolean(),
+});
+
 const ReportFieldsSchema = z.strictObject({
   email: z.string().trim().email(),
   tooling: EmailSchema,
+  jobs: JobReportSchema,
 });
 
 const CreateReportRequest = z.strictObject({

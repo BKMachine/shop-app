@@ -42,6 +42,10 @@ function normalizeReport(data: EmailReportFields & Partial<EmailReportUpdate>) {
       to: Boolean(data.tooling?.to),
       cc: Boolean(data.tooling?.cc),
     },
+    jobs: {
+      daily: Boolean(data.jobs?.daily),
+      weekly: Boolean(data.jobs?.weekly),
+    },
   };
 }
 

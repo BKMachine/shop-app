@@ -513,6 +513,9 @@ importers:
       hono:
         specifier: ^4.12.15
         version: 4.12.15
+      luxon:
+        specifier: ^3.7.2
+        version: 3.7.2
       winston:
         specifier: ^3.19.0
         version: 3.19.0
@@ -520,6 +523,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/luxon':
+        specifier: ^3.7.1
+        version: 3.7.1
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0

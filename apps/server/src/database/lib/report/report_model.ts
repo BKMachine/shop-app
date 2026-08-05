@@ -6,6 +6,10 @@ const schema = new Schema<EmailReportFields>({
     to: { type: Boolean, default: false },
     cc: { type: Boolean, default: false },
   },
+  jobs: {
+    daily: { type: Boolean, default: false },
+    weekly: { type: Boolean, default: false },
+  },
 });
 
 export default model<EmailReportFields>('reports', schema);

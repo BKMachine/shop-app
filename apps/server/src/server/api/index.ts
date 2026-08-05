@@ -64,4 +64,18 @@ router.get('/mail/reorders', async (_req, res, next) => {
   }
 });
 
+router.get('/mail/job-reports/:period', async (req, res, next) => {
+  try {
+    const period = String(req.params.period ?? '');
+    if (period !== 'daily' && period !== 'weekly') {
+      return res.status(400).json({ message: 'Invalid job report period.' });
+    }
+
+    await SMTPService.jobReport(period);
+    res.sendStatus(204);
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;
