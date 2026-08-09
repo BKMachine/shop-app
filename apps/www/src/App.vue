@@ -50,7 +50,7 @@
         <v-list-item
           v-if="showDev"
           prepend-icon="mdi-barcode-scan"
-          @click="scannerStore.scan('120850')"
+          @click="scannerStore.scan('1650509908')"
         >
           Test
         </v-list-item>
@@ -77,7 +77,12 @@
       </template>
     </v-navigation-drawer>
     <v-main> <RouterView /> </v-main>
-    <v-dialog v-model="scannerStore.dialog" class="scan-dialog" opacity="0.65">
+    <v-dialog
+      v-model="scannerStore.dialog"
+      class="scan-dialog"
+      max-width="560"
+      scrim="rgba(9, 12, 20, 0.78)"
+    >
       <ScanDialogTool v-if="scannerStore.type === 'tool'" />
       <ScanDialog404 v-else-if="scannerStore.type === '404'" />
     </v-dialog>
@@ -316,6 +321,6 @@ const showAuditTrail = computed<boolean>(() => Boolean(deviceState.current?.isAd
 }
 
 .scan-dialog {
-  max-width: 500px;
+  backdrop-filter: blur(4px);
 }
 </style>
