@@ -858,6 +858,7 @@ async function saveJob() {
       const createdJob = await jobsStore.create(payload);
       job.value = createdJob;
       draft.value = jobToDraft(createdJob);
+      await printJobTraveler();
       // await router.replace({ name: 'viewJob', params: { id: createdJob._id } });
       void router.back();
       return;
