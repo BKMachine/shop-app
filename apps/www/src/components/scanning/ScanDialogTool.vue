@@ -38,8 +38,9 @@
             class="v-arrow-select action-button"
             @click="adjustStock(scannerStore.stockAdjustment)"
           >
-            <span v-if="scannerStore.stockAdjustment !== 0" class="adjust-value">
-              {{ stockAdjustText }}
+            <span v-if="scannerStore.stockAdjustment !== 0" class="adjust-button-text">
+              <span class="adjust-value">{{ stockAdjustText }}</span>
+              <span class="adjust-hint">Click to apply</span>
             </span>
             <span v-else>Adjust Stock</span>
           </v-btn>
@@ -374,6 +375,22 @@ function arrowLeft(e: MouseEvent) {
   font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: 0.03em;
+}
+
+.adjust-button-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+}
+
+.adjust-hint {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
 }
 
 .action-button:focus,
