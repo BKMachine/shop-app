@@ -13,6 +13,7 @@
     "check-types": "tsc --noEmit",
     "repair:images": "tsx -r dotenv/config ./scripts/repair_image_database.ts",
     "export:parts-material-cycle-csv": "tsx -r dotenv/config ./scripts/export_part_material_cycle_csv.ts",
+    "report:tools-without-stock-change": "tsx -r dotenv/config ./scripts/report_tools_without_stock_change.ts",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./jest.config.cjs",
     "fixture:pdf-text": "tsx ./scripts/pdf_fixture_text_pdf.ts",
     "database:derived": "tsx -r dotenv/config ./scripts/add_derived_properties.ts",
