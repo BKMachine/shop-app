@@ -308,6 +308,7 @@ type ActiveMachineListItem =
 const idleHomeRedirectEnabled = useIdleHomeRedirectEnabled;
 const loading = ref(false);
 const loadFailed = ref(false);
+const hasLoadedDashboard = ref(false);
 const idlePanelOpen = ref(readIdlePanelOpen());
 const dashboard = ref<MachineJobDashboardResponse>({ active: [], idle: [] });
 const machineSortMode = ref<MachineSortMode>(readMachineSortMode());
@@ -525,19 +526,25 @@ function displayMachinePartText(machine: MachineJobDashboardRow) {
 }
 
 async function fetchMachineDashboard() {
-  loading.value = true;
+  const isInitialLoad = !hasLoadedDashboard.value;
+  if (isInitialLoad) {
+    loading.value = true;
+  }
   loadFailed.value = false;
 
   try {
     const { data } = await api.get<MachineJobDashboardResponse>('/jobs/machine-dashboard');
     dashboard.value = data;
+    hasLoadedDashboard.value = true;
   } catch (error) {
     dashboard.value = { active: [], idle: [] };
     loadFailed.value = true;
     toastError('Unable to load machine dashboard.');
     throw error;
   } finally {
-    loading.value = false;
+    if (isInitialLoad) {
+      loading.value = false;
+    }
   }
 }
 
