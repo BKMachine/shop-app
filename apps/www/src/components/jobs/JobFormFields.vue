@@ -1,9 +1,9 @@
 <template>
   <v-row dense>
-    <v-col cols="12" md="6">
+    <v-col cols="12" md="4">
       <CustomerSelect v-model="draft.customer" clearable label="Customer" :rules="[requiredRule]" />
     </v-col>
-    <v-col cols="12" md="6">
+    <v-col cols="12" md="8">
       <PartSearchSelect
         v-model="draft.part"
         clearable
