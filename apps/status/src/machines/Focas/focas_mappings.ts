@@ -12,10 +12,12 @@ const focas_mappings: FocasMapping = {
   'state/1': {
     'state.data.mode': 'mode',
     'state.data.execution': 'execution',
+    'state.data.override.rapid': 'rapid',
   },
   'state/2': {
     'state.data.mode': 'mode2',
     'state.data.execution': 'execution2',
+    'state.data.override.rapid': 'rapid2',
   },
   'alarms/1': {
     'state.data.alarms': 'alarms',

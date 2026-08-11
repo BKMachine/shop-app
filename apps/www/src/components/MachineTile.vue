@@ -4,7 +4,12 @@
     :class="[status, { online: isOnline, alarmed: hasAlarm, 'blink-off': blinkOffPhase }]"
   >
     <div class="header">
-      <div>{{ data.name }}</div>
+      <div>
+        {{ data.name }}
+        <span v-if="isOnline && data.source === 'focas' && rapid" class="rapid-chip">
+          {{ rapid }}
+        </span>
+      </div>
       <img v-if="!isOnline" alt="OFFLINE" class="offline" :src="offlineImg" />
       <img :alt="data.brand" aria-label="brand" class="logo" :src="logos.brand[data.brand]" />
     </div>
@@ -243,6 +248,23 @@ const longChange = computed(() => {
 const status = computed(() => {
   return `status-${props.data.status}`;
 });
+
+const rapid = computed(() => {
+  if (props.data.source === 'focas') {
+    switch (props.data.state.rapid) {
+      case 0:
+        return '100%';
+      case 1:
+        return '50%';
+      case 2:
+        return '25%';
+      case 3:
+        return 'LOW';
+      default:
+        return '';
+    }
+  }
+});
 </script>
 
 <style scoped>
@@ -300,6 +322,24 @@ const status = computed(() => {
   height: 20px;
   flex-grow: 0;
   flex-shrink: 0;
+}
+
+.rapid-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0px;
+  margin-bottom: 2px;
+  min-height: 16px;
+  padding: 0 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(18, 18, 18, 0.55);
+  color: #f5f5f5;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .details {

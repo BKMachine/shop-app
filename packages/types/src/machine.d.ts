@@ -11,9 +11,11 @@ declare global {
     mode: Mode;
     execution: Execution;
     alarms: Alarm;
+    rapid: number;
     mode2: Mode;
     execution2: Execution;
     alarms2: Alarm;
+    rapid2: number;
     cycle: number;
     macro_timer: number;
     lastCycle: MachineLastCycle;
