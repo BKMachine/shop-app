@@ -19,6 +19,7 @@ const ToolFieldsSchema = z.strictObject({
   barcode: z.string().optional(),
   barcodes: z.array(z.string().trim()).optional(),
   stock: z.number(),
+  stockLastUpdatedAt: z.string().nullable().optional(),
   img: z.string().optional(),
   category: z.enum(['milling', 'turning', 'swiss', 'other']),
   toolType: z.string().optional(),

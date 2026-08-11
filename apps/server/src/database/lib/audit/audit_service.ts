@@ -30,6 +30,11 @@ type ActivityAuditPage = {
   hasMore: boolean;
 };
 
+type ToolStockChangeAudit = {
+  _id: Types.ObjectId;
+  timestamp: Date;
+};
+
 function normalizeAuditPayload(doc: unknown): unknown | null {
   if (!doc) return null;
 
@@ -196,6 +201,37 @@ async function getAllToolAudits(from: string, to: string): Promise<ActivityAudit
     .lean<ActivityAudit[]>();
 
   return mergeActivityAudits(audits);
+}
+
+async function getLatestToolStockChangeTimestamps(): Promise<Map<string, Date>> {
+  const audits = await Audit.aggregate<ToolStockChangeAudit>([
+    {
+      $match: {
+        type: 'tool',
+        'old.stock': { $type: 'number' },
+        'new.stock': { $type: 'number' },
+      },
+    },
+    {
+      $match: {
+        $expr: { $ne: ['$old.stock', '$new.stock'] },
+      },
+    },
+    {
+      $sort: {
+        timestamp: -1,
+        _id: -1,
+      },
+    },
+    {
+      $group: {
+        _id: '$new._id',
+        timestamp: { $first: '$timestamp' },
+      },
+    },
+  ]);
+
+  return new Map(audits.map((audit) => [String(audit._id), new Date(audit.timestamp)]));
 }
 
 async function addPartAudit(
@@ -367,6 +403,7 @@ export default {
   addToolAudit,
   getToolAudits,
   getAllToolAudits,
+  getLatestToolStockChangeTimestamps,
   addPartAudit,
   addJobAudit,
   getPartAudits,

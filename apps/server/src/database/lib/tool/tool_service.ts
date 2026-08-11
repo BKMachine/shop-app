@@ -198,7 +198,7 @@ async function getAutoReorders(): Promise<ToolPopulatedDoc[]> {
 }
 
 async function create(data: ToolCreate, deviceId: string): Promise<ToolDoc> {
-  const tool = new Tool(data);
+  const tool = new Tool({ ...data, stockLastUpdatedAt: null });
   await tool.save();
   emit('tool', tool);
   await Audit.addToolAudit(null, tool, deviceId);
@@ -266,14 +266,19 @@ async function stock(
 function computedToolChanges<
   T extends {
     onOrder: boolean;
+    stockLastUpdatedAt?: string | null;
     orderedOn?: string;
     stock: number;
   },
->(oldTool: Pick<ToolFields, 'onOrder' | 'stock'>, newTool: T): T {
+>(oldTool: Pick<ToolFields, 'onOrder' | 'stock' | 'stockLastUpdatedAt'>, newTool: T): T {
   // Set the orderedOn date if onOrder is newly set to true
   if (newTool.onOrder && !oldTool.onOrder) newTool.orderedOn = new Date().toISOString();
   // Assume if the current stock has increased that the order has been fulfilled
   if (newTool.stock > oldTool.stock) newTool.onOrder = false;
+  newTool.stockLastUpdatedAt =
+    newTool.stock !== oldTool.stock
+      ? new Date().toISOString()
+      : (oldTool.stockLastUpdatedAt ?? null);
   return newTool;
 }
 

@@ -18,6 +18,7 @@ const schema = new Schema<ToolDocumentFields>({
   barcode: { type: String, unique: true },
   barcodes: { type: [String], default: [] },
   stock: { type: Number, default: 0 },
+  stockLastUpdatedAt: { type: Date, default: null },
   img: String,
   category: { type: String, required: true },
   coating: String,
