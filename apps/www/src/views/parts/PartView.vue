@@ -613,6 +613,7 @@ const defaultPartValues: Pick<
   PartFields,
   | 'stock'
   | 'materialLength'
+  | 'blanksPerPart'
   | 'barLength'
   | 'remnantLength'
   | 'cycleTimes'
@@ -624,6 +625,7 @@ const defaultPartValues: Pick<
 > = {
   stock: 0,
   materialLength: 0,
+  blanksPerPart: 1,
   barLength: 0,
   remnantLength: 0,
   cycleTimes: [],

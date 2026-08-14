@@ -235,8 +235,8 @@ async function getLatestToolStockChangeTimestamps(): Promise<Map<string, Date>> 
 }
 
 async function addPartAudit(
-  oldPart: PartDoc | null,
-  newPart: PartDoc,
+  oldPart: PartDoc | Part | null,
+  newPart: PartDoc | Part,
   deviceId: string,
 ): Promise<void> {
   await addAudit('part', oldPart, newPart, deviceId);
@@ -397,7 +397,7 @@ async function addPartNoteAudit(
   await addAudit('part_note', oldNote, newNote, deviceId);
 }
 
-export default {
+const AuditService = {
   addAudit,
   getAllAudits,
   addToolAudit,
@@ -420,3 +420,5 @@ export default {
   addReportAudit,
   addPartNoteAudit,
 };
+
+export default AuditService;

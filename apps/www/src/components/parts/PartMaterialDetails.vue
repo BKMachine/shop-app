@@ -162,10 +162,19 @@
             <v-col cols="6">
               <v-text-field
                 v-model.number="part.materialLength"
-                hint="Material usage per part"
-                label="Length per Part (in)"
+                :hint="materialUsageMessage"
+                :label="materialUsageLabel"
                 min="0"
                 :rules="[partLengthRule]"
+                type="number"
+                @keydown="onlyAllowNumeric($event)"
+              />
+              <v-text-field
+                v-if="part.materialCutType !== 'bars'"
+                v-model.number="part.blanksPerPart"
+                label="Blanks per part"
+                min="1"
+                :rules="[blanksPerPartRule]"
                 type="number"
                 @keydown="onlyAllowNumeric($event)"
               />
@@ -329,7 +338,11 @@
                       >${{ formatCost(billableMaterialCost) }}</v-chip
                     >
                     <span class="text-medium-emphasis">÷</span>
-                    <v-chip variant="outlined">{{ partsPerBar }} parts</v-chip>
+                    <v-chip variant="outlined">{{ partsPerBar }} blanks</v-chip>
+                    <template v-if="effectiveBlanksPerPart > 1">
+                      <span class="text-medium-emphasis">×</span>
+                      <v-chip variant="outlined">{{ effectiveBlanksPerPart }} blanks / part</v-chip>
+                    </template>
                   </div>
                 </td>
                 <td class="text-right">
@@ -432,6 +445,10 @@ const subComponentMaterialRows = computed(() => {
 
 const selectedMaterialLength = computed(() => {
   return resolveMaterial(props.part.material)?.length || 0;
+});
+
+const effectiveBlanksPerPart = computed(() => {
+  return Math.max(1, Number(props.part.blanksPerPart) || 1);
 });
 
 const selectedMaterialId = computed(() => {
@@ -575,10 +592,17 @@ watch(
 watch(
   () => props.part.materialCutType,
   () => {
+    if (props.part.materialCutType !== 'bars' && !props.part.blanksPerPart) {
+      props.part.blanksPerPart = 1;
+    }
     applyInitialBarsDefaults();
   },
   { immediate: true },
 );
+
+const blanksPerPartRule = (val: string) => {
+  return Math.max(1, Number(val) || 0) >= 1 || 'Blanks per part must be at least 1';
+};
 
 const sortedMaterials = computed(() => {
   return materialsStore.materials.slice().sort((a, b) => {
@@ -631,6 +655,16 @@ function openSelectedMaterial() {
 function openSubComponent(partId: string) {
   router.push({ name: 'viewPart', params: { id: partId } });
 }
+
+const materialUsageMessage = computed(() => {
+  if (props.part.materialCutType === 'blanks') return `Blank cut length`;
+  return 'Material usage per part with cutoff';
+});
+
+const materialUsageLabel = computed(() => {
+  if (props.part.materialCutType === 'blanks') return `Length per blank (in)`;
+  return 'Length per part (in)';
+});
 </script>
 
 <style scoped>

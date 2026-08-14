@@ -148,6 +148,7 @@ export const usePartStore = defineStore('parts', () => {
       customerSuppliedMaterial: part.customerSuppliedMaterial,
       materialCutType: part.materialCutType,
       materialLength: part.materialLength,
+      blanksPerPart: Math.max(1, Number(part.blanksPerPart) || 1),
       barLength: part.barLength,
       remnantLength: part.remnantLength,
       cycleTimes: (part.cycleTimes || []).map((cycle) => ({

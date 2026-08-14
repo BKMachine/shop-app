@@ -44,6 +44,7 @@ const PartFieldsSchema = z.strictObject({
   customerSuppliedMaterial: z.boolean().optional(),
   materialCutType: z.enum(['blanks', 'bars']),
   materialLength: z.number(),
+  blanksPerPart: z.number().positive().optional(),
   barLength: z.number(),
   remnantLength: z.number(),
   cycleTimes: z.array(PartCycleTimeSchema),

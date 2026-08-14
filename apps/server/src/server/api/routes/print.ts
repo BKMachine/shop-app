@@ -60,16 +60,37 @@ function materialSummary(part: Part | null) {
   );
 }
 
+function getBlanksPerPart(part: Part | null) {
+  if (!part || part.materialCutType === 'bars') return 1;
+  return Math.max(1, Number(part.blanksPerPart) || 1);
+}
+
+function materialLengthLabel(part: Part | null) {
+  if (!part?.materialLength) return '';
+  if (part.materialCutType === 'bars') return String(part.materialLength);
+
+  const blanksPerPart = getBlanksPerPart(part);
+  if (blanksPerPart <= 1) return String(part.materialLength);
+
+  return `${part.materialLength} / blank, ${blanksPerPart} blanks / part`;
+}
+
 function estimatedMaterialUsage(job: Job, part: Part | null) {
   if (!part || typeof part.material === 'string' || !part.material) return '';
 
   const fullBarLength = Number(part.material.length) || 0;
   const partsPerBar = calculatePartsPerBar(part, fullBarLength);
   const qty = Math.max(1, Number(job.qty) || 1);
+  const blanksPerPart = getBlanksPerPart(part);
 
   if (!partsPerBar) return '';
 
-  return `${(qty / partsPerBar).toFixed(1)} bars`;
+  if (part.materialCutType === 'bars') {
+    return `${(qty / partsPerBar).toFixed(1)} bars`;
+  }
+
+  const totalBlanks = qty * blanksPerPart;
+  return `${(totalBlanks / partsPerBar).toFixed(1)} bars (${totalBlanks} blanks)`;
 }
 
 function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
@@ -99,7 +120,7 @@ function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
     },
     {
       label: 'Material Length',
-      value: resolvedPart?.materialLength ? String(resolvedPart.materialLength) : '',
+      value: materialLengthLabel(resolvedPart),
     },
     { label: 'Bar Length', value: resolvedPart?.barLength ? String(resolvedPart.barLength) : '' },
     {

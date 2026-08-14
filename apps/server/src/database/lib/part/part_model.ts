@@ -25,6 +25,7 @@ const schema = new Schema<PartDocumentFields>({
   customerSuppliedMaterial: { type: Boolean, default: false },
   materialCutType: { type: String, enum: ['blanks', 'bars'], default: 'blanks' },
   materialLength: { type: Number, default: 0 },
+  blanksPerPart: { type: Number, default: 1, min: 1 },
   barLength: { type: Number, default: 0 },
   remnantLength: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },

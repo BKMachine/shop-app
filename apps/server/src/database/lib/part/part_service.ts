@@ -13,6 +13,10 @@ import Part, { type PartDoc } from './part_model.js';
 
 type PartMutation = Part | PartUpdate | PartDoc;
 
+function normalizeBlanksPerPart(value: unknown): number {
+  return Math.max(1, Number(value) || 1);
+}
+
 function getCustomerName(value: unknown): string {
   if (!value || typeof value !== 'object') return '';
   if ('name' in value) {
@@ -53,6 +57,7 @@ async function buildDerivedPartCandidate(part: unknown): Promise<Part> {
     stock: Number(plainPart.stock) || 0,
     materialCutType: plainPart.materialCutType === 'bars' ? 'bars' : 'blanks',
     materialLength: Number(plainPart.materialLength) || 0,
+    blanksPerPart: normalizeBlanksPerPart(plainPart.blanksPerPart),
     barLength: Number(plainPart.barLength) || 0,
     remnantLength: Number(plainPart.remnantLength) || 0,
     createdAt:
@@ -82,6 +87,7 @@ async function buildPersistencePayload(
     ...plainPart,
     customer: getEntityId(plainPart.customer),
     material: getEntityId(plainPart.material) ?? null,
+    blanksPerPart: normalizeBlanksPerPart(plainPart.blanksPerPart),
     createdAt:
       plainPart.createdAt instanceof Date
         ? plainPart.createdAt
@@ -347,6 +353,7 @@ function createListItem(part: PartDoc): PartListItem {
 
   return {
     ...serializedPart,
+    blanksPerPart: normalizeBlanksPerPart(serializedPart.blanksPerPart),
     subComponentIds: normalizedSubComponentIds,
     derived: {
       shopRate: Number(part.derived?.shopRate) || 0,
@@ -368,6 +375,7 @@ function createDetailItem(part: PartDoc): Part {
 
   return {
     ...serializedPart,
+    blanksPerPart: normalizeBlanksPerPart(serializedPart.blanksPerPart),
     subComponentIds: normalizedSubComponentIds,
     derived: {
       shopRate: Number(part.derived?.shopRate) || 0,
@@ -613,11 +621,12 @@ async function list(filters: PartListFilters = {}): Promise<PartListResult> {
   };
 }
 
-async function findById(id: string): Promise<PartDoc | null> {
-  return Part.findById(id).populate('customer').populate('material');
+async function findById(id: string): Promise<Part | null> {
+  const part = await Part.findById(id).populate('customer').populate('material');
+  return part ? createDetailItem(part) : null;
 }
 
-async function create(data: PartCreate, deviceId: string): Promise<PartDoc> {
+async function create(data: PartCreate, deviceId: string): Promise<Part> {
   const normalizedSubComponentIds = normalizeSubComponentIds(data.subComponentIds);
 
   const part = new Part(
@@ -647,7 +656,7 @@ async function update(
   newPart: PartMutation,
   deviceId: string,
   options: UpdatePartOptions = {},
-): Promise<PartDoc | null> {
+): Promise<Part | null> {
   const id = getEntityId(newPart._id);
   if (!id) throw new Error('Missing part document id.');
   const oldPart = await Part.findById(id);

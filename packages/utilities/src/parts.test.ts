@@ -1,6 +1,41 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { hasIncompleteMachineDashboardPartData, hasIncompletePartCostData } from './parts.js';
+import {
+  calculatePartMaterialCost,
+  hasIncompleteMachineDashboardPartData,
+  hasIncompletePartCostData,
+} from './parts.js';
+
+test('calculatePartMaterialCost multiplies blanks cut material cost by blanksPerPart', () => {
+  const material = {
+    length: 120,
+    costPerFoot: 10,
+  } as Material;
+
+  const part = {
+    materialCutType: 'blanks' as const,
+    materialLength: 10,
+    blanksPerPart: 2,
+    customerSuppliedMaterial: false,
+  };
+
+  assert.equal(calculatePartMaterialCost(part, material), (100 / 12 / 12) * 2 * 12);
+});
+
+test('calculatePartMaterialCost defaults blanksPerPart to 1 when omitted', () => {
+  const material = {
+    length: 120,
+    costPerFoot: 10,
+  } as Material;
+
+  const part = {
+    materialCutType: 'blanks' as const,
+    materialLength: 10,
+    customerSuppliedMaterial: false,
+  };
+
+  assert.equal(calculatePartMaterialCost(part, material), 100 / 12);
+});
 
 test('hasIncompletePartCostData flags priced leaf parts with missing rate inputs', () => {
   const part = {

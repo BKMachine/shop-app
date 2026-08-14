@@ -14,6 +14,7 @@ declare global {
     customerSuppliedMaterial?: boolean;
     materialCutType: 'blanks' | 'bars';
     materialLength: number;
+    blanksPerPart?: number;
     barLength: number;
     remnantLength: number;
     cycleTimes: CycleTimes[];

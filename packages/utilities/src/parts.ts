@@ -1,6 +1,7 @@
 interface MaterialUsageInput {
   materialCutType?: 'blanks' | 'bars';
   materialLength?: number | null;
+  blanksPerPart?: number | null;
   barLength?: number | null;
   remnantLength?: number | null;
 }
@@ -42,6 +43,10 @@ function hasDirectParent(part: AssemblyPartInput | null | undefined): boolean {
   return Number(part?.derived?.directParentCount) > 0;
 }
 
+function getBlanksPerPart(part: MaterialUsageInput | null | undefined): number {
+  return Math.max(1, Number(part?.blanksPerPart) || 1);
+}
+
 export function calculatePartsPerBar<TPart extends MaterialUsageInput>(
   part: TPart,
   fullBarLength: number,
@@ -77,7 +82,8 @@ export function calculatePartMaterialCost<TPart extends MaterialCostInput>(
   if (!partsPerBar) return 0;
 
   const materialCost = (fullBarLength / 12) * (Number(material.costPerFoot) || 0);
-  return materialCost / partsPerBar;
+  const blanksPerPart = part.materialCutType === 'bars' ? 1 : getBlanksPerPart(part);
+  return (materialCost / partsPerBar) * blanksPerPart;
 }
 
 export function calculateTotalCycleMinutes<TCycleTime extends CycleTimeInput>(
