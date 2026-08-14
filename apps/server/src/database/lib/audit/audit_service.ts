@@ -6,6 +6,7 @@ import type { ImageDoc } from '../image/image_model.js';
 import type { JobDoc } from '../job/job_model.js';
 import type { MaterialDoc } from '../material/material_model.js';
 import type { PartDoc } from '../part/part_model.js';
+import PartModel from '../part/part_model.js';
 import type { PartNoteDoc } from '../part_note/part_note_model.js';
 import type { EmailReportDoc } from '../report/report_model.js';
 import type { ShipmentDoc } from '../shipment/shipment_model.js';
@@ -48,6 +49,85 @@ function normalizeAuditPayload(doc: unknown): unknown | null {
   }
 
   return doc;
+}
+
+function extractReferencedId(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string' && value.trim()) return value.trim();
+
+  if (typeof value === 'object' && value !== null && '_id' in value) {
+    const idValue = value._id;
+    if (typeof idValue === 'string' && idValue.trim()) return idValue.trim();
+    if (idValue && typeof idValue === 'object' && 'toString' in idValue) {
+      const normalizedId = idValue.toString();
+      return normalizedId.trim() ? normalizedId : null;
+    }
+  }
+
+  if (typeof value === 'object' && value !== null && 'toString' in value) {
+    const normalizedId = value.toString();
+    return normalizedId.trim() ? normalizedId : null;
+  }
+
+  return null;
+}
+
+function normalizeJobAuditRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function getJobAuditPartId(value: unknown): string | null {
+  const record = normalizeJobAuditRecord(value);
+  if (!record) return null;
+  return extractReferencedId(record.part);
+}
+
+function enrichJobAuditRecordWithPartImage(
+  value: unknown,
+  partImageById: Map<string, string>,
+): unknown {
+  const record = normalizeJobAuditRecord(value);
+  if (!record) return value;
+
+  const existingPartImage = record.partImage;
+  if (typeof existingPartImage === 'string' && existingPartImage.trim()) {
+    return value;
+  }
+
+  const partId = getJobAuditPartId(record);
+  if (!partId) return value;
+
+  return {
+    ...record,
+    partImage: partImageById.get(partId) ?? null,
+  };
+}
+
+async function enrichJobAuditsWithPartImages(audits: ActivityAudit[]): Promise<ActivityAudit[]> {
+  const partIds = Array.from(
+    new Set(
+      audits.flatMap((audit) => [getJobAuditPartId(audit.old), getJobAuditPartId(audit.new)]),
+    ),
+  ).filter((partId): partId is string => Boolean(partId));
+
+  if (!partIds.length) return audits;
+
+  const parts = await PartModel.find({ _id: { $in: partIds } }, 'img').lean<
+    Array<{ _id: Types.ObjectId; img?: string | null }>
+  >();
+
+  const partImageById = new Map(
+    parts
+      .filter((part) => typeof part.img === 'string' && part.img.trim())
+      .map((part) => [part._id.toString(), (part.img as string).trim()]),
+  );
+
+  return audits.map((audit) => ({
+    ...audit,
+    old: enrichJobAuditRecordWithPartImage(audit.old, partImageById),
+    new: enrichJobAuditRecordWithPartImage(audit.new, partImageById),
+  }));
 }
 
 function getAuditDeviceId(device: Audit['device'] | string | null | undefined): string {
@@ -333,6 +413,21 @@ async function getAllPartAudits(from: string, to: string): Promise<ActivityAudit
   return mergeActivityAudits(audits);
 }
 
+async function getAllJobAudits(from: string, to: string): Promise<ActivityAudit[]> {
+  const audits = await Audit.find(
+    {
+      type: 'job',
+      timestamp: { $gte: from, $lte: to },
+    },
+    'timestamp device old new',
+  )
+    .sort({ timestamp: -1, _id: -1 })
+    .populate('device', 'displayName deviceType')
+    .lean<ActivityAudit[]>();
+
+  return enrichJobAuditsWithPartImages(audits);
+}
+
 async function addMaterialAudit(
   oldMaterial: MaterialDoc | null,
   newMaterial: MaterialDoc | null,
@@ -409,6 +504,7 @@ const AuditService = {
   getPartAudits,
   getMaterialAudits,
   getAllPartAudits,
+  getAllJobAudits,
   addImageAudit,
   addDocumentAudit,
   addMaterialAudit,

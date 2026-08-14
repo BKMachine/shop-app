@@ -40,6 +40,18 @@ router.post('/audits/parts', async (req, res, next) => {
   }
 });
 
+router.post('/audits/jobs', async (req, res, next) => {
+  const { from, to }: { from?: string; to?: string } = req.body;
+  if (!from || !to) return next(new HttpError(400, 'from and to are required.'));
+
+  try {
+    const audits = await Audit.getAllJobAudits(from, to);
+    res.status(200).json(audits);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/audits/parts/stock', async (req, res, next) => {
   const { id, from, to }: { id?: string; from?: string; to?: string } = req.body;
   if (!id || !from || !to) return next(new HttpError(400, 'id, from, and to are required.'));
