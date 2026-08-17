@@ -4,10 +4,12 @@
       <v-row no-gutters>
         <v-col cols="11">
           <v-text-field
+            :hint="productPriceHint"
             inputmode="decimal"
             label="Product Price"
             min="0"
             :model-value="priceInput ?? formatCost(part.price)"
+            :persistent-hint="Boolean(productPriceHint)"
             prefix="$"
             type="text"
             @blur="onPriceBlur"
@@ -526,6 +528,13 @@ const hourlyTargetStep = RATE_TARGET_RANGE.step;
 
 const totalCostBase = computed(() => (partMaterialCost || 0) + totalAdditionalCost.value);
 const hasNoProductPrice = computed(() => part.price == null || part.price === 0);
+const productPriceHint = computed(() => {
+  if ((part.derived?.directParentCount || 0) <= 0) {
+    return undefined;
+  }
+
+  return 'Optional for sub-components unless this part is sold as a stand-alone part.';
+});
 
 const amountMinusTotalCosts = computed(() => (part.price ? part.price - totalCostBase.value : 0));
 
