@@ -78,6 +78,9 @@
             {{ criticalNotesCount }}
             Critical {{ criticalNotesCount === 1 ? 'Note' : 'Notes' }}
           </v-chip>
+          <v-chip v-if="isSubComponent" color="warning" density="comfortable">
+            Sub-Component
+          </v-chip>
         </div>
       </div>
     </div>
@@ -691,6 +694,7 @@ const hasNoProductPrice = computed(() => {
 });
 const hasIncompleteRateData = computed(() => hasIncompletePartCostData(part.value));
 const subComponentEntries = computed<PartSubComponent[]>(() => part.value.subComponentIds || []);
+const isSubComponent = computed(() => (part.value.derived?.directParentCount || 0) > 0);
 const selectedSubComponentIds = computed<string[]>({
   get() {
     return subComponentEntries.value.map((entry) => String(entry.partId));
