@@ -75,7 +75,13 @@
       <v-window v-model="tab">
         <v-window-item value="general">
           <v-card-text>
-            <v-form v-model="valid"> <JobFormFields v-model="draft" /> </v-form>
+            <v-form v-model="valid">
+              <JobFormFields
+                v-model="draft"
+                :due-date-disabled="shipmentScheduleEnabled"
+                :due-date-hint="dueDateFieldHint"
+              />
+            </v-form>
           </v-card-text>
         </v-window-item>
 
@@ -194,10 +200,218 @@
 
         <v-window-item value="shipments">
           <v-card-text>
-            <div class="shipments-placeholder">
-              <div class="text-h6">Shipments</div>
-              <div class="text-body-1 text-medium-emphasis mt-2">
-                Shipment history and related shipment actions will live here.
+            <div class="shipments-tab">
+              <div class="shipment-progress-grid">
+                <v-card class="shipment-progress-card" variant="outlined">
+                  <v-card-text>
+                    <div class="shipment-progress-card__label">Total Qty</div>
+                    <div class="shipment-progress-card__value">{{ normalizedQty }}</div>
+                  </v-card-text>
+                </v-card>
+                <v-card class="shipment-progress-card" variant="outlined">
+                  <v-card-text>
+                    <div class="shipment-progress-card__label">Shipped</div>
+                    <div class="shipment-progress-card__value-row">
+                      <div class="shipment-progress-card__value">{{ shippedQty }}</div>
+                      <v-chip v-if="isOverShipped" color="error" size="small" variant="tonal">
+                        Over by {{ overShippedQty }}
+                      </v-chip>
+                    </div>
+                  </v-card-text>
+                </v-card>
+                <v-card class="shipment-progress-card" variant="outlined">
+                  <v-card-text>
+                    <div class="shipment-progress-card__label">Left To Ship</div>
+                    <div class="shipment-progress-card__value">{{ remainingShipmentQty }}</div>
+                  </v-card-text>
+                </v-card>
+              </div>
+
+              <div class="shipment-sections-grid">
+                <div class="shipment-section shipment-plan">
+                  <div class="shipment-plan__header">
+                    <div class="shipment-plan__header-copy">
+                      <div class="shipment-plan__header-title">
+                        <div class="text-h6">Planned Shipments</div>
+                        <v-chip color="primary" size="small" variant="tonal">
+                          {{ plannedShipmentCount }}
+                        </v-chip>
+                      </div>
+                      <div class="shipment-plan__header-hint text-body-2 text-medium-emphasis">
+                        Final shipment auto-fills the remaining planned quantity.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="shipment-plan__rows">
+                    <v-card
+                      v-for="(entry, index) in draft.shipmentSchedule"
+                      :key="shipmentScheduleRowKey(entry, index)"
+                      class="shipment-plan__row"
+                      variant="outlined"
+                    >
+                      <v-card-text class="shipment-row-card__content">
+                        <div class="shipment-plan__row-header mb-2">
+                          <div class="text-subtitle-1 font-weight-medium">
+                            Planned Shipment {{ index + 1 }}
+                          </div>
+                          <div class="shipment-plan__row-meta">
+                            <v-chip
+                              :color="plannedShipmentStatusColor(index)"
+                              size="small"
+                              variant="tonal"
+                            >
+                              {{ plannedShipmentStatusLabel(index) }}
+                            </v-chip>
+                            <div class="shipment-plan__row-buttons">
+                              <v-btn
+                                class="shipment-plan__ship-button"
+                                :disabled="!canRecordPlannedShipment(index)"
+                                prepend-icon="mdi-truck-fast-outline"
+                                size="small"
+                                variant="text"
+                                @click="recordPlannedShipment(index)"
+                              >
+                                Ship
+                              </v-btn>
+                              <v-btn
+                                class="shipment-plan__delete-button"
+                                :disabled="draft.shipmentSchedule.length === 1"
+                                icon="mdi-delete-outline"
+                                size="small"
+                                variant="text"
+                                @click="removeShipmentScheduleEntry(index)"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <v-row dense>
+                          <v-col cols="12" md="4">
+                            <v-text-field
+                              label="Shipment Date"
+                              :model-value="entry.shipDate"
+                              type="date"
+                              variant="outlined"
+                              @update:model-value="updateShipmentScheduleShipDate(index, $event)"
+                            />
+                          </v-col>
+                          <v-col cols="12" md="4">
+                            <v-text-field
+                              :disabled="isShipmentScheduleQtyLocked(index)"
+                              :hint="shipmentScheduleQtyHint(index)"
+                              label="Planned Qty"
+                              min="1"
+                              :model-value="shipmentScheduleQtyInputValue(index)"
+                              persistent-hint
+                              type="number"
+                              variant="outlined"
+                              @update:model-value="updateShipmentScheduleQty(index, $event)"
+                            />
+                          </v-col>
+                          <v-col cols="12" md="4">
+                            <v-text-field
+                              label="PO"
+                              :model-value="entry.po"
+                              variant="outlined"
+                              @update:model-value="updateShipmentSchedulePo(index, $event)"
+                            />
+                          </v-col>
+                        </v-row>
+                      </v-card-text>
+                    </v-card>
+                  </div>
+
+                  <div class="shipment-plan__actions">
+                    <v-btn
+                      :disabled="!canEqualizeShipmentSchedule()"
+                      prepend-icon="mdi-equal-box"
+                      variant="text"
+                      @click="equalizeShipmentSchedule"
+                    >
+                      Equalize Shipments
+                    </v-btn>
+                    <v-btn prepend-icon="mdi-plus" variant="text" @click="addShipmentScheduleEntry">
+                      Add Planned Shipment
+                    </v-btn>
+                  </div>
+                </div>
+
+                <div class="shipment-section shipment-log">
+                  <div class="shipment-log__header">
+                    <div class="shipment-log__header-copy">
+                      <div class="text-h6">Recorded Shipments</div>
+                      <div class="text-body-2 text-medium-emphasis mt-2">
+                        Record every shipment here, including partial or unplanned shipments.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-if="draft.shipmentRecords.length" class="shipment-log__rows">
+                    <v-card
+                      v-for="(entry, index) in draft.shipmentRecords"
+                      :key="entry.id"
+                      class="shipment-log__row"
+                      variant="outlined"
+                    >
+                      <v-card-text class="shipment-row-card__content">
+                        <div class="shipment-log__row-header">
+                          <div class="text-subtitle-1 font-weight-medium">
+                            Shipment {{ index + 1 }}
+                          </div>
+                          <v-btn
+                            icon="mdi-delete-outline"
+                            size="small"
+                            variant="text"
+                            @click="removeShipmentRecord(index)"
+                          />
+                        </div>
+
+                        <v-row dense>
+                          <v-col cols="12" md="4">
+                            <v-text-field
+                              label="Shipped On"
+                              :model-value="entry.shippedAt"
+                              type="date"
+                              variant="outlined"
+                              @update:model-value="updateShipmentRecordDate(index, $event)"
+                            />
+                          </v-col>
+                          <v-col cols="12" md="4">
+                            <v-text-field
+                              :hint="shipmentRecordQtyHint(index)"
+                              label="Qty"
+                              min="1"
+                              :model-value="entry.qty"
+                              persistent-hint
+                              type="number"
+                              variant="outlined"
+                              @update:model-value="updateShipmentRecordQty(index, $event)"
+                            />
+                          </v-col>
+                          <v-col cols="12" md="4">
+                            <v-text-field
+                              label="PO"
+                              :model-value="entry.po"
+                              variant="outlined"
+                              @update:model-value="updateShipmentRecordPo(index, $event)"
+                            />
+                          </v-col>
+                        </v-row>
+                      </v-card-text>
+                    </v-card>
+                  </div>
+
+                  <div class="shipment-log__actions">
+                    <v-btn
+                      prepend-icon="mdi-truck-plus-outline"
+                      variant="text"
+                      @click="addShipmentRecord()"
+                    >
+                      Add Shipment
+                    </v-btn>
+                  </div>
+                </div>
               </div>
             </div>
           </v-card-text>
@@ -237,6 +451,27 @@
           <v-btn color="warning" :loading="travelerLoading" @click="confirmPrintJobTraveler">
             Print Traveler
           </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="closeAfterShipmentConfirm" max-width="460">
+      <v-card>
+        <v-card-title>Close Fully Shipped Job?</v-card-title>
+        <v-card-text>
+          <div>
+            Recorded shipments now leave this job with nothing left to ship.
+            <span v-if="isOverShipped"> It is currently over by {{ overShippedQty }}.</span>
+          </div>
+          <div class="text-medium-emphasis mt-3">
+            Do you want to close the job as part of this save?
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="closeAfterShipmentConfirm = false">Cancel</v-btn>
+          <v-btn variant="text" @click="confirmSaveWithOpenJob">Keep Open</v-btn>
+          <v-btn color="primary" @click="confirmSaveWithClosedJob">Close Job</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -420,6 +655,19 @@ import { useJobsStore } from '@/stores/jobs_store';
 
 const JOB_TAB_VALUES = ['general', 'production', 'shipments'] as const;
 
+type JobShipmentScheduleDraftEntry = {
+  shipDate: string;
+  qty: string;
+  po: string;
+};
+
+type JobShipmentRecordDraftEntry = {
+  id: string;
+  shippedAt: string;
+  qty: string;
+  po: string;
+};
+
 type StartTaskMachineOption = MachineInfo & {
   hasRunningTask: boolean;
   runningTaskJobNumber: number | null;
@@ -436,6 +684,7 @@ const deleting = ref(false);
 const travelerLoading = ref(false);
 const deleteConfirm = ref(false);
 const printClosedConfirm = ref(false);
+const closeAfterShipmentConfirm = ref(false);
 const machines = ref<StartTaskMachineOption[]>([]);
 const machinesLoading = ref(false);
 const machinesLoadFailed = ref(false);
@@ -444,6 +693,7 @@ const startTaskDialog = ref(false);
 const endTaskConfirmTaskId = ref<string | null>(null);
 const job = ref<Job | null>(null);
 const draft = ref(createEmptyDraft());
+const createRouteHydrationKey = ref<string | null>(null);
 const tab = ref<(typeof JOB_TAB_VALUES)[number]>('general');
 const valid = ref(false);
 const selectedStartTaskMachineIds = ref<Record<MachineType, string | null>>({
@@ -502,12 +752,46 @@ const partHeaderSubtitle = computed(() => {
 
   return customerName || pageSubtitle.value || 'Job details';
 });
+const shipmentScheduleEnabled = computed(() => draft.value.shipmentSchedule.length > 0);
+const plannedShipmentCount = computed(() => draft.value.shipmentSchedule.length);
+const totalRecordedShipmentQty = computed(() =>
+  draft.value.shipmentRecords.reduce((sum, entry) => sum + Math.max(0, Number(entry.qty) || 0), 0),
+);
+const shippedQty = computed(() => totalRecordedShipmentQty.value);
+const remainingShipmentQty = computed(() =>
+  Math.max(normalizedQty.value - totalRecordedShipmentQty.value, 0),
+);
+const isOverShipped = computed(() => shippedQty.value > normalizedQty.value);
+const overShippedQty = computed(() => Math.max(shippedQty.value - normalizedQty.value, 0));
+const dueDateFieldHint = computed(() => {
+  if (shipmentScheduleEnabled.value) {
+    const firstShipDate = draft.value.shipmentSchedule[0]?.shipDate || '';
+    return firstShipDate
+      ? `Driven by Shipment 1: ${formatRelativeDateLabel(firstShipDate)}`
+      : 'Driven by Shipment 1';
+  }
+
+  return formatRelativeDateLabel(draft.value.dueDate);
+});
 const priorityLabel = computed(() => {
   if (draft.value.priority === 'rush') return 'Rush';
   if (draft.value.priority === 'low') return 'Low';
   return 'Normal';
 });
 const normalizedQty = computed(() => Math.max(1, Number(draft.value.qty) || 1));
+const shipmentRecordsChanged = computed(() => {
+  const baselineDraft = isCreateRoute.value
+    ? createEmptyDraft()
+    : job.value
+      ? jobToDraft(job.value)
+      : null;
+  if (!baselineDraft) return false;
+
+  return (
+    JSON.stringify(normalizeShipmentRecordsDraft(draft.value)) !==
+    JSON.stringify(normalizeShipmentRecordsDraft(baselineDraft))
+  );
+});
 const draftIsAltered = computed(() => {
   const baselineDraft = isCreateRoute.value
     ? createEmptyDraft()
@@ -517,7 +801,16 @@ const draftIsAltered = computed(() => {
   if (!baselineDraft) return false;
   return serializeDraft(draft.value) !== serializeDraft(baselineDraft);
 });
-const canSaveJob = computed(() => draftIsAltered.value && valid.value);
+const saveValidationError = computed(() =>
+  validateDraft(draft.value, job.value?.productionTasks ?? []),
+);
+const shouldPromptCloseAfterShipmentSave = computed(
+  () =>
+    shipmentRecordsChanged.value &&
+    remainingShipmentQty.value === 0 &&
+    draft.value.status !== 'closed',
+);
+const canSaveJob = computed(() => draftIsAltered.value && !saveValidationError.value);
 const productionTasks = computed(() => job.value?.productionTasks ?? []);
 const jobSummaryDetails = computed(() => {
   if (!job.value) return '';
@@ -577,12 +870,14 @@ onMounted(async () => {
 });
 
 function createEmptyDraft(): JobDraft {
+  const defaultDueDate = defaultDueDateValue();
+
   return {
     customer: null,
     part: null,
     qty: '1',
     status: 'open',
-    dueDate: defaultDueDateValue(),
+    dueDate: defaultDueDate,
     startedOn: '',
     completedOn: '',
     materialOrderedOn: '',
@@ -590,12 +885,14 @@ function createEmptyDraft(): JobDraft {
     customerPo: '',
     priority: 'normal',
     notes: '',
+    shipmentSchedule: [createSingleShipmentScheduleDraftEntry(defaultDueDate, '1')],
+    shipmentRecords: [],
   };
 }
 
 function defaultDueDateValue() {
   const date = new Date();
-  date.setDate(date.getDate() + 14);
+  date.setMonth(date.getMonth() + 1);
   return date.toLocaleDateString('en-CA');
 }
 
@@ -631,6 +928,17 @@ function createDraftFromRouteQuery() {
   return nextDraft;
 }
 
+function currentCreateRouteHydrationKey() {
+  const customerQuery = firstRouteQueryValue(route.query.customer);
+  const partQuery = firstRouteQueryValue(route.query.part);
+
+  return JSON.stringify({
+    name: route.name,
+    customer: typeof customerQuery === 'string' ? customerQuery.trim() : '',
+    part: typeof partQuery === 'string' ? partQuery.trim() : '',
+  });
+}
+
 function serializeDraft(value: JobDraft) {
   return JSON.stringify({
     customer: value.customer || null,
@@ -645,6 +953,8 @@ function serializeDraft(value: JobDraft) {
     customerPo: value.customerPo.trim(),
     priority: value.priority,
     notes: value.notes.trim(),
+    shipmentSchedule: normalizeShipmentScheduleDraft(value),
+    shipmentRecords: normalizeShipmentRecordsDraft(value),
   });
 }
 
@@ -666,6 +976,15 @@ function dateInputValue(value: string | Date | null | undefined) {
 }
 
 function jobToDraft(currentJob: Job): JobDraft {
+  const fallbackShipDate = dateInputValue(currentJob.dueDate) || defaultDueDateValue();
+  const shipmentSchedule = currentJob.shipmentSchedule?.length
+    ? currentJob.shipmentSchedule.map((entry) => ({
+        shipDate: dateInputValue(entry.shipDate),
+        qty: String(Math.max(1, Number(entry.qty) || 1)),
+        po: entry.po || '',
+      }))
+    : [createSingleShipmentScheduleDraftEntry(fallbackShipDate, String(currentJob.qty))];
+
   return {
     customer:
       typeof currentJob.customer === 'string'
@@ -682,6 +1001,13 @@ function jobToDraft(currentJob: Job): JobDraft {
     customerPo: currentJob.customerPo || '',
     priority: currentJob.priority || 'normal',
     notes: currentJob.notes || '',
+    shipmentSchedule,
+    shipmentRecords: (currentJob.shipmentRecords || []).map((entry) => ({
+      id: entry.id,
+      shippedAt: dateInputValue(entry.shippedAt),
+      qty: String(Math.max(1, Number(entry.qty) || 1)),
+      po: entry.po || '',
+    })),
   };
 }
 
@@ -689,6 +1015,10 @@ function validateDraft(nextDraft: JobDraft, existingProductionTasks: JobProducti
   if (!nextDraft.customer) return 'Select a customer.';
   if (!nextDraft.part) return 'Select a part.';
   if (Math.max(0, Number(nextDraft.qty) || 0) < 1) return 'Qty must be at least 1.';
+  const shipmentScheduleError = validateShipmentScheduleDraft(nextDraft);
+  if (shipmentScheduleError) return shipmentScheduleError;
+  const shipmentRecordsError = validateShipmentRecordsDraft(nextDraft);
+  if (shipmentRecordsError) return shipmentRecordsError;
   if (
     nextDraft.status === 'closed' &&
     existingProductionTasks.some((productionTask) => !productionTask.endedAt)
@@ -699,12 +1029,15 @@ function validateDraft(nextDraft: JobDraft, existingProductionTasks: JobProducti
 }
 
 function toJobPayload(nextDraft: JobDraft, productionTasks: JobProductionTask[] = []): JobCreate {
+  const shipmentSchedule = normalizeShipmentScheduleDraft(nextDraft);
+  const shipmentRecords = normalizeShipmentRecordsDraft(nextDraft);
+
   return {
     customer: nextDraft.customer || '',
     part: nextDraft.part || '',
     qty: Math.max(1, Number(nextDraft.qty) || 1),
     status: nextDraft.status,
-    dueDate: nextDraft.dueDate || undefined,
+    dueDate: shipmentSchedule[0]?.shipDate || nextDraft.dueDate || undefined,
     startedOn: nextDraft.startedOn || undefined,
     completedOn: nextDraft.status === 'closed' ? nextDraft.completedOn || undefined : undefined,
     materialOrderedOn: nextDraft.materialOrderedOn || undefined,
@@ -712,8 +1045,526 @@ function toJobPayload(nextDraft: JobDraft, productionTasks: JobProductionTask[] 
     customerPo: nextDraft.customerPo.trim() || undefined,
     priority: nextDraft.priority,
     notes: nextDraft.notes.trim() || undefined,
+    shipmentSchedule: shipmentSchedule.length ? shipmentSchedule : undefined,
+    shipmentRecords: shipmentRecords.length ? shipmentRecords : undefined,
     productionTasks,
   };
+}
+
+function normalizedDraftQty(value: string) {
+  return Math.max(1, Number(value) || 1);
+}
+
+function suggestedSplitQty(totalQty: number) {
+  if (totalQty <= 1) return 1;
+  return Math.max(1, Math.floor(totalQty / 2));
+}
+
+function createShipmentScheduleDraftEntry(
+  shipDate = draft.value.dueDate || defaultDueDateValue(),
+  qty = String(suggestedSplitQty(normalizedQty.value)),
+  po = '',
+): JobShipmentScheduleDraftEntry {
+  return {
+    shipDate,
+    qty,
+    po,
+  };
+}
+
+function createSingleShipmentScheduleDraftEntry(
+  shipDate = defaultDueDateValue(),
+  qty = '1',
+  po = '',
+): JobShipmentScheduleDraftEntry {
+  return {
+    shipDate,
+    qty: String(Math.max(1, Number(qty) || 1)),
+    po,
+  };
+}
+
+function createShipmentRecordDraftEntry(
+  shippedAt = currentDateInputValue(),
+  qty = String(defaultShipmentRecordQty()),
+  po = '',
+): JobShipmentRecordDraftEntry {
+  return {
+    id: crypto.randomUUID(),
+    shippedAt,
+    qty,
+    po,
+  };
+}
+
+function defaultShipmentRecordQty() {
+  return remainingShipmentQty.value > 0 ? remainingShipmentQty.value : 1;
+}
+
+function isShipmentScheduleRemainderEntry(index: number) {
+  return (
+    draft.value.shipmentSchedule.length > 1 && index === draft.value.shipmentSchedule.length - 1
+  );
+}
+
+function isShipmentScheduleQtyLocked(index: number) {
+  return draft.value.shipmentSchedule.length === 1 || isShipmentScheduleRemainderEntry(index);
+}
+
+function plannedShipmentQtyAt(index: number) {
+  const totalQty = normalizedQty.value;
+  const schedule = draft.value.shipmentSchedule;
+  if (!schedule.length) return totalQty;
+  if (schedule.length === 1) return totalQty;
+
+  if (index === schedule.length - 1) {
+    const allocatedQty = schedule
+      .slice(0, -1)
+      .reduce((sum, entry) => sum + Math.max(0, Number(entry.qty) || 0), 0);
+    return Math.max(totalQty - allocatedQty, 0);
+  }
+
+  return Math.max(0, Number(schedule[index]?.qty) || 0);
+}
+
+function shipmentScheduleQtyInputValue(index: number) {
+  if (isShipmentScheduleRemainderEntry(index)) {
+    return String(plannedShipmentQtyAt(index));
+  }
+
+  if (draft.value.shipmentSchedule.length === 1) {
+    return String(normalizedQty.value);
+  }
+
+  return draft.value.shipmentSchedule[index]?.qty || '';
+}
+
+function shipmentScheduleQtyHint(index: number) {
+  if (draft.value.shipmentSchedule.length === 1) {
+    return ''; //'Single planned shipment carries the full job quantity. Add another row to split it.';
+  }
+
+  if (isShipmentScheduleRemainderEntry(index)) {
+    return `${plannedShipmentQtyAt(index)} remaining from ${normalizedQty.value} total.`;
+  }
+
+  return `Remainder after this shipment: ${Math.max(normalizedQty.value - scheduledQtyBeforeIndex(index + 1), 0)}`;
+}
+
+function plannedShipmentShippedQtyAt(index: number) {
+  let remainingRecordedQty = totalRecordedShipmentQty.value;
+
+  for (let currentIndex = 0; currentIndex <= index; currentIndex += 1) {
+    const allocatedQty = Math.min(
+      plannedShipmentQtyAt(currentIndex),
+      Math.max(remainingRecordedQty, 0),
+    );
+    if (currentIndex === index) return allocatedQty;
+    remainingRecordedQty -= allocatedQty;
+  }
+
+  return 0;
+}
+
+function plannedShipmentRemainingQtyAt(index: number) {
+  return Math.max(plannedShipmentQtyAt(index) - plannedShipmentShippedQtyAt(index), 0);
+}
+
+function plannedShipmentStatusLabel(index: number) {
+  const plannedQty = plannedShipmentQtyAt(index);
+  const remainingQty = plannedShipmentRemainingQtyAt(index);
+  const shippedQtyForPlan = plannedQty - remainingQty;
+
+  if (remainingQty <= 0) return 'Shipped';
+  if (shippedQtyForPlan > 0) return `Partial ${shippedQtyForPlan}/${plannedQty}`;
+  return 'Planned';
+}
+
+function plannedShipmentStatusColor(index: number) {
+  const plannedQty = plannedShipmentQtyAt(index);
+  const remainingQty = plannedShipmentRemainingQtyAt(index);
+  if (remainingQty <= 0) return 'success';
+  if (remainingQty < plannedQty) return 'warning';
+  return 'grey';
+}
+
+function canRecordPlannedShipment(index: number) {
+  if (plannedShipmentRemainingQtyAt(index) < 1) return false;
+
+  for (let currentIndex = 0; currentIndex < index; currentIndex += 1) {
+    if (plannedShipmentRemainingQtyAt(currentIndex) > 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function scheduledQtyBeforeIndex(endIndex: number) {
+  return draft.value.shipmentSchedule.slice(0, endIndex).reduce((sum, entry, index) => {
+    if (
+      draft.value.shipmentSchedule.length > 1 &&
+      index === draft.value.shipmentSchedule.length - 1
+    ) {
+      return sum;
+    }
+
+    return sum + Math.max(0, Number(entry.qty) || 0);
+  }, 0);
+}
+
+function normalizeShipmentScheduleDraft(nextDraft: JobDraft): JobShipmentScheduleEntry[] {
+  if (!nextDraft.shipmentSchedule.length) return [];
+
+  const totalQty = normalizedDraftQty(nextDraft.qty);
+  const schedule = nextDraft.shipmentSchedule
+    .map((entry) => ({
+      shipDate: entry.shipDate.trim(),
+      qty: Math.max(0, Number(entry.qty) || 0),
+      po: entry.po.trim(),
+    }))
+    .filter((entry) => entry.shipDate);
+
+  if (!schedule.length) return [];
+
+  if (schedule.length === 1) {
+    return [
+      {
+        shipDate: schedule[0].shipDate,
+        qty: totalQty,
+        po: schedule[0].po || undefined,
+      },
+    ];
+  }
+
+  let allocatedQty = 0;
+
+  return schedule.map((entry, index) => {
+    if (index === schedule.length - 1) {
+      return {
+        shipDate: entry.shipDate,
+        qty: Math.max(totalQty - allocatedQty, 0),
+        po: entry.po || undefined,
+      };
+    }
+
+    const qty = Math.max(0, Math.trunc(entry.qty));
+    allocatedQty += qty;
+    return {
+      shipDate: entry.shipDate,
+      qty,
+      po: entry.po || undefined,
+    };
+  });
+}
+
+function normalizeShipmentRecordsDraft(nextDraft: JobDraft): JobShipmentRecord[] {
+  return nextDraft.shipmentRecords.map((entry) => ({
+    id: entry.id.trim(),
+    shippedAt: entry.shippedAt.trim(),
+    qty: Math.max(0, Math.trunc(Number(entry.qty) || 0)),
+    po: entry.po.trim() || undefined,
+  }));
+}
+
+function canEqualizeShipmentSchedule() {
+  return (
+    draft.value.shipmentSchedule.length > 1 &&
+    normalizedQty.value >= draft.value.shipmentSchedule.length
+  );
+}
+
+function validateShipmentScheduleDraft(nextDraft: JobDraft) {
+  if (!nextDraft.shipmentSchedule.length) return null;
+
+  const totalQty = normalizedDraftQty(nextDraft.qty);
+  const schedule = nextDraft.shipmentSchedule;
+
+  for (const [index, entry] of schedule.entries()) {
+    if (!entry.shipDate.trim()) {
+      return `Shipment ${index + 1} needs a shipment date.`;
+    }
+  }
+
+  if (schedule.length === 1) return null;
+
+  let allocatedQty = 0;
+  for (const [index, entry] of schedule.entries()) {
+    const isLastEntry = index === schedule.length - 1;
+    if (isLastEntry) {
+      if (totalQty - allocatedQty < 1) {
+        return 'Shipment quantities before the final shipment must leave a remainder.';
+      }
+      continue;
+    }
+
+    const qty = Math.trunc(Number(entry.qty) || 0);
+    if (qty < 1) {
+      return `Shipment ${index + 1} qty must be at least 1.`;
+    }
+
+    allocatedQty += qty;
+    if (allocatedQty >= totalQty) {
+      return 'Shipment quantities before the final shipment must leave a remainder.';
+    }
+  }
+
+  return null;
+}
+
+function validateShipmentRecordsDraft(nextDraft: JobDraft) {
+  if (!nextDraft.shipmentRecords.length) return null;
+
+  const normalizedRecords = normalizeShipmentRecordsDraft(nextDraft);
+  let totalQtyRecorded = 0;
+
+  for (const [index, record] of normalizedRecords.entries()) {
+    if (!record.id) {
+      return `Recorded shipment ${index + 1} is missing an id.`;
+    }
+    if (typeof record.shippedAt !== 'string' || !record.shippedAt.trim()) {
+      return `Recorded shipment ${index + 1} needs a shipment date.`;
+    }
+    if (record.qty < 1) {
+      return `Recorded shipment ${index + 1} qty must be at least 1.`;
+    }
+
+    totalQtyRecorded += record.qty;
+    if (totalQtyRecorded > normalizedDraftQty(nextDraft.qty)) {
+      return 'Recorded shipments cannot exceed the job quantity.';
+    }
+  }
+
+  return null;
+}
+
+function addShipmentScheduleEntry() {
+  const schedule = draft.value.shipmentSchedule;
+  if (!schedule.length) {
+    const fallbackDate = draft.value.dueDate || defaultDueDateValue();
+    draft.value = {
+      ...draft.value,
+      dueDate: fallbackDate,
+      shipmentSchedule: [
+        createSingleShipmentScheduleDraftEntry(fallbackDate, String(normalizedQty.value)),
+      ],
+    };
+  }
+
+  const nextSchedule = draft.value.shipmentSchedule;
+
+  if (nextSchedule.length === 1) {
+    draft.value = {
+      ...draft.value,
+      shipmentSchedule: [
+        {
+          ...nextSchedule[0],
+          qty: String(suggestedSplitQty(normalizedQty.value)),
+        },
+        createShipmentScheduleDraftEntry(nextSchedule[0].shipDate, ''),
+      ],
+    };
+    return;
+  }
+
+  const insertionIndex = nextSchedule.length - 1;
+  const finalRemainderQty = plannedShipmentQtyAt(nextSchedule.length - 1);
+  const nextQty = String(suggestedSplitQty(finalRemainderQty));
+
+  draft.value = {
+    ...draft.value,
+    shipmentSchedule: [
+      ...nextSchedule.slice(0, insertionIndex),
+      createShipmentScheduleDraftEntry(nextSchedule[insertionIndex].shipDate, nextQty),
+      ...nextSchedule.slice(insertionIndex),
+    ],
+  };
+}
+
+function equalizeShipmentSchedule() {
+  if (!canEqualizeShipmentSchedule()) {
+    toastError('Qty is too low to evenly distribute across the planned shipment rows.');
+    return;
+  }
+
+  const totalQty = normalizedQty.value;
+  const rowCount = draft.value.shipmentSchedule.length;
+  const baseQty = Math.floor(totalQty / rowCount);
+  const remainder = totalQty % rowCount;
+
+  draft.value = {
+    ...draft.value,
+    shipmentSchedule: draft.value.shipmentSchedule.map((entry, index) => ({
+      ...entry,
+      qty: String(index === rowCount - 1 ? baseQty + remainder : baseQty),
+    })),
+  };
+}
+
+function addShipmentRecord(
+  qty = String(defaultShipmentRecordQty()),
+  shippedAt = currentDateInputValue(),
+  po = '',
+) {
+  draft.value = {
+    ...draft.value,
+    shipmentRecords: [
+      ...draft.value.shipmentRecords,
+      createShipmentRecordDraftEntry(shippedAt, qty, po),
+    ],
+  };
+}
+
+function recordPlannedShipment(index: number) {
+  if (!canRecordPlannedShipment(index)) return;
+
+  const remainingPlannedQty = plannedShipmentRemainingQtyAt(index);
+  if (remainingPlannedQty < 1) return;
+
+  addShipmentRecord(
+    String(remainingPlannedQty),
+    draft.value.shipmentSchedule[index]?.shipDate || currentDateInputValue(),
+    draft.value.shipmentSchedule[index]?.po || '',
+  );
+}
+
+function removeShipmentScheduleEntry(index: number) {
+  if (draft.value.shipmentSchedule.length === 1) return;
+
+  const nextSchedule = draft.value.shipmentSchedule.filter(
+    (_, currentIndex) => currentIndex !== index,
+  );
+  draft.value = {
+    ...draft.value,
+    shipmentSchedule: nextSchedule,
+  };
+}
+
+function removeShipmentRecord(index: number) {
+  draft.value = {
+    ...draft.value,
+    shipmentRecords: draft.value.shipmentRecords.filter(
+      (_, currentIndex) => currentIndex !== index,
+    ),
+  };
+}
+
+function updateShipmentScheduleShipDate(index: number, value: string) {
+  const nextSchedule = draft.value.shipmentSchedule.map((entry, currentIndex) =>
+    currentIndex === index
+      ? {
+          ...entry,
+          shipDate: value,
+        }
+      : entry,
+  );
+
+  draft.value = {
+    ...draft.value,
+    dueDate: index === 0 ? value : draft.value.dueDate,
+    shipmentSchedule: nextSchedule,
+  };
+}
+
+function updateShipmentScheduleQty(index: number, value: string) {
+  if (isShipmentScheduleRemainderEntry(index) || draft.value.shipmentSchedule.length === 1) {
+    return;
+  }
+
+  draft.value = {
+    ...draft.value,
+    shipmentSchedule: draft.value.shipmentSchedule.map((entry, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...entry,
+            qty: value,
+          }
+        : entry,
+    ),
+  };
+}
+
+function updateShipmentSchedulePo(index: number, value: string) {
+  draft.value = {
+    ...draft.value,
+    shipmentSchedule: draft.value.shipmentSchedule.map((entry, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...entry,
+            po: value,
+          }
+        : entry,
+    ),
+  };
+}
+
+function updateShipmentRecordDate(index: number, value: string) {
+  draft.value = {
+    ...draft.value,
+    shipmentRecords: draft.value.shipmentRecords.map((entry, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...entry,
+            shippedAt: value,
+          }
+        : entry,
+    ),
+  };
+}
+
+function updateShipmentRecordQty(index: number, value: string) {
+  draft.value = {
+    ...draft.value,
+    shipmentRecords: draft.value.shipmentRecords.map((entry, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...entry,
+            qty: value,
+          }
+        : entry,
+    ),
+  };
+}
+
+function updateShipmentRecordPo(index: number, value: string) {
+  draft.value = {
+    ...draft.value,
+    shipmentRecords: draft.value.shipmentRecords.map((entry, currentIndex) =>
+      currentIndex === index
+        ? {
+            ...entry,
+            po: value,
+          }
+        : entry,
+    ),
+  };
+}
+
+function shipmentRecordQtyHint(index: number) {
+  const totalAfterRow = draft.value.shipmentRecords.slice(0, index + 1).reduce((sum, entry) => {
+    return sum + Math.max(0, Number(entry.qty) || 0);
+  }, 0);
+  const remainingAfterRow = normalizedQty.value - totalAfterRow;
+
+  if (remainingAfterRow < 0) {
+    return `Over by ${Math.abs(remainingAfterRow)}.`;
+  }
+
+  return `Remaining after this shipment: ${remainingAfterRow}`;
+}
+
+function shipmentScheduleRowKey(entry: JobShipmentScheduleDraftEntry, index: number) {
+  return `${entry.shipDate || 'shipment'}-${index}`;
+}
+
+function formatRelativeDateLabel(value: string) {
+  if (!value) return '';
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${Number(match[2])}/${Number(match[3])}/${match[1]}`;
+  }
+
+  return formatHeaderDate(value);
 }
 
 function applyJobStatus(nextDraft: JobDraft, status: JobStatus): JobDraft {
@@ -743,11 +1594,18 @@ async function syncRouteState() {
   endTaskConfirmTaskId.value = null;
 
   if (isCreateRoute.value) {
+    const nextHydrationKey = currentCreateRouteHydrationKey();
+
     job.value = null;
-    draft.value = createDraftFromRouteQuery();
+    if (createRouteHydrationKey.value !== nextHydrationKey) {
+      draft.value = createDraftFromRouteQuery();
+      createRouteHydrationKey.value = nextHydrationKey;
+    }
     loading.value = false;
     return;
   }
+
+  createRouteHydrationKey.value = null;
 
   const id = typeof route.params.id === 'string' ? route.params.id : '';
   if (!id) {
@@ -838,7 +1696,16 @@ async function fetchMachineActivityMap() {
 async function saveJob() {
   if (!canSaveJob.value) return;
 
-  const errorMessage = validateDraft(draft.value, job.value?.productionTasks ?? []);
+  if (shouldPromptCloseAfterShipmentSave.value) {
+    closeAfterShipmentConfirm.value = true;
+    return;
+  }
+
+  await persistJob(draft.value);
+}
+
+async function persistJob(nextDraft: JobDraft) {
+  const errorMessage = validateDraft(nextDraft, job.value?.productionTasks ?? []);
   if (errorMessage) {
     toastError(errorMessage);
     return;
@@ -846,7 +1713,7 @@ async function saveJob() {
 
   saving.value = true;
   try {
-    const payload = toJobPayload(draft.value, job.value?.productionTasks ?? []);
+    const payload = toJobPayload(nextDraft, job.value?.productionTasks ?? []);
 
     if (isCreateRoute.value) {
       const createdJob = await jobsStore.create(payload);
@@ -870,6 +1737,16 @@ async function saveJob() {
   } finally {
     saving.value = false;
   }
+}
+
+function confirmSaveWithOpenJob() {
+  closeAfterShipmentConfirm.value = false;
+  void persistJob(draft.value);
+}
+
+function confirmSaveWithClosedJob() {
+  closeAfterShipmentConfirm.value = false;
+  void persistJob(applyJobStatus(draft.value, 'closed'));
 }
 
 function resetStartTaskMachineSelection() {
@@ -1093,11 +1970,211 @@ function machineAvailabilityClass(machine: StartTaskMachineOption) {
   padding-bottom: 32px;
 }
 
+.shipments-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.shipment-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.shipment-section {
+  min-width: 0;
+}
+
+.shipment-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shipment-progress-card__label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.shipment-progress-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.shipment-progress-card__value-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shipment-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shipment-plan__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.shipment-plan__header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 56px;
+}
+
+.shipment-plan__header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shipment-plan__header-hint {
+  max-width: 42rem;
+}
+
+.shipment-plan__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shipment-plan__row,
+.shipment-log__row {
+  min-height: 144px;
+}
+
+.shipment-row-card__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100%;
+  padding-top: 14px;
+  padding-right: 16px;
+  padding-bottom: 14px;
+  padding-left: 16px;
+}
+
+.shipment-plan__row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.shipment-plan__row-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shipment-plan__row-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.shipment-plan__ship-button,
+.shipment-plan__delete-button {
+  min-width: 0;
+}
+
+.shipment-plan__ship-button {
+  padding-inline: 6px;
+}
+
+.shipment-plan__delete-button {
+  padding-inline: 0;
+}
+
+.shipment-plan__actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shipment-plan__empty {
+  padding: 12px 0;
+}
+
+.shipment-log {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shipment-log__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.shipment-log__header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 56px;
+}
+
+.shipment-log__actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shipment-log__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shipment-log__row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.shipment-log__empty {
+  padding: 12px 0;
+}
+
 .job-header-grid {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .shipment-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shipment-sections-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shipment-plan__header,
+  .shipment-log__header {
+    flex-direction: column;
+  }
 }
 
 .job-header-grid__left {

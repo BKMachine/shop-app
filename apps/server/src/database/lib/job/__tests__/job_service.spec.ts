@@ -236,6 +236,8 @@ class MockJobModel {
   dueDate?: string | Date | null;
   startedOn?: string | Date | null;
   completedOn?: string | Date | null;
+  materialOrderedOn?: string | Date | null;
+  materialOnHandOn?: string | Date | null;
   customerPo?: string;
   priority?: JobPriority;
   notes?: string;
@@ -243,6 +245,8 @@ class MockJobModel {
   partNumber?: string;
   partDescription?: string;
   partRevision?: string;
+  shipmentSchedule?: JobShipmentScheduleEntry[];
+  shipmentRecords?: JobShipmentRecord[];
   productionTasks?: JobProductionTask[];
   createdAt: Date;
   updatedAt: Date;
@@ -257,6 +261,8 @@ class MockJobModel {
     this.dueDate = data.dueDate ?? null;
     this.startedOn = data.startedOn ?? null;
     this.completedOn = data.completedOn ?? null;
+    this.materialOrderedOn = data.materialOrderedOn ?? null;
+    this.materialOnHandOn = data.materialOnHandOn ?? null;
     this.customerPo = data.customerPo ?? '';
     this.priority = data.priority ?? 'normal';
     this.notes = data.notes ?? '';
@@ -264,6 +270,8 @@ class MockJobModel {
     this.partNumber = data.partNumber ?? '';
     this.partDescription = data.partDescription ?? '';
     this.partRevision = data.partRevision ?? '';
+    this.shipmentSchedule = data.shipmentSchedule ?? [];
+    this.shipmentRecords = data.shipmentRecords ?? [];
     this.productionTasks = data.productionTasks ?? [];
     this.createdAt = new Date();
     this.updatedAt = new Date();
@@ -281,6 +289,8 @@ class MockJobModel {
       dueDate: this.dueDate ?? null,
       startedOn: this.startedOn ?? null,
       completedOn: this.completedOn ?? null,
+      materialOrderedOn: this.materialOrderedOn ?? null,
+      materialOnHandOn: this.materialOnHandOn ?? null,
       customerPo: this.customerPo ?? '',
       priority: this.priority ?? 'normal',
       notes: this.notes ?? '',
@@ -288,6 +298,8 @@ class MockJobModel {
       partNumber: this.partNumber ?? '',
       partDescription: this.partDescription ?? '',
       partRevision: this.partRevision ?? '',
+      shipmentSchedule: this.shipmentSchedule ?? [],
+      shipmentRecords: this.shipmentRecords ?? [],
       productionTasks: this.productionTasks ?? [],
       createdAt: this.createdAt,
       updatedAt: new Date(),
@@ -704,6 +716,267 @@ test('update stores production tasks on the job', async () => {
     }),
   ]);
   expect(updated.status).toBe('in_process');
+});
+
+test('update stores a split shipment schedule and assigns the final remainder qty', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 120,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    shipmentSchedule: [],
+    productionTasks: [],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const updated = await JobService.update(
+    {
+      _id: 'job-1',
+      jobNumber: 1001,
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
+      qty: 120,
+      status: 'open',
+      shipmentSchedule: [
+        {
+          shipDate: new Date('2026-08-01T12:00:00.000Z'),
+          qty: 40,
+          po: 'PO-1',
+        },
+        {
+          shipDate: new Date('2026-09-01T12:00:00.000Z'),
+          qty: 40,
+          po: 'PO-2',
+        },
+        {
+          shipDate: new Date('2026-10-01T12:00:00.000Z'),
+          qty: 999,
+          po: 'PO-3',
+        },
+      ],
+    },
+    'device-1',
+  );
+
+  expect(updated.dueDate).toEqual(new Date('2026-08-01T12:00:00.000Z'));
+  expect(updated.shipmentSchedule).toEqual([
+    {
+      shipDate: new Date('2026-08-01T12:00:00.000Z'),
+      qty: 40,
+      po: 'PO-1',
+    },
+    {
+      shipDate: new Date('2026-09-01T12:00:00.000Z'),
+      qty: 40,
+      po: 'PO-2',
+    },
+    {
+      shipDate: new Date('2026-10-01T12:00:00.000Z'),
+      qty: 40,
+      po: 'PO-3',
+    },
+  ]);
+});
+
+test('update rejects split shipment schedules that consume the full qty before the last shipment', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 120,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    shipmentSchedule: [],
+    productionTasks: [],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const module = await loadJobService();
+
+  await expect(
+    module.default.update(
+      {
+        _id: 'job-1',
+        jobNumber: 1001,
+        customer: CUSTOMER_ID_1,
+        part: PART_ID_1,
+        qty: 120,
+        status: 'open',
+        shipmentSchedule: [
+          {
+            shipDate: new Date('2026-08-01T12:00:00.000Z'),
+            qty: 60,
+          },
+          {
+            shipDate: new Date('2026-09-01T12:00:00.000Z'),
+            qty: 60,
+          },
+          {
+            shipDate: new Date('2026-10-01T12:00:00.000Z'),
+            qty: 1,
+          },
+        ],
+      },
+      'device-1',
+    ),
+  ).rejects.toThrow(
+    'Shipment schedule quantities before the final shipment must leave a remainder.',
+  );
+});
+
+test('update stores recorded shipments and keeps shipped qty within the job quantity', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 120,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    shipmentSchedule: [],
+    shipmentRecords: [],
+    productionTasks: [],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const updated = await JobService.update(
+    {
+      _id: 'job-1',
+      jobNumber: 1001,
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
+      qty: 120,
+      status: 'open',
+      shipmentRecords: [
+        {
+          id: 'ship-1',
+          shippedAt: new Date('2026-08-02T12:00:00.000Z'),
+          qty: 40,
+          po: 'PO-10',
+        },
+        {
+          id: 'ship-2',
+          shippedAt: new Date('2026-09-05T12:00:00.000Z'),
+          qty: 20,
+          po: 'PO-11',
+        },
+      ],
+    },
+    'device-1',
+  );
+
+  expect(updated.shipmentRecords).toEqual([
+    {
+      id: 'ship-1',
+      shippedAt: new Date('2026-08-02T12:00:00.000Z'),
+      qty: 40,
+      po: 'PO-10',
+    },
+    {
+      id: 'ship-2',
+      shippedAt: new Date('2026-09-05T12:00:00.000Z'),
+      qty: 20,
+      po: 'PO-11',
+    },
+  ]);
+});
+
+test('update rejects recorded shipments that exceed the job quantity', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 120,
+    status: 'open',
+    dueDate: null,
+    startedOn: null,
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    shipmentSchedule: [],
+    shipmentRecords: [],
+    productionTasks: [],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const module = await loadJobService();
+
+  await expect(
+    module.default.update(
+      {
+        _id: 'job-1',
+        jobNumber: 1001,
+        customer: CUSTOMER_ID_1,
+        part: PART_ID_1,
+        qty: 120,
+        status: 'open',
+        shipmentRecords: [
+          {
+            id: 'ship-1',
+            shippedAt: new Date('2026-08-02T12:00:00.000Z'),
+            qty: 80,
+          },
+          {
+            id: 'ship-2',
+            shippedAt: new Date('2026-09-05T12:00:00.000Z'),
+            qty: 50,
+          },
+        ],
+      },
+      'device-1',
+    ),
+  ).rejects.toThrow('Recorded shipments cannot exceed the job quantity.');
 });
 
 test('update adding a production task moves an open job to in-process', async () => {

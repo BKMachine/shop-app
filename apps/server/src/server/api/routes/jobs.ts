@@ -39,6 +39,17 @@ const productionTaskSchema = z.strictObject({
   startedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullish(),
 });
+const shipmentScheduleEntrySchema = z.strictObject({
+  shipDate: z.preprocess(coerceJobDate, z.coerce.date()),
+  qty: z.coerce.number().int().positive(),
+  po: z.string().optional(),
+});
+const shipmentRecordSchema = z.strictObject({
+  id: z.string().trim().min(1),
+  shippedAt: z.preprocess(coerceJobDate, z.coerce.date()),
+  qty: z.coerce.number().int().positive(),
+  po: z.string().optional(),
+});
 
 const JobFieldsSchema = z.strictObject({
   customer: mongoObjectId,
@@ -57,6 +68,8 @@ const JobFieldsSchema = z.strictObject({
   partNumber: z.string().optional(),
   partDescription: z.string().optional(),
   partRevision: z.string().optional(),
+  shipmentSchedule: z.array(shipmentScheduleEntrySchema).optional(),
+  shipmentRecords: z.array(shipmentRecordSchema).optional(),
   productionTasks: z.array(productionTaskSchema).optional(),
 });
 

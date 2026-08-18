@@ -50,7 +50,8 @@
         <v-col cols="12" md="4">
           <v-text-field
             v-model="draft.dueDate"
-            :hint="formatRelativeDateHint(draft.dueDate)"
+            :disabled="isDueDateDisabled"
+            :hint="resolvedDueDateHint"
             label="Due Date"
             persistent-hint
             type="date"
@@ -136,6 +137,19 @@ import PartSearchSelect from '@/components/parts/PartSearchSelect.vue';
 import { formatRelativeDate } from '@/lib/job_dates';
 import api from '@/plugins/axios';
 
+type JobShipmentScheduleDraftEntry = {
+  shipDate: string;
+  qty: string;
+  po: string;
+};
+
+type JobShipmentRecordDraftEntry = {
+  id: string;
+  shippedAt: string;
+  qty: string;
+  po: string;
+};
+
 export type JobDraft = {
   customer: string | null;
   part: string | null;
@@ -149,10 +163,14 @@ export type JobDraft = {
   customerPo: string;
   priority: JobPriority;
   notes: string;
+  shipmentSchedule: JobShipmentScheduleDraftEntry[];
+  shipmentRecords: JobShipmentRecordDraftEntry[];
 };
 
 const props = defineProps<{
   modelValue: JobDraft;
+  dueDateDisabled?: boolean;
+  dueDateHint?: string;
 }>();
 
 const emit = defineEmits<(e: 'update:modelValue', value: JobDraft) => void>();
@@ -161,6 +179,10 @@ const draft = computed({
   get: () => props.modelValue,
   set: (value: JobDraft) => emit('update:modelValue', value),
 });
+const isDueDateDisabled = computed(() => Boolean(props.dueDateDisabled));
+const resolvedDueDateHint = computed(
+  () => props.dueDateHint || formatRelativeDateHint(draft.value.dueDate),
+);
 const selectedPart = ref<Part | null>(null);
 const loadingPart = ref(false);
 let partRequestId = 0;
@@ -232,6 +254,15 @@ async function loadSelectedPart(partId: string | null) {
     const { data } = await api.get<Part>(`/parts/${partId}`);
     if (requestId !== partRequestId) return;
     selectedPart.value = data;
+
+    const selectedCustomerId =
+      typeof data.customer === 'string' ? data.customer : data.customer?._id || null;
+    if (!draft.value.customer && selectedCustomerId) {
+      draft.value = {
+        ...draft.value,
+        customer: selectedCustomerId,
+      };
+    }
   } catch {
     if (requestId !== partRequestId) return;
     selectedPart.value = null;

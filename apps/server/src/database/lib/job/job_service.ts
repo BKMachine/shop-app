@@ -77,6 +77,95 @@ function normalizeProductionTasks(
   });
 }
 
+function normalizeShipmentSchedule(
+  schedule: JobShipmentScheduleEntry[] | undefined,
+  totalQty: number,
+): JobShipmentScheduleEntry[] {
+  if (!Array.isArray(schedule) || !schedule.length) return [];
+
+  let allocatedQty = 0;
+
+  return schedule.map((entry, index) => {
+    const shipDate = normalizeDate(entry.shipDate);
+    if (!shipDate) {
+      throw new JobValidationError(`Shipment schedule entry ${index + 1} is missing a valid date.`);
+    }
+
+    const isLastEntry = index === schedule.length - 1;
+    if (isLastEntry) {
+      const remainingQty = totalQty - allocatedQty;
+      if (remainingQty < 1) {
+        throw new JobValidationError('Shipment schedule quantities exceed the job quantity.');
+      }
+
+      return {
+        shipDate,
+        qty: remainingQty,
+        po: normalizeText(entry.po),
+      };
+    }
+
+    const qty = Math.trunc(Number(entry.qty) || 0);
+    if (qty < 1) {
+      throw new JobValidationError(
+        `Shipment schedule entry ${index + 1} must have a quantity of at least 1.`,
+      );
+    }
+
+    allocatedQty += qty;
+    if (allocatedQty >= totalQty) {
+      throw new JobValidationError(
+        'Shipment schedule quantities before the final shipment must leave a remainder.',
+      );
+    }
+
+    return {
+      shipDate,
+      qty,
+      po: normalizeText(entry.po),
+    };
+  });
+}
+
+function normalizeShipmentRecords(
+  records: JobShipmentRecord[] | undefined,
+  totalQty: number,
+  fallbackRecords: JobShipmentRecord[] = [],
+): JobShipmentRecord[] {
+  const sourceRecords = Array.isArray(records) ? records : fallbackRecords;
+  let totalShippedQty = 0;
+
+  return sourceRecords.map((record, index) => {
+    const id = normalizeText(record.id);
+    const shippedAt = normalizeDate(record.shippedAt);
+    const qty = Math.trunc(Number(record.qty) || 0);
+
+    if (!id) {
+      throw new JobValidationError(`Shipment record ${index + 1} is missing an id.`);
+    }
+    if (!shippedAt) {
+      throw new JobValidationError(`Shipment record ${index + 1} is missing a valid date.`);
+    }
+    if (qty < 1) {
+      throw new JobValidationError(
+        `Shipment record ${index + 1} must have a quantity of at least 1.`,
+      );
+    }
+
+    totalShippedQty += qty;
+    if (totalShippedQty > totalQty) {
+      throw new JobValidationError('Recorded shipments cannot exceed the job quantity.');
+    }
+
+    return {
+      id,
+      shippedAt,
+      qty,
+      po: normalizeText(record.po),
+    };
+  });
+}
+
 function hasOpenProductionTasks(tasks: JobProductionTask[]) {
   return tasks.some((task) => !task.endedAt);
 }
@@ -98,6 +187,7 @@ async function buildPayload(
   data: JobCreate | JobUpdate,
   jobNumber: number,
   fallbackProductionTasks: JobProductionTask[] = [],
+  fallbackShipmentRecords: JobShipmentRecord[] = [],
   previousStatus?: JobStatus,
 ): Promise<Omit<Job, '_id' | 'createdAt' | 'updatedAt'>> {
   const customerId = getEntityIdOrNull(data.customer);
@@ -125,6 +215,12 @@ async function buildPayload(
 
   const qty = normalizeQty(data.qty);
   if (qty < 1) throw new JobValidationError('Job quantity must be at least 1.');
+  const shipmentSchedule = normalizeShipmentSchedule(data.shipmentSchedule, qty);
+  const shipmentRecords = normalizeShipmentRecords(
+    data.shipmentRecords,
+    qty,
+    fallbackShipmentRecords,
+  );
 
   const requestedStatus = normalizeStatus(data.status);
   const productionTasks = normalizeProductionTasks(data.productionTasks, fallbackProductionTasks);
@@ -154,7 +250,7 @@ async function buildPayload(
     part: partId,
     qty,
     status,
-    dueDate: normalizeDate(data.dueDate),
+    dueDate: shipmentSchedule[0]?.shipDate ?? normalizeDate(data.dueDate),
     startedOn,
     completedOn,
     materialOrderedOn,
@@ -166,6 +262,8 @@ async function buildPayload(
     partNumber: part.part ?? '',
     partDescription: part.description ?? '',
     partRevision: normalizeText(part.revision),
+    shipmentSchedule,
+    shipmentRecords,
     productionTasks,
   };
 }
@@ -528,6 +626,7 @@ async function update(data: JobUpdate, deviceId: string): Promise<JobDoc> {
     data,
     oldJob.jobNumber,
     oldJob.productionTasks ?? [],
+    oldJob.shipmentRecords ?? [],
     oldJob.status,
   );
   const updatedJob = await Job.findByIdAndUpdate(data._id, payload, {

@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue';
 
-export const JOB_SCAN_DESTINATIONS = ['general', 'production'] as const;
+export const JOB_SCAN_DESTINATIONS = ['general', 'production', 'shipments'] as const;
 
 export type JobScanDestination = (typeof JOB_SCAN_DESTINATIONS)[number];
 

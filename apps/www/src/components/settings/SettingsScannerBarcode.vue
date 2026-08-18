@@ -16,6 +16,7 @@
     >
       <v-radio label="Job General tab page" value="general" />
       <v-radio label="Job Production tab page" value="production" />
+      <v-radio label="Job Shipments tab page" value="shipments" />
     </v-radio-group>
   </v-card>
 </template>

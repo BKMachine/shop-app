@@ -5,6 +5,14 @@ type JobProductionTaskDocumentFields = Omit<JobProductionTask, 'startedAt' | 'en
   endedAt?: Date | null;
 };
 
+type JobShipmentScheduleEntryDocumentFields = Omit<JobShipmentScheduleEntry, 'shipDate'> & {
+  shipDate: Date;
+};
+
+type JobShipmentRecordDocumentFields = Omit<JobShipmentRecord, 'shippedAt'> & {
+  shippedAt: Date;
+};
+
 type JobDocumentFields = Omit<Job, '_id' | 'customer' | 'part'> & {
   customer: Types.ObjectId;
   part: Types.ObjectId;
@@ -31,6 +39,29 @@ const productionTaskSchema = new Schema<JobProductionTaskDocumentFields>(
   },
 );
 
+const shipmentScheduleSchema = new Schema<JobShipmentScheduleEntryDocumentFields>(
+  {
+    shipDate: { type: Date, required: true },
+    qty: { type: Number, required: true, min: 1 },
+    po: { type: String, default: '' },
+  },
+  {
+    _id: false,
+  },
+);
+
+const shipmentRecordSchema = new Schema<JobShipmentRecordDocumentFields>(
+  {
+    id: { type: String, required: true },
+    shippedAt: { type: Date, required: true },
+    qty: { type: Number, required: true, min: 1 },
+    po: { type: String, default: '' },
+  },
+  {
+    _id: false,
+  },
+);
+
 const schema = new Schema<JobDocumentFields>(
   {
     jobNumber: { type: Number, required: true, unique: true, immutable: true, index: true },
@@ -50,6 +81,8 @@ const schema = new Schema<JobDocumentFields>(
     partNumber: { type: String, default: '', index: true },
     partDescription: { type: String, default: '' },
     partRevision: { type: String, default: '' },
+    shipmentSchedule: { type: [shipmentScheduleSchema], default: [] },
+    shipmentRecords: { type: [shipmentRecordSchema], default: [] },
     productionTasks: { type: [productionTaskSchema], default: [] },
   },
   {

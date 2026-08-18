@@ -234,6 +234,19 @@ declare global {
     endedAt?: string | Date | null;
   }
 
+  interface JobShipmentScheduleEntry {
+    shipDate: string | Date;
+    qty: number;
+    po?: string;
+  }
+
+  interface JobShipmentRecord {
+    id: string;
+    shippedAt: string | Date;
+    qty: number;
+    po?: string;
+  }
+
   interface JobFields {
     customer: string | Customer;
     part: string | Part;
@@ -251,6 +264,8 @@ declare global {
     partNumber?: string;
     partDescription?: string;
     partRevision?: string;
+    shipmentSchedule?: JobShipmentScheduleEntry[];
+    shipmentRecords?: JobShipmentRecord[];
     productionTasks?: JobProductionTask[];
   }
 

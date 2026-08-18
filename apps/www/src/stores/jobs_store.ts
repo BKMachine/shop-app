@@ -29,6 +29,27 @@ function normalizeProductionTasksValue(tasks: JobProductionTask[] | undefined) {
   }));
 }
 
+function normalizeShipmentScheduleValue(schedule: JobShipmentScheduleEntry[] | undefined) {
+  if (!Array.isArray(schedule) || !schedule.length) return undefined;
+
+  return schedule.map((entry) => ({
+    shipDate: normalizeDateValue(entry.shipDate) ?? new Date(entry.shipDate).toISOString(),
+    qty: Math.max(1, Number(entry.qty) || 1),
+    po: entry.po?.trim() || undefined,
+  }));
+}
+
+function normalizeShipmentRecordsValue(records: JobShipmentRecord[] | undefined) {
+  if (!Array.isArray(records) || !records.length) return undefined;
+
+  return records.map((record) => ({
+    id: record.id,
+    shippedAt: normalizeDateValue(record.shippedAt) ?? new Date(record.shippedAt).toISOString(),
+    qty: Math.max(1, Number(record.qty) || 1),
+    po: record.po?.trim() || undefined,
+  }));
+}
+
 function toJobCreatePayload(job: Job | JobCreate): JobCreate {
   return {
     customer: getRelatedEntityId(job.customer) ?? '',
@@ -43,6 +64,8 @@ function toJobCreatePayload(job: Job | JobCreate): JobCreate {
     customerPo: job.customerPo?.trim() || undefined,
     priority: job.priority || 'normal',
     notes: job.notes?.trim() || undefined,
+    shipmentSchedule: normalizeShipmentScheduleValue(job.shipmentSchedule),
+    shipmentRecords: normalizeShipmentRecordsValue(job.shipmentRecords),
     productionTasks: normalizeProductionTasksValue(job.productionTasks),
   };
 }
