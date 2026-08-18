@@ -864,6 +864,27 @@ watch(tab, (value) => {
   syncTabToQuery(value);
 });
 
+watch(
+  () => draft.value.customerPo,
+  (value) => {
+    if (!draft.value.shipmentSchedule.length) return;
+    if (draft.value.shipmentSchedule[0]?.po === value) return;
+
+    draft.value = {
+      ...draft.value,
+      shipmentSchedule: draft.value.shipmentSchedule.map((entry, index) =>
+        index === 0
+          ? {
+              ...entry,
+              po: value,
+            }
+          : entry,
+      ),
+    };
+  },
+  { immediate: true },
+);
+
 onMounted(async () => {
   await syncRouteState();
   await fetchMachines();
@@ -1487,6 +1508,7 @@ function updateShipmentScheduleQty(index: number, value: string) {
 function updateShipmentSchedulePo(index: number, value: string) {
   draft.value = {
     ...draft.value,
+    customerPo: index === 0 ? value : draft.value.customerPo,
     shipmentSchedule: draft.value.shipmentSchedule.map((entry, currentIndex) =>
       currentIndex === index
         ? {
