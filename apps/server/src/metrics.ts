@@ -3,7 +3,9 @@ import client from 'prom-client';
 
 const METRIC_PREFIX = 'shop_app_server_';
 const METRIC_LABELS = ['method', 'route', 'status'] as const;
-const STATIC_ROUTE_PREFIXES = ['/api', '/images', '/documents', '/downloads'] as const;
+const DEVICE_REQUEST_LABELS = ['device_display_name'] as const;
+const SOCKET_CONNECTION_LABELS = ['device_display_name'] as const;
+const STATIC_ASSET_ROUTE_PREFIXES = ['/images', '/documents', '/downloads'] as const;
 
 export const metricsRegistry = new client.Registry();
 
@@ -37,20 +39,64 @@ export const activeHttpRequests = new client.Gauge({
   registers: [metricsRegistry],
 });
 
+export const httpRequestsByDevice = new client.Counter({
+  name: `${METRIC_PREFIX}http_requests_by_device_total`,
+  help: 'Total authenticated HTTP requests grouped by device display name.',
+  labelNames: [...DEVICE_REQUEST_LABELS],
+  registers: [metricsRegistry],
+});
+
+export const activeWebSocketConnections = new client.Gauge({
+  name: `${METRIC_PREFIX}websocket_connections_active`,
+  help: 'Current number of active websocket connections.',
+  registers: [metricsRegistry],
+});
+
+export const webSocketConnectionsTotal = new client.Counter({
+  name: `${METRIC_PREFIX}websocket_connections_total`,
+  help: 'Total websocket connections grouped by resolved device display name.',
+  labelNames: [...SOCKET_CONNECTION_LABELS],
+  registers: [metricsRegistry],
+});
+
 type RequestMetricLabels = {
   method: string;
   route: string;
   status: string;
 };
 
-export function shouldTrackRequest(pathname: string) {
-  return pathname !== '/metrics';
+export function getNormalizedRequestPath(req: Pick<Request, 'baseUrl' | 'path'>) {
+  return `${req.baseUrl || ''}${req.path || ''}` || '/';
+}
+
+export function shouldTrackRequest(req: Pick<Request, 'baseUrl' | 'path'>) {
+  const normalizedPath = getNormalizedRequestPath(req);
+
+  if (normalizedPath === '/metrics' || normalizedPath === '/health') {
+    return false;
+  }
+
+  if (normalizedPath === '/favicon.ico' || normalizedPath.startsWith('/favicon')) {
+    return false;
+  }
+
+  if (normalizedPath === '/images' || normalizedPath.startsWith('/images/')) {
+    return false;
+  }
+
+  if (normalizedPath === '/assets' || normalizedPath.startsWith('/assets/')) {
+    return false;
+  }
+
+  return true;
 }
 
 export function resolveMetricRoute(req: Request, res: Response) {
   if (res.statusCode === 404) {
     return 'unmatched';
   }
+
+  const normalizedPath = getNormalizedRequestPath(req);
 
   const routePath = req.route?.path;
 
@@ -66,8 +112,8 @@ export function resolveMetricRoute(req: Request, res: Response) {
     return '/health';
   }
 
-  for (const prefix of STATIC_ROUTE_PREFIXES) {
-    if (req.path === prefix || req.path.startsWith(`${prefix}/`)) {
+  for (const prefix of STATIC_ASSET_ROUTE_PREFIXES) {
+    if (normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`)) {
       return `${prefix}/*`;
     }
   }
@@ -89,4 +135,16 @@ export function buildRequestMetricLabels(req: Request, res: Response): RequestMe
     route: resolveMetricRoute(req, res),
     status: String(res.statusCode),
   };
+}
+
+export function getRequestDeviceDisplayName(req: Request) {
+  const displayName = req.device?.displayName?.trim();
+
+  return displayName || null;
+}
+
+export function normalizeSocketDeviceDisplayName(displayName: string | null | undefined) {
+  const normalized = displayName?.trim();
+
+  return normalized || 'unknown';
 }

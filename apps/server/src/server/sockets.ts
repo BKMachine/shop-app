@@ -2,6 +2,11 @@ import type http from 'node:http';
 import { Server } from 'socket.io';
 import DeviceService from '../database/lib/device/device_service.js';
 import logger from '../logger.js';
+import {
+  activeWebSocketConnections,
+  normalizeSocketDeviceDisplayName,
+  webSocketConnectionsTotal,
+} from '../metrics.js';
 
 let io: Server;
 
@@ -36,17 +41,32 @@ export default function (server: http.Server) {
   });
 
   io.on('connection', (socket) => {
+    activeWebSocketConnections.inc();
     const ip = getClientIp(socket);
     let displayName = ip;
+    let finalized = false;
+
+    const finalizeDisconnect = () => {
+      if (finalized) {
+        return;
+      }
+
+      finalized = true;
+      activeWebSocketConnections.dec();
+      logger.info(`SOCKET DISCONNECTED: ${displayName}`);
+    };
+
+    socket.once('disconnect', finalizeDisconnect);
+    socket.once('disconnecting', finalizeDisconnect);
+
     DeviceService.findByIp(ip)
       .then((device) => {
         displayName = device ? device.displayName : ip;
       })
       .finally(() => {
+        const metricDisplayName = normalizeSocketDeviceDisplayName(displayName);
+        webSocketConnectionsTotal.inc({ device_display_name: metricDisplayName });
         logger.info(`SOCKET CONNECTED: ${displayName}`);
-        socket.on('disconnect', () => {
-          logger.info(`SOCKET DISCONNECTED: ${displayName}`);
-        });
       });
   });
 }

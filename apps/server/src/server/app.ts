@@ -7,8 +7,10 @@ import * as logger from '../logger.js';
 import {
   activeHttpRequests,
   buildRequestMetricLabels,
+  getRequestDeviceDisplayName,
   httpRequestDuration,
   httpRequests,
+  httpRequestsByDevice,
   metricsRegistry,
   shouldTrackRequest,
 } from '../metrics.js';
@@ -29,7 +31,7 @@ if (process.env.NODE_ENV === 'production') {
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(format, { stream: logger.stream }));
 app.use((req, res, next) => {
-  if (!shouldTrackRequest(req.path)) {
+  if (!shouldTrackRequest(req)) {
     next();
     return;
   }
@@ -46,6 +48,12 @@ app.use((req, res, next) => {
     completed = true;
     const labels = buildRequestMetricLabels(req, res);
     httpRequests.inc(labels);
+
+    const deviceDisplayName = getRequestDeviceDisplayName(req);
+    if (deviceDisplayName) {
+      httpRequestsByDevice.inc({ device_display_name: deviceDisplayName });
+    }
+
     endTimer(labels);
     activeHttpRequests.dec();
   };
