@@ -269,13 +269,10 @@
                   <v-list-item v-bind="props" title="">
                     <div class="machine-option__row">
                       <span>{{ machineDisplayName(item) }}</span>
-                      <v-chip
-                        :color="machineAvailabilityColor(item)"
-                        size="x-small"
-                        variant="tonal"
-                      >
-                        {{ machineAvailabilityLabel(item) }}
-                      </v-chip>
+                      <span
+                        class="machine-option__status-dot"
+                        :class="machineAvailabilityClass(item)"
+                      />
                     </div>
                   </v-list-item>
                 </template>
@@ -283,9 +280,10 @@
                 <template #selection="{ item }">
                   <div class="machine-option__row machine-option__row--selection">
                     <span>{{ machineDisplayName(item) }}</span>
-                    <v-chip :color="machineAvailabilityColor(item)" size="x-small" variant="tonal">
-                      {{ machineAvailabilityLabel(item) }}
-                    </v-chip>
+                    <span
+                      class="machine-option__status-dot"
+                      :class="machineAvailabilityClass(item)"
+                    />
                   </div>
                 </template>
               </v-select>
@@ -305,13 +303,10 @@
                   <v-list-item v-bind="props" title="">
                     <div class="machine-option__row">
                       <span>{{ machineDisplayName(item) }}</span>
-                      <v-chip
-                        :color="machineAvailabilityColor(item)"
-                        size="x-small"
-                        variant="tonal"
-                      >
-                        {{ machineAvailabilityLabel(item) }}
-                      </v-chip>
+                      <span
+                        class="machine-option__status-dot"
+                        :class="machineAvailabilityClass(item)"
+                      />
                     </div>
                   </v-list-item>
                 </template>
@@ -319,9 +314,10 @@
                 <template #selection="{ item }">
                   <div class="machine-option__row machine-option__row--selection">
                     <span>{{ machineDisplayName(item) }}</span>
-                    <v-chip :color="machineAvailabilityColor(item)" size="x-small" variant="tonal">
-                      {{ machineAvailabilityLabel(item) }}
-                    </v-chip>
+                    <span
+                      class="machine-option__status-dot"
+                      :class="machineAvailabilityClass(item)"
+                    />
                   </div>
                 </template>
               </v-select>
@@ -341,13 +337,10 @@
                   <v-list-item v-bind="props" title="">
                     <div class="machine-option__row">
                       <span>{{ machineDisplayName(item) }}</span>
-                      <v-chip
-                        :color="machineAvailabilityColor(item)"
-                        size="x-small"
-                        variant="tonal"
-                      >
-                        {{ machineAvailabilityLabel(item) }}
-                      </v-chip>
+                      <span
+                        class="machine-option__status-dot"
+                        :class="machineAvailabilityClass(item)"
+                      />
                     </div>
                   </v-list-item>
                 </template>
@@ -355,9 +348,10 @@
                 <template #selection="{ item }">
                   <div class="machine-option__row machine-option__row--selection">
                     <span>{{ machineDisplayName(item) }}</span>
-                    <v-chip :color="machineAvailabilityColor(item)" size="x-small" variant="tonal">
-                      {{ machineAvailabilityLabel(item) }}
-                    </v-chip>
+                    <span
+                      class="machine-option__status-dot"
+                      :class="machineAvailabilityClass(item)"
+                    />
                   </div>
                 </template>
               </v-select>
@@ -1082,12 +1076,10 @@ function machineDisplayName(machine: StartTaskMachineOption) {
   return machine.displayName || machine.name;
 }
 
-function machineAvailabilityLabel(machine: StartTaskMachineOption) {
-  return machine.hasRunningTask ? 'Running' : 'Available';
-}
-
-function machineAvailabilityColor(machine: StartTaskMachineOption) {
-  return machine.hasRunningTask ? 'warning' : 'success';
+function machineAvailabilityClass(machine: StartTaskMachineOption) {
+  return machine.hasRunningTask
+    ? 'machine-option__status-dot--running'
+    : 'machine-option__status-dot--available';
 }
 </script>
 
@@ -1286,5 +1278,21 @@ function machineAvailabilityColor(machine: StartTaskMachineOption) {
 
 .machine-option__row--selection {
   padding-right: 4px;
+}
+
+.machine-option__status-dot {
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 14px;
+  width: 14px;
+}
+
+.machine-option__status-dot--available {
+  background-color: #9a9a9a;
+}
+
+.machine-option__status-dot--running {
+  background-color: rgba(var(--v-theme-success), 0.8);
 }
 </style>
