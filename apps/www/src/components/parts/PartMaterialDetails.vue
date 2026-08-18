@@ -169,15 +169,6 @@
                 type="number"
                 @keydown="onlyAllowNumeric($event)"
               />
-              <v-text-field
-                v-if="part.materialCutType !== 'bars'"
-                v-model.number="part.blanksPerPart"
-                label="Blanks per part"
-                min="1"
-                :rules="[blanksPerPartRule]"
-                type="number"
-                @keydown="onlyAllowNumeric($event)"
-              />
             </v-col>
           </v-row>
           <v-row>
@@ -204,6 +195,33 @@
               </v-col>
             </template>
           </v-row>
+          <div v-if="part.materialCutType !== 'bars'" class="misc-material-settings mt-2">
+            <v-divider class="mb-2" />
+            <button
+              class="misc-material-settings__toggle"
+              type="button"
+              @click="miscMaterialSettingsOpen = !miscMaterialSettingsOpen"
+            >
+              <span class="text-caption font-weight-medium">Misc</span>
+              <v-icon
+                :icon="miscMaterialSettingsOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                size="small"
+              />
+            </button>
+            <v-expand-transition>
+              <div v-if="miscMaterialSettingsOpen" class="misc-material-settings__body">
+                <v-text-field
+                  v-model.number="part.blanksPerPart"
+                  hide-details="auto"
+                  label="Blanks per part"
+                  min="1"
+                  :rules="[blanksPerPartRule]"
+                  type="number"
+                  @keydown="onlyAllowNumeric($event)"
+                />
+              </div>
+            </v-expand-transition>
+          </div>
         </v-card-text>
       </v-card>
     </v-col>
@@ -361,7 +379,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   calculateAssemblyMaterialCost,
   calculatePartMaterialCost,
@@ -386,6 +404,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<(e: 'update:partMaterialCost', value: number) => void>();
 const materialsStore = useMaterialsStore();
 const partStore = usePartStore();
+const miscMaterialSettingsOpen = ref(false);
 
 function formatDimension(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return '';
@@ -743,5 +762,25 @@ const materialUsageLabel = computed(() => {
 
 .customer-supplied-checkbox {
   margin-top: 12px;
+}
+
+.misc-material-settings {
+  margin-top: 4px;
+}
+
+.misc-material-settings__toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: rgba(0, 0, 0, 0.62);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  width: 100%;
+}
+
+.misc-material-settings__body {
+  padding-top: 8px;
 }
 </style>
