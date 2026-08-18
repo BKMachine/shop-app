@@ -4,6 +4,14 @@ import express from 'express';
 import morgan from 'morgan';
 import { documentDir, imageDir } from '../directories.js';
 import * as logger from '../logger.js';
+import {
+  activeHttpRequests,
+  buildRequestMetricLabels,
+  httpRequestDuration,
+  httpRequests,
+  metricsRegistry,
+  shouldTrackRequest,
+} from '../metrics.js';
 import api from './api/index.js';
 import errorHandler from './middleware/errorHandler.js';
 import trimRequestStrings from './middleware/trimRequestStrings.js';
@@ -20,6 +28,33 @@ if (process.env.NODE_ENV === 'production') {
 
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(format, { stream: logger.stream }));
+app.use((req, res, next) => {
+  if (!shouldTrackRequest(req.path)) {
+    next();
+    return;
+  }
+
+  activeHttpRequests.inc();
+  const endTimer = httpRequestDuration.startTimer();
+  let completed = false;
+
+  const finalizeRequestMetrics = () => {
+    if (completed) {
+      return;
+    }
+
+    completed = true;
+    const labels = buildRequestMetricLabels(req, res);
+    httpRequests.inc(labels);
+    endTimer(labels);
+    activeHttpRequests.dec();
+  };
+
+  res.once('finish', finalizeRequestMetrics);
+  res.once('close', finalizeRequestMetrics);
+
+  next();
+});
 app.use(express.json());
 
 app.use((req, _res, next) => {
@@ -32,6 +67,15 @@ const downloadsDir = path.join(serverRootDir, 'public', 'downloads');
 
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+app.get('/metrics', async (_req, res, next) => {
+  try {
+    res.set('Content-Type', metricsRegistry.contentType);
+    res.send(await metricsRegistry.metrics());
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.use('/api', trimRequestStrings, api);
