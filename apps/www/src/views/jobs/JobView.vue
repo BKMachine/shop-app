@@ -1108,7 +1108,7 @@ function createSingleShipmentScheduleDraftEntry(
 function createShipmentRecordDraftEntry(
   shippedAt = currentDateInputValue(),
   qty = String(defaultShipmentRecordQty()),
-  po = '',
+  po = defaultShipmentRecordPo(),
 ): JobShipmentRecordDraftEntry {
   return {
     id: crypto.randomUUID(),
@@ -1120,6 +1120,10 @@ function createShipmentRecordDraftEntry(
 
 function defaultShipmentRecordQty() {
   return remainingShipmentQty.value > 0 ? remainingShipmentQty.value : 1;
+}
+
+function defaultShipmentRecordPo() {
+  return draft.value.customerPo.trim();
 }
 
 function isShipmentScheduleRemainderEntry(index: number) {
@@ -1425,7 +1429,7 @@ function equalizeShipmentSchedule() {
 function addShipmentRecord(
   qty = String(defaultShipmentRecordQty()),
   shippedAt = currentDateInputValue(),
-  po = '',
+  po = defaultShipmentRecordPo(),
 ) {
   draft.value = {
     ...draft.value,
@@ -1442,10 +1446,12 @@ function recordPlannedShipment(index: number) {
   const remainingPlannedQty = plannedShipmentRemainingQtyAt(index);
   if (remainingPlannedQty < 1) return;
 
+  const plannedShipmentPo = draft.value.shipmentSchedule[index]?.po?.trim() || '';
+
   addShipmentRecord(
     String(remainingPlannedQty),
     draft.value.shipmentSchedule[index]?.shipDate || currentDateInputValue(),
-    draft.value.shipmentSchedule[index]?.po || '',
+    plannedShipmentPo || defaultShipmentRecordPo(),
   );
 }
 
