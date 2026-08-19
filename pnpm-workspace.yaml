@@ -2,6 +2,12 @@ packages:
   - apps/*
   - packages/*
 
+overrides:
+  # pdf-parse pins pdfjs-dist 5.4.296 while the server depends on 5.7.284,
+  # which shipped ~32MB of duplicate pdfjs in the production image. Both use
+  # only the legacy/build/pdf.mjs entry, so a single version serves both.
+  pdfjs-dist: ^5.7.284
+
 allowBuilds:
   esbuild: true
   onnxruntime-node: false

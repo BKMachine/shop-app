@@ -4,8 +4,5 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  },
-  "devDependencies": {
-    "@types/shop-app": "workspace:*"
   }
 }

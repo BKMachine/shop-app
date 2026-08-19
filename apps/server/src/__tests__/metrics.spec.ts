@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
 import {
   buildRequestMetricLabels,
-  getRequestDeviceDisplayName,
   getNormalizedRequestPath,
+  getRequestDeviceDisplayName,
   normalizeSocketDeviceDisplayName,
   resolveMetricRoute,
   shouldTrackRequest,
