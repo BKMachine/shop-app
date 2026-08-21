@@ -6,12 +6,15 @@ export function storeMachineStatus(influx: InfluxDBClient, database: string) {
   const points: Point[] = [];
   for (const [key, value] of machines) {
     const status = value.getStatus();
+    const machine = value.getMachine();
+    const department = machine.department.trim() || 'Unassigned';
 
     const point = Point.measurement('status')
       .setTag('dev', process.env.NODE_ENV !== 'production' ? 'dev' : 'prod')
       .setTimestamp(timestamp)
-      .setTag('name', value.getMachine().name)
+      .setTag('name', machine.name)
       .setTag('id', key)
+      .setTag('department', department)
       .setStringField('state', status);
     points.push(point);
   }

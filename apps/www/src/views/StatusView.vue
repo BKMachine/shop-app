@@ -108,6 +108,37 @@
       </v-list>
     </v-menu>
 
+    <div v-if="displayDepartmentPerformance.length" class="department-performance" role="status">
+      <div
+        v-for="entry in displayDepartmentPerformance"
+        :key="entry.department"
+        :class="[
+          'department-performance__item',
+          { 'department-performance__item--total': isTotalDepartmentPerformance(entry) },
+        ]"
+      >
+        <div
+          :class="[
+            'department-performance__box',
+            `department-performance__box--${getDepartmentPerformanceTone(entry.greenPercent)}`,
+          ]"
+          :title="`${entry.department}: ${formatDepartmentPercent(entry.greenPercent)}`"
+        >
+          <div class="department-performance__label">{{ entry.department }}</div>
+          <div class="department-performance__value-row">
+            <div class="department-performance__value">
+              {{ formatDepartmentPercent(entry.greenPercent) }}
+            </div>
+            <div class="department-performance__trend" :class="trendClass(entry.trend)">
+              <span class="department-performance__trend-glyph">
+                {{ entry.trend === 'up' ? '▲' : entry.trend === 'down' ? '▼' : '•' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <ConfirmDialog
       v-model="resetOrderConfirmVisible"
       confirm-text="Reset Order"
@@ -132,6 +163,7 @@ import { socket as appSocket } from '@/plugins/socket';
 const MACHINE_ORDER_STORAGE_KEY = 'status-machine-order';
 const INCLUDED_DEPARTMENTS_STORAGE_KEY = 'status-included-departments';
 const BLANK_TILE_PREFIX = 'blank:';
+const DEPARTMENT_PERFORMANCE_INTERVAL_MS = 1000 * 60 * 5; // 5 minutes
 
 type StatusTile = MachineInfo | BlankMachineTile;
 type MachineDashboardMetadata = Pick<
@@ -145,14 +177,29 @@ type MachineDashboardMetadata = Pick<
   | 'partSummary'
 >;
 
+interface DepartmentPerformanceEntry {
+  department: string;
+  greenPercent: number;
+  trend: DepartmentPerformanceTrend;
+}
+
+interface DepartmentPerformanceResponse {
+  performance: Array<Pick<DepartmentPerformanceEntry, 'department' | 'greenPercent'>>;
+}
+
+type DepartmentPerformanceTrend = 'steady' | 'up' | 'down';
+
 const router = useRouter();
 const tiles = ref<StatusTile[]>([]);
 const resetOrderConfirmVisible = ref(false);
 const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
 const departmentOptions = ref<string[]>([]);
+const departmentPerformance = ref<DepartmentPerformanceEntry[]>([]);
+const previousDepartmentPerformance = ref<Record<string, number>>({});
 const revealedBlankTileId = ref<string | null>(null);
 let cachedMachineDashboardMetadata = new Map<string, MachineDashboardMetadata>();
 let blankTilePressTimer: ReturnType<typeof setTimeout> | null = null;
+let departmentPerformanceTimer: ReturnType<typeof setInterval> | null = null;
 
 const hasDepartmentFilter = computed(() => {
   return (
@@ -170,6 +217,42 @@ const areAllDepartmentsIncluded = computed(() => {
 
 const hasMachineMissingDepartment = computed(() => {
   return tiles.value.some((tile) => !isBlankTile(tile) && !tile.departmentId);
+});
+
+const visibleDepartmentPerformance = computed(() => {
+  if (!departmentOptions.value.length || !includedDepartmentKeys.value.length) {
+    return departmentPerformance.value;
+  }
+
+  const includedDepartments = new Set(includedDepartmentKeys.value);
+  return departmentPerformance.value.filter((entry) => includedDepartments.has(entry.department));
+});
+
+const displayDepartmentPerformance = computed<DepartmentPerformanceEntry[]>(() => {
+  const entries = [...visibleDepartmentPerformance.value];
+
+  if (entries.length <= 1) {
+    return entries;
+  }
+
+  const totalGreenPercent =
+    entries.reduce((sum, entry) => sum + entry.greenPercent, 0) / entries.length;
+  const previousVisibleEntries = entries
+    .map((entry) => previousDepartmentPerformance.value[entry.department])
+    .filter((value): value is number => Number.isFinite(value));
+  const previousTotalGreenPercent =
+    previousVisibleEntries.length === entries.length
+      ? previousVisibleEntries.reduce((sum, value) => sum + value, 0) /
+        previousVisibleEntries.length
+      : undefined;
+
+  entries.push({
+    department: 'Total',
+    greenPercent: totalGreenPercent,
+    trend: getDepartmentPerformanceTrend(previousTotalGreenPercent, totalGreenPercent),
+  });
+
+  return entries;
 });
 
 const visibleTiles = computed<StatusTile[]>({
@@ -229,9 +312,13 @@ socket.on('refresh-data', () => {
 
 onMounted(async () => {
   await fetchMachines();
+  await fetchDepartmentPerformance();
   appSocket.on('job', fetchMachines);
   appSocket.on('jobDeleted', fetchMachines);
   appSocket.on('part', fetchMachines);
+  departmentPerformanceTimer = setInterval(() => {
+    void fetchDepartmentPerformance();
+  }, DEPARTMENT_PERFORMANCE_INTERVAL_MS);
   socket.connect();
 });
 
@@ -241,6 +328,10 @@ onBeforeUnmount(() => {
   appSocket.off('part', fetchMachines);
   socket.disconnect();
   clearBlankTilePressTimer();
+  if (departmentPerformanceTimer) {
+    clearInterval(departmentPerformanceTimer);
+    departmentPerformanceTimer = null;
+  }
 });
 
 async function fetchMachines() {
@@ -285,6 +376,37 @@ async function fetchMachineDashboardMetadata() {
   } catch (error) {
     console.warn('Unable to load machine dashboard metadata.', error);
     return cachedMachineDashboardMetadata;
+  }
+}
+
+async function fetchDepartmentPerformance() {
+  try {
+    const to = new Date();
+    const from = new Date(to.getTime() - 1000 * 60 * 60);
+    const { data } = await statusApi.get<DepartmentPerformanceResponse>(
+      '/stats/department-performance',
+      {
+        params: {
+          from: from.toISOString(),
+          to: to.toISOString(),
+        },
+      },
+    );
+
+    const previousPerformance = new Map(
+      departmentPerformance.value.map((entry) => [entry.department, entry.greenPercent]),
+    );
+    previousDepartmentPerformance.value = Object.fromEntries(previousPerformance);
+
+    departmentPerformance.value = data.performance.map((entry) => ({
+      ...entry,
+      trend: getDepartmentPerformanceTrend(
+        previousPerformance.get(entry.department),
+        entry.greenPercent,
+      ),
+    }));
+  } catch (error) {
+    console.warn('Unable to load department performance.', error);
   }
 }
 
@@ -463,6 +585,53 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
     index: -1,
   };
 }
+
+function formatDepartmentPercent(value: number): string {
+  return `${Math.round(value)}%`;
+}
+
+function getDepartmentPerformanceTone(value: number): 'blue' | 'green' | 'yellow' | 'red' {
+  if (value >= 60) {
+    return 'blue';
+  }
+
+  if (value >= 30) {
+    return 'green';
+  }
+
+  if (value >= 15) {
+    return 'yellow';
+  }
+
+  return 'red';
+}
+
+function getDepartmentPerformanceTrend(
+  previousValue: number | undefined,
+  nextValue: number,
+): DepartmentPerformanceTrend {
+  if (previousValue === undefined) {
+    return 'steady';
+  }
+
+  if (nextValue > previousValue) {
+    return 'up';
+  }
+
+  if (nextValue < previousValue) {
+    return 'down';
+  }
+
+  return 'steady';
+}
+
+function trendClass(trend: DepartmentPerformanceTrend): string {
+  return `department-performance__trend--${trend}`;
+}
+
+function isTotalDepartmentPerformance(entry: DepartmentPerformanceEntry): boolean {
+  return entry.department === 'Total';
+}
 </script>
 
 <style scoped>
@@ -577,5 +746,127 @@ function createBlankTile(id = `${BLANK_TILE_PREFIX}${crypto.randomUUID()}`): Bla
   position: fixed;
   right: 20px;
   z-index: 10;
+}
+
+.department-performance {
+  bottom: 20px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  justify-content: flex-end;
+  left: 20px;
+  position: fixed;
+  right: 84px;
+  z-index: 10;
+}
+
+.department-performance__item {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.department-performance__item--total {
+  gap: 6px;
+}
+
+.department-performance__item--total::before {
+  background: rgba(var(--v-theme-on-surface), 0.18);
+  border-radius: 999px;
+  content: "";
+  display: block;
+  height: 36px;
+  width: 1px;
+}
+
+.department-performance__box {
+  backdrop-filter: blur(8px);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  gap: 4px;
+  letter-spacing: 0.02em;
+  width: 88px;
+  padding: 6px 10px 8px;
+  text-align: center;
+}
+
+.department-performance__trend {
+  align-items: center;
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex: 0 0 auto;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}
+
+.department-performance__value-row {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.department-performance__trend--steady {
+  opacity: 0.92;
+}
+
+.department-performance__trend-glyph {
+  display: block;
+  font-size: 0.62rem;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  transform: translateY(0.5px);
+}
+
+.department-performance__label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  max-width: 72px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.department-performance__value {
+  font-size: 0.85rem;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.32);
+}
+
+.department-performance__box--blue {
+  background: #4a86e8;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.department-performance__box--green {
+  background: #73bf69;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.department-performance__box--yellow {
+  background: #f2cc0c;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.department-performance__box--red {
+  background: #f2495c;
+  border-color: rgba(255, 255, 255, 0.16);
 }
 </style>

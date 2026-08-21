@@ -18,11 +18,9 @@ export async function start(): Promise<void> {
   await database.connect();
   const seedStates = await loadRecentMachineStateSnapshot();
   await machines.initMachines(seedStates);
-  if (process.env.NODE_ENV === 'production') {
-    await influx.connect().catch((err) => {
-      logger.error('Failed to connect to InfluxDB:', err);
-    });
-  }
+  await influx.connect().catch((err) => {
+    logger.error('Failed to connect to InfluxDB:', err);
+  });
   await mqtt.connect();
   arduino.start();
   mtconnect.start();
