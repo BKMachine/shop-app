@@ -172,7 +172,7 @@ import router from '@/router';
 import { isAdmin } from '@/state/device';
 import { useJobsStore } from '@/stores/jobs_store';
 
-type FilterStatus = 'all' | 'closed' | 'in_process' | 'not_closed';
+type FilterStatus = 'all' | 'closed' | 'in_process' | 'machining_complete' | 'not_closed';
 
 type JobSortKey =
   | 'jobNumber'
@@ -252,6 +252,7 @@ const statusFilterOptions = [
   { title: 'All', value: 'all' },
   { title: 'Closed', value: 'closed' },
   { title: 'In Process', value: 'in_process' },
+  { title: 'Machining Complete', value: 'machining_complete' },
   { title: 'Not Closed', value: 'not_closed' },
 ];
 
@@ -334,6 +335,7 @@ function applyRouteFilters() {
     routeStatus === 'all' ||
     routeStatus === 'closed' ||
     routeStatus === 'in_process' ||
+    routeStatus === 'machining_complete' ||
     routeStatus === 'not_closed'
       ? routeStatus
       : routeStatus === 'open'
@@ -536,11 +538,13 @@ function priorityColor(priority: JobPriority | undefined) {
 
 function statusColor(status: JobStatus) {
   if (status === 'closed') return 'grey';
+  if (status === 'machining_complete') return 'info';
   if (status === 'in_process') return 'warning';
   return 'success';
 }
 
 function statusLabel(status: JobStatus) {
+  if (status === 'machining_complete') return 'Machining Complete';
   if (status === 'in_process') return 'In Process';
   if (status === 'closed') return 'Closed';
   return 'Open';

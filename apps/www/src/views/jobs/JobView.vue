@@ -623,14 +623,43 @@
           <div v-if="jobSummaryDetails" class="text-medium-emphasis mt-2">
             {{ jobSummaryDetails }}
           </div>
+          <v-checkbox
+            v-model="endTaskFinalForJob"
+            class="mt-3"
+            :disabled="!canMarkPendingTaskAsFinal"
+            hide-details
+            label="This is the final task for this job"
+          />
+          <template v-if="endTaskFinalForJob">
+            <v-text-field
+              v-model="endTaskActualProductionQty"
+              class="mt-3"
+              hint="This is separate from the quantity shipped and may exceed the job quantity."
+              label="Actual Production Qty"
+              min="0"
+              persistent-hint
+              required
+              type="number"
+              variant="outlined"
+            />
+            <div class="text-medium-emphasis mt-2">Job status will move to Machining Complete.</div>
+          </template>
+          <div v-else-if="!canMarkPendingTaskAsFinal" class="text-medium-emphasis mt-2">
+            This job still has other active tasks.
+          </div>
           <div v-if="draftIsAltered" class="text-medium-emphasis mt-3">
             Unsaved changes on this page will be discarded.
           </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="endTaskConfirmTaskId = null">Cancel</v-btn>
-          <v-btn color="primary" :loading="productionTaskLoading" @click="confirmEndProductionTask">
+          <v-btn variant="text" @click="closeEndTaskDialog">Cancel</v-btn>
+          <v-btn
+            color="primary"
+            :disabled="!canConfirmEndProductionTask"
+            :loading="productionTaskLoading"
+            @click="confirmEndProductionTask"
+          >
             End Task
           </v-btn>
         </v-card-actions>
@@ -691,6 +720,8 @@ const machinesLoadFailed = ref(false);
 const productionTaskLoading = ref(false);
 const startTaskDialog = ref(false);
 const endTaskConfirmTaskId = ref<string | null>(null);
+const endTaskFinalForJob = ref(false);
+const endTaskActualProductionQty = ref('');
 const job = ref<Job | null>(null);
 const draft = ref(createEmptyDraft());
 const createRouteHydrationKey = ref<string | null>(null);
@@ -839,6 +870,22 @@ const selectedStartTaskMachine = computed(() => {
 const pendingEndTask = computed(
   () => productionTasks.value.find((task) => task.id === endTaskConfirmTaskId.value) || null,
 );
+const canMarkPendingTaskAsFinal = computed(() => {
+  if (!pendingEndTask.value) return false;
+
+  const openTaskCount = productionTasks.value.filter((task) => !task.endedAt).length;
+  return openTaskCount === 1;
+});
+const hasValidEndTaskActualProductionQty = computed(() =>
+  /^\d+$/.test(endTaskActualProductionQty.value.trim()),
+);
+const canConfirmEndProductionTask = computed(
+  () =>
+    !productionTaskLoading.value &&
+    Boolean(pendingEndTask.value) &&
+    (!endTaskFinalForJob.value ||
+      (canMarkPendingTaskAsFinal.value && hasValidEndTaskActualProductionQty.value)),
+);
 const showCreateRouteProductionMessage = computed(() => isCreateRoute.value || !job.value);
 const canOpenStartTaskDialog = computed(
   () =>
@@ -897,6 +944,7 @@ function createEmptyDraft(): JobDraft {
     customer: null,
     part: null,
     qty: '1',
+    actualProductionQty: '',
     status: 'open',
     dueDate: defaultDueDate,
     startedOn: '',
@@ -965,6 +1013,7 @@ function serializeDraft(value: JobDraft) {
     customer: value.customer || null,
     part: value.part || null,
     qty: Math.max(1, Number(value.qty) || 1),
+    actualProductionQty: value.actualProductionQty.trim(),
     status: value.status,
     dueDate: value.dueDate || '',
     startedOn: value.startedOn || '',
@@ -1013,6 +1062,8 @@ function jobToDraft(currentJob: Job): JobDraft {
         : currentJob.customer?._id || null,
     part: typeof currentJob.part === 'string' ? currentJob.part : currentJob.part?._id || null,
     qty: String(Math.max(1, Number(currentJob.qty) || 1)),
+    actualProductionQty:
+      currentJob.actualProductionQty == null ? '' : String(currentJob.actualProductionQty),
     status: currentJob.status,
     dueDate: dateInputValue(currentJob.dueDate),
     startedOn: dateInputValue(currentJob.startedOn),
@@ -1036,6 +1087,12 @@ function validateDraft(nextDraft: JobDraft, existingProductionTasks: JobProducti
   if (!nextDraft.customer) return 'Select a customer.';
   if (!nextDraft.part) return 'Select a part.';
   if (Math.max(0, Number(nextDraft.qty) || 0) < 1) return 'Qty must be at least 1.';
+  if (
+    nextDraft.status === 'machining_complete' &&
+    !/^\d+$/.test(nextDraft.actualProductionQty.trim())
+  ) {
+    return 'Enter the actual production quantity as a whole number of at least 0.';
+  }
   const shipmentScheduleError = validateShipmentScheduleDraft(nextDraft);
   if (shipmentScheduleError) return shipmentScheduleError;
   const shipmentRecordsError = validateShipmentRecordsDraft(nextDraft);
@@ -1045,6 +1102,12 @@ function validateDraft(nextDraft: JobDraft, existingProductionTasks: JobProducti
     existingProductionTasks.some((productionTask) => !productionTask.endedAt)
   ) {
     return 'All production tasks must be ended before closing the job.';
+  }
+  if (
+    nextDraft.status === 'machining_complete' &&
+    existingProductionTasks.some((productionTask) => !productionTask.endedAt)
+  ) {
+    return 'All production tasks must be ended before marking the job as machining complete.';
   }
   return null;
 }
@@ -1057,6 +1120,9 @@ function toJobPayload(nextDraft: JobDraft, productionTasks: JobProductionTask[] 
     customer: nextDraft.customer || '',
     part: nextDraft.part || '',
     qty: Math.max(1, Number(nextDraft.qty) || 1),
+    actualProductionQty: nextDraft.actualProductionQty.trim()
+      ? Number(nextDraft.actualProductionQty)
+      : undefined,
     status: nextDraft.status,
     dueDate: shipmentSchedule[0]?.shipDate || nextDraft.dueDate || undefined,
     startedOn: nextDraft.startedOn || undefined,
@@ -1844,26 +1910,40 @@ function requestEndProductionTask(taskId: string) {
   const task = productionTasks.value.find((currentTask) => currentTask.id === taskId);
   if (!task || task.endedAt || productionTaskLoading.value) return;
 
+  endTaskFinalForJob.value = false;
+  endTaskActualProductionQty.value = '';
   endTaskConfirmTaskId.value = taskId;
 }
 
+function closeEndTaskDialog() {
+  endTaskConfirmTaskId.value = null;
+  endTaskFinalForJob.value = false;
+  endTaskActualProductionQty.value = '';
+}
+
 async function confirmEndProductionTask() {
-  if (!job.value || !pendingEndTask.value) return;
+  if (!job.value || !pendingEndTask.value || !canConfirmEndProductionTask.value) return;
 
   const nextTasks = productionTasks.value.map((task) =>
     task.id === pendingEndTask.value?.id ? { ...task, endedAt: currentTimestampValue() } : task,
   );
+  const nextDraft = endTaskFinalForJob.value
+    ? {
+        ...applyJobStatus(jobToDraft(job.value), 'machining_complete'),
+        actualProductionQty: endTaskActualProductionQty.value.trim(),
+      }
+    : jobToDraft(job.value);
 
   productionTaskLoading.value = true;
   try {
     const updatedJob = await jobsStore.update({
-      ...toJobPayload(jobToDraft(job.value), nextTasks),
+      ...toJobPayload(nextDraft, nextTasks),
       _id: job.value._id,
       jobNumber: job.value.jobNumber,
     });
     job.value = updatedJob;
     draft.value = jobToDraft(updatedJob);
-    endTaskConfirmTaskId.value = null;
+    closeEndTaskDialog();
   } finally {
     productionTaskLoading.value = false;
   }
@@ -1916,11 +1996,13 @@ function priorityColor(priority: JobPriority | undefined) {
 
 function statusColor(status: JobStatus) {
   if (status === 'closed') return 'grey';
+  if (status === 'machining_complete') return 'info';
   if (status === 'in_process') return 'warning';
   return 'success';
 }
 
 function statusLabel(status: JobStatus) {
+  if (status === 'machining_complete') return 'Machining Complete';
   if (status === 'in_process') return 'In Process';
   if (status === 'closed') return 'Closed';
   return 'Open';

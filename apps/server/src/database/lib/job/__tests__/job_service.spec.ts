@@ -1092,6 +1092,69 @@ test('update rejects closing a job with open production tasks', async () => {
   ).rejects.toThrow('All production tasks must be ended before closing the job.');
 });
 
+test('update rejects marking a job as machining complete with open production tasks', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'in_process',
+    dueDate: null,
+    startedOn: new Date('2026-07-16T14:00:00.000Z'),
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [
+      {
+        id: 'task-1',
+        machineId: 'machine-1',
+        machineName: 'VF-2',
+        machineType: 'mill',
+        startedAt: new Date('2026-07-16T14:00:00.000Z'),
+        endedAt: null,
+      },
+    ],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const module = await loadJobService();
+
+  await expect(
+    module.default.update(
+      {
+        _id: 'job-1',
+        jobNumber: 1001,
+        customer: CUSTOMER_ID_1,
+        part: PART_ID_1,
+        qty: 3,
+        status: 'machining_complete',
+        productionTasks: [
+          {
+            id: 'task-1',
+            machineId: 'machine-1',
+            machineName: 'VF-2',
+            machineType: 'mill',
+            startedAt: new Date('2026-07-16T14:00:00.000Z'),
+            endedAt: null,
+          },
+        ],
+      },
+      'device-1',
+    ),
+  ).rejects.toThrow(
+    'All production tasks must be ended before marking the job as machining complete.',
+  );
+});
+
 test('update rejects adding a production task to a closed job', async () => {
   customerStore.set(CUSTOMER_ID_1, buildCustomer());
   partStore.set(PART_ID_1, buildPart());

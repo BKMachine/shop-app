@@ -219,7 +219,7 @@ declare global {
 
   /* JOB */
 
-  type JobStatus = 'open' | 'in_process' | 'closed';
+  type JobStatus = 'open' | 'in_process' | 'machining_complete' | 'closed';
 
   type JobListStatusFilter = JobStatus | 'not_closed';
 
@@ -251,6 +251,7 @@ declare global {
     customer: string | Customer;
     part: string | Part;
     qty: number;
+    actualProductionQty?: number | null;
     status: JobStatus;
     dueDate?: string | Date | null;
     startedOn?: string | Date | null;

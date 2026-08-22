@@ -1054,12 +1054,14 @@ function applyFetchedPart(source: Part, relations?: PartRelationsResponse) {
 }
 
 function jobStatusLabel(status: JobStatus) {
+  if (status === 'machining_complete') return 'Machining Complete';
   if (status === 'in_process') return 'In Process';
   if (status === 'closed') return 'Closed';
   return 'Open';
 }
 
 function jobStatusColor(status: JobStatus) {
+  if (status === 'machining_complete') return 'info';
   if (status === 'in_process') return 'warning';
   if (status === 'closed') return 'success';
   return 'info';

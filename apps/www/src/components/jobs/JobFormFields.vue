@@ -24,6 +24,19 @@
             variant="outlined"
           />
         </v-col>
+        <v-col v-if="draft.status === 'machining_complete'" cols="12" md="3">
+          <v-text-field
+            v-model="draft.actualProductionQty"
+            hint="Separate from the quantity shipped."
+            label="Actual Production Qty"
+            min="0"
+            persistent-hint
+            required
+            :rules="[requiredRule, actualProductionQtyRule]"
+            type="number"
+            variant="outlined"
+          />
+        </v-col>
         <v-col cols="12" md="3">
           <v-select
             v-model="draft.status"
@@ -154,6 +167,7 @@ export type JobDraft = {
   customer: string | null;
   part: string | null;
   qty: string;
+  actualProductionQty: string;
   status: JobStatus;
   dueDate: string;
   startedOn: string;
@@ -210,6 +224,7 @@ const materialOnHandChecked = computed({
 const statusOptions = [
   { title: 'Open', value: 'open' },
   { title: 'In Process', value: 'in_process' },
+  { title: 'Machining Complete', value: 'machining_complete' },
   { title: 'Closed', value: 'closed' },
 ];
 
@@ -226,6 +241,10 @@ const requiredRule = (value: unknown) => {
 
 const qtyRule = (value: unknown) => {
   return Math.max(0, Number(value) || 0) >= 1 || 'Qty must be at least 1';
+};
+
+const actualProductionQtyRule = (value: unknown) => {
+  return /^\d+$/.test(String(value).trim()) || 'Enter a whole number of at least 0';
 };
 
 function currentDateInputValue() {

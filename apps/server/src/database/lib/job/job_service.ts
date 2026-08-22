@@ -31,12 +31,26 @@ function normalizeQty(value: unknown): number {
   return Math.max(0, Number(value) || 0);
 }
 
+function normalizeActualProductionQty(value: unknown): number | null {
+  if (value == null || value === '') return null;
+
+  const qty = Number(value);
+  if (!Number.isInteger(qty) || qty < 0) {
+    throw new JobValidationError(
+      'Actual production quantity must be a whole number of at least 0.',
+    );
+  }
+
+  return qty;
+}
+
 function normalizePriority(value: unknown): JobPriority {
   return value === 'low' || value === 'rush' ? value : 'normal';
 }
 
 function normalizeStatus(value: unknown): JobStatus {
   if (value === 'closed') return 'closed';
+  if (value === 'machining_complete') return 'machining_complete';
   if (value === 'in_process') return 'in_process';
   return 'open';
 }
@@ -189,6 +203,7 @@ async function buildPayload(
   fallbackProductionTasks: JobProductionTask[] = [],
   fallbackShipmentRecords: JobShipmentRecord[] = [],
   previousStatus?: JobStatus,
+  fallbackActualProductionQty?: number | null,
 ): Promise<Omit<Job, '_id' | 'createdAt' | 'updatedAt'>> {
   const customerId = getEntityIdOrNull(data.customer);
   const partId = getEntityIdOrNull(data.part);
@@ -215,6 +230,10 @@ async function buildPayload(
 
   const qty = normalizeQty(data.qty);
   if (qty < 1) throw new JobValidationError('Job quantity must be at least 1.');
+  const actualProductionQty =
+    data.actualProductionQty === undefined
+      ? (fallbackActualProductionQty ?? null)
+      : normalizeActualProductionQty(data.actualProductionQty);
   const shipmentSchedule = normalizeShipmentSchedule(data.shipmentSchedule, qty);
   const shipmentRecords = normalizeShipmentRecords(
     data.shipmentRecords,
@@ -233,6 +252,16 @@ async function buildPayload(
   if (requestedStatus === 'closed' && hasOpenProductionTasks(productionTasks)) {
     throw new JobValidationError('All production tasks must be ended before closing the job.');
   }
+  if (requestedStatus === 'machining_complete' && hasOpenProductionTasks(productionTasks)) {
+    throw new JobValidationError(
+      'All production tasks must be ended before marking the job as machining complete.',
+    );
+  }
+  if (requestedStatus === 'machining_complete' && actualProductionQty === null) {
+    throw new JobValidationError(
+      'Actual production quantity is required before marking the job as machining complete.',
+    );
+  }
 
   const status =
     addedProductionTasks && requestedStatus !== 'closed' ? 'in_process' : requestedStatus;
@@ -249,6 +278,7 @@ async function buildPayload(
     customer: customerId,
     part: partId,
     qty,
+    actualProductionQty,
     status,
     dueDate: shipmentSchedule[0]?.shipDate ?? normalizeDate(data.dueDate),
     startedOn,
@@ -279,7 +309,12 @@ function buildListFilter(query: JobListQuery): Record<string, unknown> {
   if (query.status === 'not_closed') {
     filter.status = { $ne: 'closed' };
   }
-  if (query.status === 'open' || query.status === 'in_process' || query.status === 'closed') {
+  if (
+    query.status === 'open' ||
+    query.status === 'in_process' ||
+    query.status === 'machining_complete' ||
+    query.status === 'closed'
+  ) {
     filter.status = query.status;
   }
 
@@ -628,6 +663,7 @@ async function update(data: JobUpdate, deviceId: string): Promise<JobDoc> {
     oldJob.productionTasks ?? [],
     oldJob.shipmentRecords ?? [],
     oldJob.status,
+    oldJob.actualProductionQty,
   );
   const updatedJob = await Job.findByIdAndUpdate(data._id, payload, {
     returnDocument: 'after',

@@ -55,6 +55,10 @@ function toJobCreatePayload(job: Job | JobCreate): JobCreate {
     customer: getRelatedEntityId(job.customer) ?? '',
     part: getRelatedEntityId(job.part) ?? '',
     qty: Math.max(1, Number(job.qty) || 1),
+    actualProductionQty:
+      Number.isInteger(job.actualProductionQty) && Number(job.actualProductionQty) >= 0
+        ? Number(job.actualProductionQty)
+        : undefined,
     status: job.status,
     dueDate: normalizeDateValue(job.dueDate),
     startedOn: normalizeDateValue(job.startedOn),

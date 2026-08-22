@@ -55,7 +55,8 @@ const JobFieldsSchema = z.strictObject({
   customer: mongoObjectId,
   part: mongoObjectId,
   qty: z.coerce.number().int().positive(),
-  status: z.enum(['open', 'in_process', 'closed']),
+  actualProductionQty: z.coerce.number().int().nonnegative().nullish(),
+  status: z.enum(['open', 'in_process', 'machining_complete', 'closed']),
   dueDate: jobDateSchema,
   startedOn: jobDateSchema,
   completedOn: jobDateSchema,
@@ -105,9 +106,11 @@ router.get('/jobs', async (req, res, next) => {
             ? 'not_closed'
             : normalizeQueryValue(req.query.status) === 'in_process'
               ? 'in_process'
-              : normalizeQueryValue(req.query.status) === 'open'
-                ? 'open'
-                : undefined,
+              : normalizeQueryValue(req.query.status) === 'machining_complete'
+                ? 'machining_complete'
+                : normalizeQueryValue(req.query.status) === 'open'
+                  ? 'open'
+                  : undefined,
       dueBefore: normalizeQueryValue(req.query.dueBefore),
       dueAfter: normalizeQueryValue(req.query.dueAfter),
       sort: normalizeQueryValue(req.query.sort),
