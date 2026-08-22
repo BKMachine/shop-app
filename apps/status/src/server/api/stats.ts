@@ -1,7 +1,7 @@
 import express, { type Router } from 'express';
 import {
-  getDepartmentPerformance,
   type DepartmentPerformanceRange,
+  getDepartmentPerformance,
 } from '../../timeseries/performance.js';
 
 const router: Router = express.Router();
