@@ -15,7 +15,7 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 
-ignoredBuildDependencies:
+ignoredBuiltDependencies:
   - onnxruntime-node
 
 onlyBuiltDependencies:
