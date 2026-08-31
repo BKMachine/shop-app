@@ -6,6 +6,17 @@
         Manual triggers for mail reports and other diagnostics.
       </v-card-subtitle>
 
+      <v-text-field
+        v-model="dailyReportDate"
+        class="mb-3"
+        density="comfortable"
+        hide-details
+        label="Daily report date"
+        prepend-inner-icon="mdi-calendar"
+        type="date"
+        variant="solo-filled"
+      />
+
       <div class="d-flex flex-wrap ga-3">
         <v-btn
           color="primary"
@@ -39,6 +50,7 @@ import api from '@/plugins/axios';
 
 const sendingDaily = ref(false);
 const sendingWeekly = ref(false);
+const dailyReportDate = ref(new Date().toISOString().slice(0, 10));
 const message = ref('');
 const messageType = ref<'success' | 'error'>('success');
 
@@ -48,7 +60,9 @@ async function sendJobReport(period: 'daily' | 'weekly') {
   message.value = '';
 
   try {
-    await api.get(`/mail/job-reports/${period}`);
+    await api.get(`/mail/job-reports/${period}`, {
+      params: { date: dailyReportDate.value },
+    });
     messageType.value = 'success';
     message.value = `Sent ${period} job report.`;
   } catch (error) {

@@ -19,7 +19,15 @@ type JobReportTask = JobProductionTask & {
   businessDurationMs: number;
 };
 
-export async function sendProductionReport(transporter: Transporter, period: JobReportPeriod) {
+type JobReportShipment = JobShipmentRecord & {
+  job: JobReportJob;
+};
+
+export async function sendProductionReport(
+  transporter: Transporter,
+  period: JobReportPeriod,
+  reportDate?: string,
+) {
   const recipients = await getJobReportRecipients(period);
 
   if (recipients.to.length === 0) {
@@ -27,7 +35,7 @@ export async function sendProductionReport(transporter: Transporter, period: Job
     return null;
   }
 
-  const now = DateTime.now().setZone(REPORT_TIME_ZONE);
+  const now = getReportNow(reportDate);
   const window = getReportWindow(period, now);
   const jobs = await loadJobsForReport(window.start.toJSDate(), window.end.toJSDate());
   const report = buildJobReport(jobs, window, now, period);
@@ -45,6 +53,14 @@ export async function sendProductionReport(transporter: Transporter, period: Job
       },
     ],
   });
+}
+
+function getReportNow(reportDate?: string) {
+  if (!reportDate) return DateTime.now().setZone(REPORT_TIME_ZONE);
+
+  const selectedDate = DateTime.fromISO(reportDate, { zone: REPORT_TIME_ZONE });
+  if (!selectedDate.isValid) throw new Error('Invalid report date.');
+  return selectedDate.endOf('day');
 }
 
 async function getJobReportRecipients(
@@ -81,10 +97,12 @@ function getReportWindow(period: JobReportPeriod, now: DateTime) {
 async function loadJobsForReport(start: Date, end: Date): Promise<JobReportJob[]> {
   return (await JobModel.find({
     $or: [
+      { createdAt: { $gte: start, $lt: end } },
       { startedOn: { $gte: start, $lt: end } },
       { completedOn: { $gte: start, $lt: end } },
       { 'productionTasks.startedAt': { $gte: start, $lt: end } },
       { 'productionTasks.endedAt': { $gte: start, $lt: end } },
+      { 'shipmentRecords.shippedAt': { $gte: start, $lt: end } },
     ],
   })
     .populate('customer')
@@ -98,6 +116,9 @@ function buildJobReport(
   now: DateTime,
   period: JobReportPeriod,
 ) {
+  const createdJobs = jobs
+    .filter((job) => isDateInWindow(job.createdAt, window))
+    .sort(compareReportJobs);
   const startedJobs = jobs
     .filter((job) => isDateInWindow(getJobStartedTimestamp(job), window))
     .sort(compareReportJobs);
@@ -106,12 +127,29 @@ function buildJobReport(
     .sort(compareReportJobs);
   const startedTasks = collectTaskEvents(jobs, window, now, 'startedAt');
   const stoppedTasks = collectTaskEvents(jobs, window, now, 'endedAt');
+  const shipments = collectShipments(jobs, window);
 
   return {
     subject: `Jobs ${formatPeriodLabel(period)} Report`,
-    html: renderJobReportHtml(period, window, startedJobs, closedJobs, startedTasks, stoppedTasks),
+    html: renderJobReportHtml(
+      period,
+      window,
+      createdJobs,
+      startedJobs,
+      closedJobs,
+      startedTasks,
+      stoppedTasks,
+      shipments,
+    ),
     csvFilename: `jobs-${period}-report-${window.end.toFormat('yyyy-LL-dd')}.csv`,
-    csv: buildJobReportCsv(startedJobs, closedJobs, startedTasks, stoppedTasks),
+    csv: buildJobReportCsv(
+      createdJobs,
+      startedJobs,
+      closedJobs,
+      startedTasks,
+      stoppedTasks,
+      shipments,
+    ),
   };
 }
 
@@ -131,7 +169,16 @@ function collectTaskEvents(
         field === 'startedAt' ? now.toJSDate() : null,
       );
       if (businessDurationMs <= 0) continue;
-      results.push({ ...task, job, businessDurationMs });
+      results.push({
+        id: task.id,
+        machineId: task.machineId,
+        machineName: task.machineName,
+        machineType: task.machineType,
+        startedAt: task.startedAt,
+        endedAt: task.endedAt,
+        job,
+        businessDurationMs,
+      });
     }
   }
   results.sort((left, right) => compareReportTasks(left, right, field));
@@ -141,13 +188,36 @@ function collectTaskEvents(
   }));
 }
 
+function collectShipments(
+  jobs: JobReportJob[],
+  window: { start: DateTime; end: DateTime },
+): JobReportShipment[] {
+  const shipments = jobs.flatMap((job) =>
+    (job.shipmentRecords ?? [])
+      .filter((shipment) => isDateInWindow(shipment.shippedAt, window))
+      .map((shipment) => ({
+        id: shipment.id,
+        shippedAt: shipment.shippedAt,
+        qty: shipment.qty,
+        po: shipment.po,
+        job,
+      })),
+  );
+  return shipments.sort((left, right) => {
+    const customerAndJob = compareCustomerAndJob(left.job, right.job);
+    return customerAndJob || compareDates(left.shippedAt, right.shippedAt);
+  });
+}
+
 function renderJobReportHtml(
   period: JobReportPeriod,
   window: { start: DateTime; end: DateTime },
+  createdJobs: JobReportJob[],
   startedJobs: JobReportJob[],
   closedJobs: JobReportJob[],
   startedTasks: JobReportTask[],
   stoppedTasks: JobReportTask[],
+  shipments: JobReportShipment[],
 ) {
   const title = `Jobs ${formatPeriodLabel(period)} Report`;
   const windowLabel = `${window.start.toFormat('ccc, LLL d')} - ${window.end.toFormat('ccc, LLL d h:mm a')}`;
@@ -155,23 +225,39 @@ function renderJobReportHtml(
     <h2 style="margin: 0 0 6px 0;">${escapeHtml(title)}</h2>
     <div style="margin-bottom: 14px; color: #666;">${escapeHtml(windowLabel)}</div>
     <p style="margin: 0 0 18px 0; color: #444;">Estimated task times only count Monday-Friday 8:00 AM-5:00 PM ${REPORT_TIME_ZONE}.</p>
-    ${renderSummaryCards(startedJobs.length, closedJobs.length, startedTasks.length, stoppedTasks.length)}
-    ${renderJobSection('Jobs Started', startedJobs, (job) => renderJobRow(job, 'startedOn'))}
-    ${renderJobSection('Jobs Closed', closedJobs, (job) => renderJobRow(job, 'completedOn'))}
+    ${renderSummaryCards(
+      createdJobs.length,
+      startedJobs.length,
+      startedTasks.length,
+      stoppedTasks.length,
+      shipments.length,
+      closedJobs.length,
+    )}
+    ${renderCreatedJobSection(createdJobs)}
+    ${renderJobSection('Jobs Started', startedJobs, 'Time', (job) =>
+      renderJobRow(job, 'startedOn'),
+    )}
     ${renderTaskSection('Tasks Started', startedTasks, 'startedAt')}
     ${renderTaskSection('Tasks Stopped', stoppedTasks, 'endedAt')}
+    ${renderShipmentSection(shipments)}
+    ${renderJobSection('Jobs Closed', closedJobs, 'Est. Days', (job) =>
+      renderJobRow(job, 'completedOn'),
+    )}
   </div>`;
 }
 
 function renderSummaryCards(
+  createdJobs: number,
   startedJobs: number,
-  closedJobs: number,
   startedTasks: number,
   stoppedTasks: number,
+  shipments: number,
+  closedJobs: number,
 ) {
-  return `<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px;">
-    ${renderSummaryCard('Jobs Started', startedJobs)}${renderSummaryCard('Jobs Closed', closedJobs)}
+  return `<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px;">
+    ${renderSummaryCard('Jobs Created', createdJobs)}${renderSummaryCard('Jobs Started', startedJobs)}
     ${renderSummaryCard('Tasks Started', startedTasks)}${renderSummaryCard('Tasks Stopped', stoppedTasks)}
+    ${renderSummaryCard('Shipments Made', shipments)}${renderSummaryCard('Jobs Closed', closedJobs)}
   </div>`;
 }
 
@@ -182,15 +268,38 @@ function renderSummaryCard(label: string, value: number) {
 function renderJobSection(
   title: string,
   jobs: JobReportJob[],
+  timeHeader: string,
   renderRow: (job: JobReportJob) => string,
 ) {
   if (!jobs.length) return renderEmptySection(title);
-  return `<h3 style="margin: 18px 0 8px 0;">${escapeHtml(title)}</h3><table style="width: 100%; border-collapse: collapse; margin-bottom: 14px;"><thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${tableHeader('Qty')}${tableHeader('Time')}</tr></thead><tbody>${jobs.map(renderRow).join('')}</tbody></table>`;
+  return `<h3 style="margin: 18px 0 8px 0;">${escapeHtml(title)}</h3><table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px;">${tableColumns(['6%', '14%', '30%', '8%', '30%', '12%'])}<thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${tableHeader('Qty')}${tableHeader(timeHeader)}${tableHeader('PO #s')}</tr></thead><tbody>${jobs.map(renderRow).join('')}</tbody></table>`;
+}
+
+function renderCreatedJobSection(jobs: JobReportJob[]) {
+  if (!jobs.length) return renderEmptySection('Jobs Created');
+  return `<h3 style="margin: 18px 0 8px 0;">Jobs Created</h3><table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px;">${tableColumns(['6%', '14%', '30%', '8%', '30%', '12%'])}<thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${tableHeader('Qty')}${tableHeader('Created')}${tableHeader('PO #s')}</tr></thead><tbody>${jobs.map(renderCreatedJobRow).join('')}</tbody></table>`;
 }
 
 function renderTaskSection(title: string, tasks: JobReportTask[], field: 'startedAt' | 'endedAt') {
   if (!tasks.length) return renderEmptySection(title);
-  return `<h3 style="margin: 18px 0 8px 0;">${escapeHtml(title)}</h3><table style="width: 100%; border-collapse: collapse; margin-bottom: 14px;"><thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${tableHeader('Machine')}${tableHeader(field === 'startedAt' ? 'Started' : 'Stopped')}${tableHeader('Est. Time')}</tr></thead><tbody>${tasks.map((task) => renderTaskRow(task, field)).join('')}</tbody></table>`;
+  const isStarted = field === 'startedAt';
+  const includeEventTime = true;
+  const includeDuration = field === 'endedAt';
+  const includeMachiningComplete = field === 'endedAt';
+  const includeProductionQty = field === 'endedAt';
+  const widths = includeDuration
+    ? ['6%', '14%', '28%', '10%', '8%', '7%', '8%', '5%', '12%']
+    : ['6%', '14%', '35%', '18%', '15%', '12%'];
+  const eventTimeHeader = includeEventTime ? tableHeader(isStarted ? 'Started' : 'Stopped') : '';
+  const taskHeaders = isStarted
+    ? `${eventTimeHeader}${tableHeader('Machine')}`
+    : `${eventTimeHeader}${tableHeader('Machine')}`;
+  return `<h3 style="margin: 18px 0 8px 0;">${escapeHtml(title)}</h3><table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px;">${tableColumns(widths)}<thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${taskHeaders}${includeDuration ? tableHeader('Est. Days') : ''}${includeMachiningComplete ? tableHeader('Machining Complete') : ''}${includeProductionQty ? tableHeader('Production Qty') : ''}${tableHeader('PO #s')}</tr></thead><tbody>${tasks.map((task) => renderTaskRow(task, field, includeEventTime, includeDuration, includeMachiningComplete, includeProductionQty)).join('')}</tbody></table>`;
+}
+
+function renderShipmentSection(shipments: JobReportShipment[]) {
+  if (!shipments.length) return renderEmptySection('Shipments Made');
+  return `<h3 style="margin: 18px 0 8px 0;">Shipments Made</h3><table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px;">${tableColumns(['6%', '14%', '30%', '10%', '20%', '20%'])}<thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${tableHeader('Qty Shipped')}${tableHeader('Date Shipped')}${tableHeader('PO')}</tr></thead><tbody>${shipments.map(renderShipmentRow).join('')}</tbody></table>`;
 }
 
 function renderEmptySection(title: string) {
@@ -198,17 +307,46 @@ function renderEmptySection(title: string) {
 }
 
 function renderJobRow(job: JobReportJob, field: 'startedOn' | 'completedOn') {
-  const timestamp = field === 'startedOn' ? getJobStartedTimestamp(job) : job.completedOn;
-  return `<tr>${tableCell(job.jobNumber)}${tableCell(getCustomerName(job))}${tableCell(getPartName(job))}${tableCell(job.qty)}${tableCell(formatReportDate(timestamp))}</tr>`;
+  const value =
+    field === 'startedOn'
+      ? formatReportDate(getJobStartedTimestamp(job))
+      : formatBusinessDays(getJobProductionDurationMs(job));
+  return `<tr>${tableCell(job.jobNumber)}${tableCell(getCustomerName(job))}${tableCell(getPartName(job))}${tableCell(job.qty)}${tableCell(value)}${tableCell(formatJobPurchaseOrders(job))}</tr>`;
 }
 
-function renderTaskRow(task: JobReportTask, field: 'startedAt' | 'endedAt') {
+function renderCreatedJobRow(job: JobReportJob) {
+  return `<tr>${tableCell(job.jobNumber)}${tableCell(getCustomerName(job))}${tableCell(getPartName(job))}${tableCell(job.qty)}${tableCell(formatReportDate(job.createdAt))}${tableCell(formatJobPurchaseOrders(job))}</tr>`;
+}
+
+function renderTaskRow(
+  task: JobReportTask,
+  field: 'startedAt' | 'endedAt',
+  includeEventTime: boolean,
+  includeDuration: boolean,
+  includeMachiningComplete: boolean,
+  includeProductionQty: boolean,
+) {
   const timestamp = field === 'startedAt' ? task.startedAt : task.endedAt;
-  return `<tr>${tableCell(task.job.jobNumber)}${tableCell(getCustomerName(task.job))}${tableCell(getPartName(task.job))}${tableCell(task.machineName)}${tableCell(formatReportDate(timestamp))}${tableCell(formatDuration(task.businessDurationMs))}</tr>`;
+  const isMachiningComplete = task.job.status === 'machining_complete';
+  const productionQty = isMachiningComplete ? String(task.job.actualProductionQty ?? '') : '';
+  const eventTimeCell = includeEventTime ? tableCell(formatReportDate(timestamp)) : '';
+  const taskCells =
+    field === 'startedAt'
+      ? `${eventTimeCell}${tableCell(task.machineName)}`
+      : `${eventTimeCell}${tableCell(task.machineName)}`;
+  return `<tr>${tableCell(task.job.jobNumber)}${tableCell(getCustomerName(task.job))}${tableCell(getPartName(task.job))}${taskCells}${includeDuration ? tableCell(formatBusinessDays(task.businessDurationMs)) : ''}${includeMachiningComplete ? tableCell(isMachiningComplete ? '[x]' : '[ ]') : ''}${includeProductionQty ? tableCell(productionQty) : ''}${tableCell(formatJobPurchaseOrders(task.job))}</tr>`;
+}
+
+function renderShipmentRow(shipment: JobReportShipment) {
+  return `<tr>${tableCell(shipment.job.jobNumber)}${tableCell(getCustomerName(shipment.job))}${tableCell(getPartName(shipment.job))}${tableCell(shipment.qty)}${tableCell(formatShipmentDate(shipment.shippedAt))}${tableCell(shipment.po || shipment.job.customerPo || '')}</tr>`;
 }
 
 function tableHeader(label: string) {
   return `<th style="text-align:left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #666;">${escapeHtml(label)}</th>`;
+}
+
+function tableColumns(widths: string[]) {
+  return `<colgroup>${widths.map((width) => `<col style="width: ${width};">`).join('')}</colgroup>`;
 }
 
 function tableCell(value: string | number) {
@@ -228,12 +366,34 @@ function getPartName(job: JobReportJob) {
     .join(' / ');
 }
 
+function getJobPurchaseOrders(job: JobReportJob) {
+  return [
+    ...new Set(
+      [job.customerPo, ...(job.shipmentSchedule ?? []).map((shipment) => shipment.po)]
+        .map((po) => po?.trim())
+        .filter((po): po is string => Boolean(po)),
+    ),
+  ];
+}
+
+function formatJobPurchaseOrders(job: JobReportJob) {
+  return getJobPurchaseOrders(job).join(', ');
+}
+
 function getJobStartedTimestamp(job: JobReportJob) {
   const jobStartedAt = normalizeReportDate(job.startedOn) ?? normalizeReportDate(job.createdAt);
   const earliestTaskStart = normalizeReportDate(
     (job.productionTasks ?? []).map((task) => task.startedAt).sort(compareDates)[0],
   );
   return earliestTaskStart ?? jobStartedAt ?? null;
+}
+
+function getJobProductionDurationMs(job: JobReportJob) {
+  return (job.productionTasks ?? []).reduce(
+    (total, task) =>
+      total + calculateTaskBusinessDurationMs(task, { timeZone: REPORT_TIME_ZONE }, null),
+    0,
+  );
 }
 
 function compareReportJobs(left: JobReportJob, right: JobReportJob) {
@@ -276,20 +436,26 @@ function formatReportDate(value: string | Date | null | undefined) {
     : '—';
 }
 
-function formatDuration(valueMs: number) {
-  const totalSeconds = Math.max(0, Math.round(valueMs / 1000));
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const totalMinutes = Math.round(totalSeconds / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return hours === 0 ? `${minutes}m` : `${hours}h ${String(minutes).padStart(2, '0')}m`;
+function formatShipmentDate(value: string | Date | null | undefined) {
+  const date = normalizeReportDate(value);
+  return date ? DateTime.fromJSDate(date, { zone: REPORT_TIME_ZONE }).toFormat('ccc LLL d') : '—';
+}
+
+function formatBusinessDays(valueMs: number) {
+  return `${(Math.max(0, valueMs) / (8 * 60 * 60 * 1000)).toFixed(1)} days`;
+}
+
+function formatHours(valueMs: number) {
+  return `${(Math.max(0, valueMs) / (60 * 60 * 1000)).toFixed(1)} hours`;
 }
 
 function buildJobReportCsv(
+  createdJobs: JobReportJob[],
   startedJobs: JobReportJob[],
   closedJobs: JobReportJob[],
   startedTasks: JobReportTask[],
   stoppedTasks: JobReportTask[],
+  shipments: JobReportShipment[],
 ) {
   const header = [
     'section',
@@ -300,8 +466,26 @@ function buildJobReportCsv(
     'machine',
     'eventTime',
     'estimatedTime',
+    'machiningComplete',
+    'productionQty',
+    'po',
+    'jobPoNumbers',
   ];
   const rows = [
+    ...createdJobs.map((job) => [
+      'Jobs Created',
+      String(job.jobNumber),
+      getCustomerName(job),
+      getPartName(job),
+      String(job.qty),
+      '',
+      formatCsvDate(job.createdAt),
+      '',
+      '',
+      '',
+      formatJobPurchaseOrdersCsv(job),
+      '',
+    ]),
     ...startedJobs.map((job) => [
       'Jobs Started',
       String(job.jobNumber),
@@ -311,15 +495,8 @@ function buildJobReportCsv(
       '',
       formatCsvDate(getJobStartedTimestamp(job)),
       '',
-    ]),
-    ...closedJobs.map((job) => [
-      'Jobs Closed',
-      String(job.jobNumber),
-      getCustomerName(job),
-      getPartName(job),
-      String(job.qty),
       '',
-      formatCsvDate(job.completedOn),
+      formatJobPurchaseOrdersCsv(job),
       '',
     ]),
     ...startedTasks.map((task) => [
@@ -330,7 +507,11 @@ function buildJobReportCsv(
       '',
       task.machineName,
       formatCsvDate(task.startedAt),
-      formatDuration(task.businessDurationMs),
+      '',
+      '',
+      '',
+      formatJobPurchaseOrdersCsv(task.job),
+      '',
     ]),
     ...stoppedTasks.map((task) => [
       'Tasks Stopped',
@@ -340,7 +521,39 @@ function buildJobReportCsv(
       '',
       task.machineName,
       formatCsvDate(task.endedAt),
-      formatDuration(task.businessDurationMs),
+      formatHours(task.businessDurationMs),
+      task.job.status === 'machining_complete' ? 'true' : 'false',
+      task.job.status === 'machining_complete' ? String(task.job.actualProductionQty ?? '') : '',
+      '',
+      formatJobPurchaseOrdersCsv(task.job),
+    ]),
+    ...shipments.map((shipment) => [
+      'Shipments Made',
+      String(shipment.job.jobNumber),
+      getCustomerName(shipment.job),
+      getPartName(shipment.job),
+      String(shipment.qty),
+      '',
+      formatShipmentCsvDate(shipment.shippedAt),
+      '',
+      '',
+      '',
+      shipment.po || shipment.job.customerPo || '',
+      formatJobPurchaseOrdersCsv(shipment.job),
+    ]),
+    ...closedJobs.map((job) => [
+      'Jobs Closed',
+      String(job.jobNumber),
+      getCustomerName(job),
+      getPartName(job),
+      String(job.qty),
+      '',
+      formatCsvDate(job.completedOn),
+      formatHours(getJobProductionDurationMs(job)),
+      '',
+      '',
+      '',
+      formatJobPurchaseOrdersCsv(job),
     ]),
   ];
   return [header, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n');
@@ -351,6 +564,15 @@ function formatCsvDate(value: string | Date | null | undefined) {
   return date
     ? DateTime.fromJSDate(date, { zone: REPORT_TIME_ZONE }).toFormat('yyyy-LL-dd HH:mm:ss')
     : '';
+}
+
+function formatShipmentCsvDate(value: string | Date | null | undefined) {
+  const date = normalizeReportDate(value);
+  return date ? DateTime.fromJSDate(date, { zone: REPORT_TIME_ZONE }).toFormat('yyyy-LL-dd') : '';
+}
+
+function formatJobPurchaseOrdersCsv(job: JobReportJob) {
+  return JSON.stringify(getJobPurchaseOrders(job));
 }
 
 function escapeCsvValue(value: unknown) {

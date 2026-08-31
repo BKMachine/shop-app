@@ -111,8 +111,8 @@ async function reorders() {
   });
 }
 
-async function jobReport(period: JobReportPeriod) {
-  return sendProductionReport(transporter, period);
+async function jobReport(period: JobReportPeriod, reportDate?: string) {
+  return sendProductionReport(transporter, period, reportDate);
 }
 
 async function getToolReportRecipients(): Promise<{ to: string[]; cc: string[] }> {

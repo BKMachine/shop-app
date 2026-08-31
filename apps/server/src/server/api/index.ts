@@ -73,7 +73,12 @@ router.get('/mail/job-reports/:period', async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid job report period.' });
     }
 
-    await SMTPService.jobReport(period);
+    const reportDate = typeof req.query.date === 'string' ? req.query.date : undefined;
+    if (reportDate && !/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) {
+      return res.status(400).json({ message: 'Invalid report date.' });
+    }
+
+    await SMTPService.jobReport(period, reportDate);
     res.sendStatus(204);
   } catch (e) {
     next(e);
