@@ -75,6 +75,7 @@ export const materials: MaterialList = {
   '6061': { density: 0.097544, category: 'aluminum' },
   '7075': { density: 0.101519, category: 'aluminum' },
   '1018': { density: 0.283599, category: 'steel' },
+  '1144': { density: 0.283599, category: 'steel' },
   '1020': { density: 0.283599, category: 'steel' },
   '12L14': { density: 0.283599, category: 'steel' },
   '4140': { density: 0.283599, category: 'steel' },
