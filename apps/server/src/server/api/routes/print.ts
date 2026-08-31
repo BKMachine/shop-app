@@ -131,6 +131,25 @@ function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
     { label: 'Location', value: resolvedPart?.location || '' },
     { label: 'Position', value: resolvedPart?.position || '' },
   ].filter((row) => row.value);
+  const shipmentPlan = (job.shipmentSchedule ?? [])
+    .map((shipment) => ({
+      shipDate: formatTravelerDate(shipment.shipDate),
+      qty: String(Math.max(1, Number(shipment.qty) || 1)),
+      po: shipment.po?.trim() || '',
+    }))
+    .filter((shipment) => shipment.shipDate);
+  const fallbackShipmentDate = formatTravelerDate(job.dueDate);
+  const travelerShipmentPlan = shipmentPlan.length
+    ? shipmentPlan
+    : fallbackShipmentDate
+      ? [
+          {
+            shipDate: fallbackShipmentDate,
+            qty: String(Math.max(1, Number(job.qty) || 1)),
+            po: job.customerPo?.trim() || '',
+          },
+        ]
+      : undefined;
 
   return {
     jobNumber: job.jobNumber,
@@ -138,6 +157,7 @@ function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
     partImageUrl: resolvedPart?.img?.trim() || undefined,
     jobDetails,
     partDetails,
+    shipmentPlan: travelerShipmentPlan,
     operatorNotes: job.notes || '',
   };
 }

@@ -112,6 +112,15 @@ router.post('/job-traveler', async (req, res, next) => {
             }))
             .filter((row) => row.label && row.value)
         : [],
+      shipmentPlan: Array.isArray(body.shipmentPlan)
+        ? body.shipmentPlan
+            .map((shipment) => ({
+              shipDate: typeof shipment?.shipDate === 'string' ? shipment.shipDate.trim() : '',
+              qty: typeof shipment?.qty === 'string' ? shipment.qty.trim() : '',
+              po: typeof shipment?.po === 'string' ? shipment.po.trim() : '',
+            }))
+            .filter((shipment) => shipment.shipDate && shipment.qty)
+        : undefined,
       operatorNotes: typeof body.operatorNotes === 'string' ? body.operatorNotes.trim() : undefined,
     });
     res.setHeader('Content-Type', 'application/pdf');

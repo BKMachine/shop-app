@@ -59,12 +59,19 @@ declare global {
     value: string;
   }
 
+  interface PrintJobTravelerShipment {
+    shipDate: string;
+    qty: string;
+    po?: string;
+  }
+
   interface PrintJobTravelerBody {
     jobNumber: number;
     barcodeText: string;
     partImageUrl?: string;
     jobDetails: PrintJobTravelerRow[];
     partDetails: PrintJobTravelerRow[];
+    shipmentPlan?: PrintJobTravelerShipment[];
     operatorNotes?: string;
   }
 
