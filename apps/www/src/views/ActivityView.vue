@@ -174,6 +174,13 @@
                       <v-icon :icon="getJobActivityIcon(activity.activityType)" size="14" />
                       {{ getJobActivityLabel(activity.activityType) }}
                     </span>
+                    <span
+                      v-if="activity.machiningComplete"
+                      class="job-event-badge job-event-badge-machining-complete"
+                    >
+                      <v-icon icon="mdi-check-circle" size="14" />
+                      Complete
+                    </span>
                   </div>
                   <div class="item-subtitle">{{ getJobActivitySubtitle(activity) }}</div>
                   <div class="activity-meta">
@@ -242,6 +249,7 @@ type JobActivity = {
   partImage: string | null;
   machineName: string;
   machineType: MachineType | null;
+  machiningComplete: boolean;
 };
 
 type DayGroup<T> = {
@@ -441,6 +449,7 @@ function transformJobAudits(audits: Audit[]): JobActivity[] {
           partImage,
           machineName: '',
           machineType: null,
+          machiningComplete: false,
         });
       }
 
@@ -458,6 +467,7 @@ function transformJobAudits(audits: Audit[]): JobActivity[] {
           partImage,
           machineName: '',
           machineType: null,
+          machiningComplete: false,
         });
       }
 
@@ -479,6 +489,7 @@ function transformJobAudits(audits: Audit[]): JobActivity[] {
             partImage,
             machineName: task.machineName,
             machineType: task.machineType,
+            machiningComplete: false,
           });
           return;
         }
@@ -499,6 +510,7 @@ function transformJobAudits(audits: Audit[]): JobActivity[] {
           partImage,
           machineName: task.machineName,
           machineType: task.machineType,
+          machiningComplete: newJob.status === 'machining_complete',
         });
       });
 
