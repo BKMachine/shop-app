@@ -168,7 +168,24 @@
                 :rules="[partLengthRule]"
                 type="number"
                 @keydown="onlyAllowNumeric($event)"
-              />
+              >
+                <template v-if="part.materialCutType === 'bars'" #append-inner>
+                  <v-tooltip text="Add 0.175 in cutoff">
+                    <template #activator="{ props: tooltipProps }">
+                      <v-btn
+                        v-bind="tooltipProps"
+                        class="add-cutoff-btn"
+                        color="primary"
+                        density="compact"
+                        icon="mdi-plus"
+                        size="x-small"
+                        variant="text"
+                        @click="addCutoff"
+                      />
+                    </template>
+                  </v-tooltip>
+                </template>
+              </v-text-field>
             </v-col>
           </v-row>
           <v-row>
@@ -666,6 +683,11 @@ function setMaterialDefaults(type: 'lathe' | 'swiss' | '2from1') {
   }
 }
 
+function addCutoff() {
+  props.part.materialLength =
+    Math.round(((Number(props.part.materialLength) || 0) + 0.175) * 1000) / 1000;
+}
+
 function openSelectedMaterial() {
   if (!selectedMaterialId.value) return;
   router.push({ name: 'materials', query: { id: selectedMaterialId.value } });
@@ -754,6 +776,10 @@ const materialUsageLabel = computed(() => {
 .swiss-defaults-btn {
   position: relative;
   left: 16px;
+}
+
+.add-cutoff-btn {
+  transform: translateY(7px);
 }
 
 .row-1 {
