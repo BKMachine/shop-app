@@ -1516,7 +1516,7 @@ function recordPlannedShipment(index: number) {
 
   addShipmentRecord(
     String(remainingPlannedQty),
-    draft.value.shipmentSchedule[index]?.shipDate || currentDateInputValue(),
+    currentDateInputValue(),
     plannedShipmentPo || defaultShipmentRecordPo(),
   );
 }
