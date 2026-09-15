@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <header class="status-header">
+    <header v-if="isAdmin" class="status-header">
       <span class="status-header__label">Accruing</span>
       <strong class="status-header__value">{{ formatHourlyRate(accruingHourlyRate) }}/hr</strong>
       <span v-if="incompleteGreenMachineCount" class="status-header__incomplete">
