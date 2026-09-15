@@ -229,13 +229,25 @@ const hasMachineMissingDepartment = computed(() => {
 });
 
 const accruingHourlyRate = computed(() => {
+  const countedPartIds = new Set<string>();
+
   return tiles.value.reduce((total, tile) => {
     if (isBlankTile(tile) || tile.status !== 'green' || tile.partHasIncompleteData) {
       return total;
     }
 
+    const partId = tile.partId?.trim();
+    if (!partId || countedPartIds.has(partId)) {
+      return total;
+    }
+
     const hourlyRate = Number(tile.partHourlyRate);
-    return Number.isFinite(hourlyRate) && hourlyRate > 0 ? total + hourlyRate : total;
+    if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) {
+      return total;
+    }
+
+    countedPartIds.add(partId);
+    return total + hourlyRate;
   }, 0);
 });
 
