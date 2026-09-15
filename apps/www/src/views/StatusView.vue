@@ -1,5 +1,12 @@
 <template>
   <div class="container">
+    <header class="status-header">
+      <span class="status-header__label">Accruing</span>
+      <strong class="status-header__value">{{ formatHourlyRate(accruingHourlyRate) }}/hr</strong>
+      <span v-if="incompleteGreenMachineCount" class="status-header__incomplete">
+        Missing data: {{ incompleteGreenMachineCount }}
+      </span>
+    </header>
     <draggable
       v-model="visibleTiles"
       class="inner-container"
@@ -159,6 +166,7 @@ import MachineTile from '@/components/MachineTile.vue';
 import { fetchMachineDepartmentOptions } from '@/lib/machineDepartments';
 import api, { statusApi } from '@/plugins/axios';
 import { socket as appSocket } from '@/plugins/socket';
+import { isAdmin } from '@/state/device';
 
 const MACHINE_ORDER_STORAGE_KEY = 'status-machine-order';
 const INCLUDED_DEPARTMENTS_STORAGE_KEY = 'status-included-departments';
@@ -174,6 +182,7 @@ type MachineDashboardMetadata = Pick<
   | 'partNumber'
   | 'partDescription'
   | 'partHasIncompleteData'
+  | 'partHourlyRate'
   | 'partSummary'
 >;
 
@@ -217,6 +226,23 @@ const areAllDepartmentsIncluded = computed(() => {
 
 const hasMachineMissingDepartment = computed(() => {
   return tiles.value.some((tile) => !isBlankTile(tile) && !tile.departmentId);
+});
+
+const accruingHourlyRate = computed(() => {
+  return tiles.value.reduce((total, tile) => {
+    if (isBlankTile(tile) || tile.status !== 'green' || tile.partHasIncompleteData) {
+      return total;
+    }
+
+    const hourlyRate = Number(tile.partHourlyRate);
+    return Number.isFinite(hourlyRate) && hourlyRate > 0 ? total + hourlyRate : total;
+  }, 0);
+});
+
+const incompleteGreenMachineCount = computed(() => {
+  return tiles.value.filter(
+    (tile) => !isBlankTile(tile) && tile.status === 'green' && tile.partHasIncompleteData,
+  ).length;
 });
 
 const visibleDepartmentPerformance = computed(() => {
@@ -367,6 +393,7 @@ async function fetchMachineDashboardMetadata() {
           partNumber: machine.partNumber ?? null,
           partDescription: machine.partDescription ?? null,
           partHasIncompleteData: machine.partHasIncompleteData ?? false,
+          partHourlyRate: machine.partHourlyRate ?? null,
           partSummary: machine.partSummary,
         },
       ]),
@@ -590,6 +617,10 @@ function formatDepartmentPercent(value: number): string {
   return `${Math.round(value)}%`;
 }
 
+function formatHourlyRate(value: number): string {
+  return `$${value.toFixed(2)}`;
+}
+
 function getDepartmentPerformanceTone(value: number): 'blue' | 'green' | 'yellow' | 'red' {
   if (value >= 60) {
     return 'blue';
@@ -637,7 +668,37 @@ function isTotalDepartmentPerformance(entry: DepartmentPerformanceEntry): boolea
 <style scoped>
 .container {
   display: flex;
+  flex-direction: column;
   padding: 20px;
+}
+
+.status-header {
+  align-items: baseline;
+  display: flex;
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 10px;
+  gap: 8px;
+}
+
+.status-header__label {
+  color: #7a7a7a;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.status-header__value {
+  color: #303030;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.status-header__incomplete {
+  color: #8a6d1d;
+  font-size: 0.6875rem;
+  font-weight: 600;
 }
 
 .inner-container {

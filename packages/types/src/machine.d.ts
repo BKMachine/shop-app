@@ -138,6 +138,7 @@ declare global {
     partNumber?: string | null;
     partDescription?: string | null;
     partHasIncompleteData?: boolean;
+    partHourlyRate?: number | null;
     partSummary?: string | null;
     index?: number;
   }

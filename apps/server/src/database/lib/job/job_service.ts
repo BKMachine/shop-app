@@ -438,6 +438,16 @@ function getMachineDashboardPartHasIncompleteData(value: unknown) {
   return hasIncompleteMachineDashboardPartData(extractPartCostData(value));
 }
 
+function getMachineDashboardPartHourlyRate(value: unknown) {
+  if (!value || typeof value !== 'object' || !('derived' in value)) return null;
+
+  const derived = value.derived;
+  if (!derived || typeof derived !== 'object' || !('shopRate' in derived)) return null;
+
+  const rate = Number(derived.shopRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
 function getMachineDepartmentName(value: MachineDoc['department']): string {
   if (!value) return '';
   if (typeof value === 'string') return value.trim();
@@ -462,6 +472,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         hasSubComponents: 1,
         'derived.directParentCount': 1,
         'derived.hasIncompleteSubComponentCosts': 1,
+        'derived.shopRate': 1,
       })
       .sort({ dueDate: 1, jobNumber: -1 }),
   ]);
@@ -477,6 +488,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         partId: string | null;
         partImage: string | null;
         partHasIncompleteData: boolean;
+        partHourlyRate: number | null;
       };
     }>
   >();
@@ -498,6 +510,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
           partDescription: extractPartText(job.part, 'description') ?? job.partDescription,
           partImage: extractPartImage(job.part),
           partHasIncompleteData: getMachineDashboardPartHasIncompleteData(job.part),
+          partHourlyRate: getMachineDashboardPartHourlyRate(job.part),
         },
       });
       activeJobsByMachineId.set(task.machineId, existingEntries);
@@ -539,6 +552,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
           partDescription: activeEntry.job.partDescription ?? null,
           partImage: activeEntry.job.partImage ?? null,
           partHasIncompleteData: activeEntry.job.partHasIncompleteData,
+          partHourlyRate: activeEntry.job.partHourlyRate,
           partSummary: toMachineDashboardPartSummary(
             activeEntry.job.partNumber,
             activeEntry.job.partDescription,
@@ -563,6 +577,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         partDescription: null,
         partImage: null,
         partHasIncompleteData: false,
+        partHourlyRate: null,
         partSummary: '',
       });
     }

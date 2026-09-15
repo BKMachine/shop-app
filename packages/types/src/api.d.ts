@@ -335,6 +335,7 @@ declare global {
     partDescription?: string | null;
     partImage?: string | null;
     partHasIncompleteData?: boolean;
+    partHourlyRate?: number | null;
     partSummary: string;
   }
 
