@@ -36,7 +36,8 @@ RUN pnpm run build --filter=server
 FROM server-installer AS server-deploy
 ENV pnpm_config_verify_deps_before_run=false
 RUN pnpm run build --filter=@repo/utilities
-RUN pnpm deploy --filter=server --prod --config.inject-workspace-packages=true /app/deploy/server
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+  pnpm deploy --filter=server --prod --config.inject-workspace-packages=true /app/deploy/server
 
 # WWW
 
