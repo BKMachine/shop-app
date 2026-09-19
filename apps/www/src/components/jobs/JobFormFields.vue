@@ -150,13 +150,13 @@ import PartSearchSelect from '@/components/parts/PartSearchSelect.vue';
 import { formatRelativeDate } from '@/lib/job_dates';
 import api from '@/plugins/axios';
 
-type JobShipmentScheduleDraftEntry = {
+export type JobShipmentScheduleDraftEntry = {
   shipDate: string;
   qty: string;
   po: string;
 };
 
-type JobShipmentRecordDraftEntry = {
+export type JobShipmentRecordDraftEntry = {
   id: string;
   shippedAt: string;
   qty: string;

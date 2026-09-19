@@ -93,6 +93,16 @@ export function hasLogoUrl(logo: string | undefined): boolean {
   return Boolean(logo?.trim());
 }
 
+export function formatImageDate(createdAt: string): string {
+  return new Date(createdAt).toLocaleString([], {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function parseCycle(val: string | number | null | undefined): number {
   if (typeof val === 'number') {
     return Number.isNaN(val) ? 0 : Math.max(0, val);

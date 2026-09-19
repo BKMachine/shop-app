@@ -172,6 +172,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
+import { formatImageDate } from '@/plugins/utils';
 import { usePartStore } from '@/stores/parts_store';
 
 const props = defineProps<{
@@ -293,10 +294,6 @@ function showNextImage() {
   if (!sortedImages.value.length) return;
   galleryIndex.value =
     galleryIndex.value === sortedImages.value.length - 1 ? 0 : galleryIndex.value + 1;
-}
-
-function formatImageDate(createdAt: string): string {
-  return new Date(createdAt).toLocaleString();
 }
 
 async function promoteToMain(image: MyImageData) {

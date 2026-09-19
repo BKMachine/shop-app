@@ -537,11 +537,13 @@
 </template>
 
 <script setup lang="ts">
-import type { AxiosError, AxiosProgressEvent } from 'axios';
+import type { AxiosProgressEvent } from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { getErrorMessage } from '@/lib/errors';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
+import { formatImageDate } from '@/plugins/utils';
 import { usePartStore } from '@/stores/parts_store';
 
 interface ImageData {
@@ -553,11 +555,6 @@ interface ImageData {
 }
 
 type BackgroundRemovalBackend = 'birefnet' | 'imgly' | 'rembg';
-
-type ApiErrorPayload = {
-  error?: string;
-  message?: string;
-};
 
 const props = defineProps<{
   modelValue: boolean;
@@ -880,16 +877,6 @@ function closeDeleteConfirm() {
 async function deleteConfirmedImage() {
   if (!deleteTargetId.value) return;
   await deleteImage(deleteTargetId.value);
-}
-
-function formatImageDate(createdAt: string): string {
-  return new Date(createdAt).toLocaleString([], {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 }
 
 function handleImageUploaded() {
@@ -1357,16 +1344,6 @@ async function attemptRotate(imageId: string, direction: 'cw' | 'ccw') {
     rotatingId.value = '';
     rotatingDirection.value = '';
   }
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  const axiosError = error as AxiosError<ApiErrorPayload>;
-  return (
-    axiosError.response?.data?.error ||
-    axiosError.response?.data?.message ||
-    axiosError.message ||
-    fallback
-  );
 }
 
 async function deleteImage(imageId: string) {

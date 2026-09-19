@@ -544,6 +544,7 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import CustomerSelect from '@/components/CustomerSelect.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import ShipperSelect from '@/components/ShipperSelect.vue';
+import { useDebouncedCallback } from '@/lib/debounce';
 import { uiIcons } from '@/lib/uiIcons';
 import api from '@/plugins/axios';
 import { hasLogoUrl } from '@/plugins/utils';
@@ -605,7 +606,9 @@ const draftTrackingBlurred = ref(false);
 const detailTrackingBlurred = ref(false);
 const detailTrackingEditing = ref(false);
 const detailTrackingTextarea = ref<{ focus?: () => void } | null>(null);
-let searchDebounceId: ReturnType<typeof setTimeout> | null = null;
+const triggerSearchFilterSync = useDebouncedCallback(() => {
+  void applyFilters();
+}, 250);
 
 const draft = ref(createEmptyDraft());
 const detailDraft = ref(createEmptyDraft());
@@ -714,9 +717,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGalleryKeydown);
-  if (searchDebounceId) {
-    clearTimeout(searchDebounceId);
-  }
 });
 
 watch(
@@ -750,18 +750,7 @@ watch(
   },
 );
 
-watch(
-  () => filters.value.search,
-  () => {
-    if (searchDebounceId) {
-      clearTimeout(searchDebounceId);
-    }
-
-    searchDebounceId = setTimeout(() => {
-      void applyFilters();
-    }, 250);
-  },
-);
+watch(() => filters.value.search, triggerSearchFilterSync);
 
 watch(
   () => filters.value.customer,

@@ -446,6 +446,7 @@ import SupplierSelect from '@/components/SupplierSelect.vue';
 import ToolStockGraph from '@/components/ToolStockGraph.vue';
 import ToolLocationSelect from '@/components/tools/ToolLocationSelect.vue';
 import VendorSelect from '@/components/VendorSelect.vue';
+import { getErrorMessage } from '@/lib/errors';
 import axios from '@/plugins/axios';
 import printer from '@/plugins/printer';
 import { isToolCategory } from '@/plugins/toolCategories';
@@ -733,13 +734,9 @@ function openLink(link: string | undefined) {
 }
 
 function getToolSaveErrorMessage(error: unknown, fallback: string) {
-  const axiosError = error as {
-    response?: { data?: { error?: string; message?: string } };
-    message?: string;
-  };
-  const responseMessage = axiosError.response?.data?.error || axiosError.response?.data?.message;
+  const responseMessage = getErrorMessage(error, '');
 
-  if (responseMessage?.startsWith('Scan code already exists:')) {
+  if (responseMessage.startsWith('Scan code already exists:')) {
     const duplicateScanCode = responseMessage.replace('Scan code already exists:', '').trim();
     if (duplicateScanCode) {
       return `Barcode ${duplicateScanCode} already exists on another tool.`;
@@ -751,7 +748,7 @@ function getToolSaveErrorMessage(error: unknown, fallback: string) {
     return 'Each barcode on a tool must be unique.';
   }
 
-  return responseMessage || axiosError.message || fallback;
+  return responseMessage || fallback;
 }
 
 /* FORM VALIDATION */

@@ -210,6 +210,7 @@
 import { DateTime } from 'luxon';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
+import { getDeviceIcon, getDeviceName, getDeviceType } from '@/lib/device';
 import { uiIcons } from '@/lib/uiIcons';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
@@ -371,25 +372,6 @@ function formatFullTimestamp(timestamp: string) {
   const dateTime = DateTime.fromISO(timestamp);
   if (!dateTime.isValid) return timestamp;
   return dateTime.toLocaleString(DateTime.DATETIME_FULL_WITH_SECONDS);
-}
-
-function getDeviceName(device: Audit['device'] | string | null | undefined) {
-  if (!device || typeof device === 'string') return 'Unknown device';
-  return device.displayName || 'Unknown device';
-}
-
-function getDeviceIcon(device: Audit['device'] | string | undefined) {
-  if (!device || typeof device === 'string') return undefined;
-  if (device.deviceType === 'pc') {
-    return device.displayName?.toLowerCase().includes('kiosk') ? 'mdi-kiosk' : 'mdi-monitor';
-  }
-  if (device.deviceType === 'android') return 'mdi-android';
-  return undefined;
-}
-
-function getDeviceType(device: Audit['device'] | string | null | undefined) {
-  if (!device || typeof device === 'string') return 'unknown';
-  return device.deviceType;
 }
 
 function summarizeAudit(audit: Audit) {

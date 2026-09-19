@@ -31,8 +31,8 @@
   </v-dialog>
 </template>
 <script setup lang="ts">
-import { AxiosError } from 'axios';
 import { ref } from 'vue';
+import { getErrorMessage } from '@/lib/errors';
 import api, { getOrCreateDeviceId } from '@/plugins/axios';
 import { setCurrentDevice } from '@/state/device';
 import { closeDisplayNameDialog, displayNameDialogState } from '@/state/displayNameDialog';
@@ -62,10 +62,7 @@ async function onSave() {
     setCurrentDevice(response.data.device);
     closeDisplayNameDialog();
   } catch (error) {
-    const responseMessage =
-      (error as AxiosError<{ message?: string }>).response?.data?.message ||
-      'Failed to save display name. Please try again.';
-    errorMessage.value = responseMessage;
+    errorMessage.value = getErrorMessage(error, 'Failed to save display name. Please try again.');
   } finally {
     saving.value = false;
   }

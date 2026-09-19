@@ -672,7 +672,11 @@
 import { calculateTaskBusinessDurationMs } from '@repo/utilities/time';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import JobFormFields, { type JobDraft } from '@/components/jobs/JobFormFields.vue';
+import JobFormFields, {
+  type JobDraft,
+  type JobShipmentRecordDraftEntry,
+  type JobShipmentScheduleDraftEntry,
+} from '@/components/jobs/JobFormFields.vue';
 import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
 import { dueDateColor } from '@/lib/job_dates';
 import api, { statusApi } from '@/plugins/axios';
@@ -683,19 +687,6 @@ import { isAdmin } from '@/state/device';
 import { useJobsStore } from '@/stores/jobs_store';
 
 const JOB_TAB_VALUES = ['general', 'production', 'shipments'] as const;
-
-type JobShipmentScheduleDraftEntry = {
-  shipDate: string;
-  qty: string;
-  po: string;
-};
-
-type JobShipmentRecordDraftEntry = {
-  id: string;
-  shippedAt: string;
-  qty: string;
-  po: string;
-};
 
 type StartTaskMachineOption = MachineInfo & {
   hasRunningTask: boolean;

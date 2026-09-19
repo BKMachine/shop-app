@@ -167,6 +167,7 @@ import CustomerSelect from '@/components/CustomerSelect.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
 import MissingImage from '@/components/MissingImage.vue';
+import { useDebouncedCallback } from '@/lib/debounce';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import router from '@/router';
 import { isAdmin } from '@/state/device';
@@ -220,7 +221,7 @@ const expandedImage = ref({
   top: 0,
   left: 0,
 });
-let searchDebounceId: ReturnType<typeof setTimeout> | null = null;
+const triggerFilterSync = useDebouncedCallback(syncFiltersToQuery, 250);
 
 const filters = reactive<{
   search: string;
@@ -294,31 +295,9 @@ watch(
   },
 );
 
-watch(
-  () => filters.search,
-  () => {
-    if (searchDebounceId) {
-      clearTimeout(searchDebounceId);
-    }
+watch(() => filters.search, triggerFilterSync);
 
-    searchDebounceId = setTimeout(() => {
-      syncFiltersToQuery();
-    }, 250);
-  },
-);
-
-watch(
-  () => filters.jobNumber,
-  () => {
-    if (searchDebounceId) {
-      clearTimeout(searchDebounceId);
-    }
-
-    searchDebounceId = setTimeout(() => {
-      syncFiltersToQuery();
-    }, 250);
-  },
-);
+watch(() => filters.jobNumber, triggerFilterSync);
 
 onMounted(async () => {
   await nextTick();

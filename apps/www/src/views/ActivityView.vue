@@ -225,6 +225,7 @@
 <script setup lang="ts">
 import { DateTime } from 'luxon';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { getDeviceIcon, getDeviceName } from '@/lib/device';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import router from '@/router';
@@ -290,20 +291,6 @@ onBeforeUnmount(() => {
     recentActivityTimer = null;
   }
 });
-
-function getDeviceName(device: Audit['device'] | string | null | undefined) {
-  if (!device || typeof device === 'string') return 'Unknown device';
-  return device.displayName || 'Unknown device';
-}
-
-function getDeviceIcon(device: Audit['device'] | string | null | undefined) {
-  if (!device || typeof device === 'string') return undefined;
-  if (device.deviceType === 'pc') {
-    return device.displayName?.toLowerCase().includes('kiosk') ? 'mdi-tablet' : 'mdi-monitor';
-  }
-  if (device.deviceType === 'android') return 'mdi-android';
-  return undefined;
-}
 
 function formatTimestamp(timestamp: string) {
   const dateTime = DateTime.fromISO(timestamp);
