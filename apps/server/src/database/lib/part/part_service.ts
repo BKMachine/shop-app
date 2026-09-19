@@ -7,6 +7,8 @@ import {
 import { emit } from '../../../server/sockets.js';
 import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
+import { clampLimit, clampOffset } from '../../../utilities/pagination.js';
+import { getSortDirection } from '../../../utilities/sorting.js';
 import Audit from '../audit/audit_service.js';
 import MaterialModel from '../material/material_model.js';
 import Part, { type PartDoc } from './part_model.js';
@@ -340,10 +342,6 @@ function getSortField(filters: PartListFilters): string {
   return normalizeSortField(filters.sort);
 }
 
-function getSortDirection(filters: PartListFilters): 1 | -1 {
-  return filters.order === 'desc' ? -1 : 1;
-}
-
 function createListItem(part: PartDoc): PartListItem {
   const normalizedSubComponentIds = normalizeSubComponentIds(part.subComponentIds);
   const directSubComponentCount =
@@ -398,7 +396,7 @@ async function searchSummaries(search: string, limit = 20): Promise<PartSearchIt
     { _id: 1, part: 1, description: 1 },
   )
     .sort({ part: 1 })
-    .limit(Math.min(Math.max(Number(limit) || 20, 1), 50))
+    .limit(clampLimit(limit, 20, 50))
     .lean();
 
   return items.map((item) => ({
@@ -573,11 +571,11 @@ function calculateTotalValue(parts: Array<Pick<PartFields, 'price' | 'stock'>>):
 }
 
 async function list(filters: PartListFilters = {}): Promise<PartListResult> {
-  const limit = Math.min(Math.max(Number(filters.limit) || 10, 1), 100);
-  const offset = Math.max(Number(filters.offset) || 0, 0);
+  const limit = clampLimit(filters.limit, 10, 100);
+  const offset = clampOffset(filters.offset);
   const query = buildPartQuery(filters);
   const sortField = getSortField(filters);
-  const direction = getSortDirection(filters);
+  const direction = getSortDirection(filters.order);
 
   if (sortField === 'customer.name') {
     const items = (await Part.find(query).populate('customer')) as PartDoc[];

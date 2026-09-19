@@ -2,6 +2,8 @@ import { isValidObjectId } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import { getEntityIdOrNull, normalizeObjectIdArray } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
+import { normalizeText } from '../../../utilities/normalizeText.js';
+import { clampLimit, clampOffset } from '../../../utilities/pagination.js';
 import AuditService from '../audit/audit_service.js';
 import Customer from '../customer/customer_model.js';
 import Shipper from '../shipper/shipper_model.js';
@@ -15,10 +17,6 @@ type ShipmentListQuery = {
   limit?: number;
   offset?: number;
 };
-
-function normalizeText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
 
 function normalizeTrackingNumberForCompare(value: string) {
   return value
@@ -91,8 +89,8 @@ async function list(query: ShipmentListQuery = {}): Promise<ShipmentListResponse
     ];
   }
 
-  const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
-  const offset = Math.max(Number(query.offset) || 0, 0);
+  const limit = clampLimit(query.limit, 50, 200);
+  const offset = clampOffset(query.offset);
 
   const [items, total] = await Promise.all([
     Shipment.find(filter)

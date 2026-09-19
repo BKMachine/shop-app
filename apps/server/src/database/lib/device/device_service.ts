@@ -1,3 +1,4 @@
+import { normalizeIp } from '../../../utilities/ip.js';
 import Device, { type DeviceDoc } from './device_model.js';
 
 async function findDeviceById(deviceId: string): Promise<DeviceDoc | null> {
@@ -16,13 +17,6 @@ async function addDevice(data: DeviceCreate): Promise<DeviceDoc> {
   const device = new Device(data);
   await device.save();
   return device;
-}
-
-function normalizeIp(ip: string): string {
-  if (ip.startsWith('::ffff:')) {
-    return ip.substring(7);
-  }
-  return ip;
 }
 
 export default {

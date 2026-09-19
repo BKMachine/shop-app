@@ -9,7 +9,11 @@ import logger from '../../../logger.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import { normalizeQueryValue } from '../../../utilities/normalizeQueryValue.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import {
+  assertKnownDevice,
+  requireAdmin,
+  requireKnownDevice,
+} from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -199,11 +203,8 @@ router.put('/jobs', requireKnownDevice, async (req, res, next) => {
   }
 });
 
-router.delete('/jobs/:id', requireKnownDevice, async (req, res, next) => {
+router.delete('/jobs/:id', requireKnownDevice, requireAdmin, async (req, res, next) => {
   assertKnownDevice(req);
-  if (!req.device.isAdmin) {
-    return next(new HttpError(403, 'Forbidden: admin access required.'));
-  }
 
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid job id'));

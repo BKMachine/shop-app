@@ -3,6 +3,9 @@ import { isValidObjectId } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import { getEntityIdOrNull } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
+import { normalizeText } from '../../../utilities/normalizeText.js';
+import { clampLimit, clampOffset } from '../../../utilities/pagination.js';
+import { getSortDirection } from '../../../utilities/sorting.js';
 import AuditService from '../audit/audit_service.js';
 import Customer from '../customer/customer_model.js';
 import Machine from '../machine/index.js';
@@ -14,10 +17,6 @@ import Job, { type JobDoc } from './job_model.js';
 export class JobValidationError extends Error {}
 
 export class JobNotFoundError extends Error {}
-
-function normalizeText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
 
 function normalizeDate(value: unknown): Date | null {
   if (!value) return null;
@@ -360,10 +359,6 @@ function getSortField(query: JobListQuery): string {
   return query.sort && validSortFields.has(query.sort) ? query.sort : 'jobNumber';
 }
 
-function getSortDirection(query: JobListQuery): 1 | -1 {
-  return query.order === 'desc' ? -1 : 1;
-}
-
 function normalizeTaskTimestamp(value: string | Date | null | undefined) {
   if (!value) return 0;
   const date = value instanceof Date ? value : new Date(value);
@@ -390,21 +385,6 @@ function extractPartImage(value: unknown) {
 
   const imageValue = value.img;
   return typeof imageValue === 'string' && imageValue.trim() ? imageValue.trim() : null;
-}
-
-function extractReferencedId(value: unknown) {
-  if (!value) return null;
-  if (typeof value === 'string') return value;
-  if (typeof value !== 'object' || !('_id' in value)) return null;
-
-  const idValue = value._id;
-  if (typeof idValue === 'string' && idValue.trim()) return idValue;
-  if (idValue && typeof idValue === 'object' && 'toString' in idValue) {
-    const normalizedId = idValue.toString();
-    return normalizedId.trim() ? normalizedId : null;
-  }
-
-  return null;
 }
 
 function extractPartCostData(
@@ -505,7 +485,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
           qty: job.qty,
           dueDate: job.dueDate,
           priority: job.priority,
-          partId: extractReferencedId(job.part),
+          partId: getEntityIdOrNull(job.part),
           partNumber: extractPartText(job.part, 'part') ?? job.partNumber,
           partDescription: extractPartText(job.part, 'description') ?? job.partDescription,
           partImage: extractPartImage(job.part),
@@ -588,10 +568,10 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
 
 async function list(query: JobListQuery = {}): Promise<JobListResponse> {
   const filter = buildListFilter(query);
-  const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
-  const offset = Math.max(Number(query.offset) || 0, 0);
+  const limit = clampLimit(query.limit, 50, 200);
+  const offset = clampOffset(query.offset);
   const sortField = getSortField(query);
-  const sortDirection = getSortDirection(query);
+  const sortDirection = getSortDirection(query.order);
 
   const [items, total, matchingJobs] = await Promise.all([
     Job.find(filter)
@@ -627,10 +607,10 @@ async function listHistoryByPart(
   query: Pick<JobListQuery, 'sort' | 'order' | 'limit' | 'offset'> = {},
 ): Promise<JobHistoryListResponse> {
   const filter = { part: partId };
-  const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 200);
-  const offset = Math.max(Number(query.offset) || 0, 0);
+  const limit = clampLimit(query.limit, 50, 200);
+  const offset = clampOffset(query.offset);
   const sortField = getSortField(query as JobListQuery);
-  const sortDirection = getSortDirection(query as JobListQuery);
+  const sortDirection = getSortDirection((query as JobListQuery).order);
 
   const [items, total] = await Promise.all([
     Job.find(filter)

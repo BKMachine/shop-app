@@ -1,6 +1,8 @@
 import { isIsoMaterialCode, isoMaterialGroupIndexByCode } from '@repo/utilities/materials';
 import { emit } from '../../../server/sockets.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
+import { clampLimit, clampOffset } from '../../../utilities/pagination.js';
+import { getSortDirection } from '../../../utilities/sorting.js';
 import Audit from '../audit/audit_service.js';
 import Tool, { type ToolDoc, type ToolPopulatedDoc } from './tool_model.js';
 
@@ -89,10 +91,6 @@ function getSortField(filters: ToolListFilters): string {
   return filters.sort && validSortFields.has(filters.sort) ? filters.sort : 'description';
 }
 
-function getSortDirection(filters: ToolListFilters): 1 | -1 {
-  return filters.order === 'desc' ? -1 : 1;
-}
-
 function getSortValue(tool: ToolPopulatedDoc, field: string): string | number {
   if (field === 'vendor.name') {
     return tool.vendor?.name ?? '';
@@ -129,11 +127,11 @@ function compareTools(
 async function list(filters: ToolListFilters = {}): Promise<ToolListDocs> {
   // Limit is between 1 and 100, default 10.
   // Offset is 0 or more, default 0.
-  const limit = Math.min(Math.max(Number(filters.limit) || 10, 1), 100);
-  const offset = Math.max(Number(filters.offset) || 0, 0);
+  const limit = clampLimit(filters.limit, 10, 100);
+  const offset = clampOffset(filters.offset);
   const query = buildToolQuery(filters);
   const sortField = getSortField(filters);
-  const direction = getSortDirection(filters);
+  const direction = getSortDirection(filters.order);
 
   if (sortField === 'vendor.name') {
     const items = (await Tool.find(query)

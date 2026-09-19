@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import Audit from '../../../database/lib/audit/audit_service.js';
+import { clampLimit, clampOffset } from '../../../utilities/pagination.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import {
+  assertKnownDevice,
+  requireAdmin,
+  requireKnownDevice,
+} from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -76,15 +81,14 @@ router.post('/audits/materials/cost', async (req, res, next) => {
   }
 });
 
-router.post('/audits', requireKnownDevice, async (req, res, next) => {
+router.post('/audits', requireKnownDevice, requireAdmin, async (req, res, next) => {
   assertKnownDevice(req);
-  if (!req.device.isAdmin) return next(new HttpError(403, 'Forbidden: admin access required.'));
   const { types, limit, offset }: { types?: Audit['type'][]; limit?: number; offset?: number } =
     req.body;
 
   try {
-    const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
-    const safeOffset = Math.max(Number(offset) || 0, 0);
+    const safeLimit = clampLimit(limit, 20, 100);
+    const safeOffset = clampOffset(offset);
     const auditPage = await Audit.getAllAudits(types, safeLimit, safeOffset);
     res.status(200).json(auditPage);
   } catch (e) {

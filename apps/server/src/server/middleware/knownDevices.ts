@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { HydratedDocument } from 'mongoose';
 import DeviceService from '../../database/lib/device/device_service.js';
+import { normalizeIp } from '../../utilities/ip.js';
 import HttpError from './httpError.js';
 
 const LAST_SEEN_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
@@ -118,12 +119,19 @@ export function assertKnownDevice<T extends Request>(req: T): asserts req is T &
   }
 }
 
+/**
+ * Requires the known device to be an admin device, sending a 403 response
+ * otherwise. Must run after `requireKnownDevice` in the middleware chain.
+ */
+export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
+  if (!req.device?.isAdmin) {
+    return next(new HttpError(403, 'Forbidden: admin access required.'));
+  }
+
+  next();
+}
+
 export function getClientIp(req: Request): string | null {
   const ip = req.ip || req.socket.remoteAddress || null;
-  if (!ip) return null;
-
-  if (ip.startsWith('::ffff:')) return ip.slice(7);
-  if (ip === '::1') return '127.0.0.1';
-
-  return ip;
+  return ip ? normalizeIp(ip) : null;
 }

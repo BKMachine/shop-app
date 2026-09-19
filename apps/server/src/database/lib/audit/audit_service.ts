@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
+import { getEntityIdOrNull } from '../../../utilities/entities.js';
 import type { CustomerDoc } from '../customer/customer_model.js';
 import type { StoredDocumentDoc } from '../document/document_model.js';
 import type { ImageDoc } from '../image/image_model.js';
@@ -51,27 +52,6 @@ function normalizeAuditPayload(doc: unknown): unknown | null {
   return doc;
 }
 
-function extractReferencedId(value: unknown): string | null {
-  if (!value) return null;
-  if (typeof value === 'string' && value.trim()) return value.trim();
-
-  if (typeof value === 'object' && value !== null && '_id' in value) {
-    const idValue = value._id;
-    if (typeof idValue === 'string' && idValue.trim()) return idValue.trim();
-    if (idValue && typeof idValue === 'object' && 'toString' in idValue) {
-      const normalizedId = idValue.toString();
-      return normalizedId.trim() ? normalizedId : null;
-    }
-  }
-
-  if (typeof value === 'object' && value !== null && 'toString' in value) {
-    const normalizedId = value.toString();
-    return normalizedId.trim() ? normalizedId : null;
-  }
-
-  return null;
-}
-
 function normalizeJobAuditRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
@@ -80,7 +60,7 @@ function normalizeJobAuditRecord(value: unknown): Record<string, unknown> | null
 function getJobAuditPartId(value: unknown): string | null {
   const record = normalizeJobAuditRecord(value);
   if (!record) return null;
-  return extractReferencedId(record.part);
+  return getEntityIdOrNull(record.part);
 }
 
 function enrichJobAuditRecordWithPartImage(
