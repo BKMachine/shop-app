@@ -249,10 +249,6 @@ export async function buildItemLabel(data: PrintItemBody) {
   return callImageProcessorJson('labels/item', data);
 }
 
-export async function buildShipmentQtyLabel(data: PrintShipmentQtyLabelBody) {
-  return callImageProcessorJson('labels/shipment-qty', data);
-}
-
 export async function buildJobTravelerPdf(data: PrintJobTravelerBody) {
   return callImageProcessorJson('labels/job-traveler', data);
 }

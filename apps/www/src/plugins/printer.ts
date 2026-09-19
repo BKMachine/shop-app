@@ -34,19 +34,6 @@ async function printItem(data: PrintItemBody) {
     });
 }
 
-async function printShipmentQtyLabel(data: PrintShipmentQtyLabelBody) {
-  await axios
-    .post('/print/shipment-qty', data, { responseType: 'blob' })
-    .then((response) => {
-      if (import.meta.env.DEV) openPdfPreview(response.data);
-      toastSuccess('Sent qty label to printer!');
-    })
-    .catch((error) => {
-      console.error('Error printing shipment qty label:', error);
-      toastError('Failed to print shipment qty label.');
-    });
-}
-
 async function openJobTraveler(jobId: string) {
   if (!jobId) return;
 
@@ -65,5 +52,4 @@ export default {
   openJobTraveler,
   printLocation,
   printItem,
-  printShipmentQtyLabel,
 };

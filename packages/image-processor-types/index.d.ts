@@ -16,19 +16,6 @@ declare global {
     labelOffsetY?: number;
   }
 
-  interface PrintShipmentQtyLabelRow {
-    qty: string;
-    item: string;
-    part?: string;
-    description?: string;
-  }
-
-  interface PrintShipmentQtyLabelBody {
-    title?: string;
-    subtitle?: string;
-    rows: PrintShipmentQtyLabelRow[];
-  }
-
   interface PrintJobTravelerRow {
     label: string;
     value: string;

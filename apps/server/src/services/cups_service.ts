@@ -15,22 +15,13 @@ const enabled = process.env.CUPS_PRINT_ENABLED === 'true';
 const cupsServer = process.env.CUPS_SERVER?.trim() || null;
 const locationQueue = process.env.CUPS_LOCATION_QUEUE || 'label_small';
 const addressQueue = process.env.CUPS_ADDRESS_QUEUE || process.env.CUPS_ITEM_QUEUE || 'label_item';
-const shipmentQtyQueue = process.env.CUPS_SHIPMENT_QTY_QUEUE || 'zebra_4x6';
 const locationMedia = process.env.CUPS_LOCATION_MEDIA?.trim() || '30333';
 const addressMedia =
   process.env.CUPS_ADDRESS_MEDIA?.trim() || process.env.CUPS_ITEM_MEDIA?.trim() || '30252';
-const shipmentQtyMedia = process.env.CUPS_SHIPMENT_QTY_MEDIA?.trim() || 'w288h432';
-const shipmentQtyOrientation =
-  process.env.CUPS_SHIPMENT_QTY_ORIENTATION?.trim().toLowerCase() || 'portrait';
-const rotateShipmentQtyPrint = process.env.CUPS_SHIPMENT_QTY_ROTATE_PRINT === 'true';
-const shipmentQtyResolution = process.env.CUPS_SHIPMENT_QTY_RESOLUTION?.trim() || '203dpi';
-const shipmentQtyDarkness = process.env.CUPS_SHIPMENT_QTY_DARKNESS?.trim() || '15';
-const shipmentQtyMediaType = process.env.CUPS_SHIPMENT_QTY_MEDIA_TYPE?.trim() || 'Direct';
-const shipmentQtyPrintRate = process.env.CUPS_SHIPMENT_QTY_PRINT_RATE?.trim() || '2';
 const cupsCommandEnv = cupsServer ? { ...process.env, CUPS_SERVER: cupsServer } : process.env;
 
 type LabelDefinition = {
-  kind: 'location' | 'address' | 'shipment-qty';
+  kind: 'location' | 'address';
   queue: string;
   media: string;
   widthPoints: number;
@@ -54,22 +45,6 @@ const addressLabel: LabelDefinition = {
   media: addressMedia,
   widthPoints: 3.5 * POINTS_PER_INCH,
   heightPoints: 1.125 * POINTS_PER_INCH,
-};
-
-const shipmentQtyLabel: LabelDefinition = {
-  kind: 'shipment-qty',
-  queue: shipmentQtyQueue,
-  media: shipmentQtyMedia,
-  widthPoints: 4.0 * POINTS_PER_INCH,
-  heightPoints: 6.0 * POINTS_PER_INCH,
-  orientationRequested: shipmentQtyOrientation === 'landscape' ? 4 : 3,
-  rotateForPrint: rotateShipmentQtyPrint,
-  extraPrintOptions: [
-    `Resolution=${shipmentQtyResolution}`,
-    `Darkness=${shipmentQtyDarkness}`,
-    `MediaType=${shipmentQtyMediaType}`,
-    `zePrintRate=${shipmentQtyPrintRate}`,
-  ],
 };
 
 function sanitizeJobSegment(value: string) {
@@ -187,7 +162,7 @@ async function validatePdfSize(pdf: Buffer, label: LabelDefinition) {
 
 function logConfiguration() {
   logger.info(
-    `CUPS config: enabled=${enabled} server=${cupsServer || 'default/local'} locationQueue=${locationQueue} locationMedia=${locationMedia} addressQueue=${addressQueue} addressMedia=${addressMedia} shipmentQtyQueue=${shipmentQtyQueue} shipmentQtyMedia=${shipmentQtyMedia} shipmentQtyOrientation=${shipmentQtyOrientation} rotateShipmentQtyPrint=${rotateShipmentQtyPrint} shipmentQtyResolution=${shipmentQtyResolution} shipmentQtyDarkness=${shipmentQtyDarkness} shipmentQtyMediaType=${shipmentQtyMediaType} shipmentQtyPrintRate=${shipmentQtyPrintRate}`,
+    `CUPS config: enabled=${enabled} server=${cupsServer || 'default/local'} locationQueue=${locationQueue} locationMedia=${locationMedia} addressQueue=${addressQueue} addressMedia=${addressMedia}`,
   );
 }
 
@@ -229,18 +204,10 @@ async function printAddressLabel(pdf: Buffer, data: PrintItemBody) {
   await sendPdfToQueue(addressLabel, pdf, jobName);
 }
 
-async function printShipmentQtyLabel(pdf: Buffer, data: PrintShipmentQtyLabelBody) {
-  if (!enabled) return;
-
-  const jobName = `shipment-qty-${sanitizeJobSegment(data.title || data.subtitle || 'label')}`;
-  await sendPdfToQueue(shipmentQtyLabel, pdf, jobName);
-}
-
 logConfiguration();
 
 export default {
   isEnabled: enabled,
   printLocationLabel,
   printAddressLabel,
-  printShipmentQtyLabel,
 };
