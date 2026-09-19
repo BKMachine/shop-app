@@ -8,6 +8,18 @@ import type { Document, Types } from 'mongoose';
 // _id is a Mongoose ObjectId for backend Documents
 
 declare global {
+  interface PaginatedResult<T> {
+    items: T[];
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }
+
+  interface PaginatedResultWithValue<T> extends PaginatedResult<T> {
+    totalValue: number;
+  }
+
   /* AUDIT */
 
   interface Audit {
@@ -37,13 +49,15 @@ declare global {
     _id: Types.ObjectId;
   }
 
-  /* CUSTOMER */
-
-  interface CustomerFields {
+  interface PartyFields {
     name: string;
     logo?: string;
     homepage?: string;
   }
+
+  /* CUSTOMER */
+
+  interface CustomerFields extends PartyFields {}
 
   interface Customer extends CustomerFields {
     _id: string;
@@ -105,11 +119,7 @@ declare global {
 
   /* SUPPLIER */
 
-  interface SupplierFields {
-    name: string;
-    logo?: string;
-    homepage?: string;
-  }
+  interface SupplierFields extends PartyFields {}
 
   interface Supplier extends SupplierFields {
     _id: string;
@@ -124,11 +134,7 @@ declare global {
 
   /* SHIPPER */
 
-  interface ShipperFields {
-    name: string;
-    logo?: string;
-    homepage?: string;
-  }
+  interface ShipperFields extends PartyFields {}
 
   interface Shipper extends ShipperFields {
     _id: string;
@@ -143,10 +149,7 @@ declare global {
 
   /* VENDOR */
 
-  interface VendorFields {
-    name: string;
-    logo?: string;
-    homepage?: string;
+  interface VendorFields extends PartyFields {
     coatings?: string[];
   }
 
@@ -209,13 +212,7 @@ declare global {
     __v?: number;
   }
 
-  interface ShipmentListResponse {
-    items: Shipment[];
-    total: number;
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  }
+  interface ShipmentListResponse extends PaginatedResult<Shipment> {}
 
   /* JOB */
 
@@ -299,22 +296,9 @@ declare global {
     offset?: number;
   }
 
-  interface JobListResponse {
-    items: Job[];
-    total: number;
-    totalValue: number;
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  }
+  interface JobListResponse extends PaginatedResultWithValue<Job> {}
 
-  interface JobHistoryListResponse {
-    items: Job[];
-    total: number;
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  }
+  interface JobHistoryListResponse extends PaginatedResult<Job> {}
 
   interface MachineJobDashboardRow {
     machineId: string;

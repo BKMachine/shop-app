@@ -83,13 +83,7 @@ declare global {
     offset?: number;
   }
 
-  type ToolListResult = {
-    items: Tool[];
-    total: number;
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  };
+  type ToolListResult = PaginatedResult<Tool>;
 
   interface ToolListDocs extends Omit<ToolListResult, 'items'> {
     items: HydratedDocument<ToolFields>[];
@@ -108,5 +102,3 @@ declare global {
     counts: ToolCategoryTypeCounts;
   }
 }
-
-export {};

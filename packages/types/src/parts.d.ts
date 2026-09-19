@@ -81,14 +81,7 @@ declare global {
     isSubComponent: boolean;
   }
 
-  interface PartListResult {
-    items: PartListItem[];
-    total: number;
-    totalValue: number;
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  }
+  interface PartListResult extends PaginatedResultWithValue<PartListItem> {}
 
   interface PartListResponse extends PartListResult {}
 
