@@ -1,15 +1,6 @@
-import * as logger from '@repo/utilities/logger';
-import type { Logger } from 'winston';
+import { createAppLogger } from '@repo/utilities/logger';
 
-const myLogger: Logger = logger.create('server');
+const { logger, stream } = createAppLogger('server');
 
-class MyStream {
-  write(text: string) {
-    myLogger.info(text.trim());
-    // TODO: remove color codes in .log files
-    // TODO: separate http log file?
-  }
-}
-
-export default myLogger;
-export const stream = new MyStream();
+export default logger;
+export { stream };

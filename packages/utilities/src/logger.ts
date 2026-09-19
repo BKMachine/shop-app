@@ -84,6 +84,24 @@ export function create(moduleName: string): MyLogger {
   return logger;
 }
 
+/**
+ * Creates an app's default logger plus a morgan/hono-compatible write stream
+ * that forwards lines to it at `info` level.
+ */
+export function createAppLogger(moduleName: string, options: { debug?: boolean } = {}) {
+  const logger = create(moduleName);
+  if (options.debug) logger.level = 'debug';
+
+  return {
+    logger,
+    stream: {
+      write(text: string) {
+        logger.info(text.trim());
+      },
+    },
+  };
+}
+
 export function honoLogger(logger: MyLogger): MiddlewareHandler {
   return async (c, next) => {
     const start = Date.now();
