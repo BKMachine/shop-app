@@ -54,6 +54,21 @@ router.post('/item', async (req, res, next) => {
   }
 });
 
+function trimmedStringOrEmpty(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function sanitizeLabelValueRows(rows: unknown): PrintJobTravelerRow[] {
+  if (!Array.isArray(rows)) return [];
+
+  return rows
+    .map((row) => ({
+      label: trimmedStringOrEmpty((row as Partial<PrintJobTravelerRow>)?.label),
+      value: trimmedStringOrEmpty((row as Partial<PrintJobTravelerRow>)?.value),
+    }))
+    .filter((row) => row.label && row.value);
+}
+
 router.post('/job-traveler', async (req, res, next) => {
   const body = req.body as PrintJobTravelerBody;
 
@@ -68,22 +83,10 @@ router.post('/job-traveler', async (req, res, next) => {
   try {
     const pdf = await LabelPdfService.buildJobTravelerPdf({
       jobNumber: body.jobNumber,
-      barcodeText: typeof body.barcodeText === 'string' ? body.barcodeText.trim() : '',
+      barcodeText: trimmedStringOrEmpty(body.barcodeText),
       partImageUrl: typeof body.partImageUrl === 'string' ? body.partImageUrl.trim() : undefined,
-      jobDetails: body.jobDetails
-        .map((row) => ({
-          label: typeof row?.label === 'string' ? row.label.trim() : '',
-          value: typeof row?.value === 'string' ? row.value.trim() : '',
-        }))
-        .filter((row) => row.label && row.value),
-      partDetails: Array.isArray(body.partDetails)
-        ? body.partDetails
-            .map((row) => ({
-              label: typeof row?.label === 'string' ? row.label.trim() : '',
-              value: typeof row?.value === 'string' ? row.value.trim() : '',
-            }))
-            .filter((row) => row.label && row.value)
-        : [],
+      jobDetails: sanitizeLabelValueRows(body.jobDetails),
+      partDetails: sanitizeLabelValueRows(body.partDetails),
       shipmentPlan: Array.isArray(body.shipmentPlan)
         ? body.shipmentPlan
             .map((shipment) => ({

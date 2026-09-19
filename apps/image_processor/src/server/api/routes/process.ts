@@ -1,7 +1,11 @@
 import path from 'node:path';
-import { type Response, Router } from 'express';
+import { type NextFunction, type Response, Router } from 'express';
 import multer, { MulterError } from 'multer';
 import sharp from 'sharp';
+import {
+  isBackgroundRemovalBackend,
+  isBackgroundRemovalModel,
+} from '../../../services/background_removal/shared.js';
 import { removeImageBackground } from '../../../services/background_removal_service.js';
 import { autoAlignImage } from '../../../services/image_auto_align_service.js';
 import { autoCropImage } from '../../../services/image_auto_crop_service.js';
@@ -10,12 +14,7 @@ import {
   extractTextFromImageDebug,
   renderTextFromImageDebugOverlay,
 } from '../../../services/image_ocr_service.js';
-import type {
-  BackgroundRemovalBackend,
-  BackgroundRemovalModel,
-  InputImage,
-  ProcessedImage,
-} from '../../../services/image_processing_types.js';
+import type { InputImage, ProcessedImage } from '../../../services/image_processing_types.js';
 import { rotateImage } from '../../../services/image_rotation_service.js';
 import HttpError from '../../middleware/httpError.js';
 
@@ -162,16 +161,17 @@ async function getUploadedImage(file: Express.Multer.File | undefined): Promise<
   }
 }
 
-function isBackgroundRemovalModel(value: string | undefined): value is BackgroundRemovalModel {
-  return value === 'small' || value === 'medium' || value === 'large';
-}
-
-function isBackgroundRemovalBackend(value: string | undefined): value is BackgroundRemovalBackend {
-  return value === 'birefnet' || value === 'imgly' || value === 'rembg';
-}
-
 function isSkippableAutoAlignError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('already aligned closely enough');
+}
+
+function handleUploadError(error: unknown, next: NextFunction): boolean {
+  if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
+    return true;
+  }
+
+  return false;
 }
 
 function sendProcessedImage(res: Response, processed: ProcessedImage) {
@@ -201,9 +201,7 @@ router.post('/remove-background', upload.single('image'), async (req, res, next)
 
     sendProcessedImage(res, processed);
   } catch (error) {
-    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
-    }
+    if (handleUploadError(error, next)) return;
 
     next(error);
   }
@@ -213,9 +211,7 @@ router.post('/auto-crop', upload.single('image'), async (req, res, next) => {
   try {
     sendProcessedImage(res, await autoCropImage(await getUploadedImage(req.file)));
   } catch (error) {
-    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
-    }
+    if (handleUploadError(error, next)) return;
 
     next(error);
   }
@@ -225,9 +221,7 @@ router.post('/auto-align', upload.single('image'), async (req, res, next) => {
   try {
     sendProcessedImage(res, await autoAlignImage(await getUploadedImage(req.file)));
   } catch (error) {
-    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
-    }
+    if (handleUploadError(error, next)) return;
 
     if (isSkippableAutoAlignError(error)) {
       return next(
@@ -283,9 +277,7 @@ router.post('/process-stack', upload.single('image'), async (req, res, next) => 
 
     sendProcessedImage(res, processed);
   } catch (error) {
-    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
-    }
+    if (handleUploadError(error, next)) return;
 
     next(error);
   }
@@ -304,9 +296,7 @@ router.post('/rotate', upload.single('image'), async (req, res, next) => {
     );
     sendProcessedImage(res, processed);
   } catch (error) {
-    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
-    }
+    if (handleUploadError(error, next)) return;
 
     next(error);
   }
@@ -326,9 +316,7 @@ router.post('/ocr', upload.single('image'), async (req, res, next) => {
     const result = await extractTextFromImage(await getUploadedImage(req.file));
     res.status(200).json(result);
   } catch (error) {
-    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
-    }
+    if (handleUploadError(error, next)) return;
 
     next(error);
   }
@@ -362,9 +350,7 @@ router.post('/ocr/debug', upload.single('image'), async (req, res, next) => {
     const { detectedLabelMask: _detectedLabelMask, ...jsonDebugResult } = debugResult;
     res.status(200).json(jsonDebugResult);
   } catch (error) {
-    if (error instanceof MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return next(new HttpError(413, 'Image upload too large', { cause: error, expose: true }));
-    }
+    if (handleUploadError(error, next)) return;
 
     next(error);
   }
