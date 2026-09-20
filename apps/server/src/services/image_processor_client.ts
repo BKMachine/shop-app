@@ -204,6 +204,10 @@ export async function removeImageBackground(
   });
 }
 
+export async function normalizeImage(sourcePath: string) {
+  return callImageProcessor('normalize', sourcePath);
+}
+
 export async function autoCropImage(sourcePath: string) {
   return callImageProcessor('auto-crop', sourcePath);
 }

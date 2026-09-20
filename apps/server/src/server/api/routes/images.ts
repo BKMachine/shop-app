@@ -24,6 +24,7 @@ import {
   type BackgroundRemovalModel,
   ImageProcessorClientError,
   isSkippableAutoAlignError,
+  normalizeImage,
   ocrImage,
   ocrImageDebugOverlay,
   processImageStack,
@@ -704,8 +705,31 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
     const destDir = path.join(imageDir, `${data.entityType}s`, data.entityId);
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
 
-    const destPath = path.join(destDir, image.filename);
+    let destPath = path.join(destDir, image.filename);
     fs.renameSync(oldPath, destPath);
+
+    let destFilename = image.filename;
+    let mimeType = image.mimeType;
+
+    // Shipment images never pass through remove-background/auto-crop/etc.,
+    // so this is the only place they get the same oversized-upload
+    // resize/shrink other entity types get as a side effect of processing.
+    if (data.entityType === 'shipment') {
+      try {
+        const normalized = await normalizeImage(destPath);
+        const normalizedFilename = `${path.parse(image.filename).name}${normalized.extension}`;
+        const normalizedPath = path.join(destDir, normalizedFilename);
+        fs.writeFileSync(normalizedPath, normalized.buffer);
+        if (normalizedPath !== destPath) fs.unlinkSync(destPath);
+        destPath = normalizedPath;
+        destFilename = normalizedFilename;
+        mimeType = normalized.mimeType;
+      } catch (error) {
+        logger.warn(
+          `Image normalize failed for attached image ${id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
 
     const newRelPath = path.relative(imageDir, destPath).replace(/\\/g, '/');
 
@@ -725,7 +749,9 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 
     const imageUpdate: ImageUpdate = {
       ...normalizeImageUpdate(image),
+      filename: destFilename,
       relPath: newRelPath,
+      mimeType,
       ocrText,
       trackingNumber,
       status: 'attached',

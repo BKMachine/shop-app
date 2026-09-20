@@ -302,6 +302,22 @@ router.post('/rotate', upload.single('image'), async (req, res, next) => {
   }
 });
 
+// Applies only the upload-size/dimension normalization every other route
+// already gets via getUploadedImage, without any AI processing. Used to
+// shrink oversized images (e.g. shipment photos) that never go through
+// remove-background/auto-crop/auto-align/process-stack.
+router.post('/normalize', upload.single('image'), async (req, res, next) => {
+  try {
+    const image = await getUploadedImage(req.file);
+    res.setHeader('Content-Type', image.mimeType || 'application/octet-stream');
+    res.status(200).send(image.buffer);
+  } catch (error) {
+    if (handleUploadError(error, next)) return;
+
+    next(error);
+  }
+});
+
 router.post('/ocr', upload.single('image'), async (req, res, next) => {
   try {
     if (!isImageOcrEnabled()) {
