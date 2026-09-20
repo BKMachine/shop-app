@@ -25,10 +25,9 @@ if (!fs.existsSync(helperExe)) {
 }
 
 fs.mkdirSync(serverDownloadDir, { recursive: true });
-clearDirectory(serverDownloadDir);
 
 const stagedHelperExe = path.join(serverDownloadDir, 'folder_helper.exe');
-fs.copyFileSync(helperExe, stagedHelperExe);
+let changed = copyIfChanged(helperExe, stagedHelperExe);
 
 const manifest = {
   name: 'folder_helper',
@@ -40,18 +39,44 @@ const manifest = {
   },
 };
 
+const stagedInstallerExe = path.join(serverDownloadDir, 'folder_helper-setup.exe');
 if (fs.existsSync(installerExe)) {
-  const stagedInstallerExe = path.join(serverDownloadDir, 'folder_helper-setup.exe');
-  fs.copyFileSync(installerExe, stagedInstallerExe);
+  changed = copyIfChanged(installerExe, stagedInstallerExe) || changed;
   manifest.files.installer = '/downloads/folder_helper/folder_helper-setup.exe';
+} else if (fs.existsSync(stagedInstallerExe)) {
+  fs.rmSync(stagedInstallerExe);
+  changed = true;
 }
 
-fs.writeFileSync(path.join(serverDownloadDir, 'latest.json'), JSON.stringify(manifest, null, 2));
+changed =
+  writeIfChanged(
+    path.join(serverDownloadDir, 'latest.json'),
+    JSON.stringify(manifest, null, 2),
+  ) || changed;
 
-console.log(`Staged folder_helper release assets to ${serverDownloadDir}`);
+console.log(
+  changed
+    ? `Staged folder_helper release assets to ${serverDownloadDir}`
+    : `folder_helper release assets already up to date in ${serverDownloadDir}`,
+);
 
-function clearDirectory(dirPath) {
-  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
-    fs.rmSync(path.join(dirPath, entry.name), { recursive: true, force: true });
+// Skips the write (and the mtime bump) when the destination already has this
+// exact content, so an unchanged exe doesn't bust the Docker build's COPY
+// cache on every build:server run.
+function copyIfChanged(sourcePath, destPath) {
+  if (fs.existsSync(destPath) && fs.readFileSync(sourcePath).equals(fs.readFileSync(destPath))) {
+    return false;
   }
+
+  fs.copyFileSync(sourcePath, destPath);
+  return true;
+}
+
+function writeIfChanged(destPath, content) {
+  if (fs.existsSync(destPath) && fs.readFileSync(destPath, 'utf8') === content) {
+    return false;
+  }
+
+  fs.writeFileSync(destPath, content);
+  return true;
 }
