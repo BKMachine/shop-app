@@ -751,7 +751,6 @@ async function attachUploadedImage(imageId: string) {
             entityType: props.entityType ?? 'part',
             entityId: props.entityId,
             setAsMain: shouldPromoteToMain,
-            skipOcr: props.entityType === 'shipment',
           })
         ).data;
 
@@ -1150,7 +1149,6 @@ async function assignSelectedToEntity() {
                   entityType: props.entityType ?? 'part',
                   entityId: props.entityId,
                   setAsMain: shouldPromoteToMain,
-                  skipOcr: props.entityType === 'shipment',
                 })
               ).data;
         const assignedImage = {

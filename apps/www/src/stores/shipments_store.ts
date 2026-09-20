@@ -22,14 +22,6 @@ type ShipmentImageDeleteResponse = {
   nextMainImageUrl?: string;
 };
 
-type AttachShipmentImageOptions = {
-  skipOcr?: boolean;
-};
-
-type RunShipmentImageOcrOptions = {
-  silent?: boolean;
-};
-
 export const useShipmentsStore = defineStore('shipments', () => {
   const _shipments = ref<Shipment[]>([]);
   const total = ref(0);
@@ -99,7 +91,6 @@ export const useShipmentsStore = defineStore('shipments', () => {
           entityType: 'shipment',
           entityId: data._id,
           setAsMain: false,
-          skipOcr: true,
         });
       }
 
@@ -153,16 +144,11 @@ export const useShipmentsStore = defineStore('shipments', () => {
     return imagesByShipmentId.value[shipmentId] || [];
   }
 
-  async function attachTempImage(
-    shipmentId: string,
-    imageId: string,
-    options: AttachShipmentImageOptions = {},
-  ) {
+  async function attachTempImage(shipmentId: string, imageId: string) {
     const { data } = await api.post<MyImageData>(`/images/uploads/${imageId}/attach`, {
       entityType: 'shipment',
       entityId: shipmentId,
       setAsMain: false,
-      skipOcr: options.skipOcr ?? true,
     });
     await loadImages(shipmentId);
     await refresh();
@@ -176,24 +162,6 @@ export const useShipmentsStore = defineStore('shipments', () => {
     await loadImages(shipmentId);
     await refresh();
     return data;
-  }
-
-  async function rerunImageOcr(
-    shipmentId: string,
-    imageId: string,
-    options: RunShipmentImageOcrOptions = {},
-  ) {
-    try {
-      const { data } = await api.post<MyImageData>(
-        `/images/entities/shipment/${shipmentId}/images/${imageId}/ocr`,
-      );
-      await loadImages(shipmentId);
-      if (!options.silent) toastSuccess('OCR updated');
-      return data;
-    } catch (err) {
-      toastError('Failed to run OCR');
-      throw err;
-    }
   }
 
   function updateShipmentImageIds(shipmentId: string, imageIds: string[]) {
@@ -246,6 +214,5 @@ export const useShipmentsStore = defineStore('shipments', () => {
     getImages,
     attachTempImage,
     deleteImage,
-    rerunImageOcr,
   };
 });

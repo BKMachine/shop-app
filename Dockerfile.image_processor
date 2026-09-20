@@ -53,10 +53,8 @@ COPY --from=image-processor-builder /app/apps/image_processor/assets /app/apps/i
 COPY --from=image-processor-builder /app/apps/image_processor/scripts /app/apps/image_processor/scripts
 ENV IMAGE_PROCESSOR_VENVS_DIR=/app/apps/image_processor/.venv
 ENV REMBG_VENV_DIR=/app/apps/image_processor/.venv/.venv-rembg
-ENV OCR_VENV_DIR=/app/apps/image_processor/.venv/.venv-ocr
 ENV XDG_CACHE_HOME=/app/data/cache
 ENV HF_HOME=/app/data/cache/huggingface
-ENV PADDLE_HOME=/app/data/cache/paddle
 ENV NODE_ENV=production
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=10s \

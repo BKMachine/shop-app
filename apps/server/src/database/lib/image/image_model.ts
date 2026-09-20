@@ -11,8 +11,6 @@ const schema = new Schema<ImageDocumentFields>(
     filename: { type: String, required: true },
     relPath: { type: String, required: true },
     mimeType: { type: String },
-    ocrText: { type: String, default: '' },
-    trackingNumber: { type: String, default: '', index: true },
     status: {
       type: String,
       enum: ['temp', 'attached'],

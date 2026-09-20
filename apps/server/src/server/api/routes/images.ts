@@ -25,8 +25,6 @@ import {
   ImageProcessorClientError,
   isSkippableAutoAlignError,
   normalizeImage,
-  ocrImage,
-  ocrImageDebugOverlay,
   processImageStack,
   removeImageBackground,
   rotateImage,
@@ -37,7 +35,6 @@ import HttpError from '../../middleware/httpError.js';
 import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
-const imageOcrEnabled = process.env.IMAGE_OCR_ENABLED !== 'false';
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, tempDir),
@@ -66,10 +63,6 @@ function getErrorStatusCode(error: unknown, fallback: number): number {
   }
 
   return fallback;
-}
-
-function isImageOcrEnabled() {
-  return imageOcrEnabled;
 }
 
 function getExtensionForMimeType(mimeType: string): string {
@@ -133,7 +126,6 @@ const AttachImageRequest = z.strictObject({
   entityType: z.enum(['tool', 'part', 'customer', 'supplier', 'shipper', 'vendor', 'shipment']),
   entityId: mongoObjectId,
   setAsMain: z.boolean().optional(),
-  skipOcr: z.boolean().optional(),
 });
 
 const PromoteImageRequest = z.strictObject({
@@ -145,8 +137,6 @@ type RouteImage = {
   _id: { toString(): string } | string;
   relPath: string;
   createdAt: Date;
-  ocrText?: string;
-  trackingNumber?: string;
 };
 
 type PartMediaUpdate = Omit<Part, 'customer' | 'material' | 'imageIds' | 'documentIds'> & {
@@ -166,8 +156,6 @@ function serializeImage(image: unknown, isMain = false): MyImageData {
     url: `/images/${routeImage.relPath}`,
     createdAt: routeImage.createdAt.toISOString(),
     isMain,
-    ocrText: routeImage.ocrText || '',
-    trackingNumber: routeImage.trackingNumber || '',
   };
 }
 
@@ -583,106 +571,6 @@ router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) =>
   }
 });
 
-router.post(
-  '/entities/:entityType/:entityId/images/:imageId/ocr',
-  requireKnownDevice,
-  async (req, res, next) => {
-    narrowKnownDevice(req);
-    const { entityType, entityId, imageId } = req.params;
-    if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
-    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
-    if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
-    if (entityType !== 'shipment') {
-      return next(new HttpError(400, 'Manual OCR is only supported for shipment images'));
-    }
-
-    try {
-      const entity = await getMultiImageEntity('shipment', entityId);
-      if (!entity) return next(new HttpError(404, 'shipment not found'));
-
-      const image = await ImageService.findById(imageId);
-      if (!image) return next(new HttpError(404, 'Image not found'));
-      if (image.status !== 'attached') {
-        return next(new HttpError(400, 'Only attached images can be OCR processed'));
-      }
-      if (image.entityType !== entityType || image.entityId?.toString() !== entityId) {
-        return next(new HttpError(404, `Image is not attached to this ${entityType}`));
-      }
-
-      const sourcePath = path.join(imageDir, image.relPath);
-      if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
-
-      if (!isImageOcrEnabled()) {
-        res.status(200).json(serializeImage(image));
-        return;
-      }
-
-      const ocrResult = await ocrImage(sourcePath);
-      const updatedImage = await ImageService.update(
-        {
-          ...normalizeImageUpdate(image),
-          ocrText: ocrResult.text.trim(),
-          trackingNumber: ocrResult.trackingNumber?.trim() || '',
-        },
-        req.deviceId,
-      );
-      if (!updatedImage) return next(new HttpError(500, 'Failed to persist OCR text'));
-
-      if (ocrResult.trackingNumber?.trim()) {
-        await ShipmentService.appendTrackingNumber(
-          entityId,
-          ocrResult.trackingNumber.trim(),
-          req.deviceId,
-        );
-      }
-
-      res.status(200).json(serializeImage(updatedImage));
-    } catch (err) {
-      const message = getErrorMessage(err);
-      next(new HttpError(getErrorStatusCode(err, 500), message, { cause: err, expose: true }));
-    }
-  },
-);
-
-router.post(
-  '/entities/:entityType/:entityId/images/:imageId/ocr/debug',
-  requireKnownDevice,
-  async (req, res, next) => {
-    narrowKnownDevice(req);
-    const { entityType, entityId, imageId } = req.params;
-    if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
-    if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
-    if (!isValidId(imageId)) return next(new HttpError(400, 'Invalid imageId'));
-    if (entityType !== 'shipment') {
-      return next(new HttpError(400, 'Manual OCR debug is only supported for shipment images'));
-    }
-
-    try {
-      const entity = await getMultiImageEntity('shipment', entityId);
-      if (!entity) return next(new HttpError(404, 'shipment not found'));
-
-      const image = await ImageService.findById(imageId);
-      if (!image) return next(new HttpError(404, 'Image not found'));
-      if (image.status !== 'attached') {
-        return next(new HttpError(400, 'Only attached images can be OCR debug processed'));
-      }
-      if (image.entityType !== entityType || image.entityId?.toString() !== entityId) {
-        return next(new HttpError(404, `Image is not attached to this ${entityType}`));
-      }
-
-      const sourcePath = path.join(imageDir, image.relPath);
-      if (!fs.existsSync(sourcePath)) return next(new HttpError(404, 'File missing on disk'));
-
-      const overlay = await ocrImageDebugOverlay(sourcePath);
-      res.setHeader('Content-Type', overlay.mimeType);
-      res.status(200).send(overlay.buffer);
-    } catch (err) {
-      const message = getErrorMessage(err);
-      next(new HttpError(getErrorStatusCode(err, 500), message, { cause: err, expose: true }));
-    }
-  },
-);
-
 // Attach an image to an entity
 router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) => {
   narrowKnownDevice(req);
@@ -733,37 +621,17 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 
     const newRelPath = path.relative(imageDir, destPath).replace(/\\/g, '/');
 
-    let ocrText = '';
-    let trackingNumber = '';
-    if (data.entityType === 'shipment' && !data.skipOcr && isImageOcrEnabled()) {
-      try {
-        const ocrResult = await ocrImage(destPath);
-        ocrText = ocrResult.text.trim();
-        trackingNumber = ocrResult.trackingNumber?.trim() || '';
-      } catch (error) {
-        logger.warn(
-          `OCR failed for attached image ${id}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
-
     const imageUpdate: ImageUpdate = {
       ...normalizeImageUpdate(image),
       filename: destFilename,
       relPath: newRelPath,
       mimeType,
-      ocrText,
-      trackingNumber,
       status: 'attached',
       entityType: data.entityType,
       entityId: data.entityId,
     };
     const updatedImage = await ImageService.update(imageUpdate, req.deviceId);
     if (!updatedImage) return next(new HttpError(500, 'Failed to persist attached image'));
-
-    if (data.entityType === 'shipment' && trackingNumber) {
-      await ShipmentService.appendTrackingNumber(data.entityId, trackingNumber, req.deviceId);
-    }
 
     // Update part's imageIds array if entity is a part
     if (data.entityType === 'part') {

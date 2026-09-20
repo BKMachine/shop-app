@@ -264,7 +264,6 @@
           />
           <v-btn
             v-if="showDeleteShipmentControl"
-            :disabled="isSelectedShipmentOcrBusy"
             icon="mdi-delete-outline"
             title="Delete Shipment"
             variant="text"
@@ -350,90 +349,16 @@
 
                   <div class="details-image-card__footer">
                     <div class="details-image-card__actions mt-2">
-                      <!-- <v-btn
-                        color="primary"
-                        :disabled="isImageOcrBusy(image.id)"
-                        icon="mdi-text-recognition"
-                        :loading="ocrImageId === image.id"
-                        size="x-small"
-                        :title="isImageOcrQueued(image.id) ? 'OCR queued' : 'Run OCR'"
-                        variant="text"
-                        @click.stop="runImageOcr(image.id)"
-                      />
-                      <v-btn
-                        color="secondary"
-                        icon="mdi-image-search-outline"
-                        :loading="ocrDebugImageId === image.id"
-                        size="x-small"
-                        title="Open OCR Debug Overlay"
-                        variant="text"
-                        @click.stop="openImageOcrDebug(image.id)"
-                      /> -->
                       <v-btn
                         color="error"
-                        :disabled="isImageOcrBusy(image.id)"
                         icon="mdi-delete-outline"
                         :loading="deletingImageId === image.id"
                         size="xs-small"
-                        :title="
-                          isImageOcrBusy(image.id)
-                            ? 'OCR is queued for this image'
-                            : 'Delete image'
-                        "
+                        title="Delete image"
                         variant="text"
                         @click.stop="confirmDeleteImage(image)"
                       />
                     </div>
-                  </div>
-                  <div v-if="false" class="details-image-card__ocr" @click.stop>
-                    <v-btn
-                      class="details-image-card__ocr-toggle"
-                      :class="{
-                        'details-image-card__ocr-toggle--expanded': isOcrExpanded(image.id, index),
-                      }"
-                      density="compact"
-                      :icon="
-                        isOcrExpanded(image.id, index) ? 'mdi-chevron-up' : 'mdi-chevron-down'
-                      "
-                      size="x-small"
-                      :title="
-                        isOcrExpanded(image.id, index) ? 'Hide OCR text' : 'Show OCR text'
-                      "
-                      variant="text"
-                      @click.stop="toggleOcrExpanded(image.id, index)"
-                    />
-                    <transition name="ocr-expand">
-                      <div
-                        v-if="isOcrExpanded(image.id, index)"
-                        class="details-image-card__ocr-body"
-                      >
-                        <div v-if="image.trackingNumber" class="details-image-card__tracking">
-                          <div class="details-image-card__tracking-label">Tracking</div>
-                          <button
-                            class="details-image-card__tracking-value"
-                            :class="{
-                              'shipment-tracking-link': trackingUrlForCarrier(
-                                shipperName(selectedShipment),
-                                image.trackingNumber,
-                              ),
-                            }"
-                            type="button"
-                            @click.stop="openTrackingLink(shipperName(selectedShipment), image.trackingNumber)"
-                          >
-                            {{ image.trackingNumber }}
-                          </button>
-                        </div>
-                        <div v-if="image.ocrText" class="details-image-card__ocr-text">
-                          {{ image.ocrText }}
-                        </div>
-                        <div
-                          v-else-if="!image.trackingNumber"
-                          class="text-body-2 text-medium-emphasis"
-                        >
-                          No readable text was detected for this image.
-                        </div>
-                      </div>
-                    </transition>
                   </div>
                 </v-card>
               </div>
@@ -554,10 +479,6 @@ import { useShipmentsStore } from '@/stores/shipments_store';
 import { useShipperStore } from '@/stores/shipper_store';
 
 type TempImage = MyImageData & { status?: 'temp' };
-type ShipmentOcrJob = {
-  shipmentId: string;
-  imageId: string;
-};
 
 type ShipmentDraft = ReturnType<typeof createEmptyDraft>;
 
@@ -589,11 +510,6 @@ const deletingShipment = ref(false);
 const loadingTempImages = ref(false);
 const loadingShipmentImages = ref(false);
 const deletingImageId = ref('');
-const ocrImageId = ref('');
-const ocrDebugImageId = ref('');
-const expandedOcrImageIds = ref<string[]>([]);
-const queuedOcrJobs = ref<ShipmentOcrJob[]>([]);
-const processingOcrQueue = ref(false);
 const galleryOpen = ref(false);
 const galleryIndex = ref(0);
 const selectedShipment = ref<Shipment | null>(null);
@@ -643,20 +559,6 @@ const shipmentCountLabel = computed(() => {
   const count = shipmentStore.total;
   if (count === 1) return '1 shipment';
   return `${count} shipments`;
-});
-
-const showDevTools = import.meta.env.DEV;
-
-const isSelectedShipmentOcrBusy = computed(() => {
-  if (!selectedShipment.value) return false;
-
-  const selectedShipmentId = selectedShipment.value._id;
-  if (queuedOcrJobs.value.some((job) => job.shipmentId === selectedShipmentId)) {
-    return true;
-  }
-
-  if (!ocrImageId.value) return false;
-  return selectedImages.value.some((image) => image.id === ocrImageId.value);
 });
 
 const hasDetailChanges = computed(() => {
@@ -846,11 +748,7 @@ async function saveShipment() {
 
   savingShipment.value = true;
   try {
-    const shipment = await shipmentStore.create(
-      toShipmentCreate(draft.value),
-      selectedTempImageIds.value,
-    );
-    queueShipmentImageOcr(shipment._id, selectedTempImageIds.value);
+    await shipmentStore.create(toShipmentCreate(draft.value), selectedTempImageIds.value);
     createDialog.value = false;
   } finally {
     savingShipment.value = false;
@@ -903,65 +801,8 @@ async function loadSelectedShipmentImages() {
   }
 }
 
-async function handleShipmentImagesSelected(payload: {
-  images: { imageId: string; url: string; isMain?: boolean }[];
-}) {
+async function handleShipmentImagesSelected() {
   await loadSelectedShipmentImages();
-  if (selectedShipment.value) {
-    queueShipmentImageOcr(
-      selectedShipment.value._id,
-      payload.images.map((image) => image.imageId),
-    );
-  }
-}
-
-function isImageOcrQueued(imageId: string) {
-  return queuedOcrJobs.value.some((job) => job.imageId === imageId);
-}
-
-function isImageOcrBusy(imageId: string) {
-  return ocrImageId.value === imageId || isImageOcrQueued(imageId);
-}
-
-function queueShipmentImageOcr(shipmentId: string, imageIds: string[]) {
-  const nextQueuedJobs = [...queuedOcrJobs.value];
-  for (const imageId of imageIds) {
-    if (
-      !imageId ||
-      ocrImageId.value === imageId ||
-      nextQueuedJobs.some((job) => job.imageId === imageId)
-    ) {
-      continue;
-    }
-    nextQueuedJobs.push({ shipmentId, imageId });
-  }
-
-  queuedOcrJobs.value = nextQueuedJobs;
-  void processShipmentImageOcrQueue();
-}
-
-async function processShipmentImageOcrQueue() {
-  if (processingOcrQueue.value) return;
-
-  processingOcrQueue.value = true;
-  try {
-    while (queuedOcrJobs.value.length) {
-      const job = queuedOcrJobs.value[0];
-      queuedOcrJobs.value = queuedOcrJobs.value.slice(1);
-      if (!job) continue;
-
-      ocrImageId.value = job.imageId;
-      try {
-        await shipmentStore.rerunImageOcr(job.shipmentId, job.imageId, { silent: true });
-      } catch {
-        // Store shows the failure toast; continue with the rest of the queue.
-      } finally {
-        if (ocrImageId.value === job.imageId) ocrImageId.value = '';
-      }
-    }
-  } finally {
-    processingOcrQueue.value = false;
-  }
 }
 
 function openGallery(index: number) {
@@ -971,20 +812,6 @@ function openGallery(index: number) {
 
 function imageCardKey(imageId: string, index: number) {
   return `${selectedShipment.value?._id || 'shipment'}:${imageId}:${index}`;
-}
-
-function isOcrExpanded(imageId: string, index: number) {
-  return expandedOcrImageIds.value.includes(imageCardKey(imageId, index));
-}
-
-function toggleOcrExpanded(imageId: string, index: number) {
-  const cardKey = imageCardKey(imageId, index);
-  if (expandedOcrImageIds.value.includes(cardKey)) {
-    expandedOcrImageIds.value = expandedOcrImageIds.value.filter((id) => id !== cardKey);
-    return;
-  }
-
-  expandedOcrImageIds.value = [...expandedOcrImageIds.value, cardKey];
 }
 
 function showPreviousImage() {
@@ -1061,22 +888,12 @@ function finishDetailTrackingEdit() {
 }
 
 function confirmDeleteImage(image: MyImageData) {
-  if (isImageOcrBusy(image.id)) {
-    toastError('Wait for queued OCR to finish before deleting this image');
-    return;
-  }
-
   deleteImageTarget.value = image;
   deleteImageConfirm.value = true;
 }
 
 function confirmDeleteShipment() {
   if (!showDeleteShipmentControl.value) return;
-
-  if (isSelectedShipmentOcrBusy.value) {
-    toastError('Wait for queued OCR to finish before deleting this shipment');
-    return;
-  }
 
   deleteShipmentConfirm.value = true;
 }
@@ -1093,61 +910,16 @@ async function deleteConfirmedImage() {
   }
 }
 
-async function runImageOcr(imageId: string) {
-  if (!selectedShipment.value || !imageId || isImageOcrBusy(imageId)) return;
-
-  ocrImageId.value = imageId;
-
-  try {
-    await shipmentStore.rerunImageOcr(selectedShipment.value._id, imageId);
-  } finally {
-    ocrImageId.value = '';
-  }
-}
-
-async function openImageOcrDebug(imageId: string) {
-  if (!showDevTools || !selectedShipment.value || !imageId || ocrDebugImageId.value) return;
-
-  ocrDebugImageId.value = imageId;
-
-  try {
-    const { data } = await api.post<Blob>(
-      `/images/entities/shipment/${selectedShipment.value._id}/images/${imageId}/ocr/debug`,
-      undefined,
-      {
-        responseType: 'blob',
-      },
-    );
-
-    const blobUrl = URL.createObjectURL(data);
-    window.open(blobUrl, '_blank', 'noopener,noreferrer');
-    window.setTimeout(() => {
-      URL.revokeObjectURL(blobUrl);
-    }, 60_000);
-  } catch (error) {
-    toastError('Failed to open OCR debug overlay');
-    throw error;
-  } finally {
-    ocrDebugImageId.value = '';
-  }
-}
-
 async function deleteSelectedShipment() {
   if (!selectedShipment.value || !showDeleteShipmentControl.value) return;
-  if (isSelectedShipmentOcrBusy.value) {
-    toastError('Wait for queued OCR to finish before deleting this shipment');
-    return;
-  }
 
   const shipmentId = selectedShipment.value._id;
   deletingShipment.value = true;
   try {
     await shipmentStore.remove(shipmentId);
-    queuedOcrJobs.value = queuedOcrJobs.value.filter((job) => job.shipmentId !== shipmentId);
     deleteShipmentConfirm.value = false;
     detailsDialog.value = false;
     selectedShipment.value = null;
-    expandedOcrImageIds.value = [];
   } finally {
     deletingShipment.value = false;
   }
@@ -1427,77 +1199,6 @@ function endOfDayIso(value: string) {
   padding: 0;
   background: transparent;
   cursor: pointer;
-}
-
-.details-image-card__ocr {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  padding: 0 6px 6px;
-}
-
-.details-image-card__ocr-toggle {
-  min-width: 24px;
-  transition: transform 0.18s ease;
-}
-
-.details-image-card__ocr-toggle--expanded {
-  transform: rotate(180deg);
-}
-
-.details-image-card__ocr-body {
-  width: 100%;
-  padding: 4px 2px 2px;
-  transform-origin: top;
-}
-
-.details-image-card__tracking {
-  margin-bottom: 10px;
-}
-
-.details-image-card__tracking-label {
-  color: rgba(var(--v-theme-on-surface), 0.6);
-  font-size: 0.75rem;
-  line-height: 1;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-}
-
-.details-image-card__tracking-value {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
-
-.details-image-card__ocr-text {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.ocr-expand-enter-active,
-.ocr-expand-leave-active {
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    max-height 0.22s ease;
-  overflow: hidden;
-}
-
-.ocr-expand-enter-from,
-.ocr-expand-leave-to {
-  opacity: 0;
-  transform: translateY(-4px) scaleY(0.98);
-  max-height: 0;
-}
-
-.ocr-expand-enter-to,
-.ocr-expand-leave-from {
-  opacity: 1;
-  transform: translateY(0) scaleY(1);
-  max-height: 320px;
 }
 
 .shipment-batch__header,

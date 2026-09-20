@@ -18,33 +18,6 @@ type ShipmentListQuery = {
   offset?: number;
 };
 
-function normalizeTrackingNumberForCompare(value: string) {
-  return value
-    .replace(/[\s-]+/g, '')
-    .trim()
-    .toUpperCase();
-}
-
-function appendTrackingNumberValue(existingValue: unknown, trackingNumber: string) {
-  const normalizedTrackingNumber = normalizeText(trackingNumber);
-  if (!normalizedTrackingNumber) return normalizeText(existingValue);
-
-  const existingLines = normalizeText(existingValue)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const existingKeys = new Set(
-    existingLines.map((line) => normalizeTrackingNumberForCompare(line)).filter(Boolean),
-  );
-  const nextKey = normalizeTrackingNumberForCompare(normalizedTrackingNumber);
-
-  if (!nextKey || existingKeys.has(nextKey)) {
-    return existingLines.join('\n');
-  }
-
-  return [...existingLines, normalizedTrackingNumber].join('\n');
-}
-
 function toPayload(data: ShipmentCreate | ShipmentUpdate) {
   return {
     shippedAt: new Date(data.shippedAt),
@@ -185,30 +158,6 @@ async function removeImage(id: string, imageId: string, deviceId: string): Promi
   );
 }
 
-async function appendTrackingNumber(
-  id: string,
-  trackingNumber: string,
-  deviceId: string,
-): Promise<ShipmentDoc> {
-  const shipment = await findById(id);
-  if (!shipment) throw new Error(`Missing shipment document id: ${id}`);
-
-  const nextTrackingNumber = appendTrackingNumberValue(shipment.trackingNumber, trackingNumber);
-  if (nextTrackingNumber === normalizeText(shipment.trackingNumber)) {
-    return shipment;
-  }
-
-  return update(
-    {
-      ...(shipment.toObject() as unknown as ShipmentUpdate),
-      _id: id,
-      customer: getEntityIdOrNull(shipment.customer),
-      trackingNumber: nextTrackingNumber,
-    },
-    deviceId,
-  );
-}
-
 export default {
   list,
   findById,
@@ -217,5 +166,4 @@ export default {
   remove,
   addImage,
   removeImage,
-  appendTrackingNumber,
 };

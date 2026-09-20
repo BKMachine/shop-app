@@ -170,8 +170,6 @@ declare global {
     filename: string;
     relPath: string;
     mimeType?: string;
-    ocrText?: string;
-    trackingNumber?: string;
     status: 'temp' | 'attached';
     entityType:
       | 'tool'

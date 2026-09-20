@@ -9,17 +9,11 @@ import {
 import { removeImageBackground } from '../../../services/background_removal_service.js';
 import { autoAlignImage } from '../../../services/image_auto_align_service.js';
 import { autoCropImage } from '../../../services/image_auto_crop_service.js';
-import {
-  extractTextFromImage,
-  extractTextFromImageDebug,
-  renderTextFromImageDebugOverlay,
-} from '../../../services/image_ocr_service.js';
 import type { InputImage, ProcessedImage } from '../../../services/image_processing_types.js';
 import { rotateImage } from '../../../services/image_rotation_service.js';
 import HttpError from '../../middleware/httpError.js';
 
 const router: Router = Router();
-const imageOcrEnabled = process.env.IMAGE_OCR_ENABLED !== 'false';
 const DEFAULT_MAX_UPLOAD_FILE_SIZE_BYTES = 15 * 1024 * 1024;
 const MAX_ACCEPTED_UPLOAD_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const MAX_IMAGE_WIDTH = 1920;
@@ -179,10 +173,6 @@ function sendProcessedImage(res: Response, processed: ProcessedImage) {
   res.status(200).send(processed.buffer);
 }
 
-function isImageOcrEnabled() {
-  return imageOcrEnabled;
-}
-
 router.get('/health', (_req, res) => {
   res.status(200).json({ ok: true });
 });
@@ -311,60 +301,6 @@ router.post('/normalize', upload.single('image'), async (req, res, next) => {
     const image = await getUploadedImage(req.file);
     res.setHeader('Content-Type', image.mimeType || 'application/octet-stream');
     res.status(200).send(image.buffer);
-  } catch (error) {
-    if (handleUploadError(error, next)) return;
-
-    next(error);
-  }
-});
-
-router.post('/ocr', upload.single('image'), async (req, res, next) => {
-  try {
-    if (!isImageOcrEnabled()) {
-      res.status(200).json({
-        text: '',
-        confidence: 0,
-        trackingNumber: '',
-      });
-      return;
-    }
-
-    const result = await extractTextFromImage(await getUploadedImage(req.file));
-    res.status(200).json(result);
-  } catch (error) {
-    if (handleUploadError(error, next)) return;
-
-    next(error);
-  }
-});
-
-router.post('/ocr/debug', upload.single('image'), async (req, res, next) => {
-  try {
-    const image = await getUploadedImage(req.file);
-    const debugResult = await extractTextFromImageDebug(image);
-    const format = String(req.query.format ?? req.body?.format ?? 'json')
-      .trim()
-      .toLowerCase();
-
-    if (format === 'image' || format === 'png' || format === 'overlay') {
-      const overlay = await renderTextFromImageDebugOverlay(image, debugResult);
-      res.setHeader('Content-Type', 'image/png');
-      res.setHeader('X-Ocr-Selected-Source', debugResult.selectedSource);
-      if (debugResult.selectedResult.trackingNumber) {
-        res.setHeader('X-Ocr-Tracking-Number', debugResult.selectedResult.trackingNumber);
-      }
-      if (debugResult.detectedLabelRegion) {
-        res.setHeader(
-          'X-Ocr-Detected-Label-Region',
-          JSON.stringify(debugResult.detectedLabelRegion),
-        );
-      }
-      res.status(200).send(overlay);
-      return;
-    }
-
-    const { detectedLabelMask: _detectedLabelMask, ...jsonDebugResult } = debugResult;
-    res.status(200).json(jsonDebugResult);
   } catch (error) {
     if (handleUploadError(error, next)) return;
 
