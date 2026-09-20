@@ -7,7 +7,7 @@ import logger from '../../../logger.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import { normalizeQueryValue } from '../../../utilities/normalizeQueryValue.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -175,7 +175,7 @@ router.get('/tools/info/:scanCode', async (req, res, next) => {
 
 // Create a new tool
 router.post('/tools', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreateToolRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid tool data provided:', error.message);
@@ -193,7 +193,7 @@ router.post('/tools', requireKnownDevice, async (req, res, next) => {
 
 // Update an existing tool
 router.put('/tools', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateToolRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid tool data provided:', error.message);
@@ -211,7 +211,7 @@ router.put('/tools', requireKnownDevice, async (req, res, next) => {
 
 // Decrement a tool by scanning its item or barcode value
 router.put('/tools/pick', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { scanCode }: { scanCode?: string } = req.body;
   if (!scanCode) return next(new HttpError(400, 'scanCode is required.'));
 
@@ -225,7 +225,7 @@ router.put('/tools/pick', requireKnownDevice, async (req, res, next) => {
 
 // Adjust or set stock by a specific amount (positive or negative)
 router.put('/tools/stock', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id, amount }: { id: string; amount: number } = req.body;
   if (!id || amount === undefined || amount === null)
     return next(new HttpError(400, 'id and amount are required.'));

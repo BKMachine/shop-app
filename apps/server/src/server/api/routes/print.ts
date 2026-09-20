@@ -13,7 +13,7 @@ import {
 } from '../../../services/image_processor_client.js';
 import { getEntityId } from '../../../utilities/entities.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -162,7 +162,7 @@ function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
 }
 
 router.post('/print/location', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { loc, pos }: PrintLocationBody = req.body;
   if (!loc || !pos) return next(new HttpError(400, 'loc and pos are required.'));
 
@@ -182,7 +182,7 @@ router.post('/print/location', requireKnownDevice, async (req, res, next) => {
 });
 
 router.post('/print/item', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { identifier, description, entity, loc, pos, imageUrl, qrText }: PrintItemBody = req.body;
   if (!identifier || !description || !entity || !loc || !pos || !qrText) {
     return next(
@@ -218,7 +218,7 @@ router.post('/print/item', requireKnownDevice, async (req, res, next) => {
 });
 
 router.get('/print/jobs/:id/traveler', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
 
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid job id'));

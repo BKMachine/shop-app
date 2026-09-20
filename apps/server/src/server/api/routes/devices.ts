@@ -4,8 +4,8 @@ import DeviceService from '../../../database/lib/device/device_service.js';
 import logger from '../../../logger.js';
 import HttpError from '../../middleware/httpError.js';
 import {
-  assertKnownDevice,
   getClientIp,
+  narrowKnownDevice,
   requireKnownDevice,
 } from '../../middleware/knownDevices.js';
 
@@ -54,7 +54,7 @@ router.post('/devices/register', async (req, res, next) => {
 });
 
 router.get('/devices/me', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
 
   try {
     return res.status(200).json({ device: req.device });

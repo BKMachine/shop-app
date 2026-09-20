@@ -5,7 +5,7 @@ import PartService from '../../../database/lib/part/part_service.js';
 import PartNoteService from '../../../database/lib/part_note/part_note_service.js';
 import logger from '../../../logger.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -27,7 +27,7 @@ router.get('/parts/:partId/notes', async (req, res, next) => {
 });
 
 router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { partId } = req.params;
   if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
   const { success, data, error } = PartNoteRequest.safeParse(req.body);
@@ -58,7 +58,7 @@ router.post('/parts/:partId/notes', requireKnownDevice, async (req, res, next) =
 });
 
 router.put('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { partId, noteId } = req.params;
   if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
   if (!isValidId(noteId)) return next(new HttpError(400, 'Invalid note id'));
@@ -92,7 +92,7 @@ router.put('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, 
 });
 
 router.delete('/parts/:partId/notes/:noteId', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { partId, noteId } = req.params;
   if (!isValidId(partId)) return next(new HttpError(400, 'Invalid part id'));
   if (!isValidId(noteId)) return next(new HttpError(400, 'Invalid note id'));

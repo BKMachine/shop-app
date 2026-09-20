@@ -3,7 +3,7 @@ import * as z from 'zod';
 import MiscSettings from '../../../database/lib/misc_settings/misc_settings_service.js';
 import logger from '../../../logger.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -27,7 +27,7 @@ router.get('/misc-settings', async (_req, res, next) => {
 });
 
 router.put('/misc-settings', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateMiscSettingsRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid misc settings provided:', error.message);

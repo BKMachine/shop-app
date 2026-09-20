@@ -4,7 +4,7 @@ import Reports from '../../../database/lib/report/report_service.js';
 import logger from '../../../logger.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -45,7 +45,7 @@ router.get('/reports', async (_req, res, next) => {
 });
 
 router.post('/reports', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreateReportRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid report data provided:', error.message);
@@ -61,7 +61,7 @@ router.post('/reports', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/reports', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateReportRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid report data provided:', error.message);
@@ -77,7 +77,7 @@ router.put('/reports', requireKnownDevice, async (req, res, next) => {
 });
 
 router.delete('/reports/:id', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const id = String(req.params.id ?? '');
   if (!id) return next(new HttpError(400, 'No report id provided.'));
 

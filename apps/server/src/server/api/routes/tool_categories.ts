@@ -3,7 +3,7 @@ import * as z from 'zod';
 import ToolCategorySettings from '../../../database/lib/tool_category_settings/tool_category_settings_service.js';
 import logger from '../../../logger.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -31,7 +31,7 @@ router.get('/tool-categories', async (_req, res, next) => {
 });
 
 router.put('/tool-categories', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateToolCategorySettingsRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid tool category settings provided:', error.message);

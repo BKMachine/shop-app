@@ -3,7 +3,7 @@ import Audit from '../../../database/lib/audit/audit_service.js';
 import { clampLimit, clampOffset } from '../../../utilities/pagination.js';
 import HttpError from '../../middleware/httpError.js';
 import {
-  assertKnownDevice,
+  narrowKnownDevice,
   requireAdmin,
   requireKnownDevice,
 } from '../../middleware/knownDevices.js';
@@ -82,7 +82,7 @@ router.post('/audits/materials/cost', async (req, res, next) => {
 });
 
 router.post('/audits', requireKnownDevice, requireAdmin, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { types, limit, offset }: { types?: Audit['type'][]; limit?: number; offset?: number } =
     req.body;
 

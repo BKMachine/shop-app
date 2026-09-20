@@ -33,7 +33,7 @@ import {
 import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const imageOcrEnabled = process.env.IMAGE_OCR_ENABLED !== 'false';
@@ -336,7 +336,7 @@ async function createTempImageFromBuffer(
 
 // Upload a temp image via file
 router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   if (!req.file) return next(new HttpError(400, 'No file uploaded'));
 
   try {
@@ -364,7 +364,7 @@ router.post('/uploads/file', requireKnownDevice, upload.single('image'), async (
 
 // Upload a temp image via URL
 router.post('/uploads/url', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UploadUrlRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid image URL upload request:', error.message);
@@ -423,7 +423,7 @@ router.get('/uploads/temps', async (_req, res, next) => {
 });
 
 router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
   const { success, data, error } = RemoveBackgroundRequest.safeParse(req.body ?? {});
@@ -456,7 +456,7 @@ router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, re
 });
 
 router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
 
@@ -480,7 +480,7 @@ router.post('/uploads/:id/auto-crop', requireKnownDevice, async (req, res, next)
 });
 
 router.post('/uploads/:id/auto-align', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
 
@@ -519,7 +519,7 @@ router.post('/uploads/:id/auto-align', requireKnownDevice, async (req, res, next
 });
 
 router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
   const { success, data, error } = ProcessStackRequest.safeParse(req.body ?? {});
@@ -553,7 +553,7 @@ router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, n
 });
 
 router.post('/uploads/:id/rotate', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
   const { success, data, error } = RotateImageRequest.safeParse(req.body ?? {});
@@ -586,7 +586,7 @@ router.post(
   '/entities/:entityType/:entityId/images/:imageId/ocr',
   requireKnownDevice,
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { entityType, entityId, imageId } = req.params;
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
@@ -647,7 +647,7 @@ router.post(
   '/entities/:entityType/:entityId/images/:imageId/ocr/debug',
   requireKnownDevice,
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { entityType, entityId, imageId } = req.params;
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
@@ -684,7 +684,7 @@ router.post(
 
 // Attach an image to an entity
 router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
   const { success, data, error } = AttachImageRequest.safeParse(req.body ?? {});
@@ -808,7 +808,7 @@ router.post('/uploads/:id/attach', requireKnownDevice, async (req, res, next) =>
 
 // Promote an existing image to be the main image for an entity
 router.post('/:id/promote-to-main', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
   const { success, data, error } = PromoteImageRequest.safeParse(req.body ?? {});
@@ -903,7 +903,7 @@ router.post(
   '/entities/:entityType/:entityId/images/:imageId/copy-to-temp',
   requireKnownDevice,
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { entityType, entityId, imageId } = req.params;
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
@@ -966,7 +966,7 @@ router.post(
   '/entities/:entityType/:entityId/images/:imageId/add',
   requireKnownDevice,
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { entityType, entityId, imageId } = req.params;
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
@@ -1003,7 +1003,7 @@ router.post(
 
 // Delete a temporary image
 router.delete('/uploads/:id', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid image id'));
 
@@ -1026,7 +1026,7 @@ router.delete('/uploads/:id', requireKnownDevice, async (req, res, next) => {
 
 // Delete all temporary images
 router.delete('/uploads', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
 
   try {
     const tempImages = await ImageService.listTemps();
@@ -1055,7 +1055,7 @@ router.delete(
   '/entities/:entityType/:entityId/images/:imageId',
   requireKnownDevice,
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { entityType, entityId, imageId } = req.params;
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));
@@ -1123,7 +1123,7 @@ router.delete(
   '/entities/:entityType/:entityId/image',
   requireKnownDevice,
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { entityType, entityId } = req.params;
     if (!entityType) return next(new HttpError(400, 'Invalid entityType'));
     if (!isValidId(entityId)) return next(new HttpError(400, 'Invalid entityId'));

@@ -4,7 +4,7 @@ import Suppliers from '../../../database/lib/supplier/supplier_service.js';
 import logger from '../../../logger.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -35,7 +35,7 @@ router.get('/suppliers', async (_req, res, next) => {
 });
 
 router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreateSupplierRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid supplier data provided:', error.message);
@@ -51,7 +51,7 @@ router.post('/suppliers', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/suppliers', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateSupplierRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid supplier data provided:', error.message);

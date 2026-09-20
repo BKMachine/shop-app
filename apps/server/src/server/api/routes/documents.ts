@@ -11,7 +11,7 @@ import logger from '../../../logger.js';
 import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -80,7 +80,7 @@ router.post(
   requireKnownDevice,
   upload.single('document'),
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { success, data, error } = PartDocumentEntityParams.safeParse(req.params);
     if (!success) {
       logger.error('Invalid document params provided:', error.message);
@@ -137,7 +137,7 @@ router.delete(
   '/entities/part/:entityId/documents/:documentId',
   requireKnownDevice,
   async (req, res, next) => {
-    assertKnownDevice(req);
+    narrowKnownDevice(req);
     const { success, data, error } = PartDocumentParams.safeParse(req.params);
     if (!success) {
       logger.error('Invalid document params provided:', error.message);

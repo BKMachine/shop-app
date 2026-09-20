@@ -11,7 +11,7 @@ import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import { normalizeQueryValue } from '../../../utilities/normalizeQueryValue.js';
 import HttpError from '../../middleware/httpError.js';
 import {
-  assertKnownDevice,
+  narrowKnownDevice,
   requireAdmin,
   requireKnownDevice,
 } from '../../middleware/knownDevices.js';
@@ -75,7 +75,7 @@ router.get('/shipments/:id', async (req, res, next) => {
 });
 
 router.post('/shipments', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreateShipmentRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid shipment data provided:', error.message);
@@ -91,7 +91,7 @@ router.post('/shipments', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/shipments', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateShipmentRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid shipment data provided:', error.message);
@@ -107,7 +107,7 @@ router.put('/shipments', requireKnownDevice, async (req, res, next) => {
 });
 
 router.delete('/shipments/:id', requireKnownDevice, requireAdmin, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
 
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid shipment id'));

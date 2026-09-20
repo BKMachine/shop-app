@@ -4,7 +4,7 @@ import Customers from '../../../database/lib/customer/customer_service.js';
 import logger from '../../../logger.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -35,7 +35,7 @@ router.get('/customers', async (_req, res, next) => {
 });
 
 router.post('/customers', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreateCustomerRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid customer data provided:', error.message);
@@ -51,7 +51,7 @@ router.post('/customers', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/customers', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateCustomerRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid customer data provided:', error.message);

@@ -10,7 +10,7 @@ import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import { normalizeQueryValue } from '../../../utilities/normalizeQueryValue.js';
 import HttpError from '../../middleware/httpError.js';
 import {
-  assertKnownDevice,
+  narrowKnownDevice,
   requireAdmin,
   requireKnownDevice,
 } from '../../middleware/knownDevices.js';
@@ -168,7 +168,7 @@ router.get('/jobs/:id', async (req, res, next) => {
 });
 
 router.post('/jobs', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreateJobRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid job data provided:', error.message);
@@ -186,7 +186,7 @@ router.post('/jobs', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/jobs', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateJobRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid job data provided:', error.message);
@@ -204,7 +204,7 @@ router.put('/jobs', requireKnownDevice, async (req, res, next) => {
 });
 
 router.delete('/jobs/:id', requireKnownDevice, requireAdmin, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
 
   const { id } = req.params;
   if (!isValidId(id)) return next(new HttpError(400, 'Invalid job id'));

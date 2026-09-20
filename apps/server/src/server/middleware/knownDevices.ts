@@ -112,8 +112,13 @@ export async function requireKnownDevice(req: Request, res: Response, next: Next
  * This is an internal invariant check, not a client auth response path. If the
  * expected device context is missing, it throws a 500 `HttpError` because the
  * route or middleware chain is misconfigured.
+ *
+ * Must be called inline at the top of each handler (not registered as
+ * middleware) — TypeScript's `asserts` narrowing only applies within the
+ * calling function's own control flow, so it can't narrow `req` for a
+ * separately-registered downstream handler.
  */
-export function assertKnownDevice<T extends Request>(req: T): asserts req is T & KnownDeviceFields {
+export function narrowKnownDevice<T extends Request>(req: T): asserts req is T & KnownDeviceFields {
   if (!req.device || !req.deviceId || !req.deviceContext) {
     throw new HttpError(500, 'Known device context was expected but is missing.');
   }

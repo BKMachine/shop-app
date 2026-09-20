@@ -7,7 +7,7 @@ import { buildHighlightedPdf } from '../../../services/pdfs/pdf_highlight_servic
 import pdfParserService from '../../../services/pdfs/pdf_parser_service.js';
 import mongoObjectId from '../../../utilities/mongoObjectId.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -56,7 +56,7 @@ router.get('/materials', async (_req, res, next) => {
 });
 
 router.post('/materials', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreateMaterialRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid material data provided:', error.message);
@@ -72,7 +72,7 @@ router.post('/materials', requireKnownDevice, async (req, res, next) => {
 });
 
 router.put('/materials', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdateMaterialRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid material data provided:', error.message);
@@ -107,7 +107,7 @@ router.post('/materials/parse-pdf', upload.single('pdf'), async (req, res, next)
 });
 
 router.post('/materials/parse-pdf/apply', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = MaterialApplyUpdateRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid updates data provided:', error.message);

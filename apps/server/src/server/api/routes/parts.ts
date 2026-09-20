@@ -9,7 +9,7 @@ import {
   normalizeQueryValue,
 } from '../../../utilities/normalizeQueryValue.js';
 import HttpError from '../../middleware/httpError.js';
-import { assertKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
+import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
 
@@ -186,7 +186,7 @@ router.get('/parts/:id/relations', async (req, res, next) => {
 
 // Create new part
 router.post('/parts', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = CreatePartRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid part data provided:', error.message);
@@ -204,7 +204,7 @@ router.post('/parts', requireKnownDevice, async (req, res, next) => {
 
 // Update an existing part
 router.put('/parts', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdatePartRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid part data provided:', error.message);
@@ -224,7 +224,7 @@ router.put('/parts', requireKnownDevice, async (req, res, next) => {
 
 // Adjust or set stock by a specific amount (positive or negative)
 router.put('/parts/stock', requireKnownDevice, async (req, res, next) => {
-  assertKnownDevice(req);
+  narrowKnownDevice(req);
   const { success, data, error } = UpdatePartStockRequest.safeParse(req.body);
   if (!success) {
     logger.error('Invalid part stock data provided:', error.message);
