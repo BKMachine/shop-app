@@ -16,16 +16,24 @@ COPY --from=image-processor-prune /app/out/json/ .
 RUN grep -q '^  injectWorkspacePackages: true$' pnpm-lock.yaml || sed -i "/^settings:$/a\\  injectWorkspacePackages: true" pnpm-lock.yaml
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --config.inject-workspace-packages=true
-COPY --from=image-processor-prune /app/out/full/ .
 
 FROM image-processor-installer AS image-processor-builder
 ENV pnpm_config_verify_deps_before_run=false
 COPY biome.json biome.json
+COPY --from=image-processor-prune /app/out/full/ .
 RUN pnpm run ci --filter=image_processor
 RUN pnpm run build --filter=image_processor
 
 FROM image-processor-installer AS image-processor-deploy
 ENV pnpm_config_verify_deps_before_run=false
+# Only @repo/utilities (and the tsconfig/types packages it builds against) are
+# copied here, not the full prune output: apps/image_processor's own source
+# has no effect on the deployed prod node_modules, so editing it must not
+# invalidate this ~300MB layer.
+COPY --from=image-processor-prune /app/out/full/turbo.json turbo.json
+COPY --from=image-processor-prune /app/out/full/packages/utilities packages/utilities
+COPY --from=image-processor-prune /app/out/full/packages/types packages/types
+COPY --from=image-processor-prune /app/out/full/packages/typescript-config packages/typescript-config
 RUN pnpm run build --filter=@repo/utilities
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm deploy --filter=image_processor --prod --config.inject-workspace-packages=true /app/deploy/image_processor

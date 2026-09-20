@@ -24,17 +24,25 @@ COPY --from=server-prune /app/out/json/ .
 RUN grep -q '^  injectWorkspacePackages: true$' pnpm-lock.yaml || sed -i "/^settings:$/a\\  injectWorkspacePackages: true" pnpm-lock.yaml
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --config.inject-workspace-packages=true
-COPY --from=server-prune /app/out/full/ .
 
 FROM server-installer AS server-builder
 COPY biome.json biome.json
-ENV pnpm_config_verify_deps_before_run=false 
+COPY --from=server-prune /app/out/full/ .
+ENV pnpm_config_verify_deps_before_run=false
 RUN pnpm run ci --filter=server
 RUN pnpm run test --filter=server
 RUN pnpm run build --filter=server
 
 FROM server-installer AS server-deploy
 ENV pnpm_config_verify_deps_before_run=false
+# Only @repo/utilities (and the tsconfig/types packages it builds against) are
+# copied here, not the full prune output: apps/server's own source has no
+# effect on the deployed prod node_modules, so editing it must not invalidate
+# this layer.
+COPY --from=server-prune /app/out/full/turbo.json turbo.json
+COPY --from=server-prune /app/out/full/packages/utilities packages/utilities
+COPY --from=server-prune /app/out/full/packages/types packages/types
+COPY --from=server-prune /app/out/full/packages/typescript-config packages/typescript-config
 RUN pnpm run build --filter=@repo/utilities
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm deploy --filter=server --prod --config.inject-workspace-packages=true /app/deploy/server
