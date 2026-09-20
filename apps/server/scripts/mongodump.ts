@@ -22,4 +22,16 @@ const result = spawnSync(
   { stdio: 'inherit' },
 );
 
+if (result.error) {
+  if ('code' in result.error && result.error.code === 'ENOENT') {
+    console.error(
+      'mongodump was not found on PATH. Install the MongoDB Database Tools ' +
+        '(mongodb-database-tools) and make sure `mongodump` is available, then try again.',
+    );
+  } else {
+    console.error('Failed to run mongodump:', result.error.message);
+  }
+  process.exit(1);
+}
+
 process.exit(result.status ?? 1);
