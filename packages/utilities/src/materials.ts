@@ -106,6 +106,7 @@ export const materials: MaterialList = {
   '440': { density: 0.279627, category: 'stainless' },
   '6Al-4V': { density: 0.160044, category: 'titanium' },
   '6Al-7Nb': { density: 0.163295, category: 'titanium' },
+  Acrylic: { density: 0.0426, category: 'plastic' },
   Delrin: { density: 0.0513, category: 'plastic' },
   Nylon: { density: 0.0412, category: 'plastic' },
   PEEK: { density: 0.0473, category: 'plastic' },
