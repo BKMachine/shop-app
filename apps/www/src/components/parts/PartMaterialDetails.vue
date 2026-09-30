@@ -33,7 +33,11 @@
                         {{ component.materialDescription }}
                       </span>
                       <span class="sub-component-separator">-</span>
-                      <span class="text-medium-emphasis">
+                      <span v-if="component.isPiece" class="text-medium-emphasis">
+                        {{ component.piecesPerPart }}
+                        pc
+                      </span>
+                      <span v-else class="text-medium-emphasis">
                         @ {{ formatDimension(component.materialLength) }}"
                       </span>
                       <span class="text-medium-emphasis">x</span>
@@ -117,49 +121,62 @@
                 hide-details
                 label="Material is customer supplied"
               />
-              <v-radio-group v-model="part.materialCutType" hide-details inline label="Cut Type">
-                <v-radio label="Blanks" value="blanks" />
-                <v-radio label="Bars" value="bars" />
-              </v-radio-group>
-              <div>
-                <v-btn
-                  v-if="part.materialCutType === 'bars'"
-                  class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
-                  color="primary"
-                  density="compact"
-                  size="x-small"
-                  variant="text"
-                  @click="setMaterialDefaults('lathe')"
-                >
-                  Lathe defaults
-                </v-btn>
-                <v-btn
-                  v-if="part.materialCutType === 'bars'"
-                  class="mt-1 px-0 ml-4 text-caption-2 swiss-defaults-btn"
-                  color="primary"
-                  density="compact"
-                  size="x-small"
-                  variant="text"
-                  @click="setMaterialDefaults('2from1')"
-                >
-                  2 from 1
-                </v-btn>
-              </div>
-              <div>
-                <v-btn
-                  v-if="part.materialCutType === 'bars'"
-                  class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
-                  color="primary"
-                  density="compact"
-                  size="x-small"
-                  variant="text"
-                  @click="setMaterialDefaults('swiss')"
-                >
-                  Swiss defaults
-                </v-btn>
-              </div>
+              <template v-if="!isPiece">
+                <v-radio-group v-model="part.materialCutType" hide-details inline label="Cut Type">
+                  <v-radio label="Blanks" value="blanks" />
+                  <v-radio label="Bars" value="bars" />
+                </v-radio-group>
+                <div>
+                  <v-btn
+                    v-if="part.materialCutType === 'bars'"
+                    class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
+                    color="primary"
+                    density="compact"
+                    size="x-small"
+                    variant="text"
+                    @click="setMaterialDefaults('lathe')"
+                  >
+                    Lathe defaults
+                  </v-btn>
+                  <v-btn
+                    v-if="part.materialCutType === 'bars'"
+                    class="mt-1 px-0 ml-4 text-caption-2 swiss-defaults-btn"
+                    color="primary"
+                    density="compact"
+                    size="x-small"
+                    variant="text"
+                    @click="setMaterialDefaults('2from1')"
+                  >
+                    2 from 1
+                  </v-btn>
+                </div>
+                <div>
+                  <v-btn
+                    v-if="part.materialCutType === 'bars'"
+                    class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
+                    color="primary"
+                    density="compact"
+                    size="x-small"
+                    variant="text"
+                    @click="setMaterialDefaults('swiss')"
+                  >
+                    Swiss defaults
+                  </v-btn>
+                </div>
+              </template>
             </v-col>
-            <v-col cols="6">
+            <v-col v-if="isPiece" cols="6">
+              <v-text-field
+                v-model.number="part.blanksPerPart"
+                hint="Pieces consumed per finished part"
+                label="Pieces per part"
+                min="1"
+                :rules="[blanksPerPartRule]"
+                type="number"
+                @keydown="onlyAllowNumeric($event)"
+              />
+            </v-col>
+            <v-col v-else cols="6">
               <v-text-field
                 v-model.number="part.materialLength"
                 :hint="materialUsageMessage"
@@ -189,7 +206,7 @@
             </v-col>
           </v-row>
           <v-row>
-            <template v-if="part.materialCutType === 'bars'">
+            <template v-if="part.materialCutType === 'bars' && !isPiece">
               <v-col cols="6">
                 <v-text-field
                   v-model.number="part.barLength"
@@ -212,7 +229,10 @@
               </v-col>
             </template>
           </v-row>
-          <div v-if="part.materialCutType !== 'bars'" class="misc-material-settings mt-2">
+          <div
+            v-if="part.materialCutType !== 'bars' && !isPiece"
+            class="misc-material-settings mt-2"
+          >
             <v-divider class="mb-2" />
             <button
               class="misc-material-settings__toggle"
@@ -247,8 +267,23 @@
       <v-card color="blue-grey" variant="tonal">
         <v-card-title class="text-subtitle-2 pa-3 pb-2"> Yield Summary </v-card-title>
         <v-card-text>
+          <v-table v-if="isPiece" class="rounded bg-transparent" density="compact">
+            <tbody>
+              <tr>
+                <td class="text-medium-emphasis text-caption row-1">Material</td>
+                <td class="text-body-2">{{ selectedMaterial?.description }}</td>
+                <td class="text-right">
+                  <v-chip class="yield-chip" color="success" size="small" variant="elevated">
+                    {{ effectiveBlanksPerPart }}
+                    {{ effectiveBlanksPerPart === 1 ? 'piece' : 'pieces' }}
+                    / part
+                  </v-chip>
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
           <v-table
-            v-if="part.materialCutType !== 'bars'"
+            v-else-if="part.materialCutType !== 'bars'"
             class="rounded bg-transparent"
             density="compact"
           >
@@ -368,7 +403,15 @@
               <tr>
                 <td class="text-medium-emphasis text-body-2 row-1">Material Cost:</td>
                 <td class="text-body-2">
-                  <div class="d-flex align-center ga-2">
+                  <div v-if="isPiece" class="d-flex align-center ga-2">
+                    <v-chip color="purple-darken-2" variant="tonal"
+                      >${{ formatCost(billableMaterialCost) }}
+                      / piece</v-chip
+                    >
+                    <span class="text-medium-emphasis">×</span>
+                    <v-chip variant="outlined">{{ effectiveBlanksPerPart }} pieces / part</v-chip>
+                  </div>
+                  <div v-else class="d-flex align-center ga-2">
                     <v-chip color="purple-darken-2" variant="tonal"
                       >${{ formatCost(billableMaterialCost) }}</v-chip
                     >
@@ -396,6 +439,7 @@
 </template>
 
 <script setup lang="ts">
+import { isPieceMaterial } from '@repo/utilities/materials';
 import { computed, ref, watch } from 'vue';
 import {
   calculateAssemblyMaterialCost,
@@ -472,6 +516,8 @@ const subComponentMaterialRows = computed(() => {
       description: subComponent.part.description,
       customerSuppliedMaterial: Boolean(subComponent.part.customerSuppliedMaterial),
       materialDescription: material?.description || 'No material set',
+      isPiece: isPieceMaterial(material),
+      piecesPerPart: Math.max(1, Number(subComponent.part.blanksPerPart) || 1),
       materialLength: Number(subComponent.part.materialLength) || 0,
       materialCost,
       materialSubtotal: materialCost * Math.max(1, Number(subComponent.entry.qty) || 1),
@@ -479,8 +525,11 @@ const subComponentMaterialRows = computed(() => {
   });
 });
 
+const selectedMaterial = computed(() => resolveMaterial(props.part.material));
+const isPiece = computed(() => isPieceMaterial(selectedMaterial.value));
+
 const selectedMaterialLength = computed(() => {
-  return resolveMaterial(props.part.material)?.length || 0;
+  return selectedMaterial.value?.length || 0;
 });
 
 const effectiveBlanksPerPart = computed(() => {
@@ -596,8 +645,9 @@ function assignMaterial() {
 }
 
 const materialCost = computed(() => {
-  const material = resolveMaterial(props.part.material);
+  const material = selectedMaterial.value;
   if (!material) return 0;
+  if (isPieceMaterial(material)) return material.costPerPiece || 0;
   const feet = (material.length || 0) / 12;
   return feet * (material.costPerFoot || 0);
 });
@@ -649,6 +699,7 @@ const sortedMaterials = computed(() => {
 });
 
 const partLengthRule = (val: string) => {
+  if (isPiece.value) return true;
   const partLength = Number(val) || 0;
   const totalBarLength = Number(selectedMaterialLength.value) || 0;
   return partLength <= totalBarLength || 'Length per part cannot exceed total bar length';

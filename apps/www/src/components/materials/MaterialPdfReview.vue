@@ -536,8 +536,11 @@ function buildMaterialFromParsedResult(result: MaterialParsePreview): MaterialCr
 
   const material: MaterialCreate = {
     description: '',
+    kind: 'stock',
     materialType: parsedMaterial.materialType,
     type: parsedMaterial.type,
+    form: null,
+    name: null,
     isMetric: parsedMaterial.isMetric ?? false,
     height: parsedMaterial.height ?? null,
     width: parsedMaterial.width ?? null,
@@ -546,6 +549,7 @@ function buildMaterialFromParsedResult(result: MaterialParsePreview): MaterialCr
     length: parsedMaterial.length ?? null,
     supplier: parsedMaterial.supplier,
     costPerFoot: result.proposedCostPerFoot,
+    costPerPiece: null,
   };
 
   material.description = buildMaterialDescription(material);

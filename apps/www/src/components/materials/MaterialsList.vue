@@ -13,8 +13,9 @@
         <v-btn size="small" value="All">All</v-btn>
         <v-btn size="small" value="Flat">Flat</v-btn>
         <v-btn size="small" value="Round">Round</v-btn>
+        <v-btn size="small" value="Piece">Piece</v-btn>
       </v-btn-toggle>
-      <v-btn-toggle v-model="tubingFilter" dense mandatory>
+      <v-btn-toggle v-model="tubingFilter" :disabled="typeFilter === 'Piece'" dense mandatory>
         <v-btn size="small" value="All">All</v-btn>
         <v-btn size="small" value="Tubing">Tubing</v-btn>
         <v-btn size="small" value="Bar">Bar</v-btn>
@@ -43,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+import { isPieceMaterial } from '@repo/utilities/materials';
 import { computed, nextTick, ref, watch } from 'vue';
 import { formatCrossSectionDimension } from '@/plugins/utils';
 
@@ -57,7 +59,7 @@ const emit = defineEmits<{
 
 const materialsListContainer = ref<HTMLElement | null>(null);
 const search = ref('');
-const typeFilter = ref<'All' | 'Flat' | 'Round'>('All');
+const typeFilter = ref<'All' | 'Flat' | 'Round' | 'Piece'>('All');
 const tubingFilter = ref<'All' | 'Tubing' | 'Bar'>('All');
 
 const sortedFilteredMaterials = computed(() => {
@@ -80,9 +82,10 @@ const sortedFilteredMaterials = computed(() => {
         return false;
       }
 
-      if (typeFilter.value !== 'All' && material.type !== typeFilter.value) return false;
+      if (typeFilter.value !== 'All' && getListType(material) !== typeFilter.value) return false;
 
-      if (tubingFilter.value !== 'All') {
+      if (tubingFilter.value !== 'All' && typeFilter.value !== 'Piece') {
+        if (isPieceMaterial(material)) return false;
         const isTubing = !!material.wallThickness;
         if (tubingFilter.value === 'Tubing' && !isTubing) return false;
         if (tubingFilter.value === 'Bar' && isTubing) return false;
@@ -118,12 +121,18 @@ watch(
   { immediate: true },
 );
 
+function getListType(material: Material): 'Flat' | 'Round' | 'Piece' | null {
+  return isPieceMaterial(material) ? 'Piece' : material.type;
+}
+
 function formatMaterialTitle(material: Material): string {
+  if (isPieceMaterial(material)) return material.description;
   const type = material.wallThickness ? 'Tubing' : 'Bar';
   return `${material.materialType} ${material.type} ${type}`;
 }
 
 function formatMaterialSize(material: Material): string {
+  if (isPieceMaterial(material)) return material.supplier?.name ?? 'Piece';
   const unit = material.isMetric ? ' mm' : ' in';
 
   if (material.type === 'Flat') {
@@ -150,8 +159,9 @@ function compareMaterials(a: Material, b: Material) {
   const materialCompare = (a.materialType || '').localeCompare(b.materialType || '');
   if (materialCompare !== 0) return materialCompare;
 
-  const typeOrder: Record<string, number> = { Flat: 0, Round: 1 };
-  const typeCompare = (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
+  const typeOrder: Record<string, number> = { Flat: 0, Round: 1, Piece: 2 };
+  const typeCompare =
+    (typeOrder[getListType(a) ?? ''] ?? 99) - (typeOrder[getListType(b) ?? ''] ?? 99);
   if (typeCompare !== 0) return typeCompare;
 
   const aDims = getSortDimensions(a);

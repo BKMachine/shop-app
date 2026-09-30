@@ -1,3 +1,4 @@
+import { isPieceMaterial } from '@repo/utilities/materials';
 import { calculatePartsPerBar } from '@repo/utilities/parts';
 import { Router } from 'express';
 import { isValidId } from '../../../database/index.js';
@@ -47,25 +48,40 @@ function normalizeTravelerText(value: string) {
     .trim();
 }
 
+function resolvePartMaterial(part: Part | null) {
+  if (!part || typeof part.material === 'string') return null;
+  return part.material ?? null;
+}
+
 function materialSummary(part: Part | null) {
   if (!part) return '';
-  if (part.customerSuppliedMaterial) return 'Customer Supplied';
 
-  const material = typeof part.material === 'string' ? null : part.material;
-  if (!material) return '';
+  const material = resolvePartMaterial(part);
+  const description = material
+    ? normalizeTravelerText(
+        isPieceMaterial(material)
+          ? material.description
+          : [material.materialType, material.description].filter(Boolean).join(' - '),
+      )
+    : '';
 
-  return normalizeTravelerText(
-    [material.materialType, material.description].filter(Boolean).join(' - '),
-  );
+  if (!part.customerSuppliedMaterial) return description;
+  return description ? `${description} (Customer Supplied)` : 'Customer Supplied';
 }
 
 function getBlanksPerPart(part: Part | null) {
-  if (!part || part.materialCutType === 'bars') return 1;
+  if (!part) return 1;
+  if (part.materialCutType === 'bars' && !isPieceMaterial(resolvePartMaterial(part))) return 1;
   return Math.max(1, Number(part.blanksPerPart) || 1);
 }
 
+function cutTypeLabel(part: Part | null) {
+  if (!part || isPieceMaterial(resolvePartMaterial(part))) return '';
+  return part.materialCutType === 'bars' ? 'Bars' : 'Blanks';
+}
+
 function materialLengthLabel(part: Part | null) {
-  if (!part?.materialLength) return '';
+  if (!part?.materialLength || isPieceMaterial(resolvePartMaterial(part))) return '';
   if (part.materialCutType === 'bars') return String(part.materialLength);
 
   const blanksPerPart = getBlanksPerPart(part);
@@ -75,12 +91,19 @@ function materialLengthLabel(part: Part | null) {
 }
 
 function estimatedMaterialUsage(job: Job, part: Part | null) {
-  if (!part || typeof part.material === 'string' || !part.material) return '';
+  const material = resolvePartMaterial(part);
+  if (!part || !material) return '';
 
-  const fullBarLength = Number(part.material.length) || 0;
-  const partsPerBar = calculatePartsPerBar(part, fullBarLength);
   const qty = Math.max(1, Number(job.qty) || 1);
   const blanksPerPart = getBlanksPerPart(part);
+
+  if (isPieceMaterial(material)) {
+    const totalPieces = qty * blanksPerPart;
+    return `${totalPieces} ${totalPieces === 1 ? 'piece' : 'pieces'}`;
+  }
+
+  const fullBarLength = Number(material.length) || 0;
+  const partsPerBar = calculatePartsPerBar(part, fullBarLength);
 
   if (!partsPerBar) return '';
 
@@ -111,20 +134,21 @@ function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
     { label: 'PO', value: job.customerPo || '' },
   ].filter((row) => row.value);
 
+  const isPiece = isPieceMaterial(resolvePartMaterial(resolvedPart));
   const partDetails: PrintJobTravelerRow[] = [
     { label: 'Material', value: materialSummary(resolvedPart) },
-    {
-      label: 'Cut Type',
-      value: resolvedPart?.materialCutType === 'bars' ? 'Bars' : resolvedPart ? 'Blanks' : '',
-    },
+    { label: 'Cut Type', value: cutTypeLabel(resolvedPart) },
     {
       label: 'Material Length',
       value: materialLengthLabel(resolvedPart),
     },
-    { label: 'Bar Length', value: resolvedPart?.barLength ? String(resolvedPart.barLength) : '' },
+    {
+      label: 'Bar Length',
+      value: resolvedPart?.barLength && !isPiece ? String(resolvedPart.barLength) : '',
+    },
     {
       label: 'Remnant Length',
-      value: resolvedPart?.remnantLength ? String(resolvedPart.remnantLength) : '',
+      value: resolvedPart?.remnantLength && !isPiece ? String(resolvedPart.remnantLength) : '',
     },
     { label: 'Estimated Material', value: estimatedMaterialUsage(job, resolvedPart) },
     { label: 'Location', value: resolvedPart?.location || '' },

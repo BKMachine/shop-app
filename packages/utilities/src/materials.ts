@@ -1,6 +1,6 @@
 interface MaterialWeightInput {
   materialType: string;
-  type: 'Flat' | 'Round';
+  type: MaterialShape | null;
   height: number | null;
   width: number | null;
   diameter: number | null;
@@ -9,7 +9,7 @@ interface MaterialWeightInput {
 }
 
 type MaterialDimensionsInput = {
-  type: 'Flat' | 'Round';
+  type: MaterialShape | null;
   width: number | null;
   height: number | null;
 };
@@ -70,6 +70,22 @@ export function calculateMaterialLengthFromWeight<T extends MaterialWeightInput>
   return Number.isFinite(length) && length > 0 ? length : null;
 }
 
+export const materialPieceForms = [
+  'Molding',
+  'Casting',
+  'Forging',
+  'Weldment',
+  'Blank',
+] as const satisfies readonly MaterialPieceForm[];
+
+export function normalizePieceName(name: string | null | undefined): string | null {
+  return name?.trim() || null;
+}
+
+export function isPieceMaterial(material: { kind?: MaterialKind | null } | null | undefined) {
+  return material?.kind === 'piece';
+}
+
 // Use full-precision density constants (lb/in^3); do not limit decimal places.
 export const materials: MaterialList = {
   '6061': { density: 0.097544, category: 'aluminum' },
@@ -90,6 +106,13 @@ export const materials: MaterialList = {
   '440': { density: 0.279627, category: 'stainless' },
   '6Al-4V': { density: 0.160044, category: 'titanium' },
   '6Al-7Nb': { density: 0.163295, category: 'titanium' },
+  Delrin: { density: 0.0513, category: 'plastic' },
+  Nylon: { density: 0.0412, category: 'plastic' },
+  PEEK: { density: 0.0473, category: 'plastic' },
+  Polycarbonate: { density: 0.0433, category: 'plastic' },
+  UHMW: { density: 0.034, category: 'plastic' },
+  // Unspecified resin, e.g. customer-supplied moldings; no density so no weight estimate.
+  Polymer: { density: null, category: 'plastic' },
   Brass: { density: 0.307089, category: 'other' },
   Bronze: { density: 0.317928, category: 'other' },
   Copper: { density: 0.323706, category: 'other' },

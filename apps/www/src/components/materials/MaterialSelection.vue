@@ -50,6 +50,7 @@ const categoryOrder = [
   'steel',
   'stainless',
   'titanium',
+  'plastic',
   'other',
 ] as const satisfies readonly MaterialCategory[];
 type MissingMaterialCategories = Exclude<MaterialCategory, (typeof categoryOrder)[number]>;

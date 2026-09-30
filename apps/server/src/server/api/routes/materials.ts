@@ -1,3 +1,4 @@
+import { materialPieceForms } from '@repo/utilities/materials';
 import { Router } from 'express';
 import multer from 'multer';
 import * as z from 'zod';
@@ -14,7 +15,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const MaterialFieldsSchema = z.strictObject({
   description: z.string(),
-  type: z.enum(['Round', 'Flat']),
+  kind: z.enum(['stock', 'piece']),
+  type: z.enum(['Round', 'Flat']).nullable(),
+  form: z.enum(materialPieceForms).nullable(),
+  name: z.string().trim().max(60).nullable(),
   isMetric: z.boolean(),
   height: z.number().nullable(),
   width: z.number().nullable(),
@@ -22,19 +26,29 @@ const MaterialFieldsSchema = z.strictObject({
   wallThickness: z.number().nullable(),
   length: z.number().nullable(),
   materialType: z.string(),
-  supplier: mongoObjectId,
+  supplier: mongoObjectId.nullable(),
   costPerFoot: z.number().nullable(),
+  costPerPiece: z.number().nullable(),
 });
 
+function refineMaterialKind(material: z.infer<typeof MaterialFieldsSchema>, ctx: z.RefinementCtx) {
+  if (material.kind === 'piece') {
+    if (!material.form) ctx.addIssue({ code: 'custom', path: ['form'], message: 'Required' });
+    return;
+  }
+  if (!material.type) ctx.addIssue({ code: 'custom', path: ['type'], message: 'Required' });
+  if (!material.supplier) ctx.addIssue({ code: 'custom', path: ['supplier'], message: 'Required' });
+}
+
 const CreateMaterialRequest = z.strictObject({
-  material: MaterialFieldsSchema,
+  material: MaterialFieldsSchema.superRefine(refineMaterialKind),
 });
 
 const UpdateMaterialRequest = z.strictObject({
   material: MaterialFieldsSchema.extend({
     _id: mongoObjectId,
     __v: z.number().optional(),
-  }),
+  }).superRefine(refineMaterialKind),
 });
 
 const MaterialApplyUpdateRequest = z.strictObject({

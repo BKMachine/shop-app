@@ -37,6 +37,25 @@ test('calculatePartMaterialCost defaults blanksPerPart to 1 when omitted', () =>
   assert.equal(calculatePartMaterialCost(part, material), 100 / 12);
 });
 
+test('calculatePartMaterialCost uses costPerPiece times pieces per part for piece materials', () => {
+  const material = {
+    kind: 'piece',
+    length: null,
+    costPerFoot: null,
+    costPerPiece: 4.5,
+  } as Material;
+
+  const part = {
+    materialCutType: 'blanks' as const,
+    materialLength: 0,
+    blanksPerPart: 2,
+    customerSuppliedMaterial: false,
+  };
+
+  assert.equal(calculatePartMaterialCost(part, material), 9);
+  assert.equal(calculatePartMaterialCost({ ...part, customerSuppliedMaterial: true }, material), 0);
+});
+
 test('hasIncompletePartCostData flags priced leaf parts with missing rate inputs', () => {
   const part = {
     price: 125,

@@ -156,7 +156,10 @@ export function formatCycleLonghand(val: number | string | null | undefined): st
 }
 
 interface MaterialDescriptionInput {
-  type: string;
+  kind?: MaterialKind | null;
+  type: string | null;
+  form?: MaterialPieceForm | null;
+  name?: string | null;
   materialType: string;
   isMetric?: boolean;
   wallThickness: number | null;
@@ -171,6 +174,13 @@ function formatMaterialDimensionToken(value: number | null, isMetric: boolean): 
 }
 
 export function buildMaterialDescription<T extends MaterialDescriptionInput>(material: T): string {
+  if (material.kind === 'piece') {
+    if (!material.materialType || !material.form) return '';
+    const name = material.name?.trim();
+    const base = `${material.materialType} ${material.form}`;
+    return name ? `${base} - ${name}` : base;
+  }
+
   if (!material.type || !material.materialType) return '';
 
   const type = material.wallThickness ? 'Tubing' : 'Bar';

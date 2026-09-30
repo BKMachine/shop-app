@@ -48,7 +48,7 @@ export const useMaterialsStore = defineStore('materials', () => {
 
   socket.on('supplier', (supplier: Supplier) => {
     _materials.value
-      .filter((material) => material.supplier._id === supplier._id)
+      .filter((material) => material.supplier?._id === supplier._id)
       .forEach((material) => {
         material.supplier = supplier;
       });

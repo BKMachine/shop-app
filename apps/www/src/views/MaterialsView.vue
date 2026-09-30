@@ -36,7 +36,28 @@
               </v-btn>
             </v-card-title>
             <v-card-text>
-              <v-row class="mt-4">
+              <v-row class="mt-2">
+                <v-col>
+                  <v-btn-toggle
+                    color="primary"
+                    density="compact"
+                    :disabled="!isNewMaterial"
+                    mandatory
+                    :model-value="selectedMaterial.kind"
+                    variant="outlined"
+                    @update:model-value="setMaterialKind"
+                  >
+                    <v-btn value="stock">Stock</v-btn>
+                    <v-btn value="piece">Piece</v-btn>
+                  </v-btn-toggle>
+                  <div class="text-caption text-medium-emphasis mt-1">
+                    {{ isPiece
+                        ? 'Pre-formed blank (molding, casting, ...) used one or more per part'
+                        : 'Bar or tube stock cut to length' }}
+                  </div>
+                </v-col>
+              </v-row>
+              <v-row class="mt-2">
                 <v-col>
                   <v-text-field
                     class="readonly-field"
@@ -46,7 +67,7 @@
                     readonly
                   />
                 </v-col>
-                <v-col cols="4">
+                <v-col v-if="!isPiece" cols="4">
                   <div class="text-end"><MaterialSketch :material="selectedMaterial" /></div>
                 </v-col>
               </v-row>
@@ -58,7 +79,18 @@
                     :disabled="!isNewMaterial"
                   />
                 </v-col>
-                <v-col cols="3">
+                <v-col v-if="isPiece" cols="6">
+                  <v-select
+                    v-model="selectedMaterial.form"
+                    :disabled="!isNewMaterial"
+                    hide-details
+                    :items="materialPieceForms"
+                    label="Form"
+                    required
+                    :rules="[requiredRule]"
+                  />
+                </v-col>
+                <v-col v-if="!isPiece" cols="3">
                   <v-select
                     v-model="selectedMaterial.type"
                     :disabled="!isNewMaterial"
@@ -68,7 +100,7 @@
                     required
                   />
                 </v-col>
-                <v-col class="d-flex align-center" cols="3">
+                <v-col v-if="!isPiece" class="d-flex align-center" cols="3">
                   <v-switch
                     v-model="selectedMaterial.isMetric"
                     class="metric-switch"
@@ -77,6 +109,20 @@
                     hide-details
                     inset
                     label="Size (mm)"
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row v-if="isPiece">
+                <v-col>
+                  <v-text-field
+                    v-model="selectedMaterial.name"
+                    clearable
+                    counter="60"
+                    hint="Shown in the description"
+                    label="Name (optional)"
+                    maxlength="60"
+                    persistent-hint
                   />
                 </v-col>
               </v-row>
@@ -153,7 +199,7 @@
                 </v-col>
               </v-row>
               <v-row>
-                <v-col cols="6">
+                <v-col v-if="!isPiece" cols="6">
                   <v-text-field
                     v-model.number="selectedMaterial.length"
                     hide-details
@@ -166,11 +212,22 @@
                   />
                 </v-col>
                 <v-col cols="6">
-                  <SupplierSelect v-model="selectedMaterial.supplier" :rules="[requiredRule]" />
+                  <SupplierSelect
+                    v-model="selectedMaterial.supplier"
+                    :label="isPiece ? 'Supplier (optional)' : 'Supplier'"
+                    :rules="isPiece ? [] : [requiredRule]"
+                  />
+                </v-col>
+                <v-col v-if="isPiece" cols="6">
+                  <CurrencyInput
+                    v-model="selectedMaterial.costPerPiece"
+                    hide-details
+                    label="Cost per Piece (ea)"
+                  />
                 </v-col>
               </v-row>
 
-              <v-row>
+              <v-row v-if="!isPiece">
                 <v-col>
                   <CurrencyInput
                     v-model="costPerPoundInput"
@@ -210,7 +267,7 @@
                 </v-col>
               </v-row>
               <MaterialCostGraph
-                v-if="selectedMaterial._id"
+                v-if="selectedMaterial._id && !isPiece"
                 :id="selectedMaterial._id"
                 :current-cost-per-foot="selectedMaterial.costPerFoot || 0"
               />
@@ -274,7 +331,12 @@
 </template>
 
 <script setup lang="ts">
-import { calculateMaterialWeight, normalizeDimensions } from '@repo/utilities/materials';
+import {
+  calculateMaterialWeight,
+  materialPieceForms,
+  normalizeDimensions,
+  normalizePieceName,
+} from '@repo/utilities/materials';
 import isEqual from 'lodash/isEqual';
 import { computed, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave, useRoute } from 'vue-router';
@@ -315,8 +377,11 @@ const DUPLICATE_MATERIAL_MESSAGE = 'This material already exists.';
 
 const defaultMaterial: EditableMaterial = {
   description: '',
+  kind: 'stock',
   materialType: '',
   type: 'Flat',
+  form: null,
+  name: null,
   isMetric: false,
   height: null,
   width: null,
@@ -325,6 +390,7 @@ const defaultMaterial: EditableMaterial = {
   length: 144,
   supplier: null,
   costPerFoot: 0,
+  costPerPiece: null,
 };
 
 const selectedMaterial = ref<EditableMaterial>({ ...defaultMaterial });
@@ -354,23 +420,51 @@ onMounted(async () => {
 
 const selectedMaterialId = computed(() => selectedMaterial.value._id ?? '');
 const isNewMaterial = computed<boolean>(() => !selectedMaterial.value._id);
+const isPiece = computed<boolean>(() => selectedMaterial.value.kind === 'piece');
+
+function setMaterialKind(kind: MaterialKind) {
+  if (kind === selectedMaterial.value.kind) return;
+  form.value?.resetValidation();
+  selectedMaterial.value = {
+    ...defaultMaterial,
+    materialType: selectedMaterial.value.materialType,
+    supplier: selectedMaterial.value.supplier,
+    ...(kind === 'piece'
+      ? { kind, type: null, length: null, costPerFoot: null, form: 'Molding' as const }
+      : { kind }),
+  };
+}
 
 function getSupplierId(supplier: EditableMaterial['supplier']): string | null {
   if (!supplier) return null;
   return typeof supplier === 'string' ? supplier : supplier._id;
 }
 
-function toComparableMaterial(material: EditableMaterial | Material) {
+function withMaterialDefaults<T extends EditableMaterial | Material>(material: T): T {
   return {
     ...material,
+    kind: material.kind ?? 'stock',
+    form: material.form ?? null,
+    name: material.name ?? null,
+    costPerPiece: material.costPerPiece ?? null,
     isMetric: material.isMetric ?? false,
+  };
+}
+
+function toComparableMaterial(material: EditableMaterial | Material) {
+  return {
+    ...withMaterialDefaults(material),
+    name: normalizePieceName(material.name),
     supplier: getSupplierId(material.supplier),
   };
 }
 
 const comparableFieldLabels = {
+  kind: 'Kind',
   materialType: 'Material Type',
   type: 'Type',
+  form: 'Form',
+  name: 'Name',
   isMetric: 'Size (mm)',
   height: 'Height',
   width: 'Width',
@@ -379,6 +473,7 @@ const comparableFieldLabels = {
   length: 'Length',
   supplier: 'Supplier',
   costPerFoot: 'Cost per Foot',
+  costPerPiece: 'Cost per Piece',
 } satisfies Partial<Record<keyof ReturnType<typeof toComparableMaterial>, string>>;
 
 const comparableSelectedMaterial = computed(() => toComparableMaterial(selectedMaterial.value));
@@ -408,7 +503,7 @@ function formatChangedMaterialFieldValue(
   rawValue: unknown,
 ) {
   if (value == null || value === '') return 'Empty';
-  if (key === 'costPerFoot') {
+  if (key === 'costPerFoot' || key === 'costPerPiece') {
     return `$${formatCost(typeof value === 'number' ? value : Number(value))}`;
   }
   if (key === 'supplier') {
@@ -426,6 +521,17 @@ function getMaterialFieldsBlockingSave() {
   const blocked = new Map<keyof ReturnType<typeof toComparableMaterial>, string>();
 
   if (!selectedMaterial.value.materialType) blocked.set('materialType', REQUIRED_MESSAGE);
+
+  if (isPiece.value) {
+    if (!selectedMaterial.value.form) blocked.set('form', REQUIRED_MESSAGE);
+    if (existsInStore.value && isNewMaterial.value) {
+      blocked.set('materialType', DUPLICATE_MATERIAL_MESSAGE);
+      blocked.set('form', DUPLICATE_MATERIAL_MESSAGE);
+      blocked.set('name', DUPLICATE_MATERIAL_MESSAGE);
+    }
+    return blocked;
+  }
+
   if (!selectedMaterial.value.type) blocked.set('type', REQUIRED_MESSAGE);
   if (!selectedMaterial.value.supplier) blocked.set('supplier', REQUIRED_MESSAGE);
   if (isMissingNumber(selectedMaterial.value.length)) blocked.set('length', REQUIRED_MESSAGE);
@@ -505,6 +611,15 @@ const existsInStore = computed<boolean>(() => {
   return materials.value.some((m) => {
     if (m._id === material._id) return true;
     if (m.materialType !== material.materialType) return false;
+    if (material.kind === 'piece') {
+      return (
+        m.kind === 'piece' &&
+        m.form === material.form &&
+        normalizePieceName(m.name)?.toLowerCase() ===
+          normalizePieceName(material.name)?.toLowerCase()
+      );
+    }
+    if (m.kind === 'piece') return false;
     if (m.type !== material.type) return false;
     if (Boolean(m.isMetric) !== Boolean(material.isMetric)) return false;
 
@@ -535,7 +650,7 @@ function selectMaterial(material: Material) {
 }
 
 function selectMaterialInternal(material: Material) {
-  selectedMaterial.value = { ...material, isMetric: material.isMetric ?? false };
+  selectedMaterial.value = withMaterialDefaults(material);
   void router.replace({
     name: 'materials',
     query: { id: material._id },
@@ -574,12 +689,15 @@ async function persistMaterial() {
   if (!canSaveMaterial.value) return false;
 
   const supplierId = getSupplierId(selectedMaterial.value.supplier);
-  if (!supplierId) return false;
+  if (!supplierId && !isPiece.value) return false;
 
   const basePayload: MaterialCreate = {
     description: selectedMaterial.value.description,
+    kind: selectedMaterial.value.kind,
     materialType: selectedMaterial.value.materialType,
-    type: selectedMaterial.value.type,
+    type: isPiece.value ? null : selectedMaterial.value.type,
+    form: isPiece.value ? selectedMaterial.value.form : null,
+    name: isPiece.value ? normalizePieceName(selectedMaterial.value.name) : null,
     isMetric: selectedMaterial.value.isMetric ?? false,
     height: selectedMaterial.value.height,
     width: selectedMaterial.value.width,
@@ -587,7 +705,8 @@ async function persistMaterial() {
     wallThickness: selectedMaterial.value.wallThickness,
     length: selectedMaterial.value.length,
     supplier: supplierId,
-    costPerFoot: selectedMaterial.value.costPerFoot,
+    costPerFoot: isPiece.value ? null : selectedMaterial.value.costPerFoot,
+    costPerPiece: isPiece.value ? selectedMaterial.value.costPerPiece : null,
   };
 
   savingMaterial.value = true;

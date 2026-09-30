@@ -77,6 +77,10 @@ export function calculatePartMaterialCost<TPart extends MaterialCostInput>(
   if (part.customerSuppliedMaterial) return 0;
   if (!material) return 0;
 
+  if (material.kind === 'piece') {
+    return (Number(material.costPerPiece) || 0) * getBlanksPerPart(part);
+  }
+
   const fullBarLength = Number(material.length) || 0;
   const partsPerBar = calculatePartsPerBar(part, fullBarLength);
   if (!partsPerBar) return 0;
