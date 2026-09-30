@@ -20,7 +20,6 @@
   "packageManager": "pnpm@10.32.0",
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
-    "@imgly/background-removal-node": "^1.4.5",
     "@repo/utilities": "workspace:*",
     "express": "^5.2.1",
     "http-terminator": "^3.2.0",

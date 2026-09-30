@@ -21,7 +21,6 @@ import {
   autoAlignImage,
   autoCropImage,
   type BackgroundRemovalBackend,
-  type BackgroundRemovalModel,
   ImageProcessorClientError,
   isSkippableAutoAlignError,
   normalizeImage,
@@ -100,22 +99,19 @@ async function getPartEntity(entityType: string, entityId: string) {
 const singleImageEntityTypes = ['tool', 'customer', 'supplier', 'shipper', 'vendor'] as const;
 type SingleImageEntityType = (typeof singleImageEntityTypes)[number];
 
-const backgroundRemovalModelSchema = z.enum(['small', 'medium', 'large']);
-const backgroundRemovalBackendSchema = z.enum(['birefnet', 'imgly', 'rembg']);
+const backgroundRemovalBackendSchema = z.enum(['birefnet', 'rembg']);
 
 const UploadUrlRequest = z.strictObject({
   url: z.url(),
 });
 
 const RemoveBackgroundRequest = z.strictObject({
-  model: backgroundRemovalModelSchema.optional(),
   backend: backgroundRemovalBackendSchema.optional(),
 });
 
 const ProcessStackRequest = z.strictObject({
   stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   backend: backgroundRemovalBackendSchema.optional(),
-  model: backgroundRemovalModelSchema.optional(),
 });
 
 const RotateImageRequest = z.strictObject({
@@ -432,7 +428,6 @@ router.post('/uploads/:id/remove-background', requireKnownDevice, async (req, re
 
     const processed = await removeImageBackground(sourcePath, {
       backend: data.backend as BackgroundRemovalBackend | undefined,
-      model: data.model as BackgroundRemovalModel | undefined,
     });
     const response = await createTempImageFromBuffer(processed, req.deviceId);
 
@@ -529,7 +524,6 @@ router.post('/uploads/:id/process-stack', requireKnownDevice, async (req, res, n
 
     const processed = await processImageStack(sourcePath, data.stage, {
       backend: data.backend ?? null,
-      model: data.model ?? null,
     });
     const response = await createTempImageFromBuffer(processed, req.deviceId);
 

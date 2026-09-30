@@ -322,9 +322,9 @@
                               :loading="backgroundRemovalId === img.id"
                               prepend-icon="mdi-auto-fix"
                               size="x-small"
-                              title="Attempt background removal with IMGLY"
+                              title="Attempt background removal with rembg"
                               variant="outlined"
-                              @click.stop="attemptBackgroundRemoval(img.id, 'imgly')"
+                              @click.stop="attemptBackgroundRemoval(img.id, 'rembg')"
                             >
                               Remove BG
                             </v-btn>
@@ -352,12 +352,6 @@
                                 </v-btn>
                               </template>
                               <v-list density="compact">
-                                <v-list-item
-                                  prepend-icon="mdi-auto-fix"
-                                  subtitle="Fast - quick cleanup"
-                                  title="Use IMGLY"
-                                  @click="attemptBackgroundRemoval(img.id, 'imgly')"
-                                />
                                 <v-list-item
                                   prepend-icon="mdi-image-outline"
                                   subtitle="Medium - simple shapes"
@@ -554,7 +548,7 @@ interface ImageData {
   status?: 'temp' | 'attached';
 }
 
-type BackgroundRemovalBackend = 'birefnet' | 'imgly' | 'rembg';
+type BackgroundRemovalBackend = 'birefnet' | 'rembg';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -1224,7 +1218,7 @@ async function copyItemImageToTempGallery(imageId: string) {
 
 async function attemptBackgroundRemoval(
   imageId: string,
-  backend: BackgroundRemovalBackend = 'imgly',
+  backend: BackgroundRemovalBackend = 'rembg',
 ) {
   if (
     !imageId ||
@@ -1241,10 +1235,7 @@ async function attemptBackgroundRemoval(
   galleryError.value = '';
 
   try {
-    await api.post(`/images/uploads/${imageId}/remove-background`, {
-      backend,
-      model: backend === 'imgly' ? 'large' : undefined,
-    });
+    await api.post(`/images/uploads/${imageId}/remove-background`, { backend });
     await loadGallery();
   } catch (err: unknown) {
     galleryError.value = getErrorMessage(err, 'Failed to remove the image background.');

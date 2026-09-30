@@ -3,14 +3,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
   BackgroundRemovalBackend,
-  BackgroundRemovalModel,
   InputImage,
   ProcessedImage,
 } from '../image_processing_types.js';
 
 export type RemoveImageBackgroundOptions = {
   backend?: BackgroundRemovalBackend | null;
-  model?: BackgroundRemovalModel | null;
 };
 
 export type BackgroundRemovalProvider = {
@@ -43,16 +41,10 @@ export function ensureDirectory(dirPath: string) {
   return dirPath;
 }
 
-export function isBackgroundRemovalModel(
-  value: string | undefined | null,
-): value is BackgroundRemovalModel {
-  return value === 'small' || value === 'medium' || value === 'large';
-}
-
 export function isBackgroundRemovalBackend(
   value: string | undefined | null,
 ): value is BackgroundRemovalBackend {
-  return value === 'birefnet' || value === 'imgly' || value === 'rembg';
+  return value === 'birefnet' || value === 'rembg';
 }
 
 export function getMimeTypeForSource(input: InputImage): string {

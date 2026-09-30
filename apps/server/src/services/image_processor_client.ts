@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export type BackgroundRemovalBackend = 'birefnet' | 'imgly' | 'rembg';
-export type BackgroundRemovalModel = 'small' | 'medium' | 'large';
+export type BackgroundRemovalBackend = 'birefnet' | 'rembg';
 
 type ProcessedImageResponse = {
   buffer: Buffer;
@@ -153,12 +152,10 @@ export async function removeImageBackground(
   sourcePath: string,
   options: {
     backend?: BackgroundRemovalBackend | null;
-    model?: BackgroundRemovalModel | null;
   } = {},
 ) {
   return callImageProcessor('remove-background', sourcePath, {
     backend: options.backend ?? undefined,
-    model: options.model ?? undefined,
   });
 }
 
@@ -185,13 +182,11 @@ export async function processImageStack(
   stage: 1 | 2 | 3,
   options: {
     backend?: BackgroundRemovalBackend | null;
-    model?: BackgroundRemovalModel | null;
   } = {},
 ) {
   return callImageProcessor('process-stack', sourcePath, {
     stage: String(stage),
     backend: options.backend ?? undefined,
-    model: options.model ?? undefined,
   });
 }
 

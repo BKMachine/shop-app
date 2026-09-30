@@ -2,10 +2,7 @@ import path from 'node:path';
 import { type NextFunction, type Response, Router } from 'express';
 import multer, { MulterError } from 'multer';
 import sharp from 'sharp';
-import {
-  isBackgroundRemovalBackend,
-  isBackgroundRemovalModel,
-} from '../../../services/background_removal/shared.js';
+import { isBackgroundRemovalBackend } from '../../../services/background_removal/shared.js';
 import { removeImageBackground } from '../../../services/background_removal_service.js';
 import { autoAlignImage } from '../../../services/image_auto_align_service.js';
 import { autoCropImage } from '../../../services/image_auto_crop_service.js';
@@ -180,13 +177,11 @@ router.get('/health', (_req, res) => {
 router.post('/remove-background', upload.single('image'), async (req, res, next) => {
   try {
     const image = await getUploadedImage(req.file);
-    const requestedModel = isBackgroundRemovalModel(req.body?.model) ? req.body.model : undefined;
     const requestedBackend = isBackgroundRemovalBackend(req.body?.backend)
       ? req.body.backend
       : undefined;
     const processed = await removeImageBackground(image, {
       backend: requestedBackend,
-      model: requestedModel,
     });
 
     sendProcessedImage(res, processed);
@@ -235,14 +230,12 @@ router.post('/process-stack', upload.single('image'), async (req, res, next) => 
       throw new HttpError(400, 'stage must be 1, 2, or 3');
     }
 
-    const requestedModel = isBackgroundRemovalModel(req.body?.model) ? req.body.model : undefined;
     const requestedBackend = isBackgroundRemovalBackend(req.body?.backend)
       ? req.body.backend
       : undefined;
 
     let processed = await removeImageBackground(image, {
       backend: requestedBackend,
-      model: requestedModel,
     });
 
     if (requestedStage >= 2) {
