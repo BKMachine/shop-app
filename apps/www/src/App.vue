@@ -42,6 +42,16 @@
           Shipments
         </v-list-item>
         <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
+        <v-list-item
+          v-if="isAdmin"
+          href="https://assistant.bkmachine.net"
+          link
+          prepend-icon="mdi-robot-outline"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Assistant
+        </v-list-item>
       </v-list>
       <template #append>
         <v-list-item v-if="showDev" link prepend-icon="mdi-test-tube" :to="{name: 'test'}">
@@ -66,7 +76,7 @@
         </v-list-item>
         <v-divider />
         <v-list-item
-          v-if="showAuditTrail"
+          v-if="isAdmin"
           link
           prepend-icon="mdi-database-eye-outline"
           :to="{ name: 'auditTrail' }"
@@ -306,7 +316,7 @@ const showDev = computed<boolean>(() => {
   return location.host.includes('localhost') || location.host.includes('127.0.0.1');
 });
 
-const showAuditTrail = computed<boolean>(() => Boolean(deviceState.current?.isAdmin));
+const isAdmin = computed<boolean>(() => Boolean(deviceState.current?.isAdmin));
 </script>
 
 <style scoped>
