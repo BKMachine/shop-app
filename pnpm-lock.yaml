@@ -21,6 +21,8 @@ importers:
         specifier: ^2.10.8
         version: 2.10.8
 
+  apps/bkmachine.net: {}
+
   apps/folder_helper:
     devDependencies:
       '@repo/typescript-config':

@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BK Machine | Precision CNC Machining in Idaho Falls</title>
+    <meta
+      name="description"
+      content="BK Machine is a precision CNC machine shop in Idaho Falls, Idaho: Swiss-type turning, multi-tasking turning, high-speed milling, wire EDM, and ZEISS CMM inspection, from prototype to production."
+    />
+    <meta name="theme-color" content="#1d1b1a" />
+    <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
+    <link
+      rel="preload"
+      href="fonts/instrument-serif.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" data-header>
+      <div class="container site-header__inner">
+        <a class="wordmark" href="#top" aria-label="BK Machine, back to top">
+          <img
+            class="wordmark__logo"
+            src="images/bk-logo-96.png"
+            srcset="images/bk-logo-96.png 1x, images/bk-logo-192.png 2x"
+            width="44"
+            height="44"
+            alt=""
+          />
+          <span class="wordmark__text">BK&nbsp;Machine</span>
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="site-nav"
+          data-nav-toggle
+        >
+          <span class="visually-hidden">Menu</span>
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+        </button>
+
+        <nav class="site-nav" id="site-nav" aria-label="Primary" data-nav>
+          <a href="#capabilities">Capabilities</a>
+          <a href="#quality">Quality</a>
+          <a href="#metrology">Metrology</a>
+          <a href="#process">Process</a>
+          <a href="#about">About</a>
+          <a class="button button--small" href="#contact">Request a quote</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero" id="top">
+        <div class="hero__grid" aria-hidden="true"></div>
+        <div class="container hero__inner">
+          <div class="hero__copy">
+            <p class="eyebrow eyebrow--light">
+              Precision CNC machining &middot; Idaho Falls, Idaho
+            </p>
+            <h1 class="hero__title">
+              Precision parts.<br />
+              <em>Repeatable</em>
+              results.
+            </h1>
+            <p class="hero__lede">
+              BK Machine turns, mills, and finishes tight-tolerance components, from first-article
+              prototypes to long-run production, all under one roof.
+            </p>
+            <div class="hero__actions">
+              <a class="button" href="#contact">Request a quote</a>
+              <a class="button button--ghost" href="#capabilities">Explore capabilities</a>
+            </div>
+          </div>
+
+          <figure class="hero__media" data-slider aria-roledescription="carousel" aria-label="Shop photos">
+            <div class="hero__slide is-active">
+              <img
+                src="images/spindle-1600.jpg"
+                srcset="images/spindle-800.jpg 800w, images/spindle-1600.jpg 1600w"
+                sizes="(min-width: 960px) 46vw, 100vw"
+                width="1600"
+                height="1064"
+                alt="End mill held in a CNC machining center spindle beside coolant nozzles"
+                fetchpriority="high"
+              />
+              <div class="spec-tag">
+                <span>High-speed milling</span>
+                <span>Small, precise parts</span>
+              </div>
+            </div>
+            <div class="hero__slide">
+              <img
+                src="images/mill-1600.jpg"
+                srcset="images/mill-800.jpg 800w, images/mill-1600.jpg 1600w"
+                sizes="(min-width: 960px) 46vw, 100vw"
+                width="1600"
+                height="1063"
+                alt="Machining center table fitted with precision vises"
+                loading="lazy"
+              />
+              <div class="spec-tag">
+                <span>Precision milling</span>
+                <span>Tight-tolerance work</span>
+              </div>
+            </div>
+            <div class="hero__slide">
+              <img
+                src="images/swiss-1600.jpg"
+                srcset="images/swiss-800.jpg 800w, images/swiss-1600.jpg 1600w"
+                sizes="(min-width: 960px) 46vw, 100vw"
+                width="1236"
+                height="1564"
+                alt="Tooling zone inside a Swiss-type lathe"
+                loading="lazy"
+              />
+              <div class="spec-tag">
+                <span>Swiss turning</span>
+                <span>Small, complex parts</span>
+              </div>
+            </div>
+            <div class="hero__slide">
+              <img
+                src="images/turn-mill-1600.jpg"
+                srcset="images/turn-mill-800.jpg 800w, images/turn-mill-1600.jpg 1600w"
+                sizes="(min-width: 960px) 46vw, 100vw"
+                width="1600"
+                height="1356"
+                alt="Turn-mill center with its control panel"
+                loading="lazy"
+              />
+              <div class="spec-tag">
+                <span>Turn-mill</span>
+                <span>Done-in-one machining</span>
+              </div>
+            </div>
+            <div class="hero__slide">
+              <img
+                src="images/cmm-1600.jpg"
+                srcset="images/cmm-800.jpg 800w, images/cmm-1600.jpg 1600w"
+                sizes="(min-width: 960px) 46vw, 100vw"
+                width="1600"
+                height="1068"
+                alt="ZEISS SPECTRUM bridge coordinate measuring machine with a part fixtured on its granite table"
+                loading="lazy"
+              />
+              <div class="spec-tag">
+                <span>Inspection</span>
+                <span>CMM verified</span>
+              </div>
+            </div>
+            <div class="hero__dots" data-slider-dots></div>
+          </figure>
+        </div>
+
+        <div class="container">
+          <dl class="stats">
+            <div class="stats__item">
+              <dt>Years in business</dt>
+              <dd>30<span>+</span></dd>
+            </div>
+            <div class="stats__item">
+              <dt>CNC machines on the floor</dt>
+              <dd>30<span>+</span></dd>
+            </div>
+            <div class="stats__item">
+              <dt>Core processes in-house</dt>
+              <dd>6</dd>
+            </div>
+            <div class="stats__item">
+              <dt>Prototype to production</dt>
+              <dd>1<span>&nbsp;shop</span></dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Capabilities -->
+      <section class="section" id="capabilities" aria-labelledby="capabilities-title">
+        <div class="container">
+          <header class="section-head reveal">
+            <p class="eyebrow">Capabilities</p>
+            <h2 class="section-title" id="capabilities-title">
+              Complete parts, in as few <em>setups</em> as possible.
+            </h2>
+            <p class="section-lede">
+              Every handoff between machines is a chance for error. Our equipment is chosen to
+              finish parts complete, which keeps features related to each other, costs predictable,
+              and lead times short.
+            </p>
+          </header>
+
+          <ol class="cap-grid">
+            <li class="cap-card reveal">
+              <span class="cap-card__index">01</span>
+              <h3>Swiss-Type Turning</h3>
+              <p>
+                Sliding-headstock turning with guide-bushing support holds long, slender parts true
+                along their full length. Synchronized main and sub spindles, both with C-axis and
+                live tooling, cross-drill, mill flats, and back-work features so parts come off the
+                machine finished. Round, hex, and profiled bar are all welcome.
+              </p>
+              <p class="cap-card__spec">
+                &Oslash;3&ndash;32 mm bar &middot; Main + sub spindle &middot; Live tooling
+              </p>
+            </li>
+
+            <li class="cap-card reveal">
+              <span class="cap-card__index">02</span>
+              <h3>Multi-Tasking Turning</h3>
+              <p>
+                Turn-mill centers with Y-axis, live tooling, and sub-spindle transfer handle
+                off-center milling, cross holes, and secondary operations in a single setup. That
+                means no re-chucking error and no handling between operations.
+              </p>
+              <p class="cap-card__spec">
+                Y-axis &middot; Sub-spindle transfer &middot; Bar-fed production
+              </p>
+            </li>
+
+            <li class="cap-card reveal">
+              <span class="cap-card__index">03</span>
+              <h3>High-Speed Precision Milling</h3>
+              <p>
+                High-RPM, rapid tool-change machining centers built for small, feature-dense
+                components. Light, fast toolpaths hold fine detail and surface finish, high-pressure
+                through-tool coolant clears chips from deep features, and 4th/5th-axis indexing
+                reaches multiple faces in one clamping.
+              </p>
+              <p class="cap-card__spec">24,000 RPM &middot; BT30 &middot; 4th/5th-axis indexing</p>
+            </li>
+
+            <li class="cap-card reveal">
+              <span class="cap-card__index">04</span>
+              <h3>Production Drilling &amp; Tapping</h3>
+              <p>
+                Dedicated drill/tap centers run high-volume hole-making with rigid tapping and fast
+                tool-to-tool times. They're ideal for part families and repeat orders where every
+                second of cycle time counts.
+              </p>
+              <p class="cap-card__spec">
+                15,000 RPM &middot; Rigid tapping &middot; 21-tool magazines
+              </p>
+            </li>
+
+            <li class="cap-card reveal">
+              <span class="cap-card__index">05</span>
+              <h3>Vertical &amp; Horizontal Machining</h3>
+              <p>
+                Rigid CAT40 platforms take on larger prismatic parts and heavier stock removal, and
+                4-axis horizontal machining works multiple faces per cycle for better
+                feature-to-feature accuracy across the part.
+              </p>
+              <p class="cap-card__spec">
+                CAT40 &middot; 30-tool capacity &middot; 4-axis horizontal
+              </p>
+            </li>
+
+            <li class="cap-card reveal">
+              <span class="cap-card__index">06</span>
+              <h3>Wire EDM</h3>
+              <p>
+                Wire EDM cuts without contact or cutting force, so it handles hardened and difficult
+                materials. It produces sharp internal corners, fine slots, and tight-tolerance
+                profiles that rotating tools can't reach.
+              </p>
+              <p class="cap-card__spec">
+                0.25 mm wire &middot; Hardened materials &middot; Burr-free profiles
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Feature band -->
+      <section class="feature" aria-labelledby="feature-title">
+        <div class="container feature__inner">
+          <figure class="feature__media reveal">
+            <img
+              src="images/turning-1600.jpg"
+              srcset="images/turning-800.jpg 800w, images/turning-1600.jpg 1600w"
+              sizes="(min-width: 960px) 50vw, 100vw"
+              width="1600"
+              height="1064"
+              alt="CNC turning center with its door open beside the machine control"
+              loading="lazy"
+            />
+          </figure>
+          <div class="feature__copy reveal">
+            <p class="eyebrow eyebrow--light">Done-in-one</p>
+            <h2 class="section-title section-title--light" id="feature-title">
+              Raw bar in. <em>Finished part</em> out.
+            </h2>
+            <p>
+              Our turning cells pair bar feeders with sub-spindle part transfer, so the back side of
+              a part is machined in the same cycle as the front. Concentricity holds, secondary
+              operations disappear, and the parts in the box match the first article.
+            </p>
+            <ul class="check-list">
+              <li>Front and back features machined in a single cycle</li>
+              <li>Bar-fed for consistent, unattended production runs</li>
+              <li>Collaborative robots tend select machines, extending runs past the shift</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quality -->
+      <section class="section" id="quality" aria-labelledby="quality-title">
+        <div class="container quality">
+          <header class="section-head reveal">
+            <p class="eyebrow">Quality &amp; control</p>
+            <h2 class="section-title" id="quality-title">
+              Measured in the machine, <em>not</em> after the fact.
+            </h2>
+            <p class="section-lede">
+              Problems are cheapest to catch before the part leaves the fixture. Measurement and
+              process control are built into how we run, then verified on our ZEISS CMM.
+            </p>
+          </header>
+
+          <div class="quality__layout">
+            <ul class="quality-list">
+              <li class="reveal">
+                <h3>In-process probing</h3>
+                <p>
+                  Spindle probes locate datums, verify setups, and measure critical features in the
+                  machine, so offsets are corrected before the next part is cut.
+                </p>
+              </li>
+              <li class="reveal">
+                <h3>Automated tool setting</h3>
+                <p>
+                  Laser and contact tool setters measure tool length and catch broken tools between
+                  operations, which protects both the part and the schedule.
+                </p>
+              </li>
+              <li class="reveal">
+                <h3>Repeatable workholding</h3>
+                <p>
+                  Self-centering pneumatic vises, dovetail fixturing, and precision rotary tables
+                  hold part position consistent from the first part to the last.
+                </p>
+              </li>
+              <li class="reveal">
+                <h3>Connected shop floor</h3>
+                <p>
+                  Networked program transfer keeps revisions under control, and MTConnect machine
+                  monitoring shows us what every spindle is doing.
+                </p>
+              </li>
+            </ul>
+
+            <figure class="quality__media reveal">
+              <img
+                src="images/mill-1600.jpg"
+                srcset="images/mill-800.jpg 800w, images/mill-1600.jpg 1600w"
+                sizes="(min-width: 960px) 40vw, 100vw"
+                width="1600"
+                height="1063"
+                alt="Machining center table fitted with precision vises"
+                loading="lazy"
+              />
+              <figcaption class="spec-tag spec-tag--dark">
+                <span>Probed setups</span>
+                <span>Verified offsets</span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- Metrology -->
+      <section class="metrology" id="metrology" aria-labelledby="metrology-title">
+        <div class="container metrology__inner">
+          <div class="metrology__copy reveal">
+            <p class="eyebrow eyebrow--light">CMM metrology <span class="badge">New</span></p>
+            <h2 class="section-title section-title--light" id="metrology-title">
+              Certainty, measured in <em>microns</em>.
+            </h2>
+            <p>
+              Our ZEISS SPECTRUM bridge CMM brings lab-grade dimensional inspection in-house. A
+              granite table, air bearings, and thermally stable glass-ceramic scales give traceable,
+              repeatable results, and ZEISS CALYPSO inspects parts directly against your CAD model
+              and GD&amp;T callouts.
+            </p>
+
+            <dl class="spec-grid">
+              <div>
+                <dt>System</dt>
+                <dd>ZEISS SPECTRUM 776</dd>
+              </div>
+              <div>
+                <dt>Measuring volume</dt>
+                <dd>700 &times; 700 &times; 600 mm</dd>
+              </div>
+              <div>
+                <dt>Length accuracy</dt>
+                <dd>Up to 1.8 + L/250 &micro;m</dd>
+              </div>
+              <div>
+                <dt>Software</dt>
+                <dd>ZEISS CALYPSO</dd>
+              </div>
+            </dl>
+
+            <ul class="check-list">
+              <li>First-article inspection reports measured against your print</li>
+              <li>Full GD&amp;T evaluation: position, profile, flatness, runout, and more</li>
+              <li>CAD-to-part comparison and production sampling with trend data</li>
+              <li>Reverse engineering of legacy parts without drawings</li>
+            </ul>
+          </div>
+
+          <div class="metrology__media reveal">
+            <figure class="metrology__main">
+              <img
+                src="images/cmm-1600.jpg"
+                srcset="images/cmm-800.jpg 800w, images/cmm-1600.jpg 1600w"
+                sizes="(min-width: 960px) 50vw, 100vw"
+                width="1600"
+                height="1068"
+                alt="ZEISS SPECTRUM bridge coordinate measuring machine with a part fixtured on its granite table"
+                loading="lazy"
+              />
+            </figure>
+            <figure class="metrology__inset">
+              <img
+                src="images/cmm-probe-600.jpg"
+                srcset="images/cmm-probe-600.jpg 600w, images/cmm-probe-1200.jpg 1200w"
+                sizes="(min-width: 960px) 16vw, 40vw"
+                width="600"
+                height="750"
+                alt="CMM scanning probe measuring a cast part"
+                loading="lazy"
+              />
+            </figure>
+            <p class="image-credit">Images: ZEISS</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Process -->
+      <section class="section section--tinted" id="process" aria-labelledby="process-title">
+        <div class="container">
+          <header class="section-head reveal">
+            <p class="eyebrow">How we work</p>
+            <h2 class="section-title" id="process-title">From drawing to <em>delivery</em>.</h2>
+          </header>
+
+          <ol class="process">
+            <li class="process__step reveal">
+              <span class="process__num">01</span>
+              <h3>Quote &amp; review</h3>
+              <p>
+                Send a drawing or 3D model. We review it for manufacturability and flag anything
+                that drives up cost before you commit.
+              </p>
+            </li>
+            <li class="process__step reveal">
+              <span class="process__num">02</span>
+              <h3>Plan &amp; program</h3>
+              <p>
+                We match each part to the right machine, then build CAM toolpaths and fixturing
+                around proven tooling.
+              </p>
+            </li>
+            <li class="process__step reveal">
+              <span class="process__num">03</span>
+              <h3>First article</h3>
+              <p>
+                The first part is measured on our ZEISS CMM and checked against the print before the
+                run begins. No surprises at quantity.
+              </p>
+            </li>
+            <li class="process__step reveal">
+              <span class="process__num">04</span>
+              <h3>Production</h3>
+              <p>
+                Bar-fed, probed, and monitored, so part 500 matches part 1. Material is cut to size
+                in-house to keep jobs moving.
+              </p>
+            </li>
+            <li class="process__step reveal">
+              <span class="process__num">05</span>
+              <h3>Inspect &amp; ship</h3>
+              <p>
+                CMM-verified final inspection, careful packaging, and on-time delivery to your dock.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Gallery -->
+      <section class="gallery" aria-label="Inside the shop">
+        <figure class="gallery__item gallery__item--wide reveal">
+          <img
+            src="images/barstock-1600.jpg"
+            srcset="images/barstock-800.jpg 800w, images/barstock-1600.jpg 1600w"
+            sizes="(min-width: 960px) 50vw, 100vw"
+            width="1600"
+            height="755"
+            alt="Bar stock staged in a bar feeder"
+            loading="lazy"
+          />
+        </figure>
+        <figure class="gallery__item reveal">
+          <img
+            src="images/swiss-800.jpg"
+            srcset="images/swiss-800.jpg 800w, images/swiss-1600.jpg 1236w"
+            sizes="(min-width: 960px) 25vw, 50vw"
+            width="800"
+            height="1012"
+            alt="Tooling zone inside a Swiss-type lathe"
+            loading="lazy"
+          />
+        </figure>
+        <figure class="gallery__item reveal">
+          <img
+            src="images/turn-mill-800.jpg"
+            srcset="images/turn-mill-800.jpg 800w, images/turn-mill-1600.jpg 1600w"
+            sizes="(min-width: 960px) 25vw, 50vw"
+            width="800"
+            height="678"
+            alt="Turn-mill center with its control panel"
+            loading="lazy"
+          />
+        </figure>
+      </section>
+
+      <!-- About -->
+      <section class="section" id="about" aria-labelledby="about-title">
+        <div class="container about">
+          <div class="about__copy reveal">
+            <p class="eyebrow">About BK Machine</p>
+            <h2 class="section-title" id="about-title">
+              Three decades of <em>craft</em>, in Idaho Falls.
+            </h2>
+            <p>
+              For over 30 years, BK Machine has made precision components for commercial customers
+              across the region. We started as a small job shop and grew into a production operation
+              with more than thirty CNC machines, but we still answer the phone and still treat
+              every print like it matters.
+            </p>
+            <p>
+              We're licensed, bonded, and insured. Our goal is simple: parts that are right, on
+              time, every time.
+            </p>
+          </div>
+          <figure class="about__media reveal">
+            <img
+              src="images/controls-1600.jpg"
+              srcset="images/controls-800.jpg 800w, images/controls-1600.jpg 1600w"
+              sizes="(min-width: 960px) 42vw, 100vw"
+              width="1600"
+              height="1064"
+              alt="Close-up of a CNC machine control panel"
+              loading="lazy"
+            />
+          </figure>
+        </div>
+      </section>
+
+      <!-- Contact -->
+      <section class="contact" id="contact" aria-labelledby="contact-title">
+        <div class="container contact__inner">
+          <div class="contact__info reveal">
+            <p class="eyebrow eyebrow--light">Contact</p>
+            <h2 class="section-title section-title--light" id="contact-title">
+              Let's talk about your <em>parts</em>.
+            </h2>
+            <p class="contact__lede">
+              Send a drawing, a model, or just a question. We'll get back to you within one business
+              day.
+            </p>
+
+            <dl class="contact-list">
+              <div>
+                <dt>Shop</dt>
+                <dd>
+                  <address>
+                    1050 Hollipark Dr.<br />
+                    Idaho Falls, ID 83401
+                  </address>
+                  <a
+                    class="text-link"
+                    href="https://www.google.com/maps/search/?api=1&amp;query=1050+Hollipark+Dr+Idaho+Falls+ID+83401"
+                    target="_blank"
+                    rel="noopener"
+                    >Get directions</a
+                  >
+                </dd>
+              </div>
+              <div>
+                <dt>Phone</dt>
+                <dd><a href="tel:+12085161970">(208) 516-1970</a></dd>
+              </div>
+              <div>
+                <dt>Email</dt>
+                <dd><a href="mailto:jeff@bkmachine.net">jeff@bkmachine.net</a></dd>
+              </div>
+              <div>
+                <dt>Hours</dt>
+                <dd>
+                  Monday &ndash; Friday, 8:00 am &ndash; 5:00 pm<br />
+                  <span class="muted">Closed Saturday &amp; Sunday</span>
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <form class="quote-form reveal" data-quote-form novalidate>
+            <h3>Request a quote</h3>
+            <div class="field-row">
+              <label class="field">
+                <span>Name</span>
+                <input name="name" type="text" autocomplete="name" required />
+              </label>
+              <label class="field">
+                <span>Company</span>
+                <input name="company" type="text" autocomplete="organization" />
+              </label>
+            </div>
+            <div class="field-row">
+              <label class="field">
+                <span>Email</span>
+                <input name="email" type="email" autocomplete="email" required />
+              </label>
+              <label class="field">
+                <span>Phone</span>
+                <input name="phone" type="tel" autocomplete="tel" />
+              </label>
+            </div>
+            <div class="field-row">
+              <label class="field">
+                <span>Quantity</span>
+                <input name="quantity" type="text" inputmode="numeric" placeholder="e.g. 250" />
+              </label>
+              <label class="field">
+                <span>Material</span>
+                <input name="material" type="text" placeholder="e.g. 304 stainless" />
+              </label>
+            </div>
+            <label class="field">
+              <span>Project details</span>
+              <textarea
+                name="details"
+                rows="4"
+                placeholder="Part description, tolerances, due date..."
+              ></textarea>
+            </label>
+            <p class="form-note">
+              Submitting opens your email app with these details filled in. Attach your drawings or
+              models there.
+            </p>
+            <p class="form-error" role="alert" data-form-error hidden>
+              Please add your name and a valid email.
+            </p>
+            <button class="button button--block" type="submit">Compose request</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner">
+        <a class="wordmark wordmark--footer" href="#top">
+          <img
+            class="wordmark__logo"
+            src="images/bk-logo-96.png"
+            srcset="images/bk-logo-96.png 1x, images/bk-logo-192.png 2x"
+            width="44"
+            height="44"
+            alt=""
+          />
+          <span class="wordmark__text">BK&nbsp;Machine</span>
+        </a>
+        <p>
+          1050 Hollipark Dr. &middot; <span class="nowrap">Idaho Falls, ID 83401</span> &middot;
+          <span class="nowrap">(208) 516-1970</span>
+        </p>
+        <p class="muted">&copy; <span data-year>2026</span> BK Machine. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script src="site.js" defer></script>
+  </body>
+</html>

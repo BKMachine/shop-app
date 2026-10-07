@@ -1,0 +1,13 @@
+# Public website (bkmachine.net). The site is plain static files with no build
+# step, so nginx serves apps/bkmachine.net/site as-is.
+#
+# The unprivileged nginx image runs as a non-root user and keeps its pid and
+# temp files in /tmp, so it also starts when the host overrides the container
+# user (e.g. `user:` in compose). It listens on 8080; point reverse proxies at
+# <container>:8080.
+FROM nginxinc/nginx-unprivileged:stable-alpine
+COPY apps/bkmachine.net/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/bkmachine.net/site /usr/share/nginx/html
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=5s \
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1

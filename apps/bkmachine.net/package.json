@@ -1,0 +1,14 @@
+{
+  "name": "bkmachine.net",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BK Machine public website (static, served by nginx)",
+  "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "check": "biome check --write",
+    "ci": "biome ci"
+  }
+}
