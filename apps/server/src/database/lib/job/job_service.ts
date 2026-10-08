@@ -79,14 +79,39 @@ function normalizeProductionTasks(
       throw new JobValidationError(`Production task ${id} is missing a valid start timestamp.`);
     }
 
+    const runs = normalizeProductionTaskRuns(id, task.runs);
+
     return {
       id,
       machineId,
       machineName,
       machineType: task.machineType,
-      startedAt,
-      endedAt: normalizeDate(task.endedAt),
+      startedAt: runs?.[0]?.startedAt ?? startedAt,
+      endedAt: runs ? (runs[runs.length - 1]?.endedAt ?? null) : normalizeDate(task.endedAt),
+      ...(runs ? { runs } : {}),
     };
+  });
+}
+
+function normalizeProductionTaskRuns(taskId: string, runs: JobProductionTaskRun[] | undefined) {
+  if (!Array.isArray(runs) || !runs.length) return undefined;
+
+  return runs.map((run, index) => {
+    const startedAt = normalizeDate(run.startedAt);
+    const endedAt = normalizeDate(run.endedAt);
+
+    if (!startedAt) {
+      throw new JobValidationError(
+        `Production task ${taskId} run ${index + 1} is missing a valid start timestamp.`,
+      );
+    }
+    if (!endedAt && index < runs.length - 1) {
+      throw new JobValidationError(
+        `Production task ${taskId} run ${index + 1} must be ended before a later run.`,
+      );
+    }
+
+    return { startedAt, endedAt };
   });
 }
 
@@ -359,6 +384,10 @@ function getSortField(query: JobListQuery): string {
   return query.sort && validSortFields.has(query.sort) ? query.sort : 'jobNumber';
 }
 
+function currentRunStartedAt(task: JobProductionTask) {
+  return task.runs?.[task.runs.length - 1]?.startedAt ?? task.startedAt;
+}
+
 function normalizeTaskTimestamp(value: string | Date | null | undefined) {
   if (!value) return 0;
   const date = value instanceof Date ? value : new Date(value);
@@ -508,8 +537,8 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
     if (activeEntries.length) {
       const sortedEntries = [...activeEntries].sort(
         (left, right) =>
-          normalizeTaskTimestamp(right.task.startedAt) -
-          normalizeTaskTimestamp(left.task.startedAt),
+          normalizeTaskTimestamp(currentRunStartedAt(right.task)) -
+          normalizeTaskTimestamp(currentRunStartedAt(left.task)),
       );
 
       for (const activeEntry of sortedEntries) {
@@ -522,7 +551,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
           hasInProcessJob: true,
           priority: activeEntry.job.priority ?? 'normal',
           taskId: activeEntry.task.id,
-          taskStartedAt: activeEntry.task.startedAt,
+          taskStartedAt: currentRunStartedAt(activeEntry.task),
           jobId: activeEntry.job._id,
           jobNumber: activeEntry.job.jobNumber,
           qty: activeEntry.job.qty,

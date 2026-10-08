@@ -718,6 +718,143 @@ test('update stores production tasks on the job', async () => {
   expect(updated.status).toBe('in_process');
 });
 
+test('update stores reopened production task runs and derives task start and end', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    actualProductionQty: 3,
+    status: 'machining_complete',
+    dueDate: null,
+    startedOn: new Date('2026-07-16T14:00:00.000Z'),
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [
+      {
+        id: 'task-1',
+        machineId: 'machine-1',
+        machineName: 'VF-2',
+        machineType: 'mill',
+        startedAt: new Date('2026-07-16T14:00:00.000Z'),
+        endedAt: new Date('2026-07-16T15:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+  const updated = await JobService.update(
+    {
+      _id: 'job-1',
+      jobNumber: 1001,
+      customer: CUSTOMER_ID_1,
+      part: PART_ID_1,
+      qty: 3,
+      status: 'in_process',
+      productionTasks: [
+        {
+          id: 'task-1',
+          machineId: 'machine-1',
+          machineName: 'VF-2',
+          machineType: 'mill',
+          startedAt: new Date('2026-07-16T14:00:00.000Z'),
+          endedAt: null,
+          runs: [
+            {
+              startedAt: new Date('2026-07-16T14:00:00.000Z'),
+              endedAt: new Date('2026-07-16T15:00:00.000Z'),
+            },
+            { startedAt: new Date('2026-07-17T14:00:00.000Z'), endedAt: null },
+          ],
+        },
+      ],
+    },
+    'device-1',
+  );
+
+  expect(updated.status).toBe('in_process');
+  expect(updated.productionTasks?.[0]).toEqual(
+    expect.objectContaining({
+      startedAt: new Date('2026-07-16T14:00:00.000Z'),
+      endedAt: null,
+      runs: [
+        {
+          startedAt: new Date('2026-07-16T14:00:00.000Z'),
+          endedAt: new Date('2026-07-16T15:00:00.000Z'),
+        },
+        { startedAt: new Date('2026-07-17T14:00:00.000Z'), endedAt: null },
+      ],
+    }),
+  );
+});
+
+test('update rejects a production task run left open before a later run', async () => {
+  customerStore.set(CUSTOMER_ID_1, buildCustomer());
+  partStore.set(PART_ID_1, buildPart());
+  jobStore.set('job-1', {
+    _id: 'job-1',
+    jobNumber: 1001,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'in_process',
+    dueDate: null,
+    startedOn: new Date('2026-07-16T14:00:00.000Z'),
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal',
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+
+  const { default: JobService } = await loadJobService();
+
+  await expect(
+    JobService.update(
+      {
+        _id: 'job-1',
+        jobNumber: 1001,
+        customer: CUSTOMER_ID_1,
+        part: PART_ID_1,
+        qty: 3,
+        status: 'in_process',
+        productionTasks: [
+          {
+            id: 'task-1',
+            machineId: 'machine-1',
+            machineName: 'VF-2',
+            machineType: 'mill',
+            startedAt: new Date('2026-07-16T14:00:00.000Z'),
+            endedAt: null,
+            runs: [
+              { startedAt: new Date('2026-07-16T14:00:00.000Z'), endedAt: null },
+              { startedAt: new Date('2026-07-17T14:00:00.000Z'), endedAt: null },
+            ],
+          },
+        ],
+      },
+      'device-1',
+    ),
+  ).rejects.toThrow('Production task task-1 run 1 must be ended before a later run.');
+});
+
 test('update stores a split shipment schedule and assigns the final remainder qty', async () => {
   customerStore.set(CUSTOMER_ID_1, buildCustomer());
   partStore.set(PART_ID_1, buildPart());

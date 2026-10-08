@@ -235,7 +235,7 @@ type InventoryActivity = Audit & {
   amount: number;
 };
 
-type JobActivityType = 'created' | 'closed' | 'task_started' | 'task_stopped';
+type JobActivityType = 'created' | 'closed' | 'task_started' | 'task_reopened' | 'task_stopped';
 
 type JobActivity = {
   _id: string;
@@ -482,6 +482,28 @@ function transformJobAudits(audits: Audit[]): JobActivity[] {
         }
 
         const previousTask = oldTasks.get(taskId);
+        if (previousTask?.endedAt && !task.endedAt) {
+          events.push({
+            _id: `${audit._id}:task-reopened:${taskId}`,
+            auditId: audit._id,
+            timestamp: toEventTimestamp(
+              task.runs?.[task.runs.length - 1]?.startedAt,
+              audit.timestamp,
+            ),
+            activityType: 'task_reopened',
+            device: audit.device,
+            jobId,
+            jobNumber,
+            customerName,
+            partSummary,
+            partImage,
+            machineName: task.machineName,
+            machineType: task.machineType,
+            machiningComplete: false,
+          });
+          return;
+        }
+
         if (previousTask?.endedAt || !task.endedAt) return;
 
         events.push({
@@ -512,6 +534,7 @@ function getJobActivityIcon(activityType: JobActivityType) {
   if (activityType === 'created') return 'mdi-briefcase-plus';
   if (activityType === 'closed') return 'mdi-briefcase-check';
   if (activityType === 'task_started') return 'mdi-play-circle';
+  if (activityType === 'task_reopened') return 'mdi-restore';
   return 'mdi-stop-circle';
 }
 
@@ -519,6 +542,7 @@ function getJobActivityLabel(activityType: JobActivityType) {
   if (activityType === 'created') return 'Created';
   if (activityType === 'closed') return 'Closed';
   if (activityType === 'task_started') return 'Task started';
+  if (activityType === 'task_reopened') return 'Task reopened';
   return 'Task stopped';
 }
 
@@ -533,7 +557,9 @@ function getJobActivitySubtitle(activity: JobActivity) {
     details.push(
       activity.activityType === 'task_started'
         ? `Started on ${activity.machineName}`
-        : `Stopped on ${activity.machineName}`,
+        : activity.activityType === 'task_reopened'
+          ? `Reopened on ${activity.machineName}`
+          : `Stopped on ${activity.machineName}`,
     );
   }
 
@@ -841,6 +867,11 @@ function openJob(jobId: string | null) {
 }
 
 .job-event-badge-task_started {
+  color: #a85d12;
+  background: #fff0de;
+}
+
+.job-event-badge-task_reopened {
   color: #a85d12;
   background: #fff0de;
 }

@@ -35,6 +35,10 @@ function coerceJobDate(value: unknown) {
 }
 
 const jobDateSchema = z.preprocess(coerceJobDate, z.coerce.date()).nullish();
+const productionTaskRunSchema = z.strictObject({
+  startedAt: z.coerce.date(),
+  endedAt: z.coerce.date().nullish(),
+});
 const productionTaskSchema = z.strictObject({
   id: z.string().trim().min(1),
   machineId: z.string().trim().min(1),
@@ -42,6 +46,7 @@ const productionTaskSchema = z.strictObject({
   machineType: z.enum(['lathe', 'mill', 'swiss']),
   startedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullish(),
+  runs: z.array(productionTaskRunSchema).optional(),
 });
 const shipmentScheduleEntrySchema = z.strictObject({
   shipDate: z.preprocess(coerceJobDate, z.coerce.date()),

@@ -17,6 +17,9 @@ type JobReportJob = Job & {
 type JobReportTask = JobProductionTask & {
   job: JobReportJob;
   businessDurationMs: number;
+  /** When this row's start or stop happened; a reopened task has one start per run. */
+  eventAt: string | Date | null | undefined;
+  reopened: boolean;
 };
 
 type JobReportShipment = JobShipmentRecord & {
@@ -102,6 +105,7 @@ async function loadJobsForReport(start: Date, end: Date): Promise<JobReportJob[]
       { completedOn: { $gte: start, $lt: end } },
       { 'productionTasks.startedAt': { $gte: start, $lt: end } },
       { 'productionTasks.endedAt': { $gte: start, $lt: end } },
+      { 'productionTasks.runs.startedAt': { $gte: start, $lt: end } },
       { 'shipmentRecords.shippedAt': { $gte: start, $lt: end } },
     ],
   })
@@ -162,30 +166,50 @@ function collectTaskEvents(
   const results: JobReportTask[] = [];
   for (const job of jobs) {
     for (const task of job.productionTasks ?? []) {
-      if (!isDateInWindow(task[field], window)) continue;
+      const events = getTaskEvents(task, field).filter((event) =>
+        isDateInWindow(event.eventAt, window),
+      );
+      if (!events.length) continue;
       const businessDurationMs = calculateTaskBusinessDurationMs(
         task,
         { timeZone: REPORT_TIME_ZONE },
         field === 'startedAt' ? now.toJSDate() : null,
       );
       if (businessDurationMs <= 0) continue;
-      results.push({
-        id: task.id,
-        machineId: task.machineId,
-        machineName: task.machineName,
-        machineType: task.machineType,
-        startedAt: task.startedAt,
-        endedAt: task.endedAt,
-        job,
-        businessDurationMs,
-      });
+      for (const event of events) {
+        results.push({
+          id: task.id,
+          machineId: task.machineId,
+          machineName: task.machineName,
+          machineType: task.machineType,
+          startedAt: task.startedAt,
+          endedAt: task.endedAt,
+          runs: task.runs,
+          job,
+          businessDurationMs,
+          ...event,
+        });
+      }
     }
   }
-  results.sort((left, right) => compareReportTasks(left, right, field));
+  results.sort(compareReportTasks);
   return results.map((task) => ({
     ...task,
     endedAt: task.endedAt ?? (field === 'startedAt' ? now.toJSDate() : task.endedAt),
   }));
+}
+
+function getTaskEvents(
+  task: JobProductionTask,
+  field: 'startedAt' | 'endedAt',
+): Pick<JobReportTask, 'eventAt' | 'reopened'>[] {
+  // A task stops once (its final end, with the total of all runs), but starts again on
+  // every reopen.
+  if (field === 'endedAt' || !task.runs?.length) {
+    return [{ eventAt: task[field], reopened: false }];
+  }
+
+  return task.runs.map((run, index) => ({ eventAt: run.startedAt, reopened: index > 0 }));
 }
 
 function collectShipments(
@@ -294,7 +318,17 @@ function renderTaskSection(title: string, tasks: JobReportTask[], field: 'starte
   const taskHeaders = isStarted
     ? `${eventTimeHeader}${tableHeader('Machine')}`
     : `${eventTimeHeader}${tableHeader('Machine')}`;
-  return `<h3 style="margin: 18px 0 8px 0;">${escapeHtml(title)}</h3><table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px;">${tableColumns(widths)}<thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${taskHeaders}${includeDuration ? tableHeader('Est. Days') : ''}${includeMachiningComplete ? tableHeader('Machining Complete') : ''}${includeProductionQty ? tableHeader('Production Qty') : ''}${tableHeader('PO #s')}</tr></thead><tbody>${tasks.map((task) => renderTaskRow(task, field, includeEventTime, includeDuration, includeMachiningComplete, includeProductionQty)).join('')}</tbody></table>`;
+  return `<h3 style="margin: 18px 0 8px 0;">${escapeHtml(title)}</h3><table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px;">${tableColumns(widths)}<thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${taskHeaders}${includeDuration ? tableHeader('Est. Days') : ''}${includeMachiningComplete ? tableHeader('Machining Complete') : ''}${includeProductionQty ? tableHeader('Production Qty') : ''}${tableHeader('PO #s')}</tr></thead><tbody>${tasks
+    .map((task) =>
+      renderTaskRow(
+        task,
+        includeEventTime,
+        includeDuration,
+        includeMachiningComplete,
+        includeProductionQty,
+      ),
+    )
+    .join('')}</tbody></table>`;
 }
 
 function renderShipmentSection(shipments: JobReportShipment[]) {
@@ -320,21 +354,20 @@ function renderCreatedJobRow(job: JobReportJob) {
 
 function renderTaskRow(
   task: JobReportTask,
-  field: 'startedAt' | 'endedAt',
   includeEventTime: boolean,
   includeDuration: boolean,
   includeMachiningComplete: boolean,
   includeProductionQty: boolean,
 ) {
-  const timestamp = field === 'startedAt' ? task.startedAt : task.endedAt;
   const isMachiningComplete = task.job.status === 'machining_complete';
   const productionQty = isMachiningComplete ? String(task.job.actualProductionQty ?? '') : '';
-  const eventTimeCell = includeEventTime ? tableCell(formatReportDate(timestamp)) : '';
-  const taskCells =
-    field === 'startedAt'
-      ? `${eventTimeCell}${tableCell(task.machineName)}`
-      : `${eventTimeCell}${tableCell(task.machineName)}`;
+  const eventTimeCell = includeEventTime ? tableCell(formatReportDate(task.eventAt)) : '';
+  const taskCells = `${eventTimeCell}${tableCell(formatReportTaskMachine(task))}`;
   return `<tr>${tableCell(task.job.jobNumber)}${tableCell(getCustomerName(task.job))}${tableCell(getPartName(task.job))}${taskCells}${includeDuration ? tableCell(formatBusinessDays(task.businessDurationMs)) : ''}${includeMachiningComplete ? tableCell(isMachiningComplete ? '[x]' : '[ ]') : ''}${includeProductionQty ? tableCell(productionQty) : ''}${tableCell(formatJobPurchaseOrders(task.job))}</tr>`;
+}
+
+function formatReportTaskMachine(task: JobReportTask) {
+  return task.reopened ? `${task.machineName} (reopened)` : task.machineName;
 }
 
 function renderShipmentRow(shipment: JobReportShipment) {
@@ -400,18 +433,12 @@ function compareReportJobs(left: JobReportJob, right: JobReportJob) {
   return compareCustomerAndJob(left, right);
 }
 
-function compareReportTasks(
-  left: JobReportTask,
-  right: JobReportTask,
-  field: 'startedAt' | 'endedAt',
-) {
+function compareReportTasks(left: JobReportTask, right: JobReportTask) {
   const customerAndJob = compareCustomerAndJob(left.job, right.job);
   if (customerAndJob !== 0) return customerAndJob;
   return (
-    compareDates(
-      field === 'startedAt' ? left.startedAt : left.endedAt,
-      field === 'startedAt' ? right.startedAt : right.endedAt,
-    ) || String(left.machineName ?? '').localeCompare(String(right.machineName ?? ''))
+    compareDates(left.eventAt, right.eventAt) ||
+    String(left.machineName ?? '').localeCompare(String(right.machineName ?? ''))
   );
 }
 
@@ -496,6 +523,7 @@ function buildJobReportCsv(
       formatCsvDate(getJobStartedTimestamp(job)),
       '',
       '',
+      '',
       formatJobPurchaseOrdersCsv(job),
       '',
     ]),
@@ -505,8 +533,8 @@ function buildJobReportCsv(
       getCustomerName(task.job),
       getPartName(task.job),
       '',
-      task.machineName,
-      formatCsvDate(task.startedAt),
+      formatReportTaskMachine(task),
+      formatCsvDate(task.eventAt),
       '',
       '',
       '',
@@ -520,7 +548,7 @@ function buildJobReportCsv(
       getPartName(task.job),
       '',
       task.machineName,
-      formatCsvDate(task.endedAt),
+      formatCsvDate(task.eventAt),
       formatHours(task.businessDurationMs),
       task.job.status === 'machining_complete' ? 'true' : 'false',
       task.job.status === 'machining_complete' ? String(task.job.actualProductionQty ?? '') : '',

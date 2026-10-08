@@ -6,9 +6,13 @@ export const DEFAULT_BUSINESS_END_HOUR = 17;
 
 type BusinessDurationInput = string | Date | null | undefined;
 
-type TaskDurationInput = {
+type TaskRunDurationInput = {
   startedAt: BusinessDurationInput;
   endedAt?: BusinessDurationInput;
+};
+
+type TaskDurationInput = TaskRunDurationInput & {
+  runs?: TaskRunDurationInput[] | null;
 };
 
 export type BusinessDurationOptions = {
@@ -72,7 +76,15 @@ export function calculateTaskBusinessDurationMs(
   options: BusinessDurationOptions = {},
   fallbackEnd: BusinessDurationInput = null,
 ) {
-  return calculateBusinessDurationMs(task.startedAt, task.endedAt ?? fallbackEnd, options);
+  if (!task.runs?.length) {
+    return calculateBusinessDurationMs(task.startedAt, task.endedAt ?? fallbackEnd, options);
+  }
+
+  return task.runs.reduce(
+    (total, run) =>
+      total + calculateBusinessDurationMs(run.startedAt, run.endedAt ?? fallbackEnd, options),
+    0,
+  );
 }
 
 function normalizeDate(value: string | Date) {

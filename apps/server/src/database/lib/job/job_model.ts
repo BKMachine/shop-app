@@ -1,8 +1,14 @@
 import { type HydratedDocument, model, Schema, type Types } from 'mongoose';
 
-type JobProductionTaskDocumentFields = Omit<JobProductionTask, 'startedAt' | 'endedAt'> & {
+type JobProductionTaskRunDocumentFields = {
   startedAt: Date;
   endedAt?: Date | null;
+};
+
+type JobProductionTaskDocumentFields = Omit<JobProductionTask, 'startedAt' | 'endedAt' | 'runs'> & {
+  startedAt: Date;
+  endedAt?: Date | null;
+  runs?: JobProductionTaskRunDocumentFields[];
 };
 
 type JobShipmentScheduleEntryDocumentFields = Omit<JobShipmentScheduleEntry, 'shipDate'> & {
@@ -25,6 +31,16 @@ type JobDocumentFields = Omit<Job, '_id' | 'customer' | 'part'> & {
   updatedAt: Date;
 };
 
+const productionTaskRunSchema = new Schema<JobProductionTaskRunDocumentFields>(
+  {
+    startedAt: { type: Date, required: true },
+    endedAt: { type: Date, default: null },
+  },
+  {
+    _id: false,
+  },
+);
+
 const productionTaskSchema = new Schema<JobProductionTaskDocumentFields>(
   {
     id: { type: String, required: true },
@@ -33,6 +49,7 @@ const productionTaskSchema = new Schema<JobProductionTaskDocumentFields>(
     machineType: { type: String, enum: ['lathe', 'mill', 'swiss'], required: true },
     startedAt: { type: Date, required: true },
     endedAt: { type: Date, default: null },
+    runs: { type: [productionTaskRunSchema], default: undefined },
   },
   {
     _id: false,

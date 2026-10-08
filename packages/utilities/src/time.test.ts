@@ -27,6 +27,39 @@ test('calculateBusinessDurationMs returns zero when there is no business-hours o
   assert.equal(duration, 0);
 });
 
+test('calculateTaskBusinessDurationMs sums runs and skips the gaps between them', () => {
+  const duration = calculateTaskBusinessDurationMs(
+    {
+      startedAt: '2026-08-07T16:00:00.000Z',
+      endedAt: '2026-08-07T21:00:00.000Z',
+      runs: [
+        { startedAt: '2026-08-07T16:00:00.000Z', endedAt: '2026-08-07T17:00:00.000Z' },
+        { startedAt: '2026-08-07T20:00:00.000Z', endedAt: '2026-08-07T21:00:00.000Z' },
+      ],
+    },
+    { timeZone: DEFAULT_BUSINESS_TIME_ZONE },
+  );
+
+  assert.equal(duration, 2 * 60 * 60 * 1000);
+});
+
+test('calculateTaskBusinessDurationMs uses the fallback end for an open run', () => {
+  const duration = calculateTaskBusinessDurationMs(
+    {
+      startedAt: '2026-08-07T16:00:00.000Z',
+      endedAt: null,
+      runs: [
+        { startedAt: '2026-08-07T16:00:00.000Z', endedAt: '2026-08-07T17:00:00.000Z' },
+        { startedAt: '2026-08-07T20:00:00.000Z', endedAt: null },
+      ],
+    },
+    { timeZone: DEFAULT_BUSINESS_TIME_ZONE },
+    '2026-08-07T20:30:00.000Z',
+  );
+
+  assert.equal(duration, 90 * 60 * 1000);
+});
+
 test('calculateTaskBusinessDurationMs uses the task timestamps directly', () => {
   const duration = calculateTaskBusinessDurationMs(
     {

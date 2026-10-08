@@ -188,6 +188,29 @@
                           >
                             End Task
                           </v-btn>
+                          <v-btn
+                            v-else-if="job?.status !== 'closed'"
+                            :disabled="productionTaskLoading"
+                            prepend-icon="mdi-restore"
+                            variant="outlined"
+                            @click="requestReopenProductionTask(task.id)"
+                          >
+                            Reopen Task
+                          </v-btn>
+                        </div>
+                      </div>
+                      <div
+                        v-if="task.runs && task.runs.length > 1"
+                        class="production-entry__runs mt-4"
+                      >
+                        <div class="production-entry__label">Runs</div>
+                        <div
+                          v-for="(run, runIndex) in task.runs"
+                          :key="runIndex"
+                          class="production-entry__value text-body-2"
+                        >
+                          {{ runIndex + 1 }}. {{ formatTaskDateTime(run.startedAt) }} –
+                          {{ run.endedAt ? formatTaskDateTime(run.endedAt) : 'In progress' }}
                         </div>
                       </div>
                     </v-card-text>
@@ -665,6 +688,46 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog max-width="420" :model-value="Boolean(reopenTaskConfirmTaskId)">
+      <v-card>
+        <v-card-title>Reopen Task</v-card-title>
+        <v-card-text>
+          <div>Are you sure you want to reopen this task?</div>
+          <div v-if="pendingReopenTask" class="production-dialog__details mt-3">
+            {{ pendingReopenTask.machineName }}:
+            {{ machineTypeLabel(pendingReopenTask.machineType) }}
+          </div>
+          <div v-if="jobSummaryDetails" class="text-medium-emphasis mt-2">
+            {{ jobSummaryDetails }}
+          </div>
+          <div class="text-medium-emphasis mt-3">
+            A new run will start now. Time between runs is not counted toward the task duration.
+          </div>
+          <div v-if="job?.status === 'machining_complete'" class="text-medium-emphasis mt-2">
+            Job status will move back to In Process.
+          </div>
+          <div v-if="pendingReopenTaskMachineBusyJobNumber" class="text-warning mt-2">
+            This machine currently has an active task on Job #{{ pendingReopenTaskMachineBusyJobNumber }}.
+          </div>
+          <div v-if="draftIsAltered" class="text-medium-emphasis mt-3">
+            Unsaved changes on this page will be discarded.
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="closeReopenTaskDialog">Cancel</v-btn>
+          <v-btn
+            color="primary"
+            :disabled="!canConfirmReopenProductionTask"
+            :loading="productionTaskLoading"
+            @click="confirmReopenProductionTask"
+          >
+            Reopen Task
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -713,6 +776,7 @@ const startTaskDialog = ref(false);
 const endTaskConfirmTaskId = ref<string | null>(null);
 const endTaskFinalForJob = ref(false);
 const endTaskActualProductionQty = ref('');
+const reopenTaskConfirmTaskId = ref<string | null>(null);
 const job = ref<Job | null>(null);
 const draft = ref(createEmptyDraft());
 const createRouteHydrationKey = ref<string | null>(null);
@@ -876,6 +940,25 @@ const canConfirmEndProductionTask = computed(
     Boolean(pendingEndTask.value) &&
     (!endTaskFinalForJob.value ||
       (canMarkPendingTaskAsFinal.value && hasValidEndTaskActualProductionQty.value)),
+);
+const pendingReopenTask = computed(
+  () => productionTasks.value.find((task) => task.id === reopenTaskConfirmTaskId.value) || null,
+);
+const pendingReopenTaskMachineBusyJobNumber = computed(() => {
+  if (!pendingReopenTask.value) return null;
+
+  const machine = machines.value.find(
+    (currentMachine) => currentMachine.id === pendingReopenTask.value?.machineId,
+  );
+  if (!machine?.hasRunningTask) return null;
+  if (machine.runningTaskJobNumber === job.value?.jobNumber) return null;
+  return machine.runningTaskJobNumber;
+});
+const canConfirmReopenProductionTask = computed(
+  () =>
+    !productionTaskLoading.value &&
+    Boolean(pendingReopenTask.value?.endedAt) &&
+    job.value?.status !== 'closed',
 );
 const showCreateRouteProductionMessage = computed(() => isCreateRoute.value || !job.value);
 const canOpenStartTaskDialog = computed(
@@ -1677,6 +1760,7 @@ async function syncRouteState() {
   tab.value = selectedRouteTab();
   closeStartTaskDialog();
   endTaskConfirmTaskId.value = null;
+  reopenTaskConfirmTaskId.value = null;
 
   if (isCreateRoute.value) {
     const nextHydrationKey = currentCreateRouteHydrationKey();
@@ -1915,8 +1999,17 @@ function closeEndTaskDialog() {
 async function confirmEndProductionTask() {
   if (!job.value || !pendingEndTask.value || !canConfirmEndProductionTask.value) return;
 
+  const endedAt = currentTimestampValue();
   const nextTasks = productionTasks.value.map((task) =>
-    task.id === pendingEndTask.value?.id ? { ...task, endedAt: currentTimestampValue() } : task,
+    task.id === pendingEndTask.value?.id
+      ? {
+          ...task,
+          endedAt,
+          ...(task.runs?.length
+            ? { runs: task.runs.map((run) => (run.endedAt ? run : { ...run, endedAt })) }
+            : {}),
+        }
+      : task,
   );
   const nextDraft = endTaskFinalForJob.value
     ? {
@@ -1935,6 +2028,52 @@ async function confirmEndProductionTask() {
     job.value = updatedJob;
     draft.value = jobToDraft(updatedJob);
     closeEndTaskDialog();
+  } finally {
+    productionTaskLoading.value = false;
+  }
+}
+
+function requestReopenProductionTask(taskId: string) {
+  const task = productionTasks.value.find((currentTask) => currentTask.id === taskId);
+  if (!task?.endedAt || productionTaskLoading.value) return;
+  if (job.value?.status === 'closed') return;
+
+  reopenTaskConfirmTaskId.value = taskId;
+}
+
+function closeReopenTaskDialog() {
+  reopenTaskConfirmTaskId.value = null;
+}
+
+async function confirmReopenProductionTask() {
+  if (!job.value || !pendingReopenTask.value || !canConfirmReopenProductionTask.value) return;
+
+  const nextTasks = productionTasks.value.map((task) =>
+    task.id === pendingReopenTask.value?.id
+      ? {
+          ...task,
+          endedAt: null,
+          runs: [
+            ...(task.runs?.length
+              ? task.runs
+              : [{ startedAt: task.startedAt, endedAt: task.endedAt }]),
+            { startedAt: currentTimestampValue(), endedAt: null },
+          ],
+        }
+      : task,
+  );
+  const nextDraft = applyJobStatus(jobToDraft(job.value), 'in_process');
+
+  productionTaskLoading.value = true;
+  try {
+    const updatedJob = await jobsStore.update({
+      ...toJobPayload(nextDraft, nextTasks),
+      _id: job.value._id,
+      jobNumber: job.value.jobNumber,
+    });
+    job.value = updatedJob;
+    draft.value = jobToDraft(updatedJob);
+    closeReopenTaskDialog();
   } finally {
     productionTaskLoading.value = false;
   }
@@ -2392,6 +2531,12 @@ function machineAvailabilityClass(machine: StartTaskMachineOption) {
 .production-entry__value {
   margin-top: 6px;
   font-weight: 600;
+}
+
+.production-entry__runs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .production-entry__action {

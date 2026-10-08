@@ -220,13 +220,22 @@ declare global {
 
   type JobPriority = 'low' | 'normal' | 'rush';
 
+  interface JobProductionTaskRun {
+    startedAt: string | Date;
+    endedAt?: string | Date | null;
+  }
+
   interface JobProductionTask {
     id: string;
     machineId: string;
     machineName: string;
     machineType: MachineType;
+    /** First start of the task. */
     startedAt: string | Date;
+    /** Latest end of the task; null while a run is active. */
     endedAt?: string | Date | null;
+    /** Individual start/stop periods; only present once a task has been reopened. */
+    runs?: JobProductionTaskRun[];
   }
 
   interface JobShipmentScheduleEntry {

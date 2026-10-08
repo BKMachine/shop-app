@@ -26,6 +26,14 @@ function normalizeProductionTasksValue(tasks: JobProductionTask[] | undefined) {
     machineType: task.machineType,
     startedAt: normalizeDateValue(task.startedAt) ?? new Date(task.startedAt).toISOString(),
     endedAt: normalizeDateValue(task.endedAt),
+    ...(task.runs?.length
+      ? {
+          runs: task.runs.map((run) => ({
+            startedAt: normalizeDateValue(run.startedAt) ?? new Date(run.startedAt).toISOString(),
+            endedAt: normalizeDateValue(run.endedAt),
+          })),
+        }
+      : {}),
   }));
 }
 
