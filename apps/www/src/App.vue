@@ -64,6 +64,9 @@
         >
           Test
         </v-list-item>
+        <v-list-item link prepend-icon="mdi-calculator" :to="{ name: 'calculator' }">
+          Calculator
+        </v-list-item>
         <v-list-item
           link
           prepend-icon="mdi-clipboard-text-clock-outline"

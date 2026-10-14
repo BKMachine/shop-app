@@ -5,6 +5,7 @@ import HomeView from '@/views/HomeView.vue';
 import JobsView from '@/views/JobsView.vue';
 import JobView from '@/views/jobs/JobView.vue';
 import LocationsView from '@/views/LocationsView.vue';
+import MachiningCalculatorView from '@/views/MachiningCalculatorView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
 import PartsView from '@/views/parts/PartsView.vue';
 import PartView from '@/views/parts/PartView.vue';
@@ -119,6 +120,11 @@ const router = createRouter({
       path: '/test',
       name: 'test',
       component: TestView,
+    },
+    {
+      path: '/calculator',
+      name: 'calculator',
+      component: MachiningCalculatorView,
     },
   ],
 });
