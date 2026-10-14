@@ -285,6 +285,24 @@
             @click.prevent="copySpeedRpm"
           />
         </template>
+        <template v-if="row.id === 'feed'" #action-woc>
+          <v-btn
+            class="calc-copy"
+            density="comfortable"
+            :disabled="!wocFlip"
+            prepend-icon="mdi-swap-horizontal"
+            size="x-small"
+            :title="
+              wocFlip
+                ? `Switch WOC to ${wocFlip.text}`
+                : 'Enter a WOC and cutter diameter to switch between length and %'
+            "
+            variant="tonal"
+            @click.prevent="flipWoc"
+          >
+            {{ wocPercent ? lengthUnit : '%' }}
+          </v-btn>
+        </template>
         <template v-if="row.id === 'feed'" #action-chip>
           <span class="calc-thinning" :class="{ 'is-thinning': thinning.ratio < 1 }">
             {{ thinning.label }}
@@ -312,7 +330,7 @@ import {
   toInches,
   type Units,
 } from '@/lib/calculatorFigure';
-import { formatNumber, useLinkedFields } from '@/lib/useLinkedFields';
+import { formatNumber, parsePositive, useLinkedFields } from '@/lib/useLinkedFields';
 import CalcRow from './CalcRow.vue';
 
 type SpeedKey = 'dia' | 'rpm' | 'sfm';
@@ -351,7 +369,7 @@ const speed = useLinkedFields<SpeedKey>({
 });
 
 // Ratio of actual chip thickness to feed per tooth for the current cutter and WOC.
-const thinningRatio = computed(() =>
+const thinningRatio = computed((): number =>
   chipThinningRatio(speed.values.value.dia, feed.values.value.woc),
 );
 
@@ -360,7 +378,14 @@ const feed = useLinkedFields<FeedKey>({
   fixed: ['rpm', 'flutes'],
   // Without a WOC the cut is treated as full engagement (no chip thinning).
   optional: ['woc'],
-  solve(key, values, anchor) {
+  // WOC can be typed as a length or as a percent of the cutter diameter ("25%").
+  parse(key, text) {
+    if (key !== 'woc' || !isPercent(text)) return parsePositive(text);
+    const percent = parsePositive(text);
+    const dia = speed.values.value.dia;
+    return percent && dia ? (percent / 100) * dia : null;
+  },
+  solve(key, values, anchor): number {
     const flutes = values.flutes ?? 0;
     const rpm = values.rpm ?? 0;
     const ratio = thinningRatio.value;
@@ -447,7 +472,7 @@ const rows = computed<CalcRowModel[]>(() => {
       id: 'feed',
       title: 'Feed',
       subtitle:
-        'Enter RPM, flutes and any one feed; the rest are calculated. Add a radial width of cut (WOC) under half the cutter diameter and chip thinning raises the feed per tooth needed to hit the chip load.',
+        'Enter RPM, flutes and any one feed; the rest are calculated. Add a radial width of cut (WOC, as a length or a percent like 25%) under half the cutter diameter and chip thinning raises the feed per tooth needed to hit the chip load.',
       fields: [
         {
           key: 'rpm',
@@ -461,7 +486,7 @@ const rows = computed<CalcRowModel[]>(() => {
         {
           key: 'woc',
           label: 'WOC',
-          unit,
+          unit: isPercent(feed.text.woc) ? '% D' : unit,
           icon: 'mdi-arrow-expand-vertical',
           step: inch.value ? 0.01 : 0.1,
           stacked: true,
@@ -536,11 +561,33 @@ watch(
       if (key === 'rpm') return value;
       return scale(value, key === 'dia' ? MM_PER_INCH : METERS_PER_FOOT);
     });
-    feed.convert((key, value) =>
-      key === 'rpm' || key === 'flutes' ? value : scale(value, MM_PER_INCH),
-    );
+    feed.convert((key, value) => {
+      if (key === 'rpm' || key === 'flutes') return value;
+      // A percent WOC is relative to the cutter, so it holds across units.
+      if (key === 'woc' && isPercent(feed.text.woc)) return null;
+      return scale(value, MM_PER_INCH);
+    });
   },
 );
+
+function isPercent(text: string) {
+  return text.trim().endsWith('%');
+}
+
+const wocPercent = computed(() => isPercent(feed.text.woc));
+
+// WOC written the other way from how it was typed: a length for a percent, a percent for a length.
+const wocFlip = computed(() => {
+  const { dia } = speed.values.value;
+  const { woc } = feed.values.value;
+  if (!dia || !woc) return null;
+  if (isPercent(feed.text.woc)) return { text: formatNumber(woc, inch.value ? 4 : 3) };
+  return { text: `${formatNumber((woc / dia) * 100, 1)}%` };
+});
+
+function flipWoc() {
+  if (wocFlip.value) feed.setInput('woc', wocFlip.value.text);
+}
 
 function partClass(key: string) {
   return { 'is-active': highlightKey.value === key };

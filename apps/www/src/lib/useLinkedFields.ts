@@ -11,6 +11,8 @@ export interface LinkedFieldsOptions<K extends string> {
   // User-entered fields that feed into the formulas but may be left blank.
   optional?: readonly K[];
   solve: (key: K, values: Record<K, number | null>, anchor: K) => number;
+  // Turns a field's text into its value; defaults to a plain positive number.
+  parse?: (key: K, text: string) => number | null;
   format: (key: K, value: number) => string;
 }
 
@@ -30,6 +32,7 @@ export function useLinkedFields<K extends string>({
   fixed = [],
   optional = [],
   solve,
+  parse = (_key, text) => parsePositive(text),
   format,
 }: LinkedFieldsOptions<K>) {
   const free = keys.filter((key) => !fixed.includes(key) && !optional.includes(key));
@@ -40,7 +43,7 @@ export function useLinkedFields<K extends string>({
 
   const values = computed(
     () =>
-      Object.fromEntries(keys.map((key) => [key, parsePositive(text[key])])) as Record<
+      Object.fromEntries(keys.map((key) => [key, parse(key, text[key])])) as Record<
         K,
         number | null
       >,
@@ -79,10 +82,13 @@ export function useLinkedFields<K extends string>({
   }
 
   // Rewrite every known value in place (unit changes) without touching edit history.
-  function convert(transform: (key: K, value: number) => number) {
+  // A transform returning null leaves that field's text as typed.
+  function convert(transform: (key: K, value: number) => number | null) {
     for (const key of keys) {
       const value = values.value[key];
-      if (value !== null) text[key] = format(key, transform(key, value));
+      if (value === null) continue;
+      const next = transform(key, value);
+      if (next !== null) text[key] = format(key, next);
     }
   }
 

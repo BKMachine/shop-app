@@ -53,12 +53,14 @@ const emit = defineEmits<{
 }>();
 
 function nudge(direction: 1 | -1, event: KeyboardEvent) {
+  // Percent entries step in whole percents and keep their % sign.
+  const percent = props.text.trim().endsWith('%');
   const scale = event.shiftKey ? 10 : event.altKey ? 0.1 : 1;
-  const step = props.step * scale;
+  const step = (percent ? 1 : props.step) * scale;
   const current = parsePositive(props.text) ?? 0;
   // Snap to the step grid so repeated nudges land on clean numbers.
   const next = Math.max(step, Math.round((current + direction * step) / step) * step);
-  emit('input', formatNumber(next, 5));
+  emit('input', `${formatNumber(next, 5)}${percent ? '%' : ''}`);
 }
 </script>
 
