@@ -1,0 +1,338 @@
+/* Layout and diagram styles shared by the turning and milling calculators. */
+
+.calc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.calc-figure-wrap {
+  position: sticky;
+  top: 16px;
+  padding: 16px;
+  border: 1px solid var(--tile-border);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at top left, rgba(var(--v-theme-primary), 0.06), transparent 60%),
+    var(--tile-bg);
+}
+
+@media (max-width: 960px) {
+  .calc-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calc-figure-wrap {
+    position: static;
+  }
+}
+
+.calc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calc-hint {
+  text-align: center;
+  font-size: 0.72rem;
+  opacity: 0.5;
+}
+
+/* ---- Figure ---- */
+
+.calc-figure {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.calc-figure text {
+  font-family: ui-monospace, "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+}
+
+.fig-steel {
+  fill: var(--steel);
+  stroke: var(--steel-edge);
+  stroke-width: 1;
+}
+
+.fig-steel--holder {
+  opacity: 0.9;
+}
+
+.fig-insert {
+  fill: var(--insert);
+  stroke: var(--steel-edge);
+  stroke-width: 1;
+}
+
+.fig-chip {
+  fill: none;
+  stroke: var(--calc-rpm);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+.fig-center {
+  stroke: var(--fig-ink);
+  stroke-width: 1;
+  stroke-dasharray: 14 4 3 4;
+}
+
+.fig-stock {
+  fill: none;
+  stroke: var(--fig-ink);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.fig-tick {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.fig-bands line {
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 2;
+}
+
+.fig-bands,
+.fig-spinner {
+  animation-duration: var(--spin);
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+  animation-play-state: var(--spin-state);
+}
+
+.fig-bands {
+  animation-name: fig-bands;
+  animation-duration: calc(var(--spin) / 4);
+}
+
+.fig-spinner {
+  animation-name: fig-spin;
+}
+
+@keyframes fig-bands {
+  to {
+    transform: translateY(16px);
+  }
+}
+
+@keyframes fig-spin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fig-bands,
+  .fig-spinner {
+    animation: none;
+  }
+}
+
+.fig-part {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 2;
+  transition:
+    opacity 0.25s,
+    filter 0.25s;
+}
+
+.fig-part path,
+.fig-part line {
+  fill: none;
+}
+
+.fig-part polygon {
+  stroke: none;
+}
+
+.fig-part .fig-feed-marks line {
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.fig-part .fig-ghost {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.fig-part .fig-label {
+  stroke: none;
+  font-weight: 600;
+}
+
+.fig-part .fig-label--halo {
+  paint-order: stroke;
+  stroke: rgb(var(--v-theme-surface));
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.fig-surface {
+  stroke-width: 4;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.fig-dia {
+  color: var(--calc-dia);
+}
+
+.fig-rpm {
+  color: var(--calc-rpm);
+}
+
+.fig-sfm {
+  color: var(--calc-sfm);
+}
+
+.fig-ipr {
+  color: var(--calc-ipr);
+}
+
+.fig-ipm {
+  color: var(--calc-ipm);
+}
+
+.calc-figure.has-highlight .fig-part:not(.is-active) {
+  opacity: 0.22;
+}
+
+.fig-part.is-active {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.fig-part.is-active .fig-surface {
+  opacity: 1;
+}
+
+.calc-figure .fig-caption {
+  fill: var(--fig-ink);
+  letter-spacing: 0.15em;
+  font-size: 10px;
+}
+
+.calc-copy {
+  letter-spacing: 0.04em;
+}
+
+/* Milling extras */
+
+.fig-block {
+  fill: var(--block);
+  stroke: var(--steel-edge);
+  stroke-width: 1;
+}
+
+.fig-gullet {
+  fill: var(--steel);
+}
+
+.fig-holder {
+  stroke: var(--steel-edge);
+  stroke-width: 1;
+}
+
+.fig-groove line {
+  stroke: var(--steel-edge);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
+.fig-runout {
+  fill: var(--steel);
+  opacity: 0.35;
+}
+
+.fig-part .fig-flute-lines polygon {
+  fill: var(--steel);
+  opacity: 0.55;
+}
+
+.fig-part .fig-flute-lines line {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 1.2;
+}
+
+.fig-part.is-active .fig-flute-lines polygon {
+  fill: currentColor;
+  opacity: 0.85;
+}
+
+.fig-flute-lines {
+  animation: fig-flutes var(--spin) linear infinite;
+  animation-play-state: var(--spin-state);
+}
+
+.fig-spinner--cw {
+  animation-name: fig-spin-cw;
+}
+
+@keyframes fig-flutes {
+  to {
+    transform: translateX(-28px);
+  }
+}
+
+@keyframes fig-spin-cw {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fig-flute-lines {
+    animation: none;
+  }
+}
+
+.fig-part .fig-ghost-circle {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.fig-part .fig-edge {
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.fig-part .fig-engagement {
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.fig-woc {
+  color: var(--calc-woc);
+}
+
+.fig-chip-load {
+  color: var(--calc-chip);
+}
+
+.fig-flutes {
+  color: var(--calc-flutes);
+}
+
+.fig-ipt {
+  color: var(--calc-ipt);
+}

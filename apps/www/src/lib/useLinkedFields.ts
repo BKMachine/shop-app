@@ -1,13 +1,16 @@
 import { computed, reactive, ref } from 'vue';
 
-// A set of fields bound by one relation (e.g. SFM = π·D·RPM/12). Once all but one field are known,
-// the remaining field is solved. Editing a field re-solves whichever other field was edited least
-// recently, so the user's most recent inputs always stay put.
+// A group of fields bound by formulas (e.g. SFM = π·D·RPM/12, or IPM = IPT·Z·RPM).
+// Fixed fields are only ever entered by the user. Of the remaining "free" fields, the one edited
+// most recently is the anchor, and every other free field is solved from the fixed fields + anchor.
+// So whatever the user just typed always stays put.
 export interface LinkedFieldsOptions<K extends string> {
   keys: readonly K[];
-  // Fields that are only ever entered by the user, never solved for.
+  // User-entered fields that must all be known before anything is solved.
   fixed?: readonly K[];
-  solve: (key: K, values: Record<K, number>) => number;
+  // User-entered fields that feed into the formulas but may be left blank.
+  optional?: readonly K[];
+  solve: (key: K, values: Record<K, number | null>, anchor: K) => number;
   format: (key: K, value: number) => string;
 }
 
@@ -25,13 +28,15 @@ export function formatNumber(value: number, decimals: number, padded = false): s
 export function useLinkedFields<K extends string>({
   keys,
   fixed = [],
+  optional = [],
   solve,
   format,
 }: LinkedFieldsOptions<K>) {
+  const free = keys.filter((key) => !fixed.includes(key) && !optional.includes(key));
   const text = reactive(Object.fromEntries(keys.map((key) => [key, '']))) as Record<K, string>;
-  // Most recently edited first.
+  // Free fields, most recently edited first.
   const history = ref<K[]>([]) as { value: K[] };
-  const solvedKey = ref<K | null>(null) as { value: K | null };
+  const solvedKeys = ref<K[]>([]) as { value: K[] };
 
   const values = computed(
     () =>
@@ -41,39 +46,36 @@ export function useLinkedFields<K extends string>({
       >,
   );
 
-  function recency(key: K) {
-    const index = history.value.indexOf(key);
-    return index === -1 ? Number.POSITIVE_INFINITY : index;
-  }
-
-  function solveFrom(editedKey: K) {
-    const others = keys.filter((key) => key !== editedKey && !fixed.includes(key));
-    if (others.length === 0) return;
-    const target = others.reduce((a, b) => (recency(b) > recency(a) ? b : a));
+  function resolve() {
+    const anchor = history.value[0];
     const current = values.value;
-    const inputsKnown = keys.every((key) => key === target || current[key] !== null);
+    const ready =
+      anchor !== undefined &&
+      current[anchor] !== null &&
+      fixed.every((key) => current[key] !== null);
+    const solved: K[] = [];
 
-    if (inputsKnown) {
-      const result = solve(target, current as Record<K, number>);
-      if (Number.isFinite(result) && result > 0) {
-        text[target] = format(target, result);
-        solvedKey.value = target;
-        return;
+    for (const key of free) {
+      if (key === anchor) continue;
+      if (ready) {
+        const result = solve(key, current, anchor);
+        if (Number.isFinite(result) && result > 0) {
+          text[key] = format(key, result);
+          solved.push(key);
+          continue;
+        }
       }
+      // Not enough inputs left to back a solved value, so drop it rather than show a stale number.
+      if (solvedKeys.value.includes(key)) text[key] = '';
     }
 
-    // Not enough inputs left to back the solved value, so drop it rather than show a stale number.
-    if (solvedKey.value === target) {
-      text[target] = '';
-      solvedKey.value = null;
-    }
+    solvedKeys.value = solved;
   }
 
   function setInput(key: K, value: string) {
     text[key] = value;
-    history.value = [key, ...history.value.filter((k) => k !== key)];
-    if (solvedKey.value === key) solvedKey.value = null;
-    solveFrom(key);
+    if (free.includes(key)) history.value = [key, ...history.value.filter((k) => k !== key)];
+    resolve();
   }
 
   // Rewrite every known value in place (unit changes) without touching edit history.
@@ -87,8 +89,8 @@ export function useLinkedFields<K extends string>({
   function clear() {
     for (const key of keys) text[key] = '';
     history.value = [];
-    solvedKey.value = null;
+    solvedKeys.value = [];
   }
 
-  return { text, values, solvedKey, setInput, convert, clear };
+  return { text, values, solvedKeys, setInput, resolve, convert, clear };
 }

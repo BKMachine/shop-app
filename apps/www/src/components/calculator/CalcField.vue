@@ -1,7 +1,7 @@
 <template>
   <label
     class="calc-field"
-    :class="{ 'is-active': active, 'is-solved': solved }"
+    :class="{ 'is-active': active, 'is-solved': solved, 'is-stacked': stacked }"
     :style="{ '--accent': accent }"
   >
     <div class="calc-field__label">
@@ -43,6 +43,7 @@ const props = defineProps<{
   step: number;
   active?: boolean;
   solved?: boolean;
+  stacked?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -156,5 +157,22 @@ function nudge(direction: 1 | -1, event: KeyboardEvent) {
   font-size: 0.8rem;
   font-weight: 600;
   opacity: 0.55;
+}
+.calc-field.is-stacked {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 6px;
+  padding: 6px 10px 4px 14px;
+}
+
+.calc-field.is-stacked .calc-field__label {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 22px;
+}
+
+.calc-field.is-stacked .calc-field__input {
+  font-size: 1.35rem;
 }
 </style>
