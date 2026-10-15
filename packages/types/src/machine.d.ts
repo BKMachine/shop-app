@@ -116,6 +116,15 @@ declare global {
   type MachineSource = 'focas' | 'arduino' | 'mtconnect' | 'serial';
   type MachineStatus = 'offline' | 'red' | 'yellow' | 'green' | 'idle';
 
+  interface MachineJobSummary {
+    jobId?: string | null;
+    jobNumber?: number | null;
+    partId?: string | null;
+    partNumber?: string | null;
+    partSummary?: string | null;
+    partHasIncompleteData?: boolean;
+  }
+
   interface MachineData {
     id: string;
     name: string;
@@ -134,7 +143,8 @@ declare global {
     state: MachineState;
     jobId?: string | null;
     jobNumber?: number | null;
-    otherJobNumbers?: number[];
+    /** Every in-process job on the machine, newest task first (includes the primary job). */
+    jobs?: MachineJobSummary[];
     partId?: string | null;
     partNumber?: string | null;
     partDescription?: string | null;

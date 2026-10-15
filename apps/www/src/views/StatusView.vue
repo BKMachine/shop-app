@@ -184,7 +184,7 @@ type MachineDashboardMetadata = Pick<
   | 'partHasIncompleteData'
   | 'partHourlyRate'
   | 'partSummary'
-> & { otherJobNumbers: number[] };
+> & { jobs: MachineJobSummary[] };
 
 interface DepartmentPerformanceEntry {
   department: string;
@@ -379,9 +379,12 @@ async function fetchMachines() {
     fetchMachineDepartmentOptions(),
   ])
     .then(([{ data: machines }, machineDashboardMetadata, departments]) => {
-      tiles.value = orderMachines(
-        machines.map((machine) => ({ ...machine, ...machineDashboardMetadata.get(machine.id) })),
-      );
+      let merged: MachineInfo[] = machines.map((machine) => ({
+        ...machine,
+        ...machineDashboardMetadata.get(machine.id),
+      }));
+      if (import.meta.env.DEV) merged = withDevExtraJobs(merged, machineDashboardMetadata);
+      tiles.value = orderMachines(merged);
       departmentOptions.value = departments;
       syncIncludedDepartments();
       persistMachineOrder();
@@ -395,18 +398,26 @@ async function fetchMachineDashboardMetadata() {
   try {
     const { data } = await api.get<MachineJobDashboardResponse>('/jobs/machine-dashboard');
 
-    // Rows arrive newest task first per machine; the newest drives the tile, the rest are counted.
+    // Rows arrive newest task first per machine; the newest is the primary, all are kept in `jobs`.
     const metadata = new Map<string, MachineDashboardMetadata>();
     for (const machine of data.active) {
+      const job: MachineJobSummary = {
+        jobId: machine.jobId ?? null,
+        jobNumber: machine.jobNumber ?? null,
+        partId: machine.partId ?? null,
+        partNumber: machine.partNumber ?? null,
+        partSummary: machine.partSummary,
+        partHasIncompleteData: machine.partHasIncompleteData ?? false,
+      };
       const existing = metadata.get(machine.machineId);
       if (existing) {
-        if (machine.jobNumber != null) existing.otherJobNumbers.push(machine.jobNumber);
+        existing.jobs.push(job);
         continue;
       }
       metadata.set(machine.machineId, {
         jobId: machine.jobId ?? null,
         jobNumber: machine.jobNumber ?? null,
-        otherJobNumbers: [],
+        jobs: [job],
         partId: machine.partId ?? null,
         partNumber: machine.partNumber ?? null,
         partDescription: machine.partDescription ?? null,
@@ -422,6 +433,35 @@ async function fetchMachineDashboardMetadata() {
     console.warn('Unable to load machine dashboard metadata.', error);
     return cachedMachineDashboardMetadata;
   }
+}
+
+// DEV ONLY: give every tile 2-4 jobs so the multi-job chip/menu can be styled/tested.
+// Borrows real job/part rows from other machines when available so the links resolve, and
+// flags some as incomplete so that styling shows up too.
+function withDevExtraJobs(
+  machines: MachineInfo[],
+  metadata: Map<string, MachineDashboardMetadata>,
+): MachineInfo[] {
+  const pool = [...metadata.values()].flatMap((entry) => entry.jobs);
+
+  return machines.map((machine, machineIndex) => {
+    const jobs = [...(machine.jobs ?? [])];
+    if (jobs.length > 1) return machine;
+
+    const total = (machineIndex % 3) + 2;
+    for (let jobIndex = jobs.length; jobIndex < total; jobIndex++) {
+      const borrowed = pool.length ? pool[(machineIndex + jobIndex) % pool.length] : null;
+      jobs.push({
+        ...(borrowed ?? {
+          jobNumber: 9000 + machineIndex * 10 + jobIndex,
+          partNumber: `DEV-${machineIndex + 1}-${jobIndex + 1}`,
+        }),
+        partHasIncompleteData:
+          Boolean(borrowed?.partHasIncompleteData) || (machineIndex + jobIndex) % 3 === 0,
+      });
+    }
+    return { ...machine, jobs };
+  });
 }
 
 async function fetchDepartmentPerformance() {

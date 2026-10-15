@@ -17,7 +17,47 @@
       <div class="details">
         <div v-if="isOnline" class="timer">
           <div>
+            <!-- Multiple jobs: only show the chip, since the cycle time can't be tied to one job. -->
+            <div v-if="hasMultipleJobs" class="job-row">
+              <v-menu location="bottom start" open-on-hover open-delay="100" close-delay="200">
+                <template #activator="{ props: menuProps }">
+                  <span v-bind="menuProps" class="extra-jobs-chip">+{{ jobs.length }}</span>
+                </template>
+                <div class="other-jobs-menu">
+                  <div class="other-jobs-menu__title">Jobs on this machine</div>
+                  <div
+                    v-for="(job, index) in jobs"
+                    :key="job.jobId ?? `${props.data.id}-job-${index}`"
+                    :class="['job-row', { 'job-row--incomplete': job.partHasIncompleteData }]"
+                    :title="job.partHasIncompleteData ? 'Part needs more cost data' : undefined"
+                  >
+                    <span class="job-row__label">Job:</span>
+                    <span class="other-jobs-menu__job-number">
+                      <RouterLink
+                        v-if="job.jobId"
+                        class="job-row__link"
+                        :to="{ name: 'viewJob', params: { id: job.jobId } }"
+                      >
+                        #{{ job.jobNumber ?? '—' }}
+                      </RouterLink>
+                      <span v-else class="job-row__value">---</span>
+                    </span>
+                    <span class="job-row__separator">|</span>
+                    <span class="job-row__label">Part:</span>
+                    <RouterLink
+                      v-if="job.partId && partText(job)"
+                      class="job-row__link"
+                      :to="{ name: 'viewPart', params: { id: job.partId }, query: { tab: 'cost' } }"
+                    >
+                      {{ partText(job) }}
+                    </RouterLink>
+                    <span v-else class="job-row__value">{{ partText(job) || '---' }}</span>
+                  </div>
+                </div>
+              </v-menu>
+            </div>
             <div
+              v-else
               :class="['job-row', { 'job-row--incomplete': hasIncompletePartData }]"
               :title="hasIncompletePartData ? 'Part needs more cost data' : undefined"
             >
@@ -30,13 +70,6 @@
                 #{{ data.jobNumber ?? '—' }}
               </RouterLink>
               <span v-else class="job-row__value">---</span>
-              <span
-                v-if="otherJobNumbers.length"
-                class="extra-jobs-chip"
-                :title="`Also on this machine: ${otherJobNumbers.map((n) => `#${n}`).join(', ')}`"
-              >
-                +{{ otherJobNumbers.length }}
-              </span>
               <span class="job-row__separator">|</span>
               <span class="job-row__label">Part:</span>
               <RouterLink
@@ -184,8 +217,16 @@ const currentPartText = computed(() => {
   return partSummary || '';
 });
 
-const otherJobNumbers = computed(() => {
-  return props.data.otherJobNumbers ?? [];
+function partText(job: Pick<MachineJobSummary, 'partNumber' | 'partSummary'>) {
+  return job.partNumber?.trim() || job.partSummary?.trim() || '';
+}
+
+const jobs = computed(() => {
+  return props.data.jobs ?? [];
+});
+
+const hasMultipleJobs = computed(() => {
+  return jobs.value.length > 1;
 });
 
 const hasIncompletePartData = computed(() => {
@@ -367,14 +408,30 @@ const rapid = computed(() => {
   flex-shrink: 0;
   min-height: 14px;
   padding: 0 5px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 999px;
-  background: rgba(18, 18, 18, 0.55);
-  color: #f5f5f5;
+  background: #1565c0;
+  color: #ffffff;
   cursor: help;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
+}
+
+.other-jobs-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #2b2b2b;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.other-jobs-menu__title {
+  font-size: 11px;
+  opacity: 0.7;
 }
 
 .details {
@@ -495,5 +552,26 @@ const rapid = computed(() => {
 .cycle-history-tooltip__index {
   min-width: 1.25rem;
   opacity: 0.7;
+}
+
+.other-jobs-menu .job-row {
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+/* Room for "#" + a 4-digit job number so the "|" delimiters line up. */
+.other-jobs-menu__job-number {
+  display: inline-block;
+  flex-shrink: 0;
+  min-width: 4.6ch;
+  font-size: 12px; /* match the link so `ch` is measured in the same font size */
+  font-variant-numeric: tabular-nums;
+}
+
+.other-jobs-menu .job-row--incomplete {
+  background: rgba(232, 154, 35, 0.22);
+  border-color: rgba(232, 154, 35, 0.75);
+  box-shadow: none;
 }
 </style>
