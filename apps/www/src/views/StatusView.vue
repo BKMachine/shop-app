@@ -435,9 +435,10 @@ async function fetchMachineDashboardMetadata() {
   }
 }
 
-// DEV ONLY: give every tile 2-4 jobs so the multi-job chip/menu can be styled/tested.
-// Borrows real job/part rows from other machines when available so the links resolve, and
-// flags some as incomplete so that styling shows up too.
+// DEV ONLY: give every third tile 2-4 jobs so the multi-job chip/menu can be styled/tested
+// alongside normal single-job tiles.
+// Borrows real job/part rows from other machines when available so the links resolve.
+// Fake tiles alternate between all-complete (blue chip) and one incomplete job (amber chip).
 function withDevExtraJobs(
   machines: MachineInfo[],
   metadata: Map<string, MachineDashboardMetadata>,
@@ -446,21 +447,28 @@ function withDevExtraJobs(
 
   return machines.map((machine, machineIndex) => {
     const jobs = [...(machine.jobs ?? [])];
-    if (jobs.length > 1) return machine;
+    if (jobs.length > 1 || machineIndex % 3 !== 0) return machine;
 
-    const total = (machineIndex % 3) + 2;
+    const fakeIndex = machineIndex / 3;
+    const total = (fakeIndex % 3) + 2;
     for (let jobIndex = jobs.length; jobIndex < total; jobIndex++) {
       const borrowed = pool.length ? pool[(machineIndex + jobIndex) % pool.length] : null;
-      jobs.push({
-        ...(borrowed ?? {
+      jobs.push(
+        borrowed ?? {
           jobNumber: 9000 + machineIndex * 10 + jobIndex,
           partNumber: `DEV-${machineIndex + 1}-${jobIndex + 1}`,
-        }),
-        partHasIncompleteData:
-          Boolean(borrowed?.partHasIncompleteData) || (machineIndex + jobIndex) % 3 === 0,
-      });
+        },
+      );
     }
-    return { ...machine, jobs };
+
+    const showIncomplete = fakeIndex % 2 === 0;
+    return {
+      ...machine,
+      jobs: jobs.map((job, jobIndex) => ({
+        ...job,
+        partHasIncompleteData: showIncomplete && jobIndex === jobs.length - 1,
+      })),
+    };
   });
 }
 

@@ -21,7 +21,15 @@
             <div v-if="hasMultipleJobs" class="job-row">
               <v-menu location="bottom start" open-on-hover open-delay="100" close-delay="200">
                 <template #activator="{ props: menuProps }">
-                  <span v-bind="menuProps" class="extra-jobs-chip">+{{ jobs.length }}</span>
+                  <span
+                    v-bind="menuProps"
+                    :class="[
+                      'extra-jobs-chip',
+                      { 'extra-jobs-chip--incomplete': anyJobHasIncompleteData },
+                    ]"
+                  >
+                    +{{ jobs.length }}
+                  </span>
                 </template>
                 <div class="other-jobs-menu">
                   <div class="other-jobs-menu__title">Jobs on this machine</div>
@@ -229,6 +237,10 @@ const hasMultipleJobs = computed(() => {
   return jobs.value.length > 1;
 });
 
+const anyJobHasIncompleteData = computed(() => {
+  return jobs.value.some((job) => job.partHasIncompleteData);
+});
+
 const hasIncompletePartData = computed(() => {
   return Boolean(props.data.partHasIncompleteData);
 });
@@ -406,16 +418,23 @@ const rapid = computed(() => {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  min-height: 14px;
-  padding: 0 5px;
+  min-height: 18px;
+  padding: 0 6px;
   border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 999px;
   background: #1565c0;
-  color: #ffffff;
+  color: #fff;
   cursor: help;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1;
+}
+
+/* Dark + amber (not solid amber) so it still stands out on yellow tiles. */
+.extra-jobs-chip--incomplete {
+  border-color: #f0a830;
+  background: rgba(18, 18, 18, 0.68);
+  color: #d7ecff;
 }
 
 .other-jobs-menu {
