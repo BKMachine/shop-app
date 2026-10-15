@@ -36,8 +36,10 @@
 
         <rect fill="url(#mc-metal)" height="128" width="170" x="80" y="96" />
         <rect fill="url(#mc-metal)" height="112" width="120" x="250" y="104" />
-        <g class="fig-bands" clip-path="url(#mc-part-clip)">
-          <line v-for="y in bandRows" :key="y" x1="80" x2="370" :y1="y" :y2="y" />
+        <g clip-path="url(#mc-part-clip)">
+          <g class="fig-bands">
+            <line v-for="y in bandRows" :key="y" x1="80" x2="370" :y1="y" :y2="y" />
+          </g>
         </g>
         <line class="fig-center" x1="8" x2="384" y1="160" y2="160" />
 
@@ -74,8 +76,10 @@
         </g>
 
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
-          <path d="M140 88 A 14 72 0 0 1 140 232" />
-          <polygon :points="arrowHead(140, 234, -0.25, 1)" />
+          <!-- Wraps over the stock and stops on its front face, clear of the edge and the tool;
+               the head sits at 40° on the same ellipse, pointing along its tangent. -->
+          <path d="M140 88 A 14 72 0 0 1 151.47 201.3" />
+          <polygon :points="arrowHead(150.72, 206.28, -9, 55.16)" />
           <text class="fig-label" text-anchor="middle" x="140" y="78">
             {{ figureText.rpm }}
           </text>
@@ -185,22 +189,7 @@
         :highlight-key="highlightKey"
         :row="row"
         @highlight="(source, key) => setHighlight(source, row.id, key)"
-      >
-        <template v-if="row.id === 'feed'" #action-rpm>
-          <v-btn
-            class="calc-copy"
-            density="comfortable"
-            :disabled="!speed.values.value.rpm || rpmMatchesSpeed"
-            :prepend-icon="rpmMatchesSpeed ? 'mdi-link-variant' : 'mdi-arrow-down-bold'"
-            size="x-small"
-            :title="speed.values.value.rpm ? 'Copy RPM from Spindle Speed' : 'Enter a spindle speed first'"
-            variant="tonal"
-            @click.prevent="copySpeedRpm"
-          >
-            {{ copyLabel }}
-          </v-btn>
-        </template>
-      </CalcRow>
+      />
 
       <div class="calc-hint">↑ / ↓ to nudge · Shift ×10 · Alt ÷10</div>
     </div>
@@ -213,6 +202,7 @@ import {
   arrowHead,
   type CalcRowModel,
   type Highlight,
+  lockUntilDiameter,
   logScale,
   METERS_PER_FOOT,
   MM_PER_INCH,
@@ -263,7 +253,7 @@ const speed = useLinkedFields<SpeedKey>({
 
 const feed = useLinkedFields<FeedKey>({
   keys: ['rpm', 'ipr', 'ipm'],
-  // RPM comes from the spindle; feed per rev and feed rate are solved around it.
+  // RPM mirrors the Spindle Speed row; feed per rev and feed rate are solved around it.
   fixed: ['rpm'],
   solve(key, { rpm, ipr, ipm }) {
     if (key === 'ipm') return (ipr ?? 0) * (rpm ?? 0);
@@ -281,99 +271,99 @@ const rows = computed<CalcRowModel[]>(() => {
   const surfaceUnit = inch.value ? 'SFM' : 'm/min';
   const iprUnit = `${lengthUnit.value}/rev`;
   const ipmUnit = `${lengthUnit.value}/min`;
-  const rpmField = {
-    key: 'rpm',
-    label: 'Spindle Speed',
-    unit: 'RPM',
-    icon: 'mdi-rotate-left',
-    step: 10,
-  };
 
-  return [
-    {
-      id: 'speed',
-      title: 'Spindle Speed',
-      subtitle: 'Enter a diameter plus RPM or surface speed and the other speed is calculated.',
-      fields: [
-        {
-          key: 'dia',
-          label: 'Diameter',
-          unit: lengthUnit.value,
-          icon: 'mdi-diameter-outline',
-          step: inch.value ? 0.01 : 0.1,
-        },
-        rpmField,
-        {
-          key: 'sfm',
-          label: 'Surface Speed',
-          unit: surfaceUnit,
-          icon: 'mdi-speedometer',
-          step: 10,
-        },
-      ],
-      formula: [
-        { key: 'sfm', text: surfaceUnit },
-        '=',
-        'π',
-        '×',
-        { key: 'dia', text: 'D' },
-        '×',
-        { key: 'rpm', text: 'RPM' },
-        '÷',
-        String(surfaceFactor.value),
-      ],
-      text: speed.text,
-      solvedKeys: speed.solvedKeys.value,
-      setInput: (key, value) => speed.setInput(key as SpeedKey, value),
-      clear: speed.clear,
-    },
-    {
-      id: 'feed',
-      title: 'Feed',
-      subtitle: 'Enter RPM plus feed per rev or feed rate and the other feed is calculated.',
-      fields: [
-        rpmField,
-        {
-          key: 'ipr',
-          label: 'Feed per Rev',
-          unit: iprUnit,
-          icon: 'mdi-format-line-spacing',
-          step: inch.value ? 0.001 : 0.01,
-        },
-        {
-          key: 'ipm',
-          label: 'Feed Rate',
-          unit: ipmUnit,
-          icon: 'mdi-arrow-left-bold',
-          step: inch.value ? 0.1 : 1,
-        },
-      ],
-      formula: [
-        { key: 'ipm', text: ipmUnit },
-        '=',
-        { key: 'ipr', text: iprUnit },
-        '×',
-        { key: 'rpm', text: 'RPM' },
-      ],
-      text: feed.text,
-      solvedKeys: feed.solvedKeys.value,
-      setInput: (key, value) => feed.setInput(key as FeedKey, value),
-      clear: feed.clear,
-    },
-  ];
+  return lockUntilDiameter(
+    [
+      {
+        id: 'speed',
+        title: 'Spindle Speed',
+        subtitle: 'Enter a diameter plus RPM or surface speed and the other speed is calculated.',
+        fields: [
+          {
+            key: 'dia',
+            label: 'Diameter',
+            unit: lengthUnit.value,
+            icon: 'mdi-diameter-outline',
+            step: inch.value ? 0.01 : 0.1,
+          },
+          {
+            key: 'rpm',
+            label: 'Spindle Speed',
+            unit: 'RPM',
+            icon: 'mdi-rotate-left',
+            step: 10,
+          },
+          {
+            key: 'sfm',
+            label: 'Surface Speed',
+            unit: surfaceUnit,
+            icon: 'mdi-speedometer',
+            step: 10,
+          },
+        ],
+        formula: [
+          { key: 'sfm', text: surfaceUnit },
+          '=',
+          'π',
+          '×',
+          { key: 'dia', text: 'D' },
+          '×',
+          { key: 'rpm', text: 'RPM' },
+          '÷',
+          String(surfaceFactor.value),
+        ],
+        text: speed.text,
+        solvedKeys: speed.solvedKeys.value,
+        setInput: (key, value) => speed.setInput(key as SpeedKey, value),
+        clear: speed.clear,
+      },
+      {
+        id: 'feed',
+        title: 'Feed',
+        subtitle:
+          'Uses the RPM from Spindle Speed. Enter feed per rev or feed rate and the other is calculated.',
+        fields: [
+          {
+            key: 'ipr',
+            label: 'Feed per Rev',
+            unit: iprUnit,
+            icon: 'mdi-format-line-spacing',
+            step: inch.value ? 0.001 : 0.01,
+          },
+          {
+            key: 'ipm',
+            label: 'Feed Rate',
+            unit: ipmUnit,
+            icon: 'mdi-arrow-left-bold',
+            step: inch.value ? 0.1 : 1,
+          },
+        ],
+        formula: [
+          { key: 'ipm', text: ipmUnit },
+          '=',
+          { key: 'ipr', text: iprUnit },
+          '×',
+          { key: 'rpm', text: 'RPM' },
+        ],
+        text: feed.text,
+        solvedKeys: feed.solvedKeys.value,
+        setInput: (key, value) => feed.setInput(key as FeedKey, value),
+        clear: clearFeed,
+      },
+    ],
+    speed.values.value.dia,
+  );
 });
 
-const rpmMatchesSpeed = computed(
-  () => speed.values.value.rpm !== null && speed.text.rpm === feed.text.rpm,
+// The feed row has no RPM field of its own; it follows Spindle Speed, typed or solved.
+watch(
+  () => speed.text.rpm,
+  (rpm) => feed.setInput('rpm', rpm),
 );
 
-const copyLabel = computed(() => {
-  if (rpmMatchesSpeed.value) return 'Matches';
-  return speed.values.value.rpm ? `Use ${speed.text.rpm}` : 'From speed';
-});
-
-function copySpeedRpm() {
-  if (speed.values.value.rpm) feed.setInput('rpm', speed.text.rpm);
+function clearFeed() {
+  feed.clear();
+  feed.setInput('rpm', speed.text.rpm);
 }
 
 watch(
@@ -397,14 +387,9 @@ function partClass(key: string) {
 
 const bandRows = Array.from({ length: 11 }, (_, i) => 80 + i * 16);
 
-// Both rows have an RPM; show whichever row the user is working in, falling back to the other.
-const figureRpm = computed(() => {
-  const preferFeed = highlight.value?.row === 'feed';
-  const [first, second] = preferFeed ? [feed, speed] : [speed, feed];
-  if (first.values.value.rpm) return { value: first.values.value.rpm, text: first.text.rpm };
-  if (second.values.value.rpm) return { value: second.values.value.rpm, text: second.text.rpm };
-  return null;
-});
+const figureRpm = computed(() =>
+  speed.values.value.rpm ? { value: speed.values.value.rpm, text: speed.text.rpm } : null,
+);
 
 const spin = computed(() => spinSeconds(figureRpm.value?.value));
 const spinState = computed(() => (figureRpm.value ? 'running' : 'paused'));

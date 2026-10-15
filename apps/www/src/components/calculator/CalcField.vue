@@ -1,8 +1,14 @@
 <template>
   <label
     class="calc-field"
-    :class="{ 'is-active': active, 'is-solved': solved, 'is-stacked': stacked }"
+    :class="{
+      'is-active': active,
+      'is-solved': solved,
+      'is-stacked': stacked,
+      'is-locked': locked,
+    }"
     :style="{ '--accent': accent }"
+    :title="locked"
   >
     <div class="calc-field__label">
       <div class="calc-field__name">
@@ -17,6 +23,7 @@
     <input
       autocomplete="off"
       class="calc-field__input"
+      :disabled="!!locked"
       inputmode="decimal"
       placeholder="—"
       spellcheck="false"
@@ -44,6 +51,8 @@ const props = defineProps<{
   active?: boolean;
   solved?: boolean;
   stacked?: boolean;
+  percent?: boolean;
+  locked?: string;
 }>();
 
 const emit = defineEmits<{
@@ -54,7 +63,7 @@ const emit = defineEmits<{
 
 function nudge(direction: 1 | -1, event: KeyboardEvent) {
   // Percent entries step in whole percents and keep their % sign.
-  const percent = props.text.trim().endsWith('%');
+  const percent = props.percent || props.text.trim().endsWith('%');
   const scale = event.shiftKey ? 10 : event.altKey ? 0.1 : 1;
   const step = (percent ? 1 : props.step) * scale;
   const current = parsePositive(props.text) ?? 0;
@@ -80,6 +89,15 @@ function nudge(direction: 1 | -1, event: KeyboardEvent) {
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
+}
+
+.calc-field.is-locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calc-field.is-locked .calc-field__input {
+  cursor: not-allowed;
 }
 
 .calc-field::before {

@@ -235,6 +235,16 @@
   letter-spacing: 0.04em;
 }
 
+.calc-presets {
+  display: flex;
+  gap: 2px;
+}
+
+.calc-presets .calc-preset {
+  min-width: 22px;
+  padding: 0 4px;
+}
+
 /* Milling extras */
 
 .fig-block {
@@ -279,7 +289,7 @@
 }
 
 .fig-flute-lines {
-  animation: fig-flutes var(--spin) linear infinite;
+  animation: fig-flutes var(--flute-spin) linear infinite;
   animation-play-state: var(--spin-state);
 }
 
@@ -289,7 +299,7 @@
 
 @keyframes fig-flutes {
   to {
-    transform: translateX(-28px);
+    transform: translateX(calc(-1 * var(--flute-pitch)));
   }
 }
 

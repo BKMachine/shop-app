@@ -26,6 +26,10 @@ export interface CalcFieldDef {
   step: number;
   // Shown as a small tile in a grid above the full-width fields.
   stacked?: boolean;
+  // The value is a percent even if its text has no % sign yet (nudges step in whole percents).
+  percent?: boolean;
+  // When set, the field can't be edited yet; the text says why (shown as a tooltip).
+  locked?: string;
 }
 
 export type FormulaToken = string | { key: string; text: string };
@@ -39,6 +43,8 @@ export interface CalcRowModel {
   text: Record<string, string>;
   solvedKeys: readonly string[];
   setInput: (key: string, value: string) => void;
+  // Called when a field loses focus, to tidy up what was typed.
+  commit?: (key: string) => void;
   clear: () => void;
 }
 
@@ -68,14 +74,26 @@ export function logScale(inches: number | null, min: number, max: number) {
   return Math.min(1, Math.max(0, t));
 }
 
+// Every formula runs through the diameter, so nothing else can be entered until it's set.
+export function lockUntilDiameter(rows: CalcRowModel[], dia: number | null): CalcRowModel[] {
+  if (dia) return rows;
+  return rows.map((row) => ({
+    ...row,
+    fields: row.fields.map((field) =>
+      field.key === 'dia' ? field : { ...field, locked: 'Enter a diameter first' },
+    ),
+  }));
+}
+
 export function toInches(value: number | null, units: Units) {
   if (value === null) return null;
   return units === 'in' ? value : value / MM_PER_INCH;
 }
 
 // Display spin period for a given RPM: faster spindles spin faster, within watchable limits.
-export function spinSeconds(rpm: number | null | undefined) {
-  return rpm ? Math.max(0.35, 4 - Math.log10(rpm)) : 4;
+// `base` shifts the curve slower; `fastest` caps the speed at high RPM.
+export function spinSeconds(rpm: number | null | undefined, base = 4, fastest = 0.35) {
+  return rpm ? Math.max(fastest, base - Math.log10(rpm)) : base;
 }
 
 // Radial chip thinning: with radial engagement under half the cutter diameter, the chip is thinner

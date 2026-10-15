@@ -34,7 +34,7 @@
         :key="field.key"
         v-bind="fieldProps(field)"
         stacked
-        @blur="emit('highlight', 'focus', null)"
+        @blur="onBlur(field.key)"
         @focus="emit('highlight', 'focus', field.key)"
         @input="row.setInput(field.key, $event)"
         @mouseenter="emit('highlight', 'hover', field.key)"
@@ -51,7 +51,7 @@
         v-for="field in listFields"
         :key="field.key"
         v-bind="fieldProps(field)"
-        @blur="emit('highlight', 'focus', null)"
+        @blur="onBlur(field.key)"
         @focus="emit('highlight', 'focus', field.key)"
         @input="row.setInput(field.key, $event)"
         @mouseenter="emit('highlight', 'hover', field.key)"
@@ -90,11 +90,18 @@ function fieldProps(field: CalcFieldDef) {
     active: props.activeKey === field.key,
     icon: field.icon,
     label: field.label,
+    locked: field.locked,
+    percent: field.percent,
     solved: props.row.solvedKeys.includes(field.key),
     step: field.step,
     text: props.row.text[field.key],
     unit: field.unit,
   };
+}
+
+function onBlur(key: string) {
+  emit('highlight', 'focus', null);
+  props.row.commit?.(key);
 }
 </script>
 

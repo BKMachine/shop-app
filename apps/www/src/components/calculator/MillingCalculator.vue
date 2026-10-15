@@ -6,7 +6,12 @@
         class="calc-figure"
         :class="{ 'has-highlight': highlightKey }"
         role="img"
-        :style="{ '--spin': `${spin}s`, '--spin-state': spinState }"
+        :style="{
+          '--spin': `${spin}s`,
+          '--flute-spin': `${fluteSpin}s`,
+          '--flute-pitch': `${side.pitch}px`,
+          '--spin-state': spinState,
+        }"
         viewBox="0 0 720 324"
       >
         <defs>
@@ -56,8 +61,9 @@
           points="128,157 212,157 204,170 136,170"
         />
         <rect class="fig-steel" height="6" width="56" x="142" y="170" />
+        <!-- 4 grooves 90° apart around the band; the front two sit at ±45°: 170 ± 28·sin 45° -->
         <g class="fig-groove">
-          <line v-for="x in [152, 164, 176, 188]" :key="x" :x1="x" :x2="x" y1="170" y2="176" />
+          <line v-for="x in [150.2, 189.8]" :key="x" :x1="x" :x2="x" y1="170" y2="176" />
         </g>
 
         <rect class="fig-holder" fill="url(#mm-metal-x)" height="36" width="32" x="154" y="176" />
@@ -74,9 +80,11 @@
         <g class="fig-part fig-flutes" :class="partClass('flutes')">
           <g clip-path="url(#mm-flute-clip)">
             <g class="fig-flute-lines">
-              <template v-for="x in fluteBandXs" :key="x">
-                <polygon :points="`${x},212 ${x + 11},212 ${x - 35},292 ${x - 46},292`" />
-                <line :x1="x + 11" :x2="x - 35" y1="212" y2="292" />
+              <template v-for="x in side.bandXs" :key="x">
+                <polygon
+                  :points="`${x},212 ${x + side.band},212 ${x + side.band - 46},292 ${x - 46},292`"
+                />
+                <line :x1="x + side.band" :x2="x + side.band - 46" y1="212" y2="292" />
               </template>
             </g>
           </g>
@@ -273,17 +281,23 @@
         :row="row"
         @highlight="(source, key) => setHighlight(source, row.id, key)"
       >
-        <template v-if="row.id === 'feed'" #action-rpm>
-          <v-btn
-            :aria-label="copyTitle"
-            density="comfortable"
-            :disabled="!speed.values.value.rpm || rpmMatchesSpeed"
-            :icon="rpmMatchesSpeed ? 'mdi-link-variant' : 'mdi-arrow-down-bold'"
-            size="x-small"
-            :title="copyTitle"
-            variant="tonal"
-            @click.prevent="copySpeedRpm"
-          />
+        <template v-if="row.id === 'feed'" #action-flutes>
+          <div class="calc-presets">
+            <v-btn
+              v-for="count in FLUTE_PRESETS"
+              :key="count"
+              :active="feed.values.value.flutes === count"
+              :aria-label="`${count} flutes`"
+              class="calc-preset"
+              density="compact"
+              :disabled="!speed.values.value.dia"
+              size="x-small"
+              variant="tonal"
+              @click.prevent="feed.setInput('flutes', String(count))"
+            >
+              {{ count }}
+            </v-btn>
+          </div>
         </template>
         <template v-if="row.id === 'feed'" #action-woc>
           <v-btn
@@ -322,6 +336,7 @@ import {
   type CalcRowModel,
   chipThinningRatio,
   type Highlight,
+  lockUntilDiameter,
   logScale,
   METERS_PER_FOOT,
   MM_PER_INCH,
@@ -368,6 +383,12 @@ const speed = useLinkedFields<SpeedKey>({
   },
 });
 
+// One-tap flute counts for the common end mills.
+const FLUTE_PRESETS = [2, 3, 4, 5];
+
+// True while the WOC text is what the user just typed, before it's committed on blur.
+const wocTyped = ref(false);
+
 // Ratio of actual chip thickness to feed per tooth for the current cutter and WOC.
 const thinningRatio = computed((): number =>
   chipThinningRatio(speed.values.value.dia, feed.values.value.woc),
@@ -375,6 +396,7 @@ const thinningRatio = computed((): number =>
 
 const feed = useLinkedFields<FeedKey>({
   keys: ['rpm', 'flutes', 'woc', 'chip', 'ipt', 'ipr', 'ipm'],
+  // RPM mirrors the Spindle Speed row rather than having a field here.
   fixed: ['rpm', 'flutes'],
   // Without a WOC the cut is treated as full engagement (no chip thinning).
   optional: ['woc'],
@@ -404,7 +426,8 @@ const feed = useLinkedFields<FeedKey>({
   },
   format(key, value) {
     if (key === 'rpm' || key === 'flutes') return formatNumber(value, 0);
-    if (key === 'woc') return formatNumber(value, inch.value ? 4 : 3);
+    // Inch lengths keep their decimals so they never read as a whole-number percent.
+    if (key === 'woc') return formatNumber(value, inch.value ? 4 : 3, inch.value);
     // Feed rate carries two fewer places than the per-tooth and per-rev feeds.
     if (key === 'ipm') return formatNumber(value, inch.value ? 2 : 1, true);
     return formatNumber(value, inch.value ? 4 : 3, true);
@@ -429,127 +452,126 @@ const rows = computed<CalcRowModel[]>(() => {
   const unit = lengthUnit.value;
   const fineStep = inch.value ? 0.0005 : 0.01;
 
-  return [
-    {
-      id: 'speed',
-      title: 'Spindle Speed',
-      subtitle:
-        'Enter a cutter diameter plus RPM or surface speed and the other speed is calculated.',
-      fields: [
-        {
-          key: 'dia',
-          label: 'Cutter Diameter',
-          unit,
-          icon: 'mdi-diameter-outline',
-          step: inch.value ? 0.0625 : 1,
+  return lockUntilDiameter(
+    [
+      {
+        id: 'speed',
+        title: 'Spindle Speed',
+        subtitle:
+          'Enter a cutter diameter plus RPM or surface speed and the other speed is calculated.',
+        fields: [
+          {
+            key: 'dia',
+            label: 'Cutter Diameter',
+            unit,
+            icon: 'mdi-diameter-outline',
+            step: inch.value ? 0.0625 : 1,
+          },
+          { key: 'rpm', label: 'Spindle Speed', unit: 'RPM', icon: 'mdi-rotate-right', step: 100 },
+          {
+            key: 'sfm',
+            label: 'Surface Speed',
+            unit: surfaceUnit,
+            icon: 'mdi-speedometer',
+            step: 10,
+          },
+        ],
+        formula: [
+          { key: 'sfm', text: surfaceUnit },
+          '=',
+          'π',
+          '×',
+          { key: 'dia', text: 'D' },
+          '×',
+          { key: 'rpm', text: 'RPM' },
+          '÷',
+          String(surfaceFactor.value),
+        ],
+        text: speed.text,
+        solvedKeys: speed.solvedKeys.value,
+        setInput: (key, value) => speed.setInput(key as SpeedKey, value),
+        clear: speed.clear,
+      },
+      {
+        id: 'feed',
+        title: 'Feed',
+        subtitle:
+          'Uses the RPM from Spindle Speed. Enter flutes and any one feed; the rest are calculated. Add a radial width of cut (WOC, as a length or a percent like 25%; in inches a whole number is a percent, 0.25 a length) under half the cutter diameter and chip thinning raises the feed per tooth needed to hit the chip load.',
+        fields: [
+          { key: 'flutes', label: 'Flutes', unit: 'FL', icon: 'mdi-fan', step: 1, stacked: true },
+          {
+            key: 'woc',
+            label: 'WOC',
+            unit: wocPercent.value ? '% D' : unit,
+            percent: wocPercent.value,
+            icon: 'mdi-arrow-expand-vertical',
+            step: inch.value ? 0.01 : 0.1,
+            stacked: true,
+          },
+          {
+            key: 'chip',
+            label: 'Chip Load',
+            unit: `${unit}`,
+            icon: 'mdi-layers-outline',
+            step: fineStep,
+          },
+          {
+            key: 'ipt',
+            label: 'Feed / Tooth',
+            unit: `${unit}/th`,
+            icon: 'mdi-tooth-outline',
+            step: fineStep,
+          },
+          {
+            key: 'ipr',
+            label: 'Feed / Rev',
+            unit: `${unit}/rev`,
+            icon: 'mdi-rotate-right',
+            step: inch.value ? 0.001 : 0.01,
+          },
+          {
+            key: 'ipm',
+            label: 'Feed Rate',
+            unit: `${unit}/min`,
+            icon: 'mdi-arrow-right-bold',
+            step: inch.value ? 0.1 : 1,
+          },
+        ],
+        formula: [
+          { key: 'ipm', text: `${unit}/min` },
+          '=',
+          { key: 'ipt', text: `${unit}/th` },
+          '×',
+          { key: 'flutes', text: 'FL' },
+          '×',
+          { key: 'rpm', text: 'RPM' },
+        ],
+        text: feed.text,
+        solvedKeys: feed.solvedKeys.value,
+        setInput: (key, value) => {
+          if (key === 'woc') wocTyped.value = true;
+          feed.setInput(key as FeedKey, value);
         },
-        { key: 'rpm', label: 'Spindle Speed', unit: 'RPM', icon: 'mdi-rotate-right', step: 100 },
-        {
-          key: 'sfm',
-          label: 'Surface Speed',
-          unit: surfaceUnit,
-          icon: 'mdi-speedometer',
-          step: 10,
+        commit: (key) => {
+          if (key === 'woc') commitWoc();
         },
-      ],
-      formula: [
-        { key: 'sfm', text: surfaceUnit },
-        '=',
-        'π',
-        '×',
-        { key: 'dia', text: 'D' },
-        '×',
-        { key: 'rpm', text: 'RPM' },
-        '÷',
-        String(surfaceFactor.value),
-      ],
-      text: speed.text,
-      solvedKeys: speed.solvedKeys.value,
-      setInput: (key, value) => speed.setInput(key as SpeedKey, value),
-      clear: speed.clear,
-    },
-    {
-      id: 'feed',
-      title: 'Feed',
-      subtitle:
-        'Enter RPM, flutes and any one feed; the rest are calculated. Add a radial width of cut (WOC, as a length or a percent like 25%) under half the cutter diameter and chip thinning raises the feed per tooth needed to hit the chip load.',
-      fields: [
-        {
-          key: 'rpm',
-          label: 'Spindle',
-          unit: 'RPM',
-          icon: 'mdi-rotate-right',
-          step: 100,
-          stacked: true,
-        },
-        { key: 'flutes', label: 'Flutes', unit: 'FL', icon: 'mdi-fan', step: 1, stacked: true },
-        {
-          key: 'woc',
-          label: 'WOC',
-          unit: isPercent(feed.text.woc) ? '% D' : unit,
-          icon: 'mdi-arrow-expand-vertical',
-          step: inch.value ? 0.01 : 0.1,
-          stacked: true,
-        },
-        {
-          key: 'chip',
-          label: 'Chip Load',
-          unit: `${unit}`,
-          icon: 'mdi-layers-outline',
-          step: fineStep,
-        },
-        {
-          key: 'ipt',
-          label: 'Feed / Tooth',
-          unit: `${unit}/th`,
-          icon: 'mdi-tooth-outline',
-          step: fineStep,
-        },
-        {
-          key: 'ipr',
-          label: 'Feed / Rev',
-          unit: `${unit}/rev`,
-          icon: 'mdi-rotate-right',
-          step: inch.value ? 0.001 : 0.01,
-        },
-        {
-          key: 'ipm',
-          label: 'Feed Rate',
-          unit: `${unit}/min`,
-          icon: 'mdi-arrow-right-bold',
-          step: inch.value ? 0.1 : 1,
-        },
-      ],
-      formula: [
-        { key: 'ipm', text: `${unit}/min` },
-        '=',
-        { key: 'ipt', text: `${unit}/th` },
-        '×',
-        { key: 'flutes', text: 'FL' },
-        '×',
-        { key: 'rpm', text: 'RPM' },
-      ],
-      text: feed.text,
-      solvedKeys: feed.solvedKeys.value,
-      setInput: (key, value) => feed.setInput(key as FeedKey, value),
-      clear: feed.clear,
-    },
-  ];
+        clear: clearFeed,
+      },
+    ],
+    speed.values.value.dia,
+  );
 });
 
-const rpmMatchesSpeed = computed(
-  () => speed.values.value.rpm !== null && speed.text.rpm === feed.text.rpm,
+// The feed row has no RPM field of its own; it follows Spindle Speed, typed or solved.
+watch(
+  () => speed.text.rpm,
+  (rpm) => feed.setInput('rpm', rpm),
 );
 
-const copyTitle = computed(() => {
-  if (rpmMatchesSpeed.value) return 'Matches Spindle Speed';
-  return speed.values.value.rpm
-    ? `Use ${speed.text.rpm} RPM from Spindle Speed`
-    : 'Enter a spindle speed first';
-});
-
-function copySpeedRpm() {
-  if (speed.values.value.rpm) feed.setInput('rpm', speed.text.rpm);
+function clearFeed() {
+  wocTyped.value = false;
+  feed.clear();
+  feed.setInput('rpm', speed.text.rpm);
 }
 
 watch(
@@ -570,8 +592,20 @@ watch(
   },
 );
 
+// WOC is a percent of the cutter diameter when it ends in %. In inches, a whole number as typed
+// ("25") is taken as a percent too, and anything with a decimal ("0.25", "1.0") as a length.
 function isPercent(text: string) {
-  return text.trim().endsWith('%');
+  const trimmed = text.trim();
+  if (trimmed.endsWith('%')) return true;
+  return wocTyped.value && inch.value && /^\d+$/.test(trimmed);
+}
+
+// Once the user leaves the field, spell out a typed percent so it reads the same everywhere after.
+function commitWoc() {
+  const text = feed.text.woc.trim();
+  const bare = isPercent(text) && !text.endsWith('%');
+  wocTyped.value = false;
+  if (bare) feed.setInput('woc', `${text}%`);
 }
 
 const wocPercent = computed(() => isPercent(feed.text.woc));
@@ -581,12 +615,14 @@ const wocFlip = computed(() => {
   const { dia } = speed.values.value;
   const { woc } = feed.values.value;
   if (!dia || !woc) return null;
-  if (isPercent(feed.text.woc)) return { text: formatNumber(woc, inch.value ? 4 : 3) };
+  if (isPercent(feed.text.woc)) return { text: formatNumber(woc, inch.value ? 4 : 3, inch.value) };
   return { text: `${formatNumber((woc / dia) * 100, 1)}%` };
 });
 
 function flipWoc() {
-  if (wocFlip.value) feed.setInput('woc', wocFlip.value.text);
+  if (!wocFlip.value) return;
+  wocTyped.value = false;
+  feed.setInput('woc', wocFlip.value.text);
 }
 
 function partClass(key: string) {
@@ -595,19 +631,30 @@ function partClass(key: string) {
 
 // ---- Figure ----
 
-// Flute gullets as seen from the side; one band per 28px so the scroll animation loops seamlessly.
-const fluteBandXs = Array.from({ length: 5 }, (_, i) => 150 + i * 28);
+const figureRpm = computed(() =>
+  speed.values.value.rpm ? { value: speed.values.value.rpm, text: speed.text.rpm } : null,
+);
 
-// Both rows have an RPM; show whichever row the user is working in, falling back to the other.
-const figureRpm = computed(() => {
-  const preferFeed = highlight.value?.row === 'feed';
-  const [first, second] = preferFeed ? [feed, speed] : [speed, feed];
-  if (first.values.value.rpm) return { value: first.values.value.rpm, text: first.text.rpm };
-  if (second.values.value.rpm) return { value: second.values.value.rpm, text: second.text.rpm };
-  return null;
+// Multi-flute cutters strobe at high speed, so milling runs on a slower curve than turning.
+const spin = computed(() => spinSeconds(figureRpm.value?.value, 5.5, 1.2));
+
+const toothCount = computed(() =>
+  Math.min(8, Math.max(1, Math.round(feed.values.value.flutes ?? 4))),
+);
+
+// Side-view flute bands: one band per flute around the 32px cutter's circumference. The bands
+// scroll one pitch per flute pass, so `toothCount` pitches of travel equal one top-view turn.
+const side = computed(() => {
+  const pitch = (Math.PI * 32) / toothCount.value;
+  // Cover the 154-186 clip, the 46px helix slant, and one pitch of scroll travel.
+  const count = Math.ceil((186 + 46 + pitch - 150) / pitch) + 1;
+  return {
+    pitch,
+    band: pitch * 0.4,
+    bandXs: Array.from({ length: count }, (_, i) => 150 + i * pitch),
+  };
 });
-
-const spin = computed(() => spinSeconds(figureRpm.value?.value));
+const fluteSpin = computed(() => spin.value / toothCount.value);
 const spinState = computed(() => (figureRpm.value ? 'running' : 'paused'));
 
 const figureText = computed(() => {
@@ -630,9 +677,9 @@ const top = computed(() => {
   const cx = 505;
   const cy = 170;
   const { dia } = speed.values.value;
-  const { flutes, woc, ipt } = feed.values.value;
+  const { woc, ipt } = feed.values.value;
   const r = 26 + logScale(toInches(dia, props.units), 0.0625, 2) * 30;
-  const teeth = Math.min(8, Math.max(1, Math.round(flutes ?? 4)));
+  const teeth = toothCount.value;
 
   const point = (radius: number, degrees: number) =>
     [cx + radius * Math.cos(rad(degrees)), cy - radius * Math.sin(rad(degrees))] as const;
