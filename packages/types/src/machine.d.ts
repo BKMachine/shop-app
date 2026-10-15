@@ -134,6 +134,7 @@ declare global {
     state: MachineState;
     jobId?: string | null;
     jobNumber?: number | null;
+    otherJobNumbers?: number[];
     partId?: string | null;
     partNumber?: string | null;
     partDescription?: string | null;

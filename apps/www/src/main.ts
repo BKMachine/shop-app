@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import axios from '@/plugins/axios';
 import App from './App.vue';
 import { registerPlugins } from './plugins';
+import '@fontsource/roboto-mono/400.css';
 import './assets/style.css';
 
 if (import.meta.env.DEV) {

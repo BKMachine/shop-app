@@ -184,7 +184,7 @@ type MachineDashboardMetadata = Pick<
   | 'partHasIncompleteData'
   | 'partHourlyRate'
   | 'partSummary'
->;
+> & { otherJobNumbers: number[] };
 
 interface DepartmentPerformanceEntry {
   department: string;
@@ -395,21 +395,27 @@ async function fetchMachineDashboardMetadata() {
   try {
     const { data } = await api.get<MachineJobDashboardResponse>('/jobs/machine-dashboard');
 
-    cachedMachineDashboardMetadata = new Map<string, MachineDashboardMetadata>(
-      data.active.map((machine) => [
-        machine.machineId,
-        {
-          jobId: machine.jobId ?? null,
-          jobNumber: machine.jobNumber ?? null,
-          partId: machine.partId ?? null,
-          partNumber: machine.partNumber ?? null,
-          partDescription: machine.partDescription ?? null,
-          partHasIncompleteData: machine.partHasIncompleteData ?? false,
-          partHourlyRate: machine.partHourlyRate ?? null,
-          partSummary: machine.partSummary,
-        },
-      ]),
-    );
+    // Rows arrive newest task first per machine; the newest drives the tile, the rest are counted.
+    const metadata = new Map<string, MachineDashboardMetadata>();
+    for (const machine of data.active) {
+      const existing = metadata.get(machine.machineId);
+      if (existing) {
+        if (machine.jobNumber != null) existing.otherJobNumbers.push(machine.jobNumber);
+        continue;
+      }
+      metadata.set(machine.machineId, {
+        jobId: machine.jobId ?? null,
+        jobNumber: machine.jobNumber ?? null,
+        otherJobNumbers: [],
+        partId: machine.partId ?? null,
+        partNumber: machine.partNumber ?? null,
+        partDescription: machine.partDescription ?? null,
+        partHasIncompleteData: machine.partHasIncompleteData ?? false,
+        partHourlyRate: machine.partHourlyRate ?? null,
+        partSummary: machine.partSummary,
+      });
+    }
+    cachedMachineDashboardMetadata = metadata;
 
     return cachedMachineDashboardMetadata;
   } catch (error) {

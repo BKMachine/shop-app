@@ -5,7 +5,7 @@
   >
     <div class="header">
       <div>
-        {{ data.name }}
+        <span class="machine-name">{{ data.name }}</span>
         <span v-if="isOnline && data.source === 'focas' && rapid" class="rapid-chip">
           {{ rapid }}
         </span>
@@ -16,7 +16,7 @@
     <div v-if="isOnline">
       <div class="details">
         <div v-if="isOnline" class="timer">
-          <div v-if="!hasAlarm">
+          <div>
             <div
               :class="['job-row', { 'job-row--incomplete': hasIncompletePartData }]"
               :title="hasIncompletePartData ? 'Part needs more cost data' : undefined"
@@ -30,6 +30,13 @@
                 #{{ data.jobNumber ?? '—' }}
               </RouterLink>
               <span v-else class="job-row__value">---</span>
+              <span
+                v-if="otherJobNumbers.length"
+                class="extra-jobs-chip"
+                :title="`Also on this machine: ${otherJobNumbers.map((n) => `#${n}`).join(', ')}`"
+              >
+                +{{ otherJobNumbers.length }}
+              </span>
               <span class="job-row__separator">|</span>
               <span class="job-row__label">Part:</span>
               <RouterLink
@@ -41,7 +48,8 @@
               </RouterLink>
               <span v-else class="job-row__value">{{ currentPartText || '---' }}</span>
             </div>
-            <div class="d-flex justify-space-between align-center">
+            <div v-if="alarmText" class="alarm" :title="alarmText">{{ alarmText }}</div>
+            <div v-else class="d-flex justify-space-between align-center">
               <div>
                 <div v-if="hasLastCycle">
                   Last Cycle:
@@ -81,7 +89,6 @@
             <!-- <div v-else>Change Time: ---</div> -->
           </div>
         </div>
-        <div v-if="hasAlarm && data.source === 'focas'" class="alarm">{{ alarmMessages[0] }}</div>
       </div>
     </div>
   </div>
@@ -177,6 +184,10 @@ const currentPartText = computed(() => {
   return partSummary || '';
 });
 
+const otherJobNumbers = computed(() => {
+  return props.data.otherJobNumbers ?? [];
+});
+
 const hasIncompletePartData = computed(() => {
   return Boolean(props.data.partHasIncompleteData);
 });
@@ -230,6 +241,10 @@ const alarmMessages = computed<string[]>(() => {
   } else {
     return [];
   }
+});
+
+const alarmText = computed(() => {
+  return hasAlarm.value ? alarmMessages.value[0] || '' : '';
 });
 
 const shouldBlink = computed(() => {
@@ -318,6 +333,10 @@ const rapid = computed(() => {
   color: white;
 }
 
+.machine-name {
+  font-family: "Roboto Mono", monospace;
+}
+
 .logo {
   height: 20px;
   flex-grow: 0;
@@ -327,7 +346,7 @@ const rapid = computed(() => {
 .rapid-chip {
   display: inline-flex;
   align-items: center;
-  margin-left: 0px;
+  margin-left: 2px;
   margin-bottom: 2px;
   min-height: 16px;
   padding: 0 5px;
@@ -340,6 +359,22 @@ const rapid = computed(() => {
   letter-spacing: 0.02em;
   line-height: 1;
   vertical-align: middle;
+}
+
+.extra-jobs-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 14px;
+  padding: 0 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(18, 18, 18, 0.55);
+  color: #f5f5f5;
+  cursor: help;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .details {
@@ -416,6 +451,12 @@ const rapid = computed(() => {
 
 .machine.online.status-red.blink-off {
   background: #6c6c6c;
+}
+
+.alarm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .long-change {
