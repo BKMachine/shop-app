@@ -29,16 +29,25 @@ const props = defineProps<{
 const modelValue = defineModel<number | null>();
 const isFocused = ref(false);
 
-const { inputRef, formattedValue, numberValue, setValue } = useCurrencyInput({
-  currency: 'USD',
-  hideCurrencySymbolOnFocus: false,
-  hideGroupingSeparatorOnFocus: false,
-  precision: 2,
-  valueRange: { min: 0 },
-  currencyDisplay: 'hidden' as CurrencyDisplay,
-});
+// autoEmit off: the library would otherwise emit update:modelValue itself on every change,
+// including the rounding done by setValue(). The watcher below is the only emitter.
+const { inputRef, formattedValue, numberValue, setValue } = useCurrencyInput(
+  {
+    currency: 'USD',
+    hideCurrencySymbolOnFocus: false,
+    hideGroupingSeparatorOnFocus: false,
+    precision: 2,
+    valueRange: { min: 0 },
+    currencyDisplay: 'hidden' as CurrencyDisplay,
+  },
+  false,
+);
 
+// Only pass on values the user typed. setValue() below rounds to 2 places for display, and
+// emitting that rounded number would overwrite the real value (e.g. a derived $2.2855/lb
+// becoming $2.29) and make an untouched record look edited.
 watch(numberValue, (value) => {
+  if (!isFocused.value) return;
   modelValue.value = value == null ? null : Number(value);
 });
 
