@@ -32,7 +32,7 @@ export function calculateBusinessDurationMs(
   const startHour = options.startHour ?? DEFAULT_BUSINESS_START_HOUR;
   const endHour = options.endHour ?? DEFAULT_BUSINESS_END_HOUR;
 
-  let cursor = DateTime.fromJSDate(normalizeDate(start), { zone: timeZone });
+  let cursor: DateTime = DateTime.fromJSDate(normalizeDate(start), { zone: timeZone });
   const finish = DateTime.fromJSDate(normalizeDate(end), { zone: timeZone });
 
   if (finish <= cursor) return 0;

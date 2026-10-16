@@ -12,17 +12,18 @@ overrides:
   pdfjs-dist: ^5.7.284
 
 allowBuilds:
+  # Optional jest watch-mode dependency; it ships prebuilt binaries, so no build is needed.
+  '@parcel/watcher': false
   esbuild: true
   onnxruntime-node: false
   protobufjs: true
-  sharp: true
   unrs-resolver: true
 
 ignoredBuiltDependencies:
+  - '@parcel/watcher'
   - onnxruntime-node
 
 onlyBuiltDependencies:
   - esbuild
   - protobufjs
-  - sharp
   - unrs-resolver

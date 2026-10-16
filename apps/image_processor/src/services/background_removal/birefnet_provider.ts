@@ -314,7 +314,7 @@ async function refineBiRefNetMask(
   height: number,
   settings: BiRefNetMaskSettings,
 ) {
-  let refinedMaskBuffer = await sharp(maskBuffer)
+  let refinedMaskBuffer: Buffer = await sharp(maskBuffer)
     .resize(width, height, { fit: 'fill' })
     .removeAlpha()
     .greyscale()
@@ -333,7 +333,7 @@ async function refineBiRefNetMask(
 
   if (settings.alphaSharpenSigma > 0) {
     refinedMaskBuffer = await sharp(refinedMaskBuffer)
-      .sharpen(settings.alphaSharpenSigma)
+      .sharpen({ sigma: settings.alphaSharpenSigma })
       .png()
       .toBuffer();
   }

@@ -49,7 +49,7 @@
                 />
               </div>
               <div v-if="selectedFile" class="upload-file-info">
-                <v-icon size="20" icon="mdi-file-image" />
+                <v-icon icon="mdi-file-image" size="20" />
                 <span class="upload-file-name">{{ selectedFile.name }}</span>
                 <v-progress-linear
                   v-if="uploadLoading"
@@ -315,7 +315,7 @@
                           type="button"
                           @click.stop="runStackProcess(img.id)"
                         >
-                          <v-icon size="12" icon="mdi-auto-fix" />
+                          <v-icon icon="mdi-auto-fix" size="12" />
                         </button>
                         <div class="image-card__processing-actions">
                           <div class="image-card__split-action">
@@ -360,7 +360,7 @@
                                   variant="outlined"
                                   @click.stop
                                 >
-                                  <v-icon size="12px" icon="mdi-chevron-down" />
+                                  <v-icon icon="mdi-chevron-down" size="12px" />
                                 </v-btn>
                               </template>
                               <v-list density="compact">

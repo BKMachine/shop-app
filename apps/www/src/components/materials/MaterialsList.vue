@@ -15,7 +15,7 @@
         <v-btn size="small" value="Round">Round</v-btn>
         <v-btn size="small" value="Piece">Piece</v-btn>
       </v-btn-toggle>
-      <v-btn-toggle v-model="tubingFilter" :disabled="typeFilter === 'Piece'" dense mandatory>
+      <v-btn-toggle v-model="tubingFilter" dense :disabled="typeFilter === 'Piece'" mandatory>
         <v-btn size="small" value="All">All</v-btn>
         <v-btn size="small" value="Tubing">Tubing</v-btn>
         <v-btn size="small" value="Bar">Bar</v-btn>

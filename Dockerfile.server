@@ -3,7 +3,7 @@ WORKDIR /app
 ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV pnpm_config_store_dir="/pnpm/store"
 ENV PATH="${PATH}:${PNPM_HOME}/bin"
-RUN npm install -g pnpm@12.11.2 turbo@2.10.8
+RUN npm install -g pnpm@12.11.2 turbo@2.11.8
 
 # Full source tree. Only feeds the prune stages below, so it never reaches an
 # app stage directly. The downloads payload is stripped here: it is a ~47MB

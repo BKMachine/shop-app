@@ -19,7 +19,7 @@
           <div>
             <!-- Multiple jobs: only show the chip, since the cycle time can't be tied to one job. -->
             <div v-if="hasMultipleJobs" class="job-row">
-              <v-menu location="bottom start" open-on-hover open-delay="100" close-delay="200">
+              <v-menu close-delay="200" location="bottom start" open-delay="100" open-on-hover>
                 <template #activator="{ props: menuProps }">
                   <span
                     v-bind="menuProps"

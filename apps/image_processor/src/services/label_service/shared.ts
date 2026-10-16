@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PDFFont } from 'pdf-lib';
 import QRCode from 'qrcode';
-import sharp from 'sharp';
+import sharp, { type Sharp } from 'sharp';
 import logger from '../../logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -104,7 +104,7 @@ function buildMissingImageSvg(width: number, height: number) {
   );
 }
 
-function enhancePartLabelImage(image: sharp.Sharp, targetWidth: number, targetHeight: number) {
+function enhancePartLabelImage(image: Sharp, targetWidth: number, targetHeight: number) {
   return image
     .flatten({ background: { r: 255, g: 255, b: 255 } })
     .grayscale()
@@ -120,7 +120,7 @@ function enhancePartLabelImage(image: sharp.Sharp, targetWidth: number, targetHe
     .toBuffer();
 }
 
-function enhanceTravelerPartImage(image: sharp.Sharp, targetWidth: number, targetHeight: number) {
+function enhanceTravelerPartImage(image: Sharp, targetWidth: number, targetHeight: number) {
   return image
     .flatten({ background: { r: 255, g: 255, b: 255 } })
     .normalise()
@@ -138,11 +138,7 @@ async function buildFetchedPartImageBuffer(
   imageUrl: string | undefined,
   width: number,
   height: number,
-  transformImage: (
-    image: sharp.Sharp,
-    targetWidth: number,
-    targetHeight: number,
-  ) => Promise<Buffer>,
+  transformImage: (image: Sharp, targetWidth: number, targetHeight: number) => Promise<Buffer>,
 ) {
   const targetWidth = Math.max(1, Math.round(width * 4));
   const targetHeight = Math.max(1, Math.round(height * 4));
