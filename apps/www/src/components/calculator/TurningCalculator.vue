@@ -67,7 +67,7 @@
           <polygon :points="arrowHead(feedMarks.x0, 84, 1, 0, 6)" />
           <polygon :points="arrowHead(feedMarks.x1, 84, -1, 0, 6)" />
           <text
-            class="fig-label"
+            class="fig-label fig-label--halo"
             text-anchor="middle"
             :x="(feedMarks.x0 + feedMarks.x1) / 2"
             y="70"
@@ -83,18 +83,19 @@
           />
           <line x1="242" x2="157" y1="292" y2="292" />
           <polygon :points="arrowHead(149, 292, -1, 0)" />
-          <text class="fig-label" text-anchor="middle" x="197" y="280">
+          <text class="fig-label fig-label--halo" text-anchor="middle" x="197" y="280">
             {{ figureText.ipm }}
           </text>
         </g>
 
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
-          <!-- CCW: wraps over the stock down its left side and stops on the front face, clear of
-               the edge and the tool; the head sits 40° past the left on the same ellipse,
-               pointing along its tangent. -->
-          <path d="M125 88 A 14 72 0 0 0 113.53 201.3" />
-          <polygon :points="arrowHead(114.28, 206.28, 9, 55.16)" />
-          <text class="fig-label" text-anchor="middle" x="125" y="78">
+          <!-- CCW: wraps from above the stock down its left side and ends just below it, so the
+               arrow sits outside the cylinder. The ellipse (rx 14, ry 80) clears the stock's 64px
+               half-height. The ellipse turns sharply near the bottom, so the head is aimed along
+               the chord of its last 8px (about 48°) rather than the tangent at the tip. -->
+          <path d="M125 80 A 14 80 0 0 0 121.38 237.27" />
+          <polygon :points="arrowHead(125, 240, 5.29, 5.93)" />
+          <text class="fig-label fig-label--halo" text-anchor="middle" x="125" y="70">
             {{ figureText.rpm }}
           </text>
         </g>
@@ -106,7 +107,7 @@
           <polygon :points="arrowHead(388, 105, 0, -1)" />
           <polygon :points="arrowHead(388, 215, 0, 1)" />
           <text
-            class="fig-label"
+            class="fig-label fig-label--halo"
             text-anchor="middle"
             transform="rotate(-90 404 160)"
             x="404"
@@ -156,7 +157,12 @@
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
           <path :d="end.rpmArc" />
           <polygon :points="end.rpmHead" />
-          <text class="fig-label" text-anchor="middle" :x="end.rpmLabel[0]" :y="end.rpmLabel[1]">
+          <text
+            class="fig-label fig-label--halo"
+            text-anchor="middle"
+            :x="end.rpmLabel[0]"
+            :y="end.rpmLabel[1]"
+          >
             {{ figureText.rpm }}
           </text>
         </g>
@@ -184,7 +190,12 @@
             :y2="end.cy - 14"
           />
           <polygon :points="arrowHead(end.cx - end.r - 10, end.cy - 6, 0, 1)" />
-          <text class="fig-label" text-anchor="end" :x="end.cx - end.r - 18" :y="end.cy - 36">
+          <text
+            class="fig-label fig-label--halo"
+            text-anchor="end"
+            :x="end.cx - end.r - 18"
+            :y="end.cy - 36"
+          >
             {{ figureText.sfm }}
           </text>
         </g>
@@ -213,6 +224,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import {
+  arcArrow,
   arrowHead,
   type CalcRowModel,
   type Highlight,
@@ -437,11 +449,9 @@ const end = computed(() => {
   const point = (radius: number, degrees: number) =>
     [cx + radius * Math.cos(rad(degrees)), cy - radius * Math.sin(rad(degrees))] as const;
 
-  const arcRadius = r + 16;
-  const [ax1, ay1] = point(arcRadius, -40);
-  const [ax2, ay2] = point(arcRadius, 40);
-  // CCW tangent at the arrow tip (screen y is flipped).
-  const rpmHead = arrowHead(ax2, ay2, -Math.sin(rad(40)), -Math.cos(rad(40)));
+  // CCW from -40° to 40° around the outside of the stock.
+  const rpm = arcArrow(point, r + 16, -40, 40);
+  const [ax2, ay2] = rpm.tip;
 
   const [sx1, sy1] = point(r, 140);
   const [sx2, sy2] = point(r, 178);
@@ -450,8 +460,8 @@ const end = computed(() => {
     cx,
     cy,
     r,
-    rpmArc: `M${ax1} ${ay1} A${arcRadius} ${arcRadius} 0 0 0 ${ax2} ${ay2}`,
-    rpmHead,
+    rpmArc: rpm.d,
+    rpmHead: rpm.head,
     rpmLabel: [ax2, ay2 - 12] as const,
     surfaceArc: `M${sx1} ${sy1} A${r} ${r} 0 0 0 ${sx2} ${sy2}`,
   };

@@ -67,6 +67,35 @@ export function arrowHead(x: number, y: number, dx: number, dy: number, size = 8
   return `${x},${y} ${bx - uy * w},${by + ux * w} ${bx + uy * w},${by - ux * w}`;
 }
 
+// A circular arc with an arrowhead at its end. `point(radius, degrees)` maps polar coordinates to
+// the figure (degrees counter-clockwise from +x). The head's base sits on the arc, aimed along the
+// tangent there, so the line runs straight into its center; the arc stops at that base, and the
+// tip lands at `to`, so the arrow spans exactly `from` to `to`.
+export function arcArrow(
+  point: (radius: number, degrees: number) => readonly [number, number],
+  radius: number,
+  from: number,
+  to: number,
+  size = 8,
+) {
+  const direction = Math.sign(to - from);
+  const base = to - (direction * ((size / radius) * 180)) / Math.PI;
+  const [bx, by] = point(radius, base);
+  const [sx, sy] = point(radius, from);
+  // Direction of travel at the base: d/dθ of (r cos θ, -r sin θ), signed by the sweep.
+  const ux = -Math.sin(rad(base)) * direction;
+  const uy = -Math.cos(rad(base)) * direction;
+  const [tx, ty] = [bx + ux * size, by + uy * size];
+  // Increasing degrees run counter-clockwise on screen (y is flipped), which is SVG sweep 0.
+  const sweep = direction > 0 ? 0 : 1;
+  const large = Math.abs(base - from) > 180 ? 1 : 0;
+  return {
+    d: `M${sx} ${sy} A${radius} ${radius} 0 ${large} ${sweep} ${bx} ${by}`,
+    head: arrowHead(tx, ty, ux, uy, size),
+    tip: [tx, ty] as const,
+  };
+}
+
 // Log scale from a reading in inches to 0..1, so small and large values both draw sensibly.
 export function logScale(inches: number | null, min: number, max: number) {
   if (!inches) return 0.5;

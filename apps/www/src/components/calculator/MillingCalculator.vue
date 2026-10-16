@@ -93,9 +93,14 @@
         <path class="fig-chip" d="M188 270 q 12 -2 16 -10 q 4 -8 14 -6 M190 284 q 14 4 16 12" />
 
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
-          <path d="M218 118 A 48 9 0 0 1 122 118" />
-          <polygon :points="arrowHead(119, 117, -1, -0.4)" />
-          <text class="fig-label" text-anchor="start" x="226" y="112">{{ figureText.rpm }}</text>
+          <!-- Ends 12px clear of the holder's sides (x 126-214). The head's base sits on the
+               ellipse, aimed along its tangent there (15°), so the line runs into its center; the
+               tip lands at x 114, 56px from the tool centerline like the tail at x 226. -->
+          <path d="M226 118 A 56 9 0 0 1 121.72 122.56" />
+          <polygon :points="arrowHead(114, 120.45, -0.965, -0.264)" />
+          <text class="fig-label fig-label--halo" text-anchor="start" x="234" y="112">
+            {{ figureText.rpm }}
+          </text>
         </g>
 
         <g class="fig-part fig-dia" :class="partClass('dia')">
@@ -326,6 +331,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import {
+  arcArrow,
   arrowHead,
   type CalcRowModel,
   chipThinningRatio,
@@ -721,11 +727,8 @@ const top = computed(() => {
   const dt = 3 + logScale(toInches(ipt, props.units), 0.0002, 0.02) * 9;
   const dr = Math.min(dt * teeth, 75);
 
-  const arcRadius = r + 12;
-  const [ax1, ay1] = point(arcRadius, 160);
-  const [ax2, ay2] = point(arcRadius, 110);
-  // Clockwise tangent at the arrow tip (screen y is flipped).
-  const rpmHead = arrowHead(ax2, ay2, Math.sin(rad(110)), Math.cos(rad(110)));
+  // Clockwise from 160° to 110° around the cutter.
+  const rpm = arcArrow(point, r + 12, 160, 110);
   const [lx, ly] = point(r + 18, 150);
 
   // Diameter leader: arrow on the rim below-left, out along the radius, then a short shoulder left.
@@ -758,8 +761,8 @@ const top = computed(() => {
     yIpr: cy - r - 28,
     yIpm: cy - r - 48,
     diaLeader,
-    rpmArc: `M${ax1} ${ay1} A${arcRadius} ${arcRadius} 0 0 1 ${ax2} ${ay2}`,
-    rpmHead,
+    rpmArc: rpm.d,
+    rpmHead: rpm.head,
     rpmLabel: [lx - 4, ly] as const,
   };
 });
