@@ -257,6 +257,11 @@
   fill: var(--steel);
 }
 
+.fig-land {
+  fill: #fff;
+  opacity: 0.45;
+}
+
 .fig-holder {
   stroke: var(--steel-edge);
   stroke-width: 1;

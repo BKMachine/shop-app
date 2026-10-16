@@ -44,8 +44,18 @@
         <line class="fig-center" x1="8" x2="384" y1="160" y2="160" />
 
         <path class="fig-chip" d="M246 224 q -12 6 -6 16 q 6 9 -7 15 q -10 4 -6 12" />
-        <polygon class="fig-steel fig-steel--holder" points="260,233 290,233 290,300 260,300" />
-        <polygon class="fig-insert" points="250,216 274,221 280,245 256,240" />
+        <!-- Square-shank 95° holder (MWLNR-style); the insert overhangs its front corner. -->
+        <polygon
+          class="fig-steel fig-steel--holder"
+          points="256,240 262,226 292,226 292,300 256,300"
+        />
+        <!-- WNMG trigon: three 80° tips and three 160° corners, 17px edges. Cutting tip at the
+             finish surface with the leading edge at 95° to the feed and the trailing edge 5° off
+             the finished surface. -->
+        <polygon
+          class="fig-insert"
+          points="250,216 266.9,217.5 282.3,224.7 272.6,238.6 258.7,248.3 251.5,232.9"
+        />
 
         <g class="fig-part fig-ipr" :class="partClass('ipr')">
           <g class="fig-feed-marks" clip-path="url(#mc-finish-clip)">
@@ -67,20 +77,24 @@
         </g>
 
         <g class="fig-part fig-ipm" :class="partClass('ipm')">
-          <polygon class="fig-ghost" points="130,216 154,221 160,245 136,240" />
-          <line x1="242" x2="142" y1="292" y2="292" />
-          <polygon :points="arrowHead(134, 292, -1, 0)" />
-          <text class="fig-label" text-anchor="middle" x="190" y="280">
+          <polygon
+            class="fig-ghost"
+            points="145,216 161.9,217.5 177.3,224.7 167.6,238.6 153.7,248.3 146.5,232.9"
+          />
+          <line x1="242" x2="157" y1="292" y2="292" />
+          <polygon :points="arrowHead(149, 292, -1, 0)" />
+          <text class="fig-label" text-anchor="middle" x="197" y="280">
             {{ figureText.ipm }}
           </text>
         </g>
 
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
-          <!-- Wraps over the stock and stops on its front face, clear of the edge and the tool;
-               the head sits at 40° on the same ellipse, pointing along its tangent. -->
-          <path d="M140 88 A 14 72 0 0 1 151.47 201.3" />
-          <polygon :points="arrowHead(150.72, 206.28, -9, 55.16)" />
-          <text class="fig-label" text-anchor="middle" x="140" y="78">
+          <!-- CCW: wraps over the stock down its left side and stops on the front face, clear of
+               the edge and the tool; the head sits 40° past the left on the same ellipse,
+               pointing along its tangent. -->
+          <path d="M125 88 A 14 72 0 0 0 113.53 201.3" />
+          <polygon :points="arrowHead(114.28, 206.28, 9, 55.16)" />
+          <text class="fig-label" text-anchor="middle" x="125" y="78">
             {{ figureText.rpm }}
           </text>
         </g>

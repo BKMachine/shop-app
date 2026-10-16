@@ -89,10 +89,8 @@
             </g>
           </g>
         </g>
-        <path
-          class="fig-chip"
-          d="M152 270 q -12 -2 -16 -10 q -4 -8 -14 -6 M150 284 q -14 4 -16 12"
-        />
+        <!-- Climb milling feeding left: chips are thrown off behind the cutter, to the right. -->
+        <path class="fig-chip" d="M188 270 q 12 -2 16 -10 q 4 -8 14 -6 M190 284 q 14 4 16 12" />
 
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
           <path d="M218 118 A 48 9 0 0 1 122 118" />
@@ -110,9 +108,9 @@
         </g>
 
         <g class="fig-part fig-ipm" :class="partClass('ipm')">
-          <line x1="200" x2="296" y1="274" y2="274" />
-          <polygon :points="arrowHead(304, 274, 1, 0)" />
-          <text class="fig-label fig-label--halo" text-anchor="middle" x="254" y="266">
+          <line x1="140" x2="44" y1="274" y2="274" />
+          <polygon :points="arrowHead(36, 274, -1, 0)" />
+          <text class="fig-label fig-label--halo" text-anchor="middle" x="86" y="266">
             {{ figureText.ipm }}
           </text>
         </g>
@@ -171,11 +169,12 @@
           class="fig-spinner fig-spinner--cw"
           :style="{ transformOrigin: `${top.cx}px ${top.cy}px` }"
         >
-          <polygon
-            v-for="(points, index) in top.gullets"
+          <path v-for="(d, index) in top.lands" :key="`l${index}`" class="fig-land" :d="d" />
+          <path
+            v-for="(d, index) in top.gullets"
             :key="`g${index}`"
             class="fig-gullet"
-            :points="points"
+            :d="d"
           />
           <g class="fig-part fig-flutes" :class="partClass('flutes')">
             <line
@@ -234,15 +233,15 @@
           </text>
         </g>
 
+        <!-- Diameter called out with a leader from the cutter's lower left -->
         <g class="fig-part fig-dia" :class="partClass('dia')">
-          <line :x1="top.cx" :x2="top.cx" :y1="top.cy - top.r + 8" :y2="top.cy + top.r - 8" />
-          <polygon :points="arrowHead(top.cx, top.cy - top.r + 1, 0, -1)" />
-          <polygon :points="arrowHead(top.cx, top.cy + top.r - 1, 0, 1)" />
+          <path :d="top.diaLeader.line" />
+          <polygon :points="top.diaLeader.head" />
           <text
             class="fig-label fig-label--halo"
-            text-anchor="start"
-            :x="top.cx + 6"
-            :y="top.cy + 4"
+            text-anchor="end"
+            :x="top.diaLeader.label[0]"
+            :y="top.diaLeader.label[1]"
           >
             {{ figureText.dia }}
           </text>
@@ -252,7 +251,7 @@
           <line
             :x1="top.cx - top.r - 10"
             :x2="top.cx - top.r - 10"
-            :y1="top.cy + 34"
+            :y1="top.cy + 24"
             :y2="top.cy - 6"
           />
           <polygon :points="arrowHead(top.cx - top.r - 10, top.cy - 14, 0, -1)" />
@@ -266,7 +265,7 @@
           </text>
         </g>
 
-        <text class="fig-caption" text-anchor="middle" :x="top.cx + 30" y="318">
+        <text class="fig-caption" text-anchor="middle" x="535" y="318">
           TOP VIEW · LOOKING DOWN
         </text>
       </svg>
@@ -674,7 +673,7 @@ const figureText = computed(() => {
 });
 
 const top = computed(() => {
-  const cx = 505;
+  const cx = 525;
   const cy = 170;
   const { dia } = speed.values.value;
   const { woc, ipt } = feed.values.value;
@@ -692,22 +691,40 @@ const top = computed(() => {
   const [ex1, ey1] = point(r, -90);
   const [ex2, ey2] = point(r, exitAngle);
 
+  // End view of a center-cutting end mill. Each end cutting edge runs in from the rim; the first
+  // reaches the center (so it can plunge) and the rest stop just shy, leaving a small web. Ahead of
+  // each edge (the cutter turns CW, toward lower angles) the gash is ground into the end: its rake
+  // face is the edge itself, and it sweeps forward out to the rim at the next tooth's clearance.
   const pitch = 360 / teeth;
+  const gashWidth = Math.min(55, pitch * 0.38);
+  const landWidth = Math.min(14, pitch * 0.1);
+  const innerRadius = (i: number) => (i === 0 ? 0 : r * 0.2);
   const edges = Array.from({ length: teeth }, (_, i) => {
     const angle = 90 + i * pitch;
-    return [...point(r * 0.3, angle), ...point(r, angle)];
+    return [...point(innerRadius(i), angle), ...point(r, angle)];
   });
   const gullets = Array.from({ length: teeth }, (_, i) => {
     const angle = 90 + i * pitch;
-    const sweep = Math.min(50, pitch * 0.35);
-    return [point(r * 0.3, angle), point(r, angle), point(r * 0.92, angle - sweep)]
-      .map(([x, y]) => `${x},${y}`)
-      .join(' ');
+    const [ix, iy] = point(Math.max(innerRadius(i), r * 0.08), angle);
+    const [ox, oy] = point(r, angle);
+    const [hx, hy] = point(r, angle - gashWidth);
+    // Concave back so the gash hugs the edge near the center and opens up toward the rim.
+    const [qx, qy] = point(r * 0.7, angle - gashWidth * 0.3);
+    return `M${ix} ${iy} L${ox} ${oy} A${r} ${r} 0 0 1 ${hx} ${hy} Q${qx} ${qy} ${ix} ${iy} Z`;
+  });
+  // Primary clearance land: a narrow bright facet trailing each edge.
+  const lands = Array.from({ length: teeth }, (_, i) => {
+    const angle = 90 + i * pitch;
+    const [ix, iy] = point(Math.max(innerRadius(i), r * 0.08), angle);
+    const [ox, oy] = point(r, angle);
+    const [bx, by] = point(r, angle + landWidth);
+    const [qx, qy] = point(r * 0.6, angle + landWidth * 0.6);
+    return `M${ix} ${iy} L${ox} ${oy} A${r} ${r} 0 0 0 ${bx} ${by} Q${qx} ${qy} ${ix} ${iy} Z`;
   });
 
   // Feed per tooth and per rev are far too small to draw to scale, so exaggerate them.
   const dt = 3 + logScale(toInches(ipt, props.units), 0.0002, 0.02) * 9;
-  const dr = Math.min(dt * teeth, 95);
+  const dr = Math.min(dt * teeth, 75);
 
   const arcRadius = r + 12;
   const [ax1, ay1] = point(arcRadius, 160);
@@ -715,6 +732,18 @@ const top = computed(() => {
   // Clockwise tangent at the arrow tip (screen y is flipped).
   const rpmHead = arrowHead(ax2, ay2, Math.sin(rad(110)), Math.cos(rad(110)));
   const [lx, ly] = point(r + 18, 150);
+
+  // Diameter leader: arrow on the rim below-left, out along the radius, then a short shoulder left.
+  const leaderAngle = 240;
+  const [tx, ty] = point(r, leaderAngle);
+  const [sx, sy] = point(r + 6, leaderAngle);
+  const [kx, ky] = point(r + 34, leaderAngle);
+  const diaLeader = {
+    line: `M${sx} ${sy} L${kx} ${ky} L${kx - 12} ${ky}`,
+    // Points in toward the center.
+    head: arrowHead(tx, ty, -Math.cos(rad(leaderAngle)), Math.sin(rad(leaderAngle))),
+    label: [kx - 16, ky + 4] as const,
+  };
 
   return {
     cx,
@@ -727,11 +756,13 @@ const top = computed(() => {
     engagementArc: `M${ex1} ${ey1} A${r} ${r} 0 0 0 ${ex2} ${ey2}`,
     edges,
     gullets,
+    lands,
     dt,
     dr,
     yIpt: cy - r - 12,
     yIpr: cy - r - 28,
     yIpm: cy - r - 48,
+    diaLeader,
     rpmArc: `M${ax1} ${ay1} A${arcRadius} ${arcRadius} 0 0 1 ${ax2} ${ay2}`,
     rpmHead,
     rpmLabel: [lx - 4, ly] as const,
