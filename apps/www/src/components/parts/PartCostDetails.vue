@@ -142,7 +142,11 @@
             <span class="font-weight-bold">Additional Costs</span>
             <template #actions>
               <span class="text-medium-emphasis mr-2">
-                {{ additionalCostEntries.length ? `${additionalCostEntries.length} item${additionalCostEntries.length > 1 ? 's' : ''} — $${formatCost(totalAdditionalCost)}` : 'None' }}
+                {{
+                  additionalCostEntries.length
+                    ? `${additionalCostEntries.length} item${additionalCostEntries.length > 1 ? 's' : ''} — $${formatCost(totalAdditionalCost)}`
+                    : 'None'
+                }}
               </span>
               <v-icon icon="mdi-chevron-down" />
             </template>
@@ -311,10 +315,18 @@
 
           <div class="slider-limits mb-6">
             <span>
-              {{ currentRate < hourlyTargetMin ? `$${formatCost(currentRate)}/hr` : `$${hourlyTargetMin}/hr` }}
+              {{
+                currentRate < hourlyTargetMin
+                  ? `$${formatCost(currentRate)}/hr`
+                  : `$${hourlyTargetMin}/hr`
+              }}
             </span>
             <span>
-              {{ currentRate > hourlyTargetMax ? `$${formatCost(currentRate)}/hr` : `$${hourlyTargetMax}/hr` }}
+              {{
+                currentRate > hourlyTargetMax
+                  ? `$${formatCost(currentRate)}/hr`
+                  : `$${hourlyTargetMax}/hr`
+              }}
             </span>
           </div>
         </div>
@@ -337,7 +349,9 @@
         <div class="summary-row">
           <span>Cycle Time Change Needed</span>
           <b :class="cycleTimeDeltaToTarget >= 0 ? 'text-rateLow' : 'text-rateOk'">
-            {{ `${cycleTimeDeltaToTarget >= 0 ? '-' : '+'}${formatCycle(Math.abs(cycleTimeDeltaToTarget))}` }}
+            {{
+              `${cycleTimeDeltaToTarget >= 0 ? '-' : '+'}${formatCycle(Math.abs(cycleTimeDeltaToTarget))}`
+            }}
             <span class="text-medium-emphasis">({{ formatCycle(requiredCycleTimeAtTarget) }})</span>
           </b>
         </div>

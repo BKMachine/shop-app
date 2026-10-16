@@ -13,9 +13,9 @@
             <div class="leave-changes-row">
               <div class="leave-changes-label-group">
                 <span>{{ field.label }}</span>
-                <span v-if="field.blockReason" class="leave-changes-status"
-                  >{{ field.blockReason }}</span
-                >
+                <span v-if="field.blockReason" class="leave-changes-status">{{
+                  field.blockReason
+                }}</span>
               </div>
               <span class="leave-changes-value">{{ field.value }}</span>
             </div>

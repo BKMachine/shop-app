@@ -180,12 +180,22 @@
                         variant="flat"
                         @click="assignSelectedToEntity"
                       >
-                        {{ canStageForUnsavedEntity ? 'Stage Selected' : canSelectMultiple ? 'Assign Selected' : 'Assign Image' }}
+                        {{
+                          canStageForUnsavedEntity
+                            ? 'Stage Selected'
+                            : canSelectMultiple
+                              ? 'Assign Selected'
+                              : 'Assign Image'
+                        }}
                       </v-btn>
                     </div>
                   </div>
                   <div v-if="assignSuccess" class="text-success text-body-2 mb-2">
-                    {{ canStageForUnsavedEntity ? 'Staged selected image(s).' : 'Assigned selected image(s).' }}
+                    {{
+                      canStageForUnsavedEntity
+                        ? 'Staged selected image(s).'
+                        : 'Assigned selected image(s).'
+                    }}
                   </div>
                   <div
                     v-if="canStageForUnsavedEntity"
@@ -213,17 +223,19 @@
                     >
                       <v-progress-circular color="primary" indeterminate />
                       <div class="text-caption mt-2">
-                        {{ backgroundRemovalId === img.id
+                        {{
+                          backgroundRemovalId === img.id
                             ? backgroundRemovalLabel
                             : autoAlignId === img.id
                               ? 'Auto aligning...'
                               : autoCropId === img.id
                                 ? 'Auto cropping...'
-                            : stackProcessingId === img.id
-                            ? stackProcessingLabel
-                            : rotatingDirection === 'ccw'
-                                ? 'Rotating 90 degrees CCW...'
-                                : 'Rotating 90 degrees CW...' }}
+                                : stackProcessingId === img.id
+                                  ? stackProcessingLabel
+                                  : rotatingDirection === 'ccw'
+                                    ? 'Rotating 90 degrees CCW...'
+                                    : 'Rotating 90 degrees CW...'
+                        }}
                       </div>
                     </div>
                     <v-img

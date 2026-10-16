@@ -162,6 +162,12 @@
   stroke: none;
 }
 
+.fig-groove line {
+  stroke: var(--steel-edge);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+
 .fig-part .fig-feed-marks line {
   stroke-width: 1.5;
   opacity: 0.7;
@@ -265,12 +271,6 @@
 .fig-holder {
   stroke: var(--steel-edge);
   stroke-width: 1;
-}
-
-.fig-groove line {
-  stroke: var(--steel-edge);
-  stroke-width: 1.5;
-  opacity: 0.7;
 }
 
 .fig-runout {

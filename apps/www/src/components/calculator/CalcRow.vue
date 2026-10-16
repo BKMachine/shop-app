@@ -13,7 +13,9 @@
               'is-solved': row.solvedKeys.includes(token.key),
             }"
             :style="{ '--accent': CALC_ACCENTS[token.key] }"
-            >{{ token.text }}</span
+            >{{
+              token.text
+            }}</span
           >
         </template>
       </div>

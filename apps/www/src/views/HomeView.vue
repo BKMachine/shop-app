@@ -162,9 +162,9 @@
                       <div class="machine-card__meta-row">
                         <div class="machine-card__meta-block">
                           <span class="machine-card__meta-label">Qty</span>
-                          <span class="machine-card__meta-value"
-                            >{{ item.machine.qty ?? '—' }}</span
-                          >
+                          <span class="machine-card__meta-value">{{
+                            item.machine.qty ?? '—'
+                          }}</span>
                         </div>
                         <div class="machine-card__meta-block machine-card__meta-block--due">
                           <span class="machine-card__meta-label">Due</span>
@@ -210,9 +210,9 @@
                         </span>
                       </template>
 
-                      <span style="white-space: nowrap"
-                        >{{ displayMachinePartText(item.machine) }}</span
-                      >
+                      <span style="white-space: nowrap">{{
+                        displayMachinePartText(item.machine)
+                      }}</span>
                     </v-tooltip>
                   </div>
                 </article>

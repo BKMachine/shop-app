@@ -853,7 +853,7 @@ function isTotalDepartmentPerformance(entry: DepartmentPerformanceEntry): boolea
 
 .machine--blank:hover .blank-tile__delete,
 .machine--blank:focus-within .blank-tile__delete,
-.machine--blank-revealed .blank-tile__delete {
+.machine--blank.machine--blank-revealed .blank-tile__delete {
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
@@ -864,7 +864,8 @@ function isTotalDepartmentPerformance(entry: DepartmentPerformanceEntry): boolea
   transition-delay: 3s, 3s, 3s;
 }
 
-.machine--blank-revealed .blank-tile__delete {
+/* Matches the :hover rule's specificity so revealing skips the hover delay even while hovered. */
+.machine--blank.machine--blank-revealed .blank-tile__delete {
   transition-delay: 0s, 0s, 0s;
 }
 

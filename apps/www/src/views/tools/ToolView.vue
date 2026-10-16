@@ -167,7 +167,11 @@
                 <div>
                   <div class="text-subtitle-2">Tool Image</div>
                   <div class="text-body-2 text-medium-emphasis">
-                    {{ tool.img ? 'Manage the current tool image.' : 'Add a single image for this tool.' }}
+                    {{
+                      tool.img
+                        ? 'Manage the current tool image.'
+                        : 'Add a single image for this tool.'
+                    }}
                   </div>
                 </div>
                 <div class="d-flex align-center ga-2">

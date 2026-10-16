@@ -135,7 +135,9 @@
                       v-if="seg.label"
                       :style="{ background: fieldColor(seg.label), color: 'inherit', borderRadius: '2px', padding: '0 2px' }"
                       :title="seg.label"
-                      >{{ seg.text }}</mark
+                      >{{
+                        seg.text
+                      }}</mark
                     >
                     <span v-else>{{ seg.text }}</span>
                   </template>

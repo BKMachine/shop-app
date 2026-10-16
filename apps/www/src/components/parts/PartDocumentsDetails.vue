@@ -93,9 +93,9 @@
     <v-dialog v-model="viewerOpen" fullscreen>
       <v-card class="document-viewer">
         <v-toolbar color="black" density="comfortable" theme="dark">
-          <v-toolbar-title
-            >{{ viewerDocument?.originalName || 'Document Preview' }}</v-toolbar-title
-          >
+          <v-toolbar-title>{{
+            viewerDocument?.originalName || 'Document Preview'
+          }}</v-toolbar-title>
           <v-spacer />
           <v-btn
             v-if="viewerDocument"

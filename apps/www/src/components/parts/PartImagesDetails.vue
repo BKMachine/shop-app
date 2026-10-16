@@ -31,7 +31,8 @@
         <div v-else-if="!sortedImages.length" class="text-medium-emphasis py-4">
           <span v-if="part._id">No images yet. Click <strong>Add Images</strong> to upload.</span>
           <span v-else
-            >No staged images yet. Click <strong>Add Images</strong> to queue them before save.</span
+            >No staged images yet. Click <strong>Add Images</strong> to queue them before
+            save.</span
           >
         </div>
 

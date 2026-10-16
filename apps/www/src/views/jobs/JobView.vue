@@ -708,7 +708,9 @@
             Job status will move back to In Process.
           </div>
           <div v-if="pendingReopenTaskMachineBusyJobNumber" class="text-warning mt-2">
-            This machine currently has an active task on Job #{{ pendingReopenTaskMachineBusyJobNumber }}.
+            This machine currently has an active task on Job #{{
+              pendingReopenTaskMachineBusyJobNumber
+            }}.
           </div>
           <div v-if="draftIsAltered" class="text-medium-emphasis mt-3">
             Unsaved changes on this page will be discarded.

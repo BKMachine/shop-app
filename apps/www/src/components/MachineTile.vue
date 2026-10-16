@@ -474,12 +474,6 @@ const rapid = computed(() => {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
 }
 
-.machine.online.status-green .job-row--incomplete,
-.machine.online.status-yellow .job-row--incomplete {
-  background: rgba(22, 22, 22, 0.78);
-  border-color: rgba(255, 255, 255, 0.34);
-}
-
 .job-row__label,
 .job-row__separator,
 .job-row__value {
@@ -592,5 +586,11 @@ const rapid = computed(() => {
   background: rgba(232, 154, 35, 0.22);
   border-color: rgba(232, 154, 35, 0.75);
   box-shadow: none;
+}
+
+.machine.online.status-green .job-row--incomplete,
+.machine.online.status-yellow .job-row--incomplete {
+  background: rgba(22, 22, 22, 0.78);
+  border-color: rgba(255, 255, 255, 0.34);
 }
 </style>

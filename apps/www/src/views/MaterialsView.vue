@@ -51,9 +51,11 @@
                     <v-btn value="piece">Piece</v-btn>
                   </v-btn-toggle>
                   <div class="text-caption text-medium-emphasis mt-1">
-                    {{ isPiece
+                    {{
+                      isPiece
                         ? 'Pre-formed blank (molding, casting, ...) used one or more per part'
-                        : 'Bar or tube stock cut to length' }}
+                        : 'Bar or tube stock cut to length'
+                    }}
                   </div>
                 </v-col>
               </v-row>

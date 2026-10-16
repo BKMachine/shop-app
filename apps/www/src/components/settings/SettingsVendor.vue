@@ -25,7 +25,9 @@
             <div class="logo-section__content">
               <div class="text-subtitle-2">Vendor Logo</div>
               <div class="text-body-2 text-medium-emphasis">
-                {{ editingItem.logo ? 'Manage the current logo image.' : 'Add a single logo image.' }}
+                {{
+                  editingItem.logo ? 'Manage the current logo image.' : 'Add a single logo image.'
+                }}
               </div>
               <div class="d-flex align-center ga-2 pt-3">
                 <v-btn

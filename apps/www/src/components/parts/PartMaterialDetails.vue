@@ -304,7 +304,9 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Waste</td>
                 <td class="text-body-2">
-                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
+                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" − ({{
+                    partsPerBarDetails.totalParts
+                  }}
                   × {{ formatDimension(partsPerBarDetails.materialLength) }}") =
                   {{ formatDimension(wasteDetails.wasteLength) }}"
                 </td>
@@ -376,7 +378,9 @@
               <tr>
                 <td class="text-medium-emphasis text-caption row-1">Waste</td>
                 <td class="text-body-2">
-                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" − ({{ partsPerBarDetails.totalParts }}
+                  {{ formatDimension(partsPerBarDetails.fullBarLength) }}" − ({{
+                    partsPerBarDetails.totalParts
+                  }}
                   × {{ formatDimension(partsPerBarDetails.materialLength) }}") =
                   {{ formatDimension(wasteDetails.wasteLength) }}"
                 </td>
