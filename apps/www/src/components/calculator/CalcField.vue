@@ -96,10 +96,6 @@ function nudge(direction: 1 | -1, event: KeyboardEvent) {
   cursor: not-allowed;
 }
 
-.calc-field.is-locked .calc-field__input {
-  cursor: not-allowed;
-}
-
 .calc-field::before {
   content: "";
   position: absolute;
@@ -163,6 +159,10 @@ function nudge(direction: 1 | -1, event: KeyboardEvent) {
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
   text-align: right;
+}
+
+.calc-field.is-locked .calc-field__input {
+  cursor: not-allowed;
 }
 
 .calc-field.is-solved .calc-field__input {

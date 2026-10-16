@@ -9,7 +9,9 @@
       "!**/.venv-*",
       "!**/.venv-*/**/*",
       "!**/models/**/*",
-      "!**/__pycache__/**/*"
+      "!**/__pycache__/**/*",
+      "!**/status/data/machine-state-cache.json",
+      "!**/server/public/downloads/**/*"
     ]
   },
   "formatter": {
@@ -28,7 +30,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "suspicious": {
         "noExplicitAny": "info"
       }

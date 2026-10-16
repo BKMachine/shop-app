@@ -170,12 +170,7 @@
           :style="{ transformOrigin: `${top.cx}px ${top.cy}px` }"
         >
           <path v-for="(d, index) in top.lands" :key="`l${index}`" class="fig-land" :d="d" />
-          <path
-            v-for="(d, index) in top.gullets"
-            :key="`g${index}`"
-            class="fig-gullet"
-            :d="d"
-          />
+          <path v-for="(d, index) in top.gullets" :key="`g${index}`" class="fig-gullet" :d="d" />
           <g class="fig-part fig-flutes" :class="partClass('flutes')">
             <line
               v-for="(edge, index) in top.edges"
