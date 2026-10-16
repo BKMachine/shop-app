@@ -29,9 +29,12 @@ RUN pnpm run build --filter=@repo/utilities
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm deploy --filter=status --prod /app/deploy/status
 
-FROM node:22-slim AS runner
+# Same Node major as the build stages, so production runs what CI tested.
+FROM node:24-slim AS runner
 WORKDIR /app
 COPY --from=status-deploy /app/deploy/status/node_modules /app/apps/status/node_modules
+# package.json carries "type": "module"; without it Node only runs dist as ESM by sniffing syntax.
+COPY --from=status-deploy /app/deploy/status/package.json /app/apps/status/package.json
 COPY --from=status-builder /app/apps/status/dist /app/apps/status/dist
 ENV NODE_ENV=production
 EXPOSE 3000

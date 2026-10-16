@@ -29,9 +29,12 @@ RUN pnpm run build --filter=@repo/utilities
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm deploy --filter=haas_serial --prod /app/deploy/haas_serial
 
-FROM node:22-slim AS runner
+# Same Node major as the build stages, so production runs what CI tested.
+FROM node:24-slim AS runner
 WORKDIR /app
-COPY --from=haas_serial-deploy /app/deploy/haas_serial/node_modules /app/apps/haas_serial/node_modules  
+COPY --from=haas_serial-deploy /app/deploy/haas_serial/node_modules /app/apps/haas_serial/node_modules
+# package.json carries "type": "module"; without it Node only runs dist as ESM by sniffing syntax.
+COPY --from=haas_serial-deploy /app/deploy/haas_serial/package.json /app/apps/haas_serial/package.json
 COPY --from=haas_serial-builder /app/apps/haas_serial/dist /app/apps/haas_serial/dist
 ENV NODE_ENV=production
 EXPOSE 3000
