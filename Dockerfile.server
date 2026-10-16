@@ -3,7 +3,7 @@ WORKDIR /app
 ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV pnpm_config_store_dir="/pnpm/store"
 ENV PATH="${PATH}:${PNPM_HOME}/bin"
-RUN npm install -g pnpm@11.23.0 turbo@2.10.8
+RUN npm install -g pnpm@12.11.2 turbo@2.10.8
 
 # Full source tree. Only feeds the prune stages below, so it never reaches an
 # app stage directly. The downloads payload is stripped here: it is a ~47MB
@@ -21,9 +21,8 @@ RUN turbo prune server --docker
 
 FROM base AS server-installer
 COPY --from=server-prune /app/out/json/ .
-RUN grep -q '^  injectWorkspacePackages: true$' pnpm-lock.yaml || sed -i "/^settings:$/a\\  injectWorkspacePackages: true" pnpm-lock.yaml
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm install --frozen-lockfile --config.inject-workspace-packages=true
+  pnpm install --frozen-lockfile
 
 FROM server-installer AS server-builder
 COPY biome.json biome.json
@@ -45,7 +44,7 @@ COPY --from=server-prune /app/out/full/packages/types packages/types
 COPY --from=server-prune /app/out/full/packages/typescript-config packages/typescript-config
 RUN pnpm run build --filter=@repo/utilities
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm deploy --filter=server --prod --config.inject-workspace-packages=true /app/deploy/server
+  pnpm deploy --filter=server --prod /app/deploy/server
 
 # WWW
 
@@ -54,9 +53,8 @@ RUN turbo prune www --docker
 
 FROM base AS www-installer
 COPY --from=www-prune /app/out/json/ .
-RUN grep -q '^  injectWorkspacePackages: true$' pnpm-lock.yaml || sed -i "/^settings:$/a\\  injectWorkspacePackages: true" pnpm-lock.yaml
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm install --frozen-lockfile --config.inject-workspace-packages=true
+  pnpm install --frozen-lockfile
 COPY --from=www-prune /app/out/full/ .
 
 FROM www-installer AS www-builder
