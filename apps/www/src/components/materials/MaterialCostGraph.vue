@@ -80,16 +80,18 @@ const data = computed<Data[]>(() => {
 
   if (!items.value.length) return [init, last];
 
-  const startingDatum: Audit[] = [];
   const firstAudit = items.value[0];
   if (!firstAudit) return [init, last];
 
-  const filtered = [...items.value].filter((item) => item.old.costPerFoot !== item.new.costPerFoot);
+  // Compare against the previous audit rather than each audit's own old value: backfilled cost
+  // changes sit between existing audits, and create audits have no old value.
+  const filtered = items.value.filter(
+    (item, index, all) => index === 0 || item.new.costPerFoot !== all[index - 1]?.new.costPerFoot,
+  );
 
   firstAudit.timestamp = from.value.toISO() as string;
-  if (!filtered[0] || firstAudit._id !== filtered[0]._id) startingDatum.push(firstAudit);
 
-  const mappedData: Data[] = [...startingDatum, ...filtered].map((item) => {
+  const mappedData: Data[] = filtered.map((item) => {
     return {
       x: DateTime.fromISO(item.timestamp).toMillis(),
       y: Number(item.new.costPerFoot) || 0,

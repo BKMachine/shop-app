@@ -1,6 +1,11 @@
 import type { LocationQueryValue } from 'vue-router';
 
 export {
+  buildMaterialDescription,
+  formatCrossSectionDimension,
+  formatDimension,
+} from '@repo/utilities/materials';
+export {
   calculateAssemblyCycleMinutes,
   calculateAssemblyMaterialCost,
   calculatePartMaterialCost,
@@ -66,22 +71,6 @@ export function onlyAllowNumeric(e: KeyboardEvent) {
 export function formatWeight(val: number | null | undefined): string {
   if (val == null || Number.isNaN(val)) return '';
   return parseFloat(val.toFixed(2)).toString();
-}
-
-export function formatDimension(val: number | null | undefined): string {
-  if (val == null || Number.isNaN(val)) return '';
-  return parseFloat(val.toFixed(4)).toString();
-}
-
-const MILLIMETERS_PER_INCH = 25.4;
-
-export function formatCrossSectionDimension(
-  val: number | null | undefined,
-  isMetric = false,
-): string {
-  if (val == null || Number.isNaN(val)) return '';
-  const displayValue = isMetric ? val * MILLIMETERS_PER_INCH : val;
-  return formatDimension(displayValue);
 }
 
 export function formatCost(val: number | null | undefined): string {
@@ -153,55 +142,6 @@ export function formatCycleLonghand(val: number | string | null | undefined): st
   const seconds = totalSeconds % 60;
 
   return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
-}
-
-interface MaterialDescriptionInput {
-  kind?: MaterialKind | null;
-  type: string | null;
-  form?: MaterialPieceForm | null;
-  name?: string | null;
-  materialType: string;
-  isMetric?: boolean;
-  wallThickness: number | null;
-  height: number | null;
-  width: number | null;
-  diameter: number | null;
-}
-
-function formatMaterialDimensionToken(value: number | null, isMetric: boolean): string {
-  const formatted = formatCrossSectionDimension(value, isMetric);
-  return formatted ? `${formatted}${isMetric ? 'mm' : '"'}` : '';
-}
-
-export function buildMaterialDescription<T extends MaterialDescriptionInput>(material: T): string {
-  if (material.kind === 'piece') {
-    if (!material.materialType || !material.form) return '';
-    const name = material.name?.trim();
-    const base = `${material.materialType} ${material.form}`;
-    return name ? `${base} - ${name}` : base;
-  }
-
-  if (!material.type || !material.materialType) return '';
-
-  const type = material.wallThickness ? 'Tubing' : 'Bar';
-  const isMetric = material.isMetric ?? false;
-  let description = '';
-
-  if (material.type === 'Flat') {
-    const materialInfo = material.wallThickness
-      ? `${formatMaterialDimensionToken(material.height, isMetric)} x ${formatMaterialDimensionToken(material.width, isMetric)} x ${formatMaterialDimensionToken(material.wallThickness, isMetric)}`
-      : `${formatMaterialDimensionToken(material.height, isMetric)} x ${formatMaterialDimensionToken(material.width, isMetric)}`;
-    description = `${material.materialType} Flat ${type} - ${materialInfo}`;
-  } else if (material.type === 'Round') {
-    const diameterInfo = material.wallThickness
-      ? `${formatMaterialDimensionToken(material.diameter, isMetric)} ⌀ x ${formatMaterialDimensionToken(material.wallThickness, isMetric)}`
-      : `${formatMaterialDimensionToken(material.diameter, isMetric)} ⌀`;
-    description = `${material.materialType} Round ${type} - ${diameterInfo}`;
-  } else {
-    description = `${material.materialType}`;
-  }
-
-  return description;
 }
 
 export function normalizeQueryValue(

@@ -171,10 +171,11 @@ async function addAudit(
   oldDoc: unknown | null,
   newDoc: unknown | null,
   deviceId: string,
+  timestamp = new Date(),
 ): Promise<void> {
   const doc = new Audit({
     type,
-    timestamp: new Date(),
+    timestamp,
     device: new Types.ObjectId(deviceId),
     old: normalizeAuditPayload(oldDoc),
     new: normalizeAuditPayload(newDoc),
@@ -353,27 +354,78 @@ async function getPartAudits(id: string, from: string, to: string): Promise<Audi
 
 async function getMaterialAudits(id: string, from: string, to: string): Promise<AuditDoc[]> {
   const projection = 'timestamp device new.costPerFoot old.costPerFoot';
+  const materialId = new Types.ObjectId(id);
 
+  // Match on `new._id` so the create audit's initial cost is included, and sort by timestamp
+  // because backfilled cost changes are inserted out of chronological order.
   const docsInRange = await Audit.find(
     {
       type: 'material',
-      'old._id': new Types.ObjectId(id),
+      'new._id': materialId,
       timestamp: { $gte: from, $lte: to },
     },
     projection,
-  ).populate('device', 'displayName deviceType');
+  )
+    .sort({ timestamp: 1, _id: 1 })
+    .populate('device', 'displayName deviceType');
   if (!docsInRange.length) return [];
 
   const previousDoc = await Audit.findOne(
-    { type: 'material', 'old._id': new Types.ObjectId(id), timestamp: { $lt: from } },
+    { type: 'material', 'new._id': materialId, timestamp: { $lt: from } },
     projection,
   )
     .sort({
+      timestamp: -1,
       _id: -1,
     })
     .populate('device', 'displayName deviceType');
 
   return previousDoc ? [previousDoc, ...docsInRange] : docsInRange;
+}
+
+// Material audits from `from` through `to`, oldest first. With `from`, the latest audit before it
+// leads the list, since its cost was in effect at the start of the range.
+async function getMaterialCostAudits(id: string, from?: Date, to?: Date): Promise<AuditDoc[]> {
+  const projection =
+    'timestamp device new.costPerFoot new.costPerPiece old.costPerFoot old.costPerPiece';
+  const materialId = new Types.ObjectId(id);
+
+  const query: Record<string, unknown> = { type: 'material', 'new._id': materialId };
+  if (from || to) {
+    query.timestamp = {
+      ...(from ? { $gte: from.toISOString() } : {}),
+      ...(to ? { $lte: to.toISOString() } : {}),
+    };
+  }
+
+  const audits = await Audit.find(query, projection)
+    .sort({ timestamp: 1, _id: 1 })
+    .populate('device', 'displayName deviceType');
+  if (!from) return audits;
+
+  const previousDoc = await Audit.findOne(
+    { type: 'material', 'new._id': materialId, timestamp: { $lt: from.toISOString() } },
+    projection,
+  )
+    .sort({ timestamp: -1, _id: -1 })
+    .populate('device', 'displayName deviceType');
+
+  return previousDoc ? [previousDoc, ...audits] : audits;
+}
+
+// The latest material audit at or before `at`; its `new` snapshot is the material's state then.
+async function findMaterialAuditAt(id: string, at: Date): Promise<AuditDoc | null> {
+  return await Audit.findOne(
+    { type: 'material', 'new._id': new Types.ObjectId(id), timestamp: { $lte: at.toISOString() } },
+    'timestamp new',
+  ).sort({ timestamp: -1, _id: -1 });
+}
+
+async function findMaterialAuditAfter(id: string, at: Date): Promise<AuditDoc | null> {
+  return await Audit.findOne(
+    { type: 'material', 'new._id': new Types.ObjectId(id), timestamp: { $gt: at.toISOString() } },
+    'timestamp',
+  ).sort({ timestamp: 1, _id: 1 });
 }
 
 async function getAllPartAudits(from: string, to: string): Promise<ActivityAudit[]> {
@@ -412,8 +464,9 @@ async function addMaterialAudit(
   oldMaterial: MaterialDoc | null,
   newMaterial: MaterialDoc | null,
   deviceId: string,
+  timestamp?: Date,
 ): Promise<void> {
-  await addAudit('material', oldMaterial, newMaterial, deviceId);
+  await addAudit('material', oldMaterial, newMaterial, deviceId, timestamp);
 }
 
 async function addCustomerAudit(
@@ -483,6 +536,9 @@ const AuditService = {
   addJobAudit,
   getPartAudits,
   getMaterialAudits,
+  getMaterialCostAudits,
+  findMaterialAuditAt,
+  findMaterialAuditAfter,
   getAllPartAudits,
   getAllJobAudits,
   addImageAudit,

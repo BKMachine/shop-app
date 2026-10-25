@@ -15,6 +15,7 @@ import {
   shouldTrackRequest,
 } from '../metrics.js';
 import api from './api/index.js';
+import mcp from './mcp/index.js';
 import errorHandler from './middleware/errorHandler.js';
 import trimRequestStrings from './middleware/trimRequestStrings.js';
 
@@ -87,6 +88,7 @@ app.get('/metrics', async (_req, res, next) => {
 });
 
 app.use('/api', trimRequestStrings, api);
+app.use('/mcp', mcp);
 app.use('/images', express.static(imageDir));
 app.use('/documents', express.static(documentDir));
 app.use('/downloads', express.static(downloadsDir));
