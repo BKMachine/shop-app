@@ -9,6 +9,15 @@
         BK Machine
       </v-app-bar-title>
       <div class="app-bar__actions">
+        <v-btn
+          aria-label="Assistant"
+          href="https://assistant.bkmachine.net"
+          icon="mdi-robot-outline"
+          rel="noopener noreferrer"
+          target="_blank"
+          title="Assistant"
+          variant="text"
+        />
         <v-icon
           :aria-label="scanReadyLabel"
           class="app-bar__scan-indicator"
@@ -42,16 +51,6 @@
           Shipments
         </v-list-item>
         <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
-        <v-list-item
-          v-if="isAdmin"
-          href="https://assistant.bkmachine.net"
-          link
-          prepend-icon="mdi-robot-outline"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          Assistant
-        </v-list-item>
       </v-list>
       <template #append>
         <v-list-item v-if="showDev" link prepend-icon="mdi-test-tube" :to="{name: 'test'}">
