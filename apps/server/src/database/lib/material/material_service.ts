@@ -65,6 +65,37 @@ function getCostField(material: MaterialDoc): MaterialCostField {
   return isPieceMaterial(material) ? 'costPerPiece' : 'costPerFoot';
 }
 
+// Matches stored text regardless of case or surrounding spaces, which older documents don't
+// always agree on (a grade saved as "4130 ", a shape as "flat").
+function looseText(value: string): RegExp {
+  return new RegExp(`^\\s*${escapeRegExp(value.trim())}\\s*$`, 'i');
+}
+
+const normalizedText = (value: string | null | undefined) => value?.trim().toLowerCase() ?? '';
+
+function compareSizes(a: number | null | undefined, b: number | null | undefined): number {
+  const left = a ?? Number.NEGATIVE_INFINITY;
+  const right = b ?? Number.NEGATIVE_INFINITY;
+  return left === right ? 0 : left < right ? -1 : 1;
+}
+
+// Grade, kind, shape or form, then size. Compares loaded documents rather than sorting in the
+// query: an older document missing `kind` gets its default when loaded, but in a query it sorts
+// before every value and would land apart from the rest of its grade.
+function compareForListing(a: MaterialDoc, b: MaterialDoc): number {
+  return (
+    normalizedText(a.materialType).localeCompare(normalizedText(b.materialType)) ||
+    normalizedText(a.kind).localeCompare(normalizedText(b.kind)) ||
+    normalizedText(a.type).localeCompare(normalizedText(b.type)) ||
+    normalizedText(a.form).localeCompare(normalizedText(b.form)) ||
+    compareSizes(a.diameter, b.diameter) ||
+    compareSizes(a.height, b.height) ||
+    compareSizes(a.width, b.width) ||
+    compareSizes(a.wallThickness, b.wallThickness) ||
+    a._id.toString().localeCompare(b._id.toString())
+  );
+}
+
 // Sizes closer than this are the same number up to floating point, e.g. millimeters converted to
 // inches by different code.
 const EXACT_SIZE_DIFFERENCE = 1e-6;
@@ -171,11 +202,11 @@ async function search(
 
   // Documents saved before `kind` existed are stock.
   if (filters.kind) query.kind = filters.kind === 'piece' ? 'piece' : { $ne: 'piece' };
-  if (filters.type) query.type = filters.type;
+  if (filters.type) query.type = looseText(filters.type);
   if (filters.form) query.form = filters.form;
   if (filters.isMetric !== undefined) query.isMetric = filters.isMetric ? true : { $ne: true };
   if (filters.materialType?.trim()) {
-    query.materialType = new RegExp(`^${escapeRegExp(filters.materialType.trim())}$`, 'i');
+    query.materialType = looseText(filters.materialType);
   }
 
   if (filters.supplier?.trim()) {
@@ -208,7 +239,7 @@ async function findMatches(data: MaterialCreate, tolerance: number): Promise<Mat
     const name = normalizePieceName(data.name);
     const pieces = await Material.find({
       kind: 'piece',
-      materialType: data.materialType,
+      materialType: looseText(data.materialType),
       form: data.form,
       name: name ? new RegExp(`^${escapeRegExp(name)}$`, 'i') : null,
     }).populate('supplier');
@@ -218,8 +249,8 @@ async function findMatches(data: MaterialCreate, tolerance: number): Promise<Mat
 
   const stock = await Material.find({
     kind: { $ne: 'piece' },
-    materialType: data.materialType,
-    type: data.type,
+    materialType: looseText(data.materialType),
+    type: data.type ? looseText(data.type) : null,
     isMetric: data.isMetric ? true : { $ne: true },
   }).populate('supplier');
   const crossSection =
@@ -227,30 +258,15 @@ async function findMatches(data: MaterialCreate, tolerance: number): Promise<Mat
   return matchSizes(stock, { ...crossSection, wallThickness: data.wallThickness }, tolerance);
 }
 
-// Sorted by grade, shape and then size, so materials of nearly the same size sit together.
+// Sorted so materials of nearly the same size sit together. The catalog is small enough to sort
+// whole in code.
 async function listPage(
   offset: number,
   limit: number,
 ): Promise<{ materials: MaterialDoc[]; total: number }> {
-  const [materials, total] = await Promise.all([
-    Material.find({})
-      .sort({
-        materialType: 1,
-        kind: 1,
-        type: 1,
-        form: 1,
-        diameter: 1,
-        height: 1,
-        width: 1,
-        wallThickness: 1,
-        _id: 1,
-      })
-      .skip(offset)
-      .limit(limit)
-      .populate('supplier'),
-    Material.countDocuments({}),
-  ]);
-  return { materials, total };
+  const materials = await Material.find({}).populate('supplier');
+  materials.sort(compareForListing);
+  return { materials: materials.slice(offset, offset + limit), total: materials.length };
 }
 
 // Records a cost that took effect at `effectiveAt` as a material audit with that timestamp, which
