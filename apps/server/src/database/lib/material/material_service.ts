@@ -256,8 +256,8 @@ async function listPage(
 // Records a cost that took effect at `effectiveAt` as a material audit with that timestamp, which
 // is what the cost history is built from. A change newer than the recorded history becomes the
 // current cost; an older one is only inserted into the history, since later audits already
-// record what came after it. A material with no recorded history gives no way to tell whether a
-// past price predates its current cost, so the caller has to decide via `updateCurrent`.
+// record what came after it. When the current cost isn't in the recorded history there is no way
+// to tell whether a past price predates it, so the caller has to decide via `updateCurrent`.
 async function recordCost(
   id: string,
   field: MaterialCostField,
@@ -285,13 +285,23 @@ async function recordCost(
     );
   }
 
-  if (!priorAudit && !laterAudit && updateCurrent === undefined && material[field] !== cost) {
+  // The current cost is only known to predate `effectiveAt` when the latest recorded change ends
+  // at it. Otherwise it was set outside the recorded history (before audits, or after a backfill
+  // that left it alone) and could be newer than this cost.
+  const currentCostRecorded =
+    !laterAudit && priorAudit !== null && (priorAudit.new?.[field] ?? null) === material[field];
+  if (
+    !laterAudit &&
+    !currentCostRecorded &&
+    updateCurrent === undefined &&
+    material[field] !== cost
+  ) {
     throw new Error(
-      `Material ${id} has no recorded cost history, so it is unknown whether a cost effective ${effectiveAt.toISOString()} is newer than its current ${field} of ${material[field]}. Pass updateCurrent: true to also make it the current cost, or false to only record it as history.`,
+      `Material ${id}'s current ${field} of ${material[field]} is not in its recorded cost history, so it is unknown whether a cost effective ${effectiveAt.toISOString()} is newer. Pass updateCurrent: true to also make it the current cost, or false to only record it as history.`,
     );
   }
 
-  if (updateCurrent ?? (!laterAudit && priorAudit !== null)) {
+  if (updateCurrent ?? currentCostRecorded) {
     const previousCost = material[field];
     if (previousCost === cost) {
       return { material, previousCost, recorded: false, currentCostUpdated: false };
