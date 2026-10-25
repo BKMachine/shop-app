@@ -78,6 +78,8 @@ function buildToolQuery(filters: ToolListFilters) {
     if (Number.isFinite(minFluteLength)) query.fluteLength = { $gte: minFluteLength };
   }
 
+  if (filters.lowStock) exprConditions.push({ $lte: ['$stock', '$reorderThreshold'] });
+
   if (exprConditions.length === 1) {
     query.$expr = exprConditions[0];
   } else if (exprConditions.length > 1) {

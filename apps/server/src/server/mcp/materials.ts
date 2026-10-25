@@ -9,16 +9,14 @@ import {
   normalizeDimensions,
   normalizePieceName,
 } from '@repo/utilities/materials';
-import { DEFAULT_BUSINESS_TIME_ZONE } from '@repo/utilities/time';
-import { DateTime } from 'luxon';
 import * as z from 'zod';
 import type { MaterialDoc } from '../../database/lib/material/material_model.js';
 import Materials from '../../database/lib/material/material_service.js';
 import Suppliers from '../../database/lib/supplier/supplier_service.js';
 import mongoObjectId from '../../utilities/mongoObjectId.js';
+import { dateFormat, jsonResult, parseDate, parseRange } from './utils.js';
 
 const dimension = (description: string) => z.number().positive().optional().describe(description);
-const dateFormat = `an ISO 8601 date or date-time; a value without an offset is read in ${DEFAULT_BUSINESS_TIME_ZONE}`;
 const kindDescription =
   'stock is bar or tube cut to length and priced per foot; piece is a pre-formed blank (molding, casting, ...) priced per piece.';
 const materialTypes = Object.keys(materials);
@@ -243,34 +241,12 @@ async function findSupplier(name: string) {
   return supplier;
 }
 
-function jsonResult(data: unknown) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function parseDate(name: string, value: string): DateTime {
-  const date = DateTime.fromISO(value, { zone: DEFAULT_BUSINESS_TIME_ZONE });
-  if (!date.isValid) {
-    throw new Error(`Invalid ${name} "${value}"; use an ISO 8601 date or date-time.`);
-  }
-  return date;
-}
-
 function parseEffectiveAt(value: string | undefined): Date {
   if (!value) return new Date();
 
   const effectiveAt = parseDate('effectiveAt', value);
   if (effectiveAt.toMillis() > Date.now()) throw new Error('effectiveAt cannot be in the future.');
   return effectiveAt.toJSDate();
-}
-
-function parseRange(from: string | undefined, to: string | undefined) {
-  const fromDate = from ? parseDate('from', from).toJSDate() : undefined;
-  // A date without a time covers that whole day.
-  const toDate = to
-    ? (to.includes('T') ? parseDate('to', to) : parseDate('to', to).endOf('day')).toJSDate()
-    : undefined;
-  if (fromDate && toDate && fromDate > toDate) throw new Error('from must be before to.');
-  return { fromDate, toDate };
 }
 
 export default function registerMaterialTools(server: McpServer, deviceId: string): void {

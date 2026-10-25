@@ -242,12 +242,12 @@ export async function calculateDerivedPartProperties(part: Part): Promise<void> 
   };
 }
 
-const deriveShopRateFromGraph = (part: Part, partGraph: Map<string, Part>): number => {
-  const rootId = part._id;
-  const rootPart = partGraph.get(rootId);
-  if (!rootPart) return 0;
+// Material cost and cycle time for a part including its sub-components.
+function getAssemblyCosts(part: Part, partGraph: Map<string, Part>) {
+  const rootPart = partGraph.get(part._id);
+  if (!rootPart) return null;
 
-  const partMaterialCost = calculateAssemblyMaterialCost(
+  const materialCost = calculateAssemblyMaterialCost(
     rootPart,
     (partId) => partGraph.get(partId),
     (material) => {
@@ -258,11 +258,16 @@ const deriveShopRateFromGraph = (part: Part, partGraph: Map<string, Part>): numb
       return null;
     },
   );
-  const totalCycleMinutes = calculateAssemblyCycleMinutes(rootPart, (partId) =>
-    partGraph.get(partId),
-  );
+  const cycleMinutes = calculateAssemblyCycleMinutes(rootPart, (partId) => partGraph.get(partId));
 
-  return calculatePartShopRate(rootPart.price, partMaterialCost, totalCycleMinutes);
+  return { materialCost, cycleMinutes };
+}
+
+const deriveShopRateFromGraph = (part: Part, partGraph: Map<string, Part>): number => {
+  const costs = getAssemblyCosts(part, partGraph);
+  if (!costs) return 0;
+
+  return calculatePartShopRate(part.price, costs.materialCost, costs.cycleMinutes);
 };
 
 function hasIncompleteSubComponentCosts(part: Part, partGraph: Map<string, Part>): boolean {
@@ -624,6 +629,23 @@ async function findById(id: string): Promise<Part | null> {
   return part ? createDetailItem(part) : null;
 }
 
+// Per-part material cost, cycle minutes and shop rate counting sub-components, the figures the
+// stored shop rate is derived from.
+async function getCostSummary(id: string) {
+  const part = await Part.findById(id);
+  if (!part) return null;
+
+  const candidate = await buildDerivedPartCandidate(part);
+  const partGraph = await buildAssemblyPartGraph(candidate);
+  const costs = getAssemblyCosts(candidate, partGraph) ?? { materialCost: 0, cycleMinutes: 0 };
+
+  return {
+    ...costs,
+    shopRate: calculatePartShopRate(candidate.price, costs.materialCost, costs.cycleMinutes),
+    hasIncompleteSubComponentCosts: hasIncompleteSubComponentCosts(candidate, partGraph),
+  };
+}
+
 async function create(data: PartCreate, deviceId: string): Promise<Part> {
   const normalizedSubComponentIds = normalizeSubComponentIds(data.subComponentIds);
 
@@ -728,6 +750,7 @@ export default {
   list,
   searchSummaries,
   findById,
+  getCostSummary,
   listSubComponents,
   listParentAssemblies,
   listRelations,

@@ -2,12 +2,15 @@ import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
 import { McpServer } from '@modelcontextprotocol/server';
 import { Router } from 'express';
 import { narrowKnownDevice, requireKnownDevice } from '../middleware/knownDevices.js';
+import registerJobTools from './jobs.js';
 import registerMaterialTools from './materials.js';
+import registerPartTools from './parts.js';
+import registerToolingTools from './tooling.js';
 
 const router: Router = Router();
 
 // Sent to the client when it connects, as guidance for the model using the tools.
-const instructions = `Tools for the machine shop's material catalog: look up and add the bar stock and pieces the shop buys, record their prices (including past prices from old invoices), and read price history.
+const instructions = `Tools for the machine shop's data. The material tools look up and add the bar stock and pieces the shop buys, record their prices (including past prices from old invoices), and read price history. The part, cutting tool and job tools are read-only.
 
 Materials
 - "stock" is bar or tube priced per foot (costPerFoot); a "piece" is a pre-formed blank such as a molding or casting, priced per piece (costPerPiece). Use the cost field that matches the material's kind.
@@ -33,11 +36,20 @@ Price history with get_material_cost_history
 - Changes come oldest first; each price holds until the next change. costAtStart is the price at the start of the range and currentCost the price now. Prices from before the shop began tracking appear only if they were backfilled.
 
 Reviewing for duplicates with list_materials
-- It pages through every material, sorted so materials of nearly the same size sit together. Report suspected duplicates to the user; merging them is done in the shop app, not with these tools.`;
+- It pages through every material, sorted so materials of nearly the same size sit together. Report suspected duplicates to the user; merging them is done in the shop app, not with these tools.
+
+Parts, cutting tools and jobs (read-only)
+- find_parts searches the parts made for customers; get_part has cycle times, material, costs and assembly structure. A part's material links to the material tools.
+- find_cutting_tools searches the tool crib: specs, stock, reorder settings and storage location. lowStock finds tools at or below their reorder threshold.
+- find_jobs searches production jobs by status, customer, part or due date; get_job has shipments and machine time. A job's partId works with get_part.
+- Lists are paged: when nextOffset isn't null, pass it as offset to get the rest.`;
 
 function createServer(deviceId: string): McpServer {
   const server = new McpServer({ name: 'shop-app', version: '1.0.0' }, { instructions });
   registerMaterialTools(server, deviceId);
+  registerPartTools(server);
+  registerToolingTools(server);
+  registerJobTools(server);
   return server;
 }
 

@@ -77,6 +77,8 @@ declare global {
     position?: string;
     cuttingDia?: string;
     minFluteLength?: string;
+    /** Only tools whose stock is at or below their reorder threshold. */
+    lowStock?: boolean;
     sort?: string;
     order?: 'asc' | 'desc';
     limit?: number;
