@@ -9,7 +9,7 @@
         density="compact"
         item-title="title"
         item-value="value"
-        :items="selectOptions"
+        :items="graphRanges"
         @update:model-value="getData"
       />
     </v-col>
@@ -25,6 +25,7 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 import { DateTime } from 'luxon';
 import { computed, onMounted, ref } from 'vue';
 import { Line } from 'vue-chartjs';
+import { type GraphPoint, graphRanges, stepPoints, timeScale } from '@/lib/auditGraph';
 import axios from '@/plugins/axios';
 import 'chartjs-adapter-luxon';
 
@@ -36,70 +37,41 @@ const props = defineProps<{
   currentCostPerFoot: number;
 }>();
 
-interface Select {
-  title: string;
-  value: number;
-}
-
-interface Data {
-  x: number;
-  y: number;
-}
-
-const selectOptions: Select[] = [
-  { title: '1 month', value: 1 },
-  { title: '3 months', value: 3 },
-  { title: '6 months', value: 6 },
-  { title: '1 year', value: 12 },
-];
-
 const months = ref<number>(1);
 const items = ref<Audit[]>([] as Audit[]);
+// The range of the audits in `items`, set when they arrive so the chart never mixes ranges.
 const to = ref<DateTime>(DateTime.now());
-const from = computed<DateTime>(() => DateTime.now().minus({ months: months.value }));
+const from = ref<DateTime>(to.value.minus({ months: months.value }));
 
 onMounted(() => {
   setTimeout(getData, 100);
 });
 
 function getData() {
+  const end = DateTime.now();
+  const start = end.minus({ months: months.value });
   axios
     .post('/audits/materials/cost', {
       id: props.id,
-      from: from.value.toISO(),
-      to: to.value.toISO(),
+      from: start.toISO(),
+      to: end.toISO(),
     })
     .then(({ data }: { data: Audit[] }) => {
       items.value = data;
+      from.value = start;
+      to.value = end;
     });
 }
 
-const data = computed<Data[]>(() => {
-  const init: Data = { x: from.value.toMillis(), y: props.currentCostPerFoot || 0 };
-  const last: Data = { x: to.value.toMillis(), y: props.currentCostPerFoot || 0 };
-
-  if (!items.value.length) return [init, last];
-
-  const firstAudit = items.value[0];
-  if (!firstAudit) return [init, last];
-
-  // Compare against the previous audit rather than each audit's own old value: backfilled cost
-  // changes sit between existing audits, and create audits have no old value.
-  const filtered = items.value.filter(
-    (item, index, all) => index === 0 || item.new.costPerFoot !== all[index - 1]?.new.costPerFoot,
-  );
-
-  firstAudit.timestamp = from.value.toISO() as string;
-
-  const mappedData: Data[] = filtered.map((item) => {
-    return {
-      x: DateTime.fromISO(item.timestamp).toMillis(),
-      y: Number(item.new.costPerFoot) || 0,
-    };
-  });
-
-  return [...mappedData, last];
-});
+const data = computed<GraphPoint[]>(() =>
+  stepPoints(
+    items.value,
+    from.value,
+    to.value,
+    props.currentCostPerFoot || 0,
+    (doc) => doc.costPerFoot,
+  ),
+);
 
 const chartData = computed<ChartData<'line'>>(() => {
   return {
@@ -140,18 +112,7 @@ const options = computed<ChartOptions<'line'>>(() => {
         },
         min: 0,
       },
-      x: {
-        type: 'time',
-        min: from.value.toMillis(),
-        max: to.value.toMillis(),
-        time: {
-          tooltipFormat: 'D t',
-          unit: 'day',
-          displayFormats: {
-            day: 'L/d',
-          },
-        },
-      },
+      x: timeScale(from.value, to.value),
     },
     interaction: {
       intersect: false,

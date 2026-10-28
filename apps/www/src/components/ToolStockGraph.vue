@@ -9,7 +9,7 @@
         density="compact"
         item-title="title"
         item-value="value"
-        :items="selectOptions"
+        :items="graphRanges"
         @update:model-value="getData"
       />
     </v-col>
@@ -25,6 +25,7 @@ import annotationPlugin, { type AnnotationOptions } from 'chartjs-plugin-annotat
 import { DateTime } from 'luxon';
 import { computed, onMounted, ref } from 'vue';
 import { Line } from 'vue-chartjs';
+import { type GraphPoint, graphRanges, stepPoints, timeScale } from '@/lib/auditGraph';
 import axios from '@/plugins/axios';
 import 'chartjs-adapter-luxon';
 
@@ -38,94 +39,36 @@ const props = defineProps<{
   currentCost: number;
 }>();
 
-interface Select {
-  title: string;
-  value: number;
-}
-
-const selectOptions: Select[] = [
-  { title: '1 month', value: 1 },
-  { title: '3 months', value: 3 },
-  { title: '6 months', value: 6 },
-  { title: '1 year', value: 12 },
-];
-
 const months = ref<number>(1);
 const items = ref<Audit[]>([] as Audit[]);
+// The range of the audits in `items`, set when they arrive so the chart never mixes ranges.
 const to = ref<DateTime>(DateTime.now());
-const from = computed<DateTime>(() => DateTime.now().minus({ months: months.value }));
+const from = ref<DateTime>(to.value.minus({ months: months.value }));
 
 onMounted(() => {
   setTimeout(getData, 100);
 });
 
 function getData() {
+  const end = DateTime.now();
+  const start = end.minus({ months: months.value });
   axios
     .post('/audits/tools/stock', {
       id: props.id,
-      from: from.value.toISO(),
-      to: to.value.toISO(),
+      from: start.toISO(),
+      to: end.toISO(),
     })
     .then(({ data }: { data: Audit[] }) => {
       items.value = data;
+      from.value = start;
+      to.value = end;
     });
 }
 
-interface Data {
-  x: number;
-  y: number;
-}
-
-const firstDate = DateTime.fromISO('2024-04-09T00:00:00-06:00');
-
-const data = computed<{ stock: Data[]; cost: Data[] }>(() => {
-  const stock: Data[] = [];
-  const cost: Data[] = [];
-
-  // If there are no audits just show a straight line at the current values
-  const initStock: Data = { x: from.value.toMillis(), y: props.currentStock || 0 };
-  const lastStock: Data = { x: to.value.toMillis(), y: props.currentStock || 0 };
-
-  const initCost: Data = { x: from.value.toMillis(), y: props.currentCost || 0 };
-  const lastCost: Data = { x: to.value.toMillis(), y: props.currentCost || 0 };
-  if (!items.value?.length)
-    return {
-      stock: [initStock, lastStock],
-      cost: [initCost, lastCost],
-    };
-
-  // Create a starting datum for when we started doing tool audits
-  const startingDatumStock: Audit[] = [];
-  const startingDatumCost: Audit[] = [];
-  // Pull the first audit record from the results
-  const firstAudit = items.value[0];
-  if (!firstAudit) return { stock, cost };
-
-  // Filter for any audits with a stock number change
-  const filteredStock = [...items.value].filter((x) => x.old.stock !== x.new.stock);
-  const filteredCost = [...items.value].filter((x) => x.old.cost !== x.new.cost);
-
-  // If the first audit is not in the filtered results add it to the starting datums array
-  firstAudit.timestamp = from.value.toISO() as string;
-  if (!filteredStock[0] || firstAudit._id !== filteredStock[0]._id)
-    startingDatumStock.push(firstAudit);
-  if (!filteredCost[0] || firstAudit._id !== filteredCost[0]._id)
-    startingDatumCost.push(firstAudit);
-
-  // Map the data the chart cares about
-  const mappedStockData: Data[] = [...startingDatumStock, ...filteredStock].map((x) => {
-    return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.stock };
-  });
-  const mappedCostData: Data[] = [...startingDatumCost, ...filteredCost].map((x) => {
-    return { x: DateTime.fromISO(x.timestamp).toMillis(), y: x.new.cost };
-  });
-
-  console.log([...mappedCostData, lastCost]);
-  return {
-    stock: [...mappedStockData, lastStock],
-    cost: [...mappedCostData, lastCost],
-  };
-});
+const data = computed<{ stock: GraphPoint[]; cost: GraphPoint[] }>(() => ({
+  stock: stepPoints(items.value, from.value, to.value, props.currentStock || 0, (doc) => doc.stock),
+  cost: stepPoints(items.value, from.value, to.value, props.currentCost || 0, (doc) => doc.cost),
+}));
 
 const orderPoints = computed(() => {
   let i = 1;
@@ -229,19 +172,7 @@ const options = computed<ChartOptions<'line'>>(() => {
         },
         min: 0,
       },
-      x: {
-        type: 'time',
-        min: from.value.toMillis(),
-        max: to.value.toMillis(),
-        time: {
-          tooltipFormat: 'D t',
-          unit: 'day',
-          displayFormats: {
-            day: 'L/d',
-          },
-        },
-        // clip: false,
-      },
+      x: timeScale(from.value, to.value),
     },
     interaction: {
       mode: 'nearest',
