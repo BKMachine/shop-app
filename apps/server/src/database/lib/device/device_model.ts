@@ -6,6 +6,7 @@ const deviceSchema = new Schema<DeviceFields>(
     displayName: { type: String, required: true },
     deviceType: { type: String, enum: ['pc', 'android', 'unknown'], default: 'unknown' },
     isAdmin: { type: Boolean, default: false },
+    isLan: { type: Boolean, default: false },
     approved: { type: Boolean, default: true },
     blocked: { type: Boolean, default: false },
 

@@ -10,6 +10,7 @@
       </v-app-bar-title>
       <div class="app-bar__actions">
         <v-btn
+          v-if="isAdmin || isLan"
           aria-label="Assistant"
           href="https://assistant.bkmachine.net"
           icon="mdi-robot-outline"
@@ -317,6 +318,8 @@ watch(
 const showDev = computed<boolean>(() => {
   return location.host.includes('localhost') || location.host.includes('127.0.0.1');
 });
+
+const isLan = computed<boolean>(() => Boolean(deviceState.current?.isLan));
 
 const isAdmin = computed<boolean>(() => Boolean(deviceState.current?.isAdmin));
 </script>

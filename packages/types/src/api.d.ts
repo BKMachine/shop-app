@@ -413,6 +413,7 @@ declare global {
     displayName: string;
     deviceType: 'pc' | 'android' | 'unknown';
     isAdmin: boolean;
+    isLan: boolean;
     approved: boolean;
     blocked: boolean;
     firstSeenAt: Date;

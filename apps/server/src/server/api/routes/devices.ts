@@ -37,6 +37,7 @@ router.post('/devices/register', async (req, res, next) => {
       displayName: data.displayName,
       deviceType: data.deviceType,
       isAdmin: false,
+      isLan: false,
       approved: true,
       blocked: false,
       firstSeenAt: new Date(),
