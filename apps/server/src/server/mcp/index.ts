@@ -25,15 +25,16 @@ Recording prices with update_material_cost
 - A price taking effect now: omit effectiveAt.
 - A past price: set effectiveAt to the invoice date. It goes into the history at that date and only becomes the current cost if it is newer than everything recorded. Invoices can be entered in any order.
 - If the tool says the current cost isn't in the recorded history, ask the user whether this price should also become the current cost (updateCurrent: true) or only be history (false). Don't guess; the current cost is used for quoting.
-- Repeating a call is safe: recorded: false means that price was already in effect then.
+- Set supplierId to who the price came from (list_suppliers has the ids). Suppliers differ in price, so each recorded price keeps its supplier, and a price that becomes the current cost makes its supplier the material's supplier.
+- Repeating a call is safe: recorded: false means that price, from that supplier, was already in effect then.
 
 Adding materials with create_material
-- Only after find_materials shows the material doesn't exist. The supplier must already exist; there is no tool to add one.
+- Only after find_materials shows the material doesn't exist. The supplier must already exist (list_suppliers); there is no tool to add one.
 - Include the newest known price and its date (effectiveAt), then add older prices with update_material_cost.
 - If it's refused as within 0.01 in of an existing material, show the user the candidates and pass confirmDistinct: true only once they confirm it's a different size.
 
 Price history with get_material_cost_history
-- Changes come oldest first; each price holds until the next change. costAtStart is the price at the start of the range and currentCost the price now. Prices from before the shop began tracking appear only if they were backfilled.
+- Changes come oldest first, each with its supplier; a price holds until the next change. costAtStart and supplierAtStart are those at the start of the range, currentCost the price now. Prices from before the shop began tracking appear only if they were backfilled.
 
 Reviewing for duplicates with list_materials
 - It pages through every material, sorted so materials of nearly the same size sit together. Report suspected duplicates to the user; merging them is done in the shop app, not with these tools.

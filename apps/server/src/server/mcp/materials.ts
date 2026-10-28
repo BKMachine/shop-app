@@ -84,6 +84,11 @@ const UpdateMaterialCostInput = z
       .describe(
         "Whether a past price also becomes the material's current cost. By default it does only when it is newer than every recorded change. Required for a material with no recorded history whose current cost differs.",
       ),
+    supplierId: mongoObjectId
+      .optional()
+      .describe(
+        "Id of the supplier the price came from, from list_suppliers. It is recorded with the price, and becomes the material's supplier when the price becomes its current cost. Omit to keep the supplier already in effect.",
+      ),
   })
   .refine((input) => (input.costPerFoot === undefined) !== (input.costPerPiece === undefined), {
     message: 'Provide exactly one of costPerFoot or costPerPiece.',
@@ -129,10 +134,9 @@ const CreateMaterialFields = z.object({
     .positive()
     .default(144)
     .describe('Stock only: bar length in inches. It does not identify the material.'),
-  supplier: z
-    .string()
+  supplierId: mongoObjectId
     .optional()
-    .describe('Name of an existing supplier, case-insensitive. Required for stock.'),
+    .describe('Id of the supplier, from list_suppliers. Required for stock.'),
   costPerFoot: z.number().positive().optional().describe('Cost per foot, for stock.'),
   costPerPiece: z.number().positive().optional().describe('Cost per piece, for pieces.'),
   effectiveAt: z
@@ -162,12 +166,12 @@ const createMaterialShapes: Record<
   },
   Flat: {
     label: 'flat stock',
-    required: ['supplier', 'height', 'width'],
+    required: ['supplierId', 'height', 'width'],
     unused: ['form', 'name', 'diameter', 'costPerPiece'],
   },
   Round: {
     label: 'round stock',
-    required: ['supplier', 'diameter'],
+    required: ['supplierId', 'diameter'],
     unused: ['form', 'name', 'height', 'width', 'costPerPiece'],
   },
 };
@@ -230,14 +234,9 @@ function toListedMaterial(material: MaterialDoc) {
   );
 }
 
-async function findSupplier(name: string) {
-  const suppliers = await Suppliers.list();
-  const supplier = suppliers.find((s) => s.name.toLowerCase() === name.trim().toLowerCase());
-  if (!supplier) {
-    throw new Error(
-      `No supplier named "${name}". Known suppliers: ${suppliers.map((s) => s.name).join(', ')}.`,
-    );
-  }
+async function findSupplier(id: string) {
+  const supplier = await Suppliers.findById(id);
+  if (!supplier) throw new Error(`No supplier with id ${id}; list_suppliers has them.`);
   return supplier;
 }
 
@@ -299,6 +298,25 @@ export default function registerMaterialTools(server: McpServer, deviceId: strin
   );
 
   server.registerTool(
+    'list_suppliers',
+    {
+      title: 'List suppliers',
+      description:
+        'List the material suppliers with their ids, for the supplierId of create_material and update_material_cost.',
+      inputSchema: z.object({}),
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const suppliers = await Suppliers.list();
+      return jsonResult({
+        suppliers: suppliers
+          .map((supplier) => ({ id: supplier._id.toString(), name: supplier.name }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      });
+    },
+  );
+
+  server.registerTool(
     'create_material',
     {
       title: 'Create material',
@@ -309,7 +327,7 @@ export default function registerMaterialTools(server: McpServer, deviceId: strin
       const isPiece = input.kind === 'piece';
       const isMetric = !isPiece && input.isMetric;
       const effectiveDate = input.effectiveAt ? parseEffectiveAt(input.effectiveAt) : null;
-      const supplier = input.supplier ? await findSupplier(input.supplier) : null;
+      const supplier = input.supplierId ? await findSupplier(input.supplierId) : null;
 
       const material: MaterialCreate = normalizeDimensions({
         description: '',
@@ -371,14 +389,15 @@ export default function registerMaterialTools(server: McpServer, deviceId: strin
     {
       title: 'Update material cost',
       description:
-        'Record a material price change, now or retroactively. Set costPerFoot for stock materials or costPerPiece for piece materials. A price equal to the one already in effect at that time is not recorded again, so repeating a call is safe.',
+        'Record a material price change, now or retroactively, and the supplier it came from. Set costPerFoot for stock materials or costPerPiece for piece materials. A price equal to the one already in effect at that time, from the same supplier, is not recorded again, so repeating a call is safe.',
       inputSchema: UpdateMaterialCostInput,
       annotations: { destructiveHint: false, idempotentHint: true },
     },
-    async ({ materialId, costPerFoot, costPerPiece, effectiveAt, updateCurrent }) => {
+    async ({ materialId, costPerFoot, costPerPiece, effectiveAt, updateCurrent, supplierId }) => {
       const field = costPerFoot !== undefined ? 'costPerFoot' : 'costPerPiece';
       const cost = (costPerFoot ?? costPerPiece) as number;
       const effectiveDate = parseEffectiveAt(effectiveAt);
+      const supplier = supplierId ? await findSupplier(supplierId) : null;
 
       const change = await Materials.recordCost(
         materialId,
@@ -387,12 +406,14 @@ export default function registerMaterialTools(server: McpServer, deviceId: strin
         effectiveDate,
         effectiveAt ? updateCurrent : (updateCurrent ?? true),
         deviceId,
+        supplier?._id.toString(),
       );
 
       return jsonResult({
         material: toToolMaterial(change.material),
         field,
         cost,
+        supplier: supplier ? { id: supplier._id.toString(), name: supplier.name } : null,
         previousCost: change.previousCost,
         effectiveAt: effectiveDate.toISOString(),
         recorded: change.recorded,
@@ -406,7 +427,7 @@ export default function registerMaterialTools(server: McpServer, deviceId: strin
     {
       title: 'Get material cost history',
       description:
-        "List a material's price changes over time, oldest first. Each change's cost holds until the next one; costAtStart is the cost in effect at `from`, and currentCost is the cost now. Prices from before the shop began recording changes appear only if they were backfilled.",
+        "List a material's price and supplier changes over time, oldest first. Each change's cost and supplier hold until the next one; costAtStart and supplierAtStart are those in effect at `from`, and currentCost is the cost now. Prices from before the shop began recording changes appear only if they were backfilled.",
       inputSchema: GetMaterialCostHistoryInput,
       annotations: { readOnlyHint: true },
     },
@@ -421,6 +442,7 @@ export default function registerMaterialTools(server: McpServer, deviceId: strin
         from: fromDate?.toISOString() ?? null,
         to: toDate?.toISOString() ?? null,
         costAtStart: history.costAtStart,
+        supplierAtStart: history.supplierAtStart,
         changes: history.changes.map((change) => ({
           ...change,
           at: change.at.toISOString(),

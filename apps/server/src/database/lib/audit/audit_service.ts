@@ -387,7 +387,7 @@ async function getMaterialAudits(id: string, from: string, to: string): Promise<
 // leads the list, since its cost was in effect at the start of the range.
 async function getMaterialCostAudits(id: string, from?: Date, to?: Date): Promise<AuditDoc[]> {
   const projection =
-    'timestamp device new.costPerFoot new.costPerPiece old.costPerFoot old.costPerPiece';
+    'timestamp device new.costPerFoot new.costPerPiece new.supplier old.costPerFoot old.costPerPiece old.supplier';
   const materialId = new Types.ObjectId(id);
 
   const query: Record<string, unknown> = { type: 'material', 'new._id': materialId };

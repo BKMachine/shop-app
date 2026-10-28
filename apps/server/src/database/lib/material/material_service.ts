@@ -3,6 +3,7 @@ import {
   normalizeDimensions,
   normalizePieceName,
 } from '@repo/utilities/materials';
+import { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import Audit from '../audit/audit_service.js';
@@ -49,20 +50,32 @@ type MaterialCostChange = {
   currentCostUpdated: boolean;
 };
 
+type SupplierRef = { id: string; name: string | null };
+
 type MaterialCostHistory = {
   material: MaterialDoc;
   field: MaterialCostField;
   costAtStart: number | null;
+  supplierAtStart: SupplierRef | null;
   changes: {
     at: Date;
     cost: number | null;
     previousCost: number | null;
+    supplier: SupplierRef | null;
     recordedBy: string | null;
   }[];
 };
 
 function getCostField(material: MaterialDoc): MaterialCostField {
   return isPieceMaterial(material) ? 'costPerPiece' : 'costPerFoot';
+}
+
+// A supplier's id as a string: audit snapshots hold the id, a loaded material the populated
+// supplier.
+function supplierIdOf(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'object' && '_id' in value) return String(value._id);
+  return String(value);
 }
 
 // Matches stored text regardless of case or surrounding spaces, which older documents don't
@@ -274,6 +287,9 @@ async function listPage(
 // current cost; an older one is only inserted into the history, since later audits already
 // record what came after it. When the current cost isn't in the recorded history there is no way
 // to tell whether a past price predates it, so the caller has to decide via `updateCurrent`.
+// `supplierId` is who the price came from: it goes into the recorded change and, when the price
+// becomes the current cost, onto the material. A price is recorded again when only its supplier
+// differs.
 async function recordCost(
   id: string,
   field: MaterialCostField,
@@ -281,6 +297,7 @@ async function recordCost(
   effectiveAt: Date,
   updateCurrent: boolean | undefined,
   deviceId: string,
+  supplierId?: string,
 ): Promise<MaterialCostChange> {
   const material = await Material.findById(id).populate('supplier');
   if (!material) throw new Error(`Missing material document id: ${id}`);
@@ -317,15 +334,18 @@ async function recordCost(
     );
   }
 
+  const supplierChange = (supplier: unknown) =>
+    supplierId !== undefined && supplierIdOf(supplier) !== supplierId;
+
   if (updateCurrent ?? currentCostRecorded) {
     const previousCost = material[field];
-    if (previousCost === cost) {
+    if (previousCost === cost && !supplierChange(material.supplier)) {
       return { material, previousCost, recorded: false, currentCostUpdated: false };
     }
 
     const updatedMaterial = await Material.findByIdAndUpdate(
       id,
-      { [field]: cost },
+      { [field]: cost, ...(supplierId ? { supplier: supplierId } : {}) },
       { returnDocument: 'after' },
     ).populate('supplier');
     if (!updatedMaterial) throw new Error(`Unable to update material document id: ${id}`);
@@ -341,47 +361,74 @@ async function recordCost(
     costPerPiece: null,
   };
   const previousCost: number | null = before[field] ?? null;
-  if (previousCost === cost) {
+  if (previousCost === cost && !supplierChange(before.supplier)) {
     return { material, previousCost, recorded: false, currentCostUpdated: false };
   }
 
-  await Audit.addAudit('material', before, { ...before, [field]: cost }, deviceId, effectiveAt);
+  const after = {
+    ...before,
+    [field]: cost,
+    ...(supplierId ? { supplier: new Types.ObjectId(supplierId) } : {}),
+  };
+  await Audit.addAudit('material', before, after, deviceId, effectiveAt);
   return { material, previousCost, recorded: true, currentCostUpdated: false };
 }
 
 // Cost changes from `from` through `to`, oldest first. Each is compared with the audit before it
 // rather than its own old value, which goes stale when a backfilled change is inserted ahead of
-// it; only the first, with nothing before it, falls back to its old value. Audits that leave the
-// cost alone are dropped.
+// it; only the first, with nothing before it, falls back to its old value. Audits that leave both
+// the cost and the supplier alone are dropped.
 async function getCostHistory(id: string, from?: Date, to?: Date): Promise<MaterialCostHistory> {
   const material = await Material.findById(id).populate('supplier');
   if (!material) throw new Error(`Missing material document id: ${id}`);
 
   const field = getCostField(material);
   const audits = await Audit.getMaterialCostAudits(id, from, to);
+  const suppliers = await Supplier.find({}, 'name');
+  const supplierRef = (supplierId: string | null): SupplierRef | null =>
+    supplierId
+      ? {
+          id: supplierId,
+          name: suppliers.find((supplier) => supplier._id.toString() === supplierId)?.name ?? null,
+        }
+      : null;
 
   let costAtStart: number | null = null;
+  let supplierAtStart: SupplierRef | null = null;
   let lastCost: number | null | undefined;
+  let lastSupplier: string | null | undefined;
   const changes: MaterialCostHistory['changes'] = [];
 
   for (const audit of audits) {
     const at = new Date(audit.timestamp);
     const cost: number | null = audit.new?.[field] ?? null;
+    const supplier = supplierIdOf(audit.new?.supplier);
 
     if (from && at < from) {
       costAtStart = cost;
+      supplierAtStart = supplierRef(supplier);
       lastCost = cost;
+      lastSupplier = supplier;
       continue;
     }
     const previousCost: number | null =
       lastCost === undefined ? (audit.old?.[field] ?? null) : lastCost;
+    const previousSupplier =
+      lastSupplier === undefined ? supplierIdOf(audit.old?.supplier) : lastSupplier;
     lastCost = cost;
-    if (cost === previousCost) continue;
+    lastSupplier = supplier;
+    if (cost === previousCost && supplier === previousSupplier) continue;
 
-    changes.push({ at, cost, previousCost, recordedBy: audit.device?.displayName ?? null });
+    changes.push({
+      at,
+      cost,
+      previousCost,
+      supplier: supplierRef(supplier),
+      recordedBy: audit.device?.displayName ?? null,
+    });
   }
 
-  return { material, field, costAtStart, changes };
+  return { material, field, costAtStart, supplierAtStart, changes };
 }
 
 async function updateCostPerFoot(
