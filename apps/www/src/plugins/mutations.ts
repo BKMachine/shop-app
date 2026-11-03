@@ -7,4 +7,5 @@ export const alarms: AlarmMutations = {
   'BROKEN TOOLW': 'BROKEN TOOL',
   'H2-TOOL CHANGE ALARME)': 'H2-TOOL CHANGE ALARM',
   'DATA ERRORW': 'DATA ERROR',
+  'BROKEN TOOLE': 'BROKEN TOOL',
 };
