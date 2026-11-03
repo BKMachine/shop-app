@@ -4,6 +4,7 @@ import {
   calculatePartMaterialCost,
   hasIncompleteMachineDashboardPartData,
   hasIncompletePartCostData,
+  hasMissingRateInputs,
 } from './parts.js';
 
 test('calculatePartMaterialCost multiplies blanks cut material cost by blanksPerPart', () => {
@@ -126,4 +127,46 @@ test('hasIncompletePartCostData flags top-level parts with no price', () => {
 
   assert.equal(hasIncompletePartCostData(topLevelPart), true);
   assert.equal(hasIncompleteMachineDashboardPartData(topLevelPart), true);
+});
+
+test('hasMissingRateInputs flags cycle rows with a time but no operation name', () => {
+  const part = {
+    cycleTimes: [
+      { operation: 'Op 10', time: 5 },
+      { operation: '  ', time: 3 },
+    ],
+    additionalCosts: [],
+    material: 'material-1',
+    customerSuppliedMaterial: false,
+  };
+
+  assert.equal(hasMissingRateInputs(part), true);
+});
+
+test('hasMissingRateInputs flags placeholder cycle rows with no operation name or time', () => {
+  const part = {
+    cycleTimes: [
+      { operation: 'Op 10', time: 5 },
+      { operation: '', time: 0 },
+    ],
+    additionalCosts: [{ cost: 10 }],
+    material: 'material-1',
+    customerSuppliedMaterial: false,
+  };
+
+  assert.equal(hasMissingRateInputs(part), true);
+});
+
+test('hasMissingRateInputs passes when every cycle row has an operation name and time', () => {
+  const part = {
+    cycleTimes: [
+      { operation: 'Op 10', time: 5 },
+      { operation: 'Op 20', time: 2 },
+    ],
+    additionalCosts: [],
+    material: 'material-1',
+    customerSuppliedMaterial: false,
+  };
+
+  assert.equal(hasMissingRateInputs(part), false);
 });

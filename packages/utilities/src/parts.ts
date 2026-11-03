@@ -186,18 +186,16 @@ export function calculatePartShopRate(
 
 export function hasMissingRateInputs<TPart extends RateInputPart>(part: TPart): boolean {
   const hasCycleTimes = (part.cycleTimes || []).some((cycle) => Number(cycle.time) > 0);
+  // Every cycle row needs both an operation name and a time. Rows added as
+  // placeholders for upcoming operations (no name yet) count as incomplete.
   const hasIncompleteCycleTimeEntry = (part.cycleTimes || []).some((cycle) => {
     const operationName = cycle.operation?.trim() || '';
-    return Boolean(operationName) && Number(cycle.time) <= 0;
+    return !operationName || !(Number(cycle.time) > 0);
   });
   const hasAdditionalCost = (part.additionalCosts || []).some((cost) => Number(cost.cost) > 0);
   const isMissingMaterial = !part.material && !part.customerSuppliedMaterial;
 
-  return (
-    ((!hasCycleTimes || hasIncompleteCycleTimeEntry) && !hasAdditionalCost) ||
-    hasIncompleteCycleTimeEntry ||
-    isMissingMaterial
-  );
+  return (!hasCycleTimes && !hasAdditionalCost) || hasIncompleteCycleTimeEntry || isMissingMaterial;
 }
 
 export function hasIncompletePartCostData(part: AssemblyPartInput | null | undefined): boolean {
