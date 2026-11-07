@@ -2,36 +2,87 @@ import _ from 'lodash';
 import * as mqtt from 'mqtt';
 import logger from '../../logger.js';
 import { focasMachines as machines } from '../index.js';
+import type FocasMachine from './FocasMachine.js';
 import mappings from './focas_mappings.js';
 
+// The driver sends a sweep every 5s for each machine it has reached, including online: false once
+// the machine is off. Silence therefore means the driver or its connection has failed.
+const SWEEP_TIMEOUT_MS = 30000;
+const SWEEP_CHECK_MS = 5000;
+
 let client: mqtt.MqttClient;
+let sweepCheck: NodeJS.Timeout | undefined;
+let brokerConnected = false;
+let stopping = false;
+let lastBrokerError: string | null = null;
+let watchingSince = 0;
+const lastSweep = new Map<string, number>();
 const machinesWithProductionCycleTimer = new Set<string>();
+// Machines whose running cycle crossed an outage, so its time can't be trusted.
+const interruptedCycles = new Set<string>();
 
-export function connect(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!process.env.MQTT_URL) throw new Error('Missing MQTT_URL environment variable.');
-    client = mqtt.connect(process.env.MQTT_URL);
+/** Starts connecting and returns straight away, so a broker outage can't hold up app startup. */
+export function connect(): void {
+  if (!process.env.MQTT_URL) throw new Error('Missing MQTT_URL environment variable.');
+  stopping = false;
+  watchingSince = Date.now();
+  client = mqtt.connect(process.env.MQTT_URL);
 
-    client.on('connect', () => {
-      logger.info('Connected to MQTT broker');
-      client.subscribe('fanuc/#', (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
+  client.on('connect', () => {
+    brokerConnected = true;
+    lastBrokerError = null;
+    // Sweeps can't have arrived while disconnected, so give the driver a full timeout again.
+    lastSweep.clear();
+    watchingSince = Date.now();
+    logger.info('Connected to MQTT broker');
+    client.subscribe('fanuc/#', (err) => {
+      if (err) logger.error(`Failed to subscribe to MQTT topics: ${err.message}`);
     });
-
-    client.on('disconnect', () => {
-      logger.warn('Disconnected from the MQTT broker');
-    });
-
-    client.on('message', processMessage);
   });
+
+  // Fires again on every failed reconnect, so only act on the first one.
+  client.on('close', () => {
+    if (stopping || !brokerConnected) return;
+    brokerConnected = false;
+    logger.warn('Lost connection to the MQTT broker');
+    for (const [location, machine] of machines) setOffline(location, machine);
+  });
+
+  client.on('error', (error) => {
+    if (error.message === lastBrokerError) return;
+    lastBrokerError = error.message;
+    logger.error(`MQTT client error: ${error.message}`);
+  });
+
+  client.on('message', processMessage);
+
+  sweepCheck = setInterval(checkSweeps, SWEEP_CHECK_MS);
 }
 
 export function disconnect() {
+  // Shutting down isn't an outage: the state snapshot saved next must keep machines as they are.
+  stopping = true;
+  clearInterval(sweepCheck);
   if (client) {
     client.end();
   }
+}
+
+function checkSweeps() {
+  const now = Date.now();
+  for (const [location, machine] of machines) {
+    if (!(machine.getState() as FocasState).online) continue;
+    const lastHeard = lastSweep.get(location) ?? watchingSince;
+    if (now - lastHeard < SWEEP_TIMEOUT_MS) continue;
+    logger.warn(`No sweep from ${location} for ${SWEEP_TIMEOUT_MS / 1000}s, marking it offline`);
+    setOffline(location, machine);
+  }
+}
+
+function setOffline(location: string, machine: FocasMachine) {
+  if (machine.getStatus() === 'green') interruptedCycles.add(location);
+  if ((machine.getState() as FocasState).online) machine.setState(new Map([['online', false]]));
+  machine.updateStatus();
 }
 
 function hasProductionCycleTimer(subtopic: string, location: string, value: unknown) {
@@ -62,6 +113,9 @@ export function processMessage(topic: string, message: Buffer) {
 
   // Extract the subtopic from the mqtt topic
   const subtopic = topic.split('/').slice(2).join('/');
+  // A retained copy only arrives just after connecting, when the timeout restarts anyway, so it
+  // can't keep a machine online once the driver has stopped.
+  if (subtopic === 'sweep') lastSweep.set(machineLocation, Date.now());
   // Only process subtopics we have mapped
   if (!mappings[subtopic]) return;
 
@@ -103,6 +157,11 @@ export function processMessage(topic: string, message: Buffer) {
         if (value === 'OPTIONAL_STOP') return;
         changes.set('lastStateTs', new Date().toISOString());
       }
+
+      // Time spent offline must not count towards the next wait or cycle
+      if (prop === 'online' && value === true) {
+        changes.set('lastStateTs', new Date().toISOString());
+      }
       // Push the newly changed value
       changes.set(prop, value);
     }
@@ -118,15 +177,23 @@ export function processMessage(topic: string, message: Buffer) {
 
   const currentStatus = machine.getStatus();
 
-  if (!machinesWithProductionCycleTimer.has(machineLocation)) {
-    if (previousStatus === 'green' && currentStatus !== 'green') {
+  if (previousStatus === 'green' && currentStatus === 'offline') {
+    interruptedCycles.add(machineLocation);
+  } else if (currentStatus !== 'green' && currentStatus !== 'offline') {
+    const interrupted = interruptedCycles.delete(machineLocation);
+    if (
+      previousStatus === 'green' &&
+      !interrupted &&
+      !machinesWithProductionCycleTimer.has(machineLocation)
+    ) {
       const lastCycle: Changes = new Map();
       lastCycle.set('lastCycle', Date.now() - new Date(lastStateTs).valueOf());
       machine.setState(lastCycle);
     }
   }
 
-  if (previousStatus === 'yellow' && currentStatus !== 'yellow') {
+  // Going offline doesn't mean the operator finished, so it isn't a completed wait
+  if (previousStatus === 'yellow' && currentStatus !== 'yellow' && currentStatus !== 'offline') {
     const lastOperatorTime: Changes = new Map();
     lastOperatorTime.set('lastOperatorTime', Date.now() - new Date(lastStateTs).valueOf());
     machine.setState(lastOperatorTime);

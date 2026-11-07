@@ -21,7 +21,7 @@ export async function start(): Promise<void> {
   await influx.connect().catch((err) => {
     logger.error('Failed to connect to InfluxDB:', err);
   });
-  await mqtt.connect();
+  mqtt.connect();
   arduino.start();
   mtconnect.start();
   if (HAAS_SERIAL_ENABLED) serial.start();
