@@ -10,7 +10,7 @@
       </v-app-bar-title>
       <div class="app-bar__actions">
         <v-btn
-          v-if="isAdmin || isLan"
+          v-if="isLan"
           aria-label="Assistant"
           href="https://assistant.bkmachine.net"
           icon="mdi-robot-outline"
