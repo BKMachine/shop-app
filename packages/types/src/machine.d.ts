@@ -94,7 +94,6 @@ declare global {
     lastCycle: MachineLastCycle;
     lastOperatorTime: number;
     lastStateTs: string;
-    serial: string;
   }
 
   type HaasCommand = 'MODE' | 'PROGRAM' | 'PREVCYCLE' | 'STATUS' | 'LASTCYCLE';

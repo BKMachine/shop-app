@@ -8,7 +8,6 @@ const initState: HaasState = {
   lastCycle: [],
   lastOperatorTime: 0,
   lastStateTs: new Date().toISOString(),
-  serial: '',
 };
 
 class HaasMachine extends Machine {

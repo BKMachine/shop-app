@@ -89,20 +89,20 @@ describe('Arduino polling', () => {
   });
 
   describe('when the board does not respond', () => {
-    it('stays online through one missed poll', async () => {
-      const { hold, machine, noResponse } = await start();
-      await hold({ green: true });
-
-      await noResponse();
-
-      expect(machine.getStatus()).toBe('green');
-    });
-
-    it('goes offline on the second miss in a row', async () => {
+    it('stays online through two missed polls', async () => {
       const { hold, machine, noResponse } = await start();
       await hold({ green: true });
 
       await noResponse(POLL * 2);
+
+      expect(machine.getStatus()).toBe('green');
+    });
+
+    it('goes offline on the third miss in a row', async () => {
+      const { hold, machine, noResponse } = await start();
+      await hold({ green: true });
+
+      await noResponse(POLL * 3);
 
       expect(machine.getStatus()).toBe('offline');
     });
@@ -144,7 +144,7 @@ describe('Arduino polling', () => {
       const { get, machine } = await start();
 
       get.mockResolvedValue({ data });
-      await jest.advanceTimersByTimeAsync(POLL * 2);
+      await jest.advanceTimersByTimeAsync(POLL * 3);
 
       expect(machine.getStatus()).toBe('offline');
     });

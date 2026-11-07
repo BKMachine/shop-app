@@ -121,6 +121,10 @@ function open(tcp: RSPC): Promise<void> {
         resolve();
       }
     });
+
+    // The client library neither listens for socket errors nor passes them on, so one reaching
+    // nothing would exit this service and stop polling for every machine.
+    tcp.options.client?.on('error', (error) => tcp.emit('error', error));
   });
 }
 
