@@ -66,7 +66,6 @@ declare global {
   }
 
   interface ArduinoResponse {
-    online: boolean;
     green: boolean;
     yellow: boolean;
     red: boolean;
