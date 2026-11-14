@@ -9,7 +9,8 @@ import api from './api/index.js';
 
 const app = new Hono();
 
-app.use(honoLogger(logger));
+// The container's health check asks every 30 seconds.
+app.use(honoLogger(logger, { skip: (c) => c.req.path === '/health' }));
 app.use(cors({ origin: corsOrigin }));
 // The status board is served from another origin, so it has to be allowed to read responses.
 app.use(secureHeaders({ crossOriginResourcePolicy: 'cross-origin' }));

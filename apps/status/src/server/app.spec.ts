@@ -53,6 +53,17 @@ describe('status API', () => {
     expect(await response.json()).toEqual({ status: 'ok' });
   });
 
+  it('leaves health checks out of the request log', async () => {
+    const { app, logger } = await setup();
+    (logger.http as jest.Mock).mockClear();
+
+    await app.request('/health');
+    expect(logger.http).not.toHaveBeenCalled();
+
+    await app.request('/api/machines');
+    expect(logger.http).toHaveBeenCalledTimes(1);
+  });
+
   it('lists the machines in order', async () => {
     const { app } = await setup();
     const response = await app.request('/api/machines');

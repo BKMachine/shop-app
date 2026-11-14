@@ -30,7 +30,13 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
-app.use(morgan(format, { stream: logger.stream }));
+app.use(
+  morgan(format, {
+    stream: logger.stream,
+    // Health checks and metrics scrapes arrive every few seconds and say nothing.
+    skip: (req) => req.url === '/health' || req.url === '/metrics',
+  }),
+);
 app.use((req, res, next) => {
   if (!shouldTrackRequest(req)) {
     next();

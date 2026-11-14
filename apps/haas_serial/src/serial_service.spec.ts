@@ -1,4 +1,5 @@
 import net from 'node:net';
+import logger from './logger.js';
 import { readStatus, SerialError } from './serial_service.js';
 
 jest.mock('./logger.js', () => ({
@@ -126,6 +127,50 @@ describe('reading a machine', () => {
 
       silent = false;
       expect(await read(address)).toEqual(STATUS);
+    });
+  });
+
+  describe('logging', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('says nothing while a machine keeps replying', async () => {
+      const { address } = await machine();
+      await read(address);
+      await read(address);
+
+      expect(logger.warn).not.toHaveBeenCalled();
+      expect(logger.info).not.toHaveBeenCalled();
+    });
+
+    it('logs a machine that stops replying once, however often it is asked', async () => {
+      const { address } = await machine(() => {});
+      await failure(read(address));
+      await failure(read(address));
+      await failure(read(address));
+
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(logger.warn).toHaveBeenCalledWith(
+        `127.0.0.1:${address.port} is not replying: No reply to Q104 within ${TIMEOUT_MS}ms`,
+      );
+    });
+
+    it('logs again when the reason changes, and when the machine replies again', async () => {
+      let mode: 'silent' | 'drop' | 'reply' = 'silent';
+      const { address } = await machine((command, socket) => {
+        if (mode === 'drop') socket.destroy();
+        if (mode === 'reply') socket.write(REPLIES[command] ?? '');
+      });
+      await failure(read(address));
+
+      mode = 'drop';
+      await failure(read(address));
+      expect(logger.warn).toHaveBeenCalledTimes(2);
+
+      mode = 'reply';
+      await read(address);
+      await read(address);
+      expect(logger.info).toHaveBeenCalledTimes(1);
+      expect(logger.info).toHaveBeenCalledWith(`127.0.0.1:${address.port} is replying again`);
     });
   });
 

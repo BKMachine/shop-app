@@ -9,6 +9,17 @@ export function createAppLogger() {
   };
 }
 
-export function honoLogger() {
-  return (_context: unknown, next: () => Promise<void>) => next();
+interface Context {
+  req: { method: string; path: string };
+}
+
+/** Logs the requests the app doesn't skip, so a test can see which those are. */
+export function honoLogger(
+  logger: { http?: (message: string) => void },
+  options: { skip?: (c: Context) => boolean } = {},
+) {
+  return async (c: Context, next: () => Promise<void>) => {
+    await next();
+    if (!options.skip?.(c)) logger.http?.(`${c.req.method} ${c.req.path}`);
+  };
 }

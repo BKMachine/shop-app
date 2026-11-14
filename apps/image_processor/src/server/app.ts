@@ -11,7 +11,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
-app.use(morgan(format, { stream: logger.stream }));
+// The container's health check asks every 30 seconds.
+app.use(morgan(format, { stream: logger.stream, skip: (req) => req.url === '/health' }));
 app.use(express.json());
 
 app.use((req, _res, next) => {

@@ -7,7 +7,16 @@ import api from './api/index.js';
 
 const app = new Hono();
 
-app.use(honoLogger(logger));
+/**
+ * Requests that arrive constantly and say nothing new: the container's health check, and each
+ * poll of a machine, which the serial service logs only when the machine stops or starts replying.
+ */
+function isRoutine(path: string, status: number): boolean {
+  if (path === '/health') return true;
+  return path.startsWith('/api/serial/status') && [200, 502, 503, 504].includes(status);
+}
+
+app.use(honoLogger(logger, { skip: (c) => isRoutine(c.req.path, c.res.status) }));
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 

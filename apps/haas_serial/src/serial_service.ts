@@ -27,6 +27,9 @@ export class SerialError extends Error {
 }
 
 const readings = new Map<string, Promise<string[][]>>();
+// Why each machine that isn't replying failed last, so a machine left off is logged once rather
+// than on every poll.
+const failures = new Map<string, string>();
 
 /**
  * Reads a machine's status, as its reply to each command split into values.
@@ -42,7 +45,21 @@ export function readStatus(
   let reading = readings.get(machine);
   if (!reading) {
     logger.debug(`Reading ${machine}`);
-    reading = query(host, port, timeoutMs).finally(() => readings.delete(machine));
+    reading = query(host, port, timeoutMs)
+      .then(
+        (replies) => {
+          if (failures.delete(machine)) logger.info(`${machine} is replying again`);
+          return replies;
+        },
+        (error: Error) => {
+          if (failures.get(machine) !== error.message) {
+            logger.warn(`${machine} is not replying: ${error.message}`);
+            failures.set(machine, error.message);
+          }
+          throw error;
+        },
+      )
+      .finally(() => readings.delete(machine));
     readings.set(machine, reading);
   }
   return reading;
@@ -54,9 +71,6 @@ async function query(host: string, port: number, timeoutMs: number): Promise<str
     const replies: string[][] = [];
     for (const code of COMMANDS) replies.push(await send(socket, code, timeoutMs));
     return replies;
-  } catch (error) {
-    logger.debug(`Reading ${host}:${port} failed: ${(error as Error).message}`);
-    throw error;
   } finally {
     socket.destroy();
   }
@@ -69,7 +83,6 @@ function connect(host: string, port: number, timeoutMs: number): Promise<net.Soc
     const fail = (message: string) => {
       clearTimeout(timer);
       socket.destroy();
-      logger.debug(`Connecting to ${host}:${port} failed: ${message}`);
       reject(new SerialError(503, message));
     };
     const timer = setTimeout(() => fail(`Connection timeout after ${timeoutMs}ms`), timeoutMs);

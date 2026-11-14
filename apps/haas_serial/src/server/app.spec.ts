@@ -1,6 +1,12 @@
 jest.mock('../logger.js', () => ({
   __esModule: true,
-  default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+  default: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    http: jest.fn(),
+  },
 }));
 jest.mock('../serial_service.js', () => ({
   ...jest.requireActual('../serial_service.js'),
@@ -50,6 +56,34 @@ describe('haas serial API', () => {
     const response = await app.request('/nothing');
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: 'Not found' });
+  });
+
+  describe('request log', () => {
+    it('leaves out health checks and the polls of machines', async () => {
+      const { app, logger, post, readStatus, SerialError } = await setup();
+      (logger.http as jest.Mock).mockClear();
+
+      await app.request('/health');
+      await post({ url: URL });
+      await post({ url: URL }, { path: '/api/serial/status/H%201' });
+      readStatus.mockRejectedValue(new SerialError(503, 'connect ECONNREFUSED'));
+      await post({ url: URL });
+
+      expect(logger.http).not.toHaveBeenCalled();
+    });
+
+    it('keeps requests that were refused or went wrong', async () => {
+      const { app, logger, post, readStatus } = await setup();
+      (logger.http as jest.Mock).mockClear();
+
+      await post({ url: URL }, { key: 'wrong' });
+      await post({});
+      await app.request('/nothing');
+      readStatus.mockRejectedValue(new Error('unexpected'));
+      await post({ url: URL });
+
+      expect(logger.http).toHaveBeenCalledTimes(4);
+    });
   });
 
   describe('API key', () => {
