@@ -5,8 +5,6 @@ jest.mock('../../logger.js', () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
-jest.mock('../../config.js', () => ({ baseUrl: 'http://test' }));
-jest.mock('../../server/socket.io.js', () => ({ emit: jest.fn() }));
 jest.mock('../index.js', () => ({ mtConnectMachines: new Map() }));
 
 const POLL_MS = 5000;
@@ -57,7 +55,11 @@ async function setup() {
   jest.resetModules();
   const { default: axios } = await import('axios');
   const { default: logger } = await import('../../logger.js');
-  const { emit } = await import('../../server/socket.io.js');
+  const { machineEvents } = await import('../events.js');
+  // Everything a machine reports, as (event, data) calls.
+  const emit = jest.fn();
+  machineEvents.on('change', (data) => emit('change', data));
+  machineEvents.on('status', (data) => emit('status', data));
   const { mtConnectMachines } = await import('../index.js');
   const { default: MTConnectMachine } = await import('./MTConnectMachine.js');
   const polling = await import('./mtconnect_polling.js');
@@ -67,7 +69,7 @@ async function setup() {
   mtConnectMachines.set('nhx', machine);
 
   const get = axios.get as jest.Mock;
-  const state = () => machine.getState() as MTConnectState;
+  const state = () => machine.getState();
 
   /** Runs one poll that gets this response. */
   async function poll(events?: Events) {
@@ -88,7 +90,7 @@ async function setup() {
   }
 
   polling.start();
-  return { get, logger, emit: emit as jest.Mock, machine, state, poll, pollFails, hold, polling };
+  return { get, logger, emit, machine, state, poll, pollFails, hold, polling };
 }
 
 describe('MTConnect polling', () => {
@@ -186,6 +188,19 @@ describe('MTConnect polling', () => {
       await poll({ execution: 'ACTIVE' });
 
       await hold({ execution: 'ACTIVE' }, 60 * SECOND);
+      await poll({ execution: 'READY' });
+
+      expect(state().lastCycle).toEqual([60 * SECOND + POLL_MS]);
+    });
+
+    it('times a cycle with an optional stop in it as one cycle', async () => {
+      const { machine, state, poll, hold } = await start();
+      await poll({ execution: 'ACTIVE' });
+
+      await hold({ execution: 'ACTIVE' }, 30 * SECOND);
+      await hold({ execution: 'OPTIONAL_STOP' }, 10 * SECOND);
+      expect(machine.getStatus()).toBe('green');
+      await hold({ execution: 'ACTIVE' }, 20 * SECOND);
       await poll({ execution: 'READY' });
 
       expect(state().lastCycle).toEqual([60 * SECOND + POLL_MS]);

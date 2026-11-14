@@ -1,31 +1,33 @@
 import type { MachineDoc } from '../../database/lib/machine/machine_model.js';
 import Machine from '../Machine.js';
 
-const initState: ArduinoState = {
-  online: false,
-  green: false,
-  yellow: false,
-  red: false,
-  cycle: 0,
-  lastCycle: [],
-  lastOperatorTime: 0,
-  lastStateTs: new Date().toISOString(),
-};
+function initialState(): ArduinoState {
+  return {
+    online: false,
+    green: false,
+    yellow: false,
+    red: false,
+    cycle: 0,
+    lastCycle: [],
+    lastOperatorTime: 0,
+    lastStateTs: new Date().toISOString(),
+  };
+}
 
-class ArduinoMachine extends Machine {
-  constructor(doc: MachineDoc, seedState?: MachineState) {
-    super(doc, { ...initState, ...(seedState ?? {}) } as ArduinoState);
+class ArduinoMachine extends Machine<ArduinoState> {
+  // The polling times the wait from the yellow light itself, which can be lit under another light.
+  protected override readonly timesOperatorWait = false;
+
+  constructor(doc: MachineDoc, seedState?: Partial<ArduinoState>) {
+    super(doc, initialState(), seedState);
   }
 
-  updateStatus(): void {
-    const state = this.getState() as ArduinoState;
-    let status: MachineStatus;
-    if (!state.online) status = 'offline';
-    else if (state.red) status = 'red';
-    else if (state.green) status = 'green';
-    else if (state.yellow) status = 'yellow';
-    else status = 'idle';
-    this.setStatus(status);
+  protected deriveStatus(state: ArduinoState): MachineStatus {
+    if (!state.online) return 'offline';
+    if (state.red) return 'red';
+    if (state.green) return 'green';
+    if (state.yellow) return 'yellow';
+    return 'idle';
   }
 }
 

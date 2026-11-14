@@ -107,7 +107,8 @@ declare global {
     | keyof MTConnectState
     | keyof HaasState;
 
-  type Changes = Map<MachineStateKey, unknown>;
+  /** The state values that changed, as sent to status board clients. */
+  type Changes = Partial<Record<MachineStateKey, unknown>>;
 
   type MachineBrand = 'fanuc' | 'mori' | 'doosan' | 'mitsubishi' | 'haas' | 'mazak' | 'hanwha';
   type MachineType = 'lathe' | 'mill' | 'swiss';
@@ -123,7 +124,8 @@ declare global {
     partHasIncompleteData?: boolean;
   }
 
-  interface MachineData {
+  /** A machine as it is set up in the database, without any live data. */
+  interface MachineConfig {
     id: string;
     name: string;
     displayName: string;
@@ -136,7 +138,9 @@ declare global {
     departmentId?: string | null;
     department: string;
     location: string;
-    logo: string;
+  }
+
+  interface MachineData extends MachineConfig {
     status: MachineStatus;
     state: MachineState;
     jobId?: string | null;

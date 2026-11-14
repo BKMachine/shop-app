@@ -1,6 +1,7 @@
 import _axios from 'axios';
 import logger from '../../logger.js';
 import { arduinoMachines as machines } from '../index.js';
+import type { StateChanges } from '../Machine.js';
 import type ArduinoMachine from './ArduinoMachine.js';
 
 const POLL_INTERVAL_MS = 5000;
@@ -75,18 +76,15 @@ function recordFailure(machine: ArduinoMachine, location: string, message: strin
   tracker.reachable = false;
   tracker.lightsOffSince = null;
 
-  if ((machine.getState() as ArduinoState).online) {
-    machine.setState(new Map([['online', false]]));
-    machine.updateStatus();
-  }
+  if (machine.getState().online) machine.update({ online: false });
 }
 
 function recordLights(machine: ArduinoMachine, location: string, lights: ArduinoResponse) {
   const tracker = getTracker(location);
-  const state = machine.getState() as ArduinoState;
+  const state = machine.getState();
   const now = Date.now();
   const timestamp = new Date(now).toISOString();
-  const changes: Changes = new Map();
+  const changes: StateChanges<ArduinoState> = {};
 
   tracker.misses = 0;
   if (tracker.lastFailure) {
@@ -99,7 +97,7 @@ function recordLights(machine: ArduinoMachine, location: string, lights: Arduino
       if (lights.green) {
         tracker.greenSince = now;
       } else if (tracker.greenSince !== null) {
-        changes.set('lastCycle', now - tracker.greenSince);
+        changes.lastCycle = now - tracker.greenSince;
         tracker.greenSince = null;
       }
     }
@@ -107,7 +105,7 @@ function recordLights(machine: ArduinoMachine, location: string, lights: Arduino
       if (lights.yellow) {
         tracker.yellowSince = now;
       } else if (tracker.yellowSince !== null) {
-        changes.set('lastOperatorTime', now - tracker.yellowSince);
+        changes.lastOperatorTime = now - tracker.yellowSince;
         tracker.yellowSince = null;
       }
     }
@@ -121,8 +119,8 @@ function recordLights(machine: ArduinoMachine, location: string, lights: Arduino
 
   for (const light of LIGHTS) {
     if (lights[light] !== state[light]) {
-      changes.set(light, lights[light]);
-      changes.set('lastStateTs', timestamp);
+      changes[light] = lights[light];
+      changes.lastStateTs = timestamp;
     }
   }
 
@@ -131,16 +129,13 @@ function recordLights(machine: ArduinoMachine, location: string, lights: Arduino
 
   const online = tracker.lightsOffSince === null || now - tracker.lightsOffSince < IDLE_OFFLINE_MS;
   if (online !== state.online) {
-    changes.set('online', online);
-    changes.set('lastStateTs', timestamp);
+    changes.online = online;
+    changes.lastStateTs = timestamp;
     if (!online)
       logger.info(`Arduino ${location} has had no lights on for 4 hours, showing offline`);
   }
 
-  if (changes.size) {
-    machine.setState(changes);
-    machine.updateStatus();
-  }
+  if (Object.keys(changes).length) machine.update(changes);
 }
 
 function getTracker(location: string): Tracker {

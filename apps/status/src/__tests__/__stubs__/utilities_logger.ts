@@ -8,3 +8,7 @@ export function createAppLogger() {
     stream: { write: noop },
   };
 }
+
+export function honoLogger() {
+  return (_context: unknown, next: () => Promise<void>) => next();
+}

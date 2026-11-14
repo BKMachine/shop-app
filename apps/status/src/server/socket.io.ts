@@ -1,13 +1,15 @@
 import type http from 'node:http';
-import { Server } from 'socket.io';
+import { type DefaultEventsMap, Server } from 'socket.io';
+import { corsOrigin } from '../config.js';
 import logger from '../logger.js';
+import { machineEvents } from '../machines/events.js';
 
-let io: Server;
+let io: Server<DefaultEventsMap, ServerToClientEvents> | undefined;
 
 export default function (server: http.Server) {
-  io = new Server<ServerToClientEvents>(server, {
+  io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: corsOrigin,
     },
   });
 
@@ -17,8 +19,15 @@ export default function (server: http.Server) {
       logger.info('SOCKET DISCONNECTED');
     });
   });
+
+  machineEvents.on('change', (data) => emit('change', data));
+  machineEvents.on('status', (data) => emit('status', data));
+  machineEvents.on('refresh-data', () => emit('refresh-data'));
 }
 
-export function emit(event: EmitterEventNames, data?: unknown): void {
-  if (io) io.emit(event, data);
+export function emit<Event extends EmitterEventNames>(
+  event: Event,
+  ...data: Parameters<ServerToClientEvents[Event]>
+): void {
+  io?.emit(event, ...data);
 }

@@ -8,8 +8,6 @@ jest.mock('../../logger.js', () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
-jest.mock('../../config.js', () => ({ baseUrl: 'http://test' }));
-jest.mock('../../server/socket.io.js', () => ({ emit: jest.fn() }));
 jest.mock('../index.js', () => ({ arduinoMachines: new Map() }));
 
 const POLL = 5000;
@@ -38,7 +36,7 @@ async function setup() {
 
   const get = axios.__get;
   get.mockReset();
-  const state = () => machine.getState() as ArduinoState;
+  const state = () => machine.getState();
 
   /** Every poll during this time sees these lights. */
   async function hold(lights: Lights, ms: number = POLL) {

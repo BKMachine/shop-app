@@ -1,29 +1,28 @@
 import type { MachineDoc } from '../../database/lib/machine/machine_model.js';
 import Machine from '../Machine.js';
 
-const initState: HaasState = {
-  online: false,
-  mode: null,
-  execution: null,
-  lastCycle: [],
-  lastOperatorTime: 0,
-  lastStateTs: new Date().toISOString(),
-};
+function initialState(): HaasState {
+  return {
+    online: false,
+    mode: null,
+    execution: null,
+    lastCycle: [],
+    lastOperatorTime: 0,
+    lastStateTs: new Date().toISOString(),
+  };
+}
 
-class HaasMachine extends Machine {
-  constructor(doc: MachineDoc, seedState?: MachineState) {
-    super(doc, { ...initState, ...(seedState ?? {}) } as HaasState);
+class HaasMachine extends Machine<HaasState> {
+  constructor(doc: MachineDoc, seedState?: Partial<HaasState>) {
+    super(doc, initialState(), seedState);
   }
 
-  updateStatus(): void {
-    const state = this.getState() as HaasState;
-    let status: MachineStatus;
-    if (!state.online) status = 'offline';
-    else if (state.execution === 'ALARMON') status = 'red';
-    else if (state.execution === 'BUSY') status = 'green';
-    else if (state.mode === 'MEM' && state.execution === 'IDLE') status = 'yellow';
-    else status = 'idle';
-    this.setStatus(status);
+  protected deriveStatus(state: HaasState): MachineStatus {
+    if (!state.online) return 'offline';
+    if (state.execution === 'ALARMON') return 'red';
+    if (state.execution === 'BUSY') return 'green';
+    if (state.mode === 'MEM' && state.execution === 'IDLE') return 'yellow';
+    return 'idle';
   }
 }
 

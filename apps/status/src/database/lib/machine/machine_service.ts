@@ -1,31 +1,10 @@
-import { initMachines } from '../../../machines/index.js';
 import '../department/department_model.js';
 import Machine, { type MachineDoc } from './machine_model.js';
 
 function list(): Promise<MachineDoc[]> {
-  return Machine.find().populate('department').sort('-1');
+  return Machine.find().populate('department').sort({ name: 1 }).lean<MachineDoc[]>();
 }
 
-async function create(data: unknown): Promise<MachineDoc> {
-  const doc = new Machine(data);
-  const created = await doc.save();
-  await initMachines();
-  return created;
-}
-
-async function update(id: string, data: MachineDoc): Promise<MachineDoc | null> {
-  const updated = await Machine.findByIdAndUpdate(id, data, { new: true });
-  await initMachines();
-  return updated;
-}
-
-async function remove(id: string): Promise<void> {
-  await Machine.findByIdAndDelete(id);
-  await initMachines();
-}
 export default {
   list,
-  create,
-  update,
-  remove,
 };

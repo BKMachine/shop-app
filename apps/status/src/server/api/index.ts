@@ -1,39 +1,40 @@
-import { Router } from 'express';
-import machines from '../../machines/index.js';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
+import machines, { listMachineData } from '../../machines/index.js';
 import { emit } from '../socket.io.js';
-import MachineRoutes from './machine.js';
-import StatsRoutes from './stats.js';
+import stats from './stats.js';
 
-const router: Router = Router();
+const api = new Hono();
 
-router.get('/', (_req, res, _next) => {
-  res.status(200).json({ message: 'Welcome to the API' });
+api.get('/', (c) => c.json({ message: 'Welcome to the API' }));
+
+api.get('/machines', (c) =>
+  c.json(listMachineData().map((machine, index) => ({ ...machine, index }))),
+);
+
+api.get('/machine/:id', (c) => {
+  const machine = machines.get(c.req.param('id'));
+  if (!machine) return c.notFound();
+  return c.json(machine.toJSON());
 });
 
-router.use('/machine', MachineRoutes);
-router.use('/stats', StatsRoutes);
+api.route('/stats', stats);
 
-router.get('/machines', async (_req, res, next) => {
-  try {
-    const response = [];
-    let id = 0;
-    for (const [, value] of machines) {
-      response.push({ ...value.getMachine(), index: id++ });
-    }
-    res.status(200).json(response);
-  } catch (e) {
-    next(e);
-  }
-});
-
-router.post('/refresh', (req, res, _next) => {
-  const { token } = req.body;
-  if (!process.env.TOKEN || !token || token !== process.env.TOKEN) {
-    res.sendStatus(401);
-    return;
-  }
+/** Tells every open status board to reload itself. */
+api.post('/refresh', bodyLimit({ maxSize: 1024 }), async (c) => {
+  const body: { token?: unknown } | null = await c.req.json().catch(() => null);
+  if (!isRefreshToken(body?.token)) return c.body(null, 401);
   emit('refresh');
-  res.sendStatus(204);
+  return c.body(null, 204);
 });
 
-export default router;
+function isRefreshToken(token: unknown): boolean {
+  const expected = process.env.TOKEN;
+  if (!expected || typeof token !== 'string') return false;
+  // Hashed so both sides are the same length, which timingSafeEqual needs.
+  const digest = (value: string) => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(token), digest(expected));
+}
+
+export default api;

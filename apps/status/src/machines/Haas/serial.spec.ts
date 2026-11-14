@@ -6,9 +6,7 @@ jest.mock('../../logger.js', () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
-jest.mock('../../config.js', () => ({ baseUrl: 'http://test' }));
-jest.mock('../../server/socket.io.js', () => ({ emit: jest.fn() }));
-// The parser doesn't need the machine registry, which would load the database and socket server.
+// The parser doesn't need the machine registry, which would load the database.
 jest.mock('../index.js', () => ({ haasMachines: new Map() }));
 
 test('parseLastCycle method', () => {
@@ -38,7 +36,11 @@ async function setup() {
   process.env.HAAS_SERIAL_API_KEY = 'test-key';
   const { default: axios } = await import('axios');
   const { default: logger } = await import('../../logger.js');
-  const { emit } = await import('../../server/socket.io.js');
+  const { machineEvents } = await import('../events.js');
+  // Everything a machine reports, as (event, data) calls.
+  const emit = jest.fn();
+  machineEvents.on('change', (data) => emit('change', data));
+  machineEvents.on('status', (data) => emit('status', data));
   const { haasMachines } = await import('../index.js');
   const { default: HaasMachine } = await import('./HaasMachine.js');
   const polling = await import('./serial.js');
@@ -54,7 +56,7 @@ async function setup() {
 
   const post = axios.post as unknown as jest.Mock;
   post.mockReset();
-  const state = () => machine.getState() as HaasState;
+  const state = () => machine.getState();
 
   /** Every poll during this time gets this reply. */
   async function hold(reply: Reply, ms: number = POLL) {
@@ -72,7 +74,7 @@ async function setup() {
   }
 
   return {
-    emit: emit as unknown as jest.Mock,
+    emit,
     fails,
     hold,
     logger,

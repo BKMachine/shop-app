@@ -1,28 +1,29 @@
-import cors from 'cors';
-import express, { type Application } from 'express';
-import morgan from 'morgan';
-import * as logger from '../logger.js';
+import { honoLogger } from '@repo/utilities/logger';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { HTTPException } from 'hono/http-exception';
+import { secureHeaders } from 'hono/secure-headers';
+import { corsOrigin } from '../config.js';
+import logger from '../logger.js';
 import api from './api/index.js';
 
-const app: Application = express();
+const app = new Hono();
 
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', true);
-}
+app.use(honoLogger(logger));
+app.use(cors({ origin: corsOrigin }));
+// The status board is served from another origin, so it has to be allowed to read responses.
+app.use(secureHeaders({ crossOriginResourcePolicy: 'cross-origin' }));
 
-const format = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
-app.use(
-  cors({
-    origin: '*',
-  }),
-);
-app.use(morgan(format, { stream: logger.stream }));
-app.use(express.json());
+app.get('/health', (c) => c.json({ status: 'ok' }));
 
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok' });
+app.route('/api', api);
+
+app.notFound((c) => c.json({ error: 'Not found' }, 404));
+
+app.onError((error, c) => {
+  if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);
+  logger.error('Request failed:', error);
+  return c.json({ error: 'Internal server error' }, 500);
 });
-
-app.use('/api', api);
 
 export default app;

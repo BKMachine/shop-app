@@ -6,8 +6,6 @@ jest.mock('../../logger.js', () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
-jest.mock('../../config.js', () => ({ baseUrl: 'http://test' }));
-jest.mock('../../server/socket.io.js', () => ({ emit: jest.fn() }));
 jest.mock('../index.js', () => ({ focasMachines: new Map() }));
 
 const SECOND = 1000;
@@ -31,11 +29,10 @@ async function setup(seedState?: Partial<FocasState>) {
   (mqtt.connect as unknown as jest.Mock).mockReturnValue(client);
 
   const doc = { _id: 'id-1', location: 'rd5', brand: 'fanuc' } as unknown as MachineDoc;
-  const machine = new FocasMachine(doc, seedState as MachineState);
+  const machine = new FocasMachine(doc, seedState);
   focasMachines.set('rd5', machine);
-  machine.updateStatus();
 
-  const state = () => machine.getState() as FocasState;
+  const state = () => machine.getState();
 
   function send(subtopic: string, data: unknown, retain = false) {
     client.emit('message', `fanuc/rd5/${subtopic}`, Buffer.from(JSON.stringify(data)), { retain });
@@ -265,6 +262,21 @@ describe('Focas MQTT', () => {
       execution('AUTOMATIC', 'ACTIVE');
 
       await runFor(60 * SECOND);
+      execution('AUTOMATIC', 'READY');
+
+      expect(state().lastCycle).toEqual([60 * SECOND]);
+    });
+
+    it('times a cycle with an optional stop in it as one cycle', async () => {
+      const { execution, machine, runFor, state } = await startOnline();
+      execution('AUTOMATIC', 'ACTIVE');
+
+      await runFor(30 * SECOND);
+      execution('AUTOMATIC', 'OPTIONAL_STOP');
+      await runFor(10 * SECOND);
+      expect(machine.getStatus()).toBe('green');
+      execution('AUTOMATIC', 'ACTIVE');
+      await runFor(20 * SECOND);
       execution('AUTOMATIC', 'READY');
 
       expect(state().lastCycle).toEqual([60 * SECOND]);

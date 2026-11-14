@@ -24,6 +24,10 @@
       </v-card-title>
     </v-card>
 
+    <v-alert v-if="!isAdmin" class="mb-4" type="info" variant="tonal">
+      Only an admin device can add or change machines.
+    </v-alert>
+
     <v-row class="status-settings__content-row">
       <v-col class="status-settings__column" cols="12" md="4">
         <v-card class="status-settings__machine-card" rounded="lg">
@@ -159,11 +163,13 @@
 </template>
 
 <script setup lang="ts">
+import { isAxiosError } from 'axios';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { fetchDepartments } from '@/lib/machineDepartments';
-import { statusApi } from '@/plugins/axios';
+import api from '@/plugins/axios';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+import { isAdmin } from '@/state/device';
 
 type MachineForm = {
   name: string;
@@ -192,7 +198,7 @@ const typeOptions: MachineType[] = ['lathe', 'mill', 'swiss'];
 const pathOptions: Array<'1' | '2'> = ['1', '2'];
 
 const router = useRouter();
-const machines = ref<MachineInfo[]>([]);
+const machines = ref<MachineConfig[]>([]);
 const selectedMachineId = ref<string | null>(null);
 const savePending = ref(false);
 const form = ref<MachineForm>(createEmptyForm());
@@ -200,7 +206,8 @@ const departmentOptions = ref<Department[]>([]);
 
 const canSave = computed(() =>
   Boolean(
-    form.value.name.trim() &&
+    isAdmin.value &&
+      form.value.name.trim() &&
       form.value.displayName.trim() &&
       form.value.serialNumber.trim() &&
       form.value.brand &&
@@ -219,7 +226,7 @@ onMounted(async () => {
 async function fetchMachines() {
   try {
     const [{ data }, departments] = await Promise.all([
-      statusApi.get<MachineInfo[]>('/machines'),
+      api.get<MachineConfig[]>('/machines'),
       fetchDepartments(),
     ]);
 
@@ -240,7 +247,7 @@ async function fetchMachines() {
   }
 }
 
-function selectMachine(machine: MachineInfo) {
+function selectMachine(machine: MachineConfig) {
   selectedMachineId.value = machine.id;
   applyMachineToForm(machine);
 }
@@ -254,7 +261,7 @@ function resetForm() {
   form.value = createEmptyForm();
 }
 
-function applyMachineToForm(machine: MachineInfo) {
+function applyMachineToForm(machine: MachineConfig) {
   form.value = {
     name: machine.name,
     displayName: machine.displayName || machine.name,
@@ -292,10 +299,10 @@ async function saveMachine() {
     };
 
     if (selectedMachineId.value) {
-      await statusApi.put(`/machine/${selectedMachineId.value}`, payload);
+      await api.put(`/machines/${selectedMachineId.value}`, payload);
       toastSuccess('Machine updated successfully');
     } else {
-      await statusApi.post('/machine', payload);
+      await api.post('/machines', payload);
       toastSuccess('Machine added successfully');
     }
 
@@ -310,7 +317,10 @@ async function saveMachine() {
     }
   } catch (error) {
     console.error('Error saving machine:', error);
-    toastError(selectedMachineId.value ? 'Failed to update machine' : 'Failed to add machine');
+    // The server says what was wrong, such as a location another machine already has.
+    const reason = isAxiosError(error) ? error.response?.data?.error : undefined;
+    const failure = selectedMachineId.value ? 'Failed to update machine' : 'Failed to add machine';
+    toastError(typeof reason === 'string' ? `${failure}: ${reason}` : failure);
   } finally {
     savePending.value = false;
   }

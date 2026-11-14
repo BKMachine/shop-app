@@ -1,7 +1,17 @@
 import { queryRows } from './influx.js';
 
-const DEFAULT_RANGE_MS = 1000 * 60 * 60;
-const DEFAULT_SEED_LOOKBACK_MS = 1000 * 60 * 60 * 24;
+const MINUTE_MS = 1000 * 60;
+const DEFAULT_RANGE_MS = MINUTE_MS * 60;
+const DEFAULT_SEED_LOOKBACK_MS = MINUTE_MS * 60 * 24;
+// The query reads every status point in its range, so the range can't be left open-ended.
+const MAX_RANGE_MS = MINUTE_MS * 60 * 24 * 31;
+// Every open status board asks for the same thing, so one answer serves them all for a while.
+const CACHE_MS = MINUTE_MS;
+
+/** The range asked for can't be used, which is the caller's mistake rather than a failure. */
+export class InvalidRangeError extends Error {}
+
+const cache = new Map<string, { expires: number; rows: Promise<DepartmentPerformanceRow[]> }>();
 
 export interface DepartmentPerformanceRow {
   department: string;
@@ -30,12 +40,20 @@ function toPercent(value: unknown): number {
   return Math.round((parsed + Number.EPSILON) * 100) / 100;
 }
 
+/** Rounded down to the minute, so requests made close together ask for the same range. */
+function toMinute(value: Date): Date {
+  return new Date(Math.floor(value.getTime() / MINUTE_MS) * MINUTE_MS);
+}
+
 function resolveRange(range: DepartmentPerformanceRange): Required<DepartmentPerformanceRange> {
-  const to = range.to ?? new Date();
-  const from = range.from ?? new Date(to.getTime() - DEFAULT_RANGE_MS);
+  const to = toMinute(range.to ?? new Date());
+  const from = range.from ? toMinute(range.from) : new Date(to.getTime() - DEFAULT_RANGE_MS);
 
   if (from > to) {
-    throw new Error('Invalid time range: "from" must be before "to"');
+    throw new InvalidRangeError('Invalid time range: "from" must be before "to"');
+  }
+  if (to.getTime() - from.getTime() > MAX_RANGE_MS) {
+    throw new InvalidRangeError('Invalid time range: it can be 31 days at most');
   }
 
   return { from, to };
@@ -50,12 +68,9 @@ function getSeedLookbackMs(): number {
   return DEFAULT_SEED_LOOKBACK_MS;
 }
 
+/** Development doesn't write status points, so it reads production's unless told otherwise. */
 function getInfluxReadTag(): string {
-  if (process.env.INFLUX_READ_TAG) {
-    return process.env.INFLUX_READ_TAG;
-  }
-
-  return process.env.NODE_ENV === 'production' ? 'prod' : 'prod';
+  return process.env.INFLUX_READ_TAG || 'prod';
 }
 
 function buildDepartmentPerformanceQuery(range: Required<DepartmentPerformanceRange>): string {
@@ -65,18 +80,18 @@ function buildDepartmentPerformanceQuery(range: Required<DepartmentPerformanceRa
   return `
 WITH prior_states AS (
   SELECT
-    name,
+    id,
     department,
     time,
     state
   FROM (
     SELECT
-      name,
+      id,
       department,
       time,
       state,
       ROW_NUMBER() OVER (
-        PARTITION BY name
+        PARTITION BY id
         ORDER BY time DESC
       ) AS row_num
     FROM status
@@ -90,7 +105,7 @@ WITH prior_states AS (
 ),
 window_states AS (
   SELECT
-    name,
+    id,
     department,
     time,
     state
@@ -103,23 +118,23 @@ window_states AS (
 ),
 states AS (
     SELECT
-    name,
+    id,
         department,
         time,
         state,
         LEAD(time) OVER (
-      PARTITION BY name
+      PARTITION BY id
             ORDER BY time
         ) AS next_time
   FROM (
-    SELECT name, department, time, state FROM prior_states
+    SELECT id, department, time, state FROM prior_states
     UNION ALL
-    SELECT name, department, time, state FROM window_states
+    SELECT id, department, time, state FROM window_states
   ) candidate_states
 ),
 durations AS (
     SELECT
-    name,
+    id,
         department,
         state,
         EXTRACT(
@@ -156,7 +171,7 @@ durations AS (
 ),
 device_rates AS (
     SELECT
-    name,
+    id,
         department,
         SUM(
             CASE
@@ -173,7 +188,7 @@ device_rates AS (
       END
     ) AS online_seconds
     FROM durations
-  GROUP BY department, name
+  GROUP BY department, id
 )
 SELECT
     department,
@@ -185,11 +200,32 @@ ORDER BY department;
 `.trim();
 }
 
-export async function getDepartmentPerformance(
+export function getDepartmentPerformance(
   range: DepartmentPerformanceRange = {},
 ): Promise<DepartmentPerformanceRow[]> {
   const resolvedRange = resolveRange(range);
-  const rows = await queryRows(buildDepartmentPerformanceQuery(resolvedRange));
+  const key = `${resolvedRange.from.getTime()}-${resolvedRange.to.getTime()}`;
+  const now = Date.now();
+
+  for (const [cachedKey, cached] of cache) {
+    if (cached.expires <= now) cache.delete(cachedKey);
+  }
+
+  let entry = cache.get(key);
+  if (!entry) {
+    const rows = queryDepartmentPerformance(resolvedRange);
+    // A failure is passed on to this caller, but the next one should try again.
+    rows.catch(() => cache.delete(key));
+    entry = { expires: now + CACHE_MS, rows };
+    cache.set(key, entry);
+  }
+  return entry.rows;
+}
+
+async function queryDepartmentPerformance(
+  range: Required<DepartmentPerformanceRange>,
+): Promise<DepartmentPerformanceRow[]> {
+  const rows = await queryRows(buildDepartmentPerformanceQuery(range));
 
   return rows.map((row) => ({
     department: typeof row.department === 'string' ? row.department : 'Unassigned',

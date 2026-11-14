@@ -1,47 +1,46 @@
 import type { MachineDoc } from '../../database/lib/machine/machine_model.js';
 import Machine from '../Machine.js';
 
-const initState: FocasState = {
-  online: false,
-  mainProgram: '',
-  mainComment: '',
-  runningProgram: '',
-  runningComment: '',
-  mode: 'UNAVAILABLE',
-  execution: 'UNAVAILABLE',
-  alarms: {},
-  rapid: 0,
-  mode2: 'UNAVAILABLE',
-  execution2: 'UNAVAILABLE',
-  alarms2: {},
-  rapid2: 0,
-  cycle: 0,
-  macro_timer: 0,
-  lastCycle: [],
-  lastOperatorTime: 0,
-  lastStateTs: new Date().toISOString(),
-};
+function initialState(): FocasState {
+  return {
+    online: false,
+    mainProgram: '',
+    mainComment: '',
+    runningProgram: '',
+    runningComment: '',
+    mode: 'UNAVAILABLE',
+    execution: 'UNAVAILABLE',
+    alarms: {},
+    rapid: 0,
+    mode2: 'UNAVAILABLE',
+    execution2: 'UNAVAILABLE',
+    alarms2: {},
+    rapid2: 0,
+    cycle: 0,
+    macro_timer: 0,
+    lastCycle: [],
+    lastOperatorTime: 0,
+    lastStateTs: new Date().toISOString(),
+  };
+}
 
-class FocasMachine extends Machine {
-  constructor(doc: MachineDoc, seedState?: MachineState) {
-    super(doc, { ...initState, ...(seedState ?? {}) } as FocasState);
+class FocasMachine extends Machine<FocasState> {
+  constructor(doc: MachineDoc, seedState?: Partial<FocasState>) {
+    super(doc, initialState(), seedState);
   }
 
-  updateStatus(): void {
-    const state = this.getState() as FocasState;
-    let status: MachineStatus;
-    const alarms = Object.assign({}, state.alarms, state.alarms2);
-    state;
-    if (!state.online) status = 'offline';
-    else if (Object.keys(alarms).length > 0) status = 'red';
-    else if (state.execution === 'ACTIVE' || state.execution2 === 'ACTIVE') status = 'green';
-    else if (
+  protected deriveStatus(state: FocasState): MachineStatus {
+    const hasAlarm = Object.keys({ ...state.alarms, ...state.alarms2 }).length > 0;
+    if (!state.online) return 'offline';
+    if (hasAlarm) return 'red';
+    if (state.execution === 'ACTIVE' || state.execution2 === 'ACTIVE') return 'green';
+    if (
       (state.mode === 'AUTOMATIC' && state.execution === 'READY') ||
       (state.mode2 === 'AUTOMATIC' && state.execution2 === 'READY')
-    )
-      status = 'yellow';
-    else status = 'idle';
-    this.setStatus(status);
+    ) {
+      return 'yellow';
+    }
+    return 'idle';
   }
 }
 

@@ -2,6 +2,7 @@ import _ from 'lodash';
 import * as mqtt from 'mqtt';
 import logger from '../../logger.js';
 import { focasMachines as machines } from '../index.js';
+import type { StateChanges } from '../Machine.js';
 import type FocasMachine from './FocasMachine.js';
 import mappings from './focas_mappings.js';
 
@@ -71,7 +72,7 @@ export function disconnect() {
 function checkSweeps() {
   const now = Date.now();
   for (const [location, machine] of machines) {
-    if (!(machine.getState() as FocasState).online) continue;
+    if (!machine.getState().online) continue;
     const lastHeard = lastSweep.get(location) ?? watchingSince;
     if (now - lastHeard < SWEEP_TIMEOUT_MS) continue;
     logger.warn(`No sweep from ${location} for ${SWEEP_TIMEOUT_MS / 1000}s, marking it offline`);
@@ -81,8 +82,7 @@ function checkSweeps() {
 
 function setOffline(location: string, machine: FocasMachine) {
   if (machine.getStatus() === 'green') interruptedCycles.add(location);
-  if ((machine.getState() as FocasState).online) machine.setState(new Map([['online', false]]));
-  machine.updateStatus();
+  if (machine.getState().online) machine.update({ online: false });
 }
 
 function hasProductionCycleTimer(subtopic: string, location: string, value: unknown) {
@@ -102,6 +102,11 @@ export function processMessage(topic: string, message: Buffer) {
   const machine = machines.get(machineLocation);
   if (!machine) return;
 
+  // Only process subtopics we have mapped, which saves parsing the many that aren't
+  const subtopic = topic.split('/').slice(2).join('/');
+  const mapping = mappings[subtopic];
+  if (!mapping) return;
+
   // Try to parse the message buffer to JSON
   let data: unknown = {};
   try {
@@ -111,18 +116,15 @@ export function processMessage(topic: string, message: Buffer) {
     return;
   }
 
-  // Extract the subtopic from the mqtt topic
-  const subtopic = topic.split('/').slice(2).join('/');
   // A retained copy only arrives just after connecting, when the timeout restarts anyway, so it
   // can't keep a machine online once the driver has stopped.
   if (subtopic === 'sweep') lastSweep.set(machineLocation, Date.now());
-  // Only process subtopics we have mapped
-  if (!mappings[subtopic]) return;
 
-  // Loop through the mapped subtopics and see if any data values have changed
-  const changes: Changes = new Map();
+  // Loop through the mapped values and see if any have changed. The values come from the driver
+  // unchecked, so they can't be held to the state's types.
+  const changes: Record<string, unknown> = {};
   const lastStateTs = machine.getState().lastStateTs;
-  Object.keys(mappings[subtopic]).forEach((location) => {
+  Object.keys(mapping).forEach((location) => {
     let value: any;
     // Try to get the nested value via the mapped subtopic
     try {
@@ -139,41 +141,36 @@ export function processMessage(topic: string, message: Buffer) {
     if (value === undefined) return;
 
     // Compare the old property value to the new property value
-    const mapping = mappings[subtopic];
-    if (!mapping) return;
     const prop = mapping[location] as keyof FocasState;
-    const state = machine.getState() as FocasState;
-    const old = state[prop];
+    const old = machine.getState()[prop];
     if (old === undefined) return;
     if (!_.isEqual(old, value)) {
       // If the current cycle time is smaller than previously seen
       // then a new part has been started and the old cycle time is considered the 'last' cycle time
       if (prop === 'cycle') {
-        if (old > value) changes.set('lastCycle', old);
+        if (old > value) changes.lastCycle = old;
       }
 
       // If the execution mode has changed the push a new lastStateTs value
       if (prop === 'execution') {
+        // An optional stop is a pause within the cycle, so the machine stays as it was
         if (value === 'OPTIONAL_STOP') return;
-        changes.set('lastStateTs', new Date().toISOString());
+        changes.lastStateTs = new Date().toISOString();
       }
 
       // Time spent offline must not count towards the next wait or cycle
       if (prop === 'online' && value === true) {
-        changes.set('lastStateTs', new Date().toISOString());
+        changes.lastStateTs = new Date().toISOString();
       }
       // Push the newly changed value
-      changes.set(prop, value);
+      changes[prop] = value;
     }
   });
 
   const previousStatus = machine.getStatus();
 
-  // Update machine status if there are any changes
-  if (changes.size) {
-    machine.setState(changes);
-    machine.updateStatus();
-  }
+  // Update the machine if there are any changes
+  if (Object.keys(changes).length) machine.update(changes as StateChanges<FocasState>);
 
   const currentStatus = machine.getStatus();
 
@@ -186,17 +183,8 @@ export function processMessage(topic: string, message: Buffer) {
       !interrupted &&
       !machinesWithProductionCycleTimer.has(machineLocation)
     ) {
-      const lastCycle: Changes = new Map();
-      lastCycle.set('lastCycle', Date.now() - new Date(lastStateTs).valueOf());
-      machine.setState(lastCycle);
+      machine.update({ lastCycle: Date.now() - new Date(lastStateTs).valueOf() });
     }
-  }
-
-  // Going offline doesn't mean the operator finished, so it isn't a completed wait
-  if (previousStatus === 'yellow' && currentStatus !== 'yellow' && currentStatus !== 'offline') {
-    const lastOperatorTime: Changes = new Map();
-    lastOperatorTime.set('lastOperatorTime', Date.now() - new Date(lastStateTs).valueOf());
-    machine.setState(lastOperatorTime);
   }
 }
 

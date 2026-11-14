@@ -9,23 +9,34 @@ const isWriteEnabled = process.env.NODE_ENV === 'production';
 
 let influx: InfluxDBClient;
 let statusTimer: NodeJS.Timeout;
+let lastWriteFailure: string | null = null;
 
 export async function connect(): Promise<void> {
   influx = new InfluxDBClient({ host: url, token, database });
+
+  // Started before checking the connection, so writing begins by itself once InfluxDB is back.
+  if (isWriteEnabled) statusTimer = setInterval(writeMachineStatus, 1000 * 15);
 
   await preflightInflux({ influx });
 
   logger.info(
     `Connected to InfluxDB v3 at ${url} with database "${database}" (${isWriteEnabled ? 'read/write' : 'read-only'})`,
   );
+}
 
-  if (!isWriteEnabled) {
-    return;
-  }
-
-  statusTimer = setInterval(() => {
-    storeMachineStatus(influx, database);
-  }, 1000 * 15);
+function writeMachineStatus(): void {
+  storeMachineStatus(influx, database)
+    .then(() => {
+      if (lastWriteFailure) logger.info('Writing machine status to InfluxDB recovered');
+      lastWriteFailure = null;
+    })
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message !== lastWriteFailure) {
+        logger.error(`Failed to write machine status to InfluxDB: ${message}`);
+      }
+      lastWriteFailure = message;
+    });
 }
 
 export async function disconnect(): Promise<void> {

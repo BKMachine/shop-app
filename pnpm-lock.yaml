@@ -448,6 +448,12 @@ importers:
 
   apps/status:
     dependencies:
+      '@hono/node-server':
+        specifier: ^2.1.8
+        version: 2.1.8(hono@4.13.13)
+      '@hono/zod-validator':
+        specifier: ^0.9.1
+        version: 0.9.1(hono@4.13.13)(zod@4.6.7)
       '@influxdata/influxdb3-client':
         specifier: ^2.4.0
         version: 2.4.0
@@ -457,18 +463,12 @@ importers:
       axios:
         specifier: ^1.20.0
         version: 1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
-      cors:
-        specifier: ^2.8.6
-        version: 2.8.6
-      cross-env:
-        specifier: ^10.1.0
-        version: 10.1.0
       dotenv:
         specifier: ^18.0.8
         version: 18.0.8
-      express:
-        specifier: ^5.3.0
-        version: 5.3.0(supports-color@8.1.1)
+      hono:
+        specifier: ^4.13.13
+        version: 4.13.13
       http-terminator:
         specifier: ^3.2.0
         version: 3.2.0
@@ -478,46 +478,37 @@ importers:
       mongoose:
         specifier: ^9.11.2
         version: 9.11.2(socks@2.8.10)
-      morgan:
-        specifier: ^1.12.1
-        version: 1.12.1(supports-color@8.1.1)
       mqtt:
         specifier: ^5.16.1
         version: 5.16.1(supports-color@8.1.1)
-      remote-serial-port-client:
-        specifier: ^0.4.0
-        version: 0.4.0
       socket.io:
         specifier: ^4.8.4
         version: 4.8.4(supports-color@8.1.1)
       winston:
         specifier: ^3.19.0
         version: 3.19.0
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
-      '@types/cors':
-        specifier: ^2.8.19
-        version: 2.8.19
-      '@types/express':
-        specifier: ^5.0.6
-        version: 5.0.6
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
       '@types/lodash':
         specifier: ^4.17.26
         version: 4.17.26
-      '@types/morgan':
-        specifier: ^1.9.10
-        version: 1.9.10
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/shop-app':
         specifier: workspace:*
         version: link:../../packages/types
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
       jest:
         specifier: ^30.5.2
         version: 30.5.2(@types/node@24.19.2)(supports-color@8.1.1)
@@ -1253,6 +1244,18 @@ packages:
     engines: {node: '>=20'}
     peerDependencies:
       hono: ^4 || ^5.0.0-0
+
+  '@hono/node-server@2.1.8':
+    resolution: {integrity: sha512-jdf7FHh6A1lzjpHHQUgxsg2GeER2vMetnAOfeActzcoli6jamlK+NAwL6Dsr5Fl3BS3tYUQzCdtZjU8Qxv7bEA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4 || ^5.0.0-0
+
+  '@hono/zod-validator@0.9.1':
+    resolution: {integrity: sha512-iiv6w0qrIc0arfvCtUqBWsvl4fXjzaTcQcCJTTtCnkawF9HHGE+KjEl0ox3gQJ6rKZEgE3mLExlQCF72M+mNuw==}
+    peerDependencies:
+      hono: '>=4.11.2'
+      zod: ^3.25.0 || ^4.0.0
 
   '@huggingface/jinja@0.5.10':
     resolution: {integrity: sha512-SgS1D1bglQ94ceD4ZCL6eayUDy9uV1xuyk61OjgSxU5GJh7upqZCKII0JoTYMc6wWsg3JUgaPRX0ElQzXPk3Cw==}
@@ -5885,6 +5888,15 @@ snapshots:
   '@hono/node-server@2.1.5(hono@4.13.13)':
     dependencies:
       hono: 4.13.13
+
+  '@hono/node-server@2.1.8(hono@4.13.13)':
+    dependencies:
+      hono: 4.13.13
+
+  '@hono/zod-validator@0.9.1(hono@4.13.13)(zod@4.6.7)':
+    dependencies:
+      hono: 4.13.13
+      zod: 4.6.7
 
   '@huggingface/jinja@0.5.10': {}
 

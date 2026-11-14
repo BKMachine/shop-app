@@ -1,28 +1,51 @@
-import { baseUrl } from '../config.js';
 import type { MachineDoc } from '../database/lib/machine/machine_model.js';
-import { emit } from '../server/socket.io.js';
 import { appendCycleHistory } from './cycle_history.js';
+import { machineEvents } from './events.js';
 
-class Machine {
+/**
+ * New values for a machine's state. A finished cycle is given as its time, and is added to the
+ * history of recent cycles rather than replacing it.
+ */
+export type StateChanges<S extends MachineState> = Partial<Omit<S, 'lastCycle'>> & {
+  lastCycle?: number;
+};
+
+abstract class Machine<S extends MachineState> {
+  readonly id: string;
   readonly doc: MachineDoc;
-  private readonly logo: string;
-  private state: MachineState;
-  private status: MachineStatus = 'offline';
+  private state: S;
+  private status: MachineStatus;
+  /**
+   * Whether a wait for the operator is timed from the status leaving yellow. A source that times
+   * the wait itself turns this off.
+   */
+  protected readonly timesOperatorWait: boolean = true;
 
-  constructor(doc: MachineDoc, state: MachineState) {
+  constructor(doc: MachineDoc, initialState: S, seedState?: Partial<S>) {
     this.doc = doc;
-    this.logo = `${baseUrl}/img/machine_logos/${this.doc.brand}.png`;
-    this.state = state;
+    this.id = doc._id.toString();
+    this.state = { ...initialState, ...seedState };
+    this.status = this.deriveStatus(this.state);
   }
 
-  getMachine(): MachineData {
-    const displayName = this.doc.displayName || this.doc.name;
+  /** Works out the status from the state alone, as it is also called while constructing. */
+  protected abstract deriveStatus(state: S): MachineStatus;
+
+  getState(): Readonly<S> {
+    return this.state;
+  }
+
+  getStatus(): MachineStatus {
+    return this.status;
+  }
+
+  toJSON(): MachineData {
     const { departmentId, departmentName } = getMachineDepartment(this.doc.department);
 
     return {
-      id: this.doc._id.toString(),
+      id: this.id,
       name: this.doc.name,
-      displayName,
+      displayName: this.doc.displayName || this.doc.name,
       serialNumber: this.doc.serialNumber,
       brand: this.doc.brand,
       source: this.doc.source,
@@ -32,46 +55,46 @@ class Machine {
       departmentId,
       department: departmentName,
       location: this.doc.location,
-      logo: this.logo,
       state: this.state,
       status: this.status,
     };
   }
 
-  getState() {
-    return this.state;
+  /** Applies the changes, then brings the status up to date with them. */
+  update(changes: StateChanges<S>): void {
+    const previousStatus = this.status;
+    const previousStateTs = this.state.lastStateTs;
+
+    this.apply(changes);
+
+    const status = this.deriveStatus(this.state);
+    if (status === previousStatus) return;
+    this.status = status;
+    machineEvents.emit('status', { id: this.id, status });
+
+    // Going offline doesn't mean the operator finished, so it isn't a completed wait.
+    if (this.timesOperatorWait && previousStatus === 'yellow' && status !== 'offline') {
+      const waited = Date.now() - new Date(previousStateTs).valueOf();
+      this.apply({ lastOperatorTime: waited } as StateChanges<S>);
+    }
   }
 
-  setState(changes: Changes) {
-    const changeObj = Object.fromEntries(changes) as Partial<Record<MachineStateKey, unknown>>;
-    const nextState = Object.assign({}, this.getState(), changeObj) as MachineState;
+  private apply(changes: StateChanges<S>): void {
+    const { lastCycle, ...values } = changes;
+    const sent: Changes = { ...values };
+    let next = { ...this.state, ...values } as S;
 
-    if ('lastCycle' in changeObj) {
-      const currentLastCycle = (this.getState() as MachineState & { lastCycle?: MachineLastCycle })
-        .lastCycle;
-      const incomingLastCycle = changeObj.lastCycle as MachineLastCycle | undefined;
-      const cycleHistory = appendCycleHistory(currentLastCycle, incomingLastCycle);
-
-      (nextState as MachineState & { lastCycle: MachineCycleHistory }).lastCycle = cycleHistory;
-      changeObj.lastCycle = cycleHistory;
+    if (lastCycle !== undefined) {
+      const history = appendCycleHistory(this.state.lastCycle, lastCycle);
+      next = { ...next, lastCycle: history };
+      sent.lastCycle = history;
     }
 
-    this.state = nextState;
-    // Remove cycle property before sending changes over websocket
-    delete changeObj.cycle;
-    if (Object.keys(changeObj).length === 0) return;
-    emit('change', { id: this.doc._id.toString(), changes: changeObj });
-  }
-
-  getStatus() {
-    return this.status;
-  }
-
-  setStatus(status: MachineStatus): void {
-    if (status !== this.status) {
-      this.status = status;
-      emit('status', { id: this.doc._id, status: this.status });
-    }
+    this.state = next;
+    // The running cycle time changes with every message and clients don't show it.
+    delete sent.cycle;
+    if (Object.keys(sent).length === 0) return;
+    machineEvents.emit('change', { id: this.id, changes: sent });
   }
 }
 

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import logger from '../../logger.js';
 import { haasMachines as machines } from '../index.js';
+import type { StateChanges } from '../Machine.js';
 import type HaasMachine from './HaasMachine.js';
 
 const POLL_INTERVAL_MS = 10000;
@@ -83,7 +84,7 @@ async function poll(machine: HaasMachine, location: string, tracker: Tracker) {
 
 function statusUrl(machine: HaasMachine) {
   const url = new URL(process.env.HAAS_SERIAL_URL as string);
-  const name = encodeURIComponent(machine.getMachine().name);
+  const name = encodeURIComponent(machine.doc.name);
   url.pathname = url.pathname.endsWith('/') ? `${url.pathname}${name}` : `${url.pathname}/${name}`;
   return url.toString();
 }
@@ -99,18 +100,13 @@ function recordFailure(machine: HaasMachine, location: string, tracker: Tracker,
   tracker.cyclesSinceParts = 0;
   tracker.repeatPending = false;
 
-  if ((machine.getState() as HaasState).online) {
-    machine.setState(new Map([['online', false]]));
-    machine.updateStatus();
-  }
+  if (machine.getState().online) machine.update({ online: false });
 }
 
 function recordReading(machine: HaasMachine, location: string, tracker: Tracker, reading: Reading) {
-  const state = machine.getState() as HaasState;
-  const previousStatus = machine.getStatus();
-  const previousStateTs = state.lastStateTs;
+  const state = machine.getState();
   const timestamp = new Date().toISOString();
-  const changes: Changes = new Map();
+  const changes: StateChanges<HaasState> = {};
 
   if (tracker.lastFailure) {
     logger.info(`Haas machine ${location} is responding again`);
@@ -118,30 +114,22 @@ function recordReading(machine: HaasMachine, location: string, tracker: Tracker,
   }
 
   if (!state.online) {
-    changes.set('online', true);
-    changes.set('lastStateTs', timestamp);
+    changes.online = true;
+    changes.lastStateTs = timestamp;
   }
   if (reading.mode !== undefined && reading.mode !== state.mode) {
-    changes.set('mode', reading.mode);
-    changes.set('lastStateTs', timestamp);
+    changes.mode = reading.mode;
+    changes.lastStateTs = timestamp;
   }
   if (reading.execution !== undefined && reading.execution !== state.execution) {
-    changes.set('execution', reading.execution);
-    changes.set('lastStateTs', timestamp);
+    changes.execution = reading.execution;
+    changes.lastStateTs = timestamp;
   }
 
   const cycle = finishedCycle(tracker, reading);
-  if (cycle !== null) changes.set('lastCycle', cycle);
+  if (cycle !== null) changes.lastCycle = cycle;
 
-  if (changes.size) {
-    machine.setState(changes);
-    machine.updateStatus();
-  }
-
-  if (previousStatus === 'yellow' && machine.getStatus() !== 'yellow') {
-    const waited = Date.now() - new Date(previousStateTs).valueOf();
-    machine.setState(new Map([['lastOperatorTime', waited]]));
-  }
+  if (Object.keys(changes).length) machine.update(changes);
 }
 
 /**

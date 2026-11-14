@@ -1,38 +1,22 @@
-import DoosanLogo from '@/assets/machine_logos/doosan.png';
-import FanucLogo from '@/assets/machine_logos/fanuc.png';
-import HaasLogo from '@/assets/machine_logos/haas.png';
-import HanwhaLogo from '@/assets/machine_logos/hanwha.png';
-import MazakLogo from '@/assets/machine_logos/mazak.png';
-import MitsubishiLogo from '@/assets/machine_logos/mitsubishi.png';
-import MoriLogo from '@/assets/machine_logos/mori.png';
-import Arduino from '@/assets/machine_sources/arduino.png';
-import Focas from '@/assets/machine_sources/focas.png';
-import MTConnect from '@/assets/machine_sources/mtconnect.png';
-import Lathe from '@/assets/machine_types/lathe.png';
-import Mill from '@/assets/machine_types/mill.png';
-import Swiss from '@/assets/machine_types/swiss.png';
+/** Maps each image to its file name without the extension, so `fanuc.png` is found as `fanuc`. */
+function byName(images: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(images).map(([path, url]) => [path.replace(/^.*\/|\.png$/g, ''), url]),
+  );
+}
 
-const brand: { [key: string]: string } = {
-  doosan: DoosanLogo,
-  fanuc: FanucLogo,
-  haas: HaasLogo,
-  hanwha: HanwhaLogo,
-  mazak: MazakLogo,
-  mitsubishi: MitsubishiLogo,
-  mori: MoriLogo,
-};
+// An image is picked up by being in its folder, named after the brand, type or source it is for.
+const brand = byName(
+  import.meta.glob<string>('../assets/machine_logos/*.png', { eager: true, import: 'default' }),
+);
 
-const type: { [key: string]: string } = {
-  mill: Mill,
-  lathe: Lathe,
-  swiss: Swiss,
-};
+const type = byName(
+  import.meta.glob<string>('../assets/machine_types/*.png', { eager: true, import: 'default' }),
+);
 
-const source: { [key: string]: string } = {
-  focas: Focas,
-  arduino: Arduino,
-  mtconnect: MTConnect,
-};
+const source = byName(
+  import.meta.glob<string>('../assets/machine_sources/*.png', { eager: true, import: 'default' }),
+);
 
 export default {
   brand,

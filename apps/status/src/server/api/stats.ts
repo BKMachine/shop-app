@@ -1,40 +1,29 @@
-import express, { type Router } from 'express';
-import {
-  type DepartmentPerformanceRange,
-  getDepartmentPerformance,
-} from '../../timeseries/performance.js';
+import { zValidator } from '@hono/zod-validator';
+import { Hono } from 'hono';
+import * as z from 'zod';
+import { getDepartmentPerformance, InvalidRangeError } from '../../timeseries/performance.js';
 
-const router: Router = express.Router();
+const stats = new Hono();
 
-function parseDate(value: unknown): Date | undefined {
-  if (typeof value !== 'string' || value.trim() === '') {
-    return undefined;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`Invalid date: ${value}`);
-  }
-
-  return parsed;
-}
-
-function getRange(query: Record<string, unknown>): DepartmentPerformanceRange {
-  return {
-    from: parseDate(query.from),
-    to: parseDate(query.to),
-  };
-}
-
-router.get('/department-performance', async (req, res, next) => {
-  try {
-    const performance = await getDepartmentPerformance(
-      getRange(req.query as Record<string, unknown>),
-    );
-    res.status(200).json({ performance });
-  } catch (e) {
-    next(e);
-  }
+const RangeQuery = z.object({
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
 });
 
-export default router;
+stats.get(
+  '/department-performance',
+  zValidator('query', RangeQuery, (result, c) => {
+    if (!result.success) return c.json({ error: 'Invalid date.' }, 400);
+  }),
+  async (c) => {
+    try {
+      const performance = await getDepartmentPerformance(c.req.valid('query'));
+      return c.json({ performance });
+    } catch (error) {
+      if (error instanceof InvalidRangeError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
+  },
+);
+
+export default stats;

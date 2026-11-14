@@ -2,6 +2,7 @@ import axios from 'axios';
 import _ from 'lodash';
 import logger from '../../logger.js';
 import { mtConnectMachines as machines } from '../index.js';
+import type { StateChanges } from '../Machine.js';
 import mappings from './mtconnect_mappings.js';
 
 const POLL_INTERVAL_MS = 5000;
@@ -63,10 +64,9 @@ function run() {
 
 function setAllOffline() {
   for (const [location, machine] of machines) {
-    const state = machine.getState() as MTConnectState;
+    const state = machine.getState();
     if (state.execution === 'ACTIVE') interruptedCycles.add(location);
-    if (state.online) machine.setState(new Map([['online', false]]));
-    machine.updateStatus();
+    if (state.online) machine.update({ online: false });
   }
 }
 
@@ -77,7 +77,8 @@ function processJSON(data: MTConnectResponse) {
     // find the matching machine
     const machine = machines.get(device.name);
     if (!machine) return;
-    const changes: Changes = new Map();
+    // The values come from the agent unchecked, so they can't be held to the state's types.
+    const changes: Record<string, unknown> = {};
     const deviceEvents = device.ComponentStream[0].Events;
     if (!deviceEvents) return;
 
@@ -87,17 +88,16 @@ function processJSON(data: MTConnectResponse) {
       let value: string | boolean = deviceEvent[0].value;
 
       const prop = mappings[key] as keyof MTConnectState;
-      const state = machine.getState() as MTConnectState;
-      const old = state[prop as keyof MTConnectState];
+      const old = machine.getState()[prop];
       if (old === undefined) return;
       if (prop === 'online') value = value === 'AVAILABLE';
 
       if (!_.isEqual(old, value)) {
-        changes.set(prop, value);
+        // An optional stop is a pause within the cycle, so the machine stays as it was
+        if (prop === 'execution' && value === 'OPTIONAL_STOP') return;
+        changes[prop] = value;
         if (prop === 'execution') {
-          if (value === 'OPTIONAL_STOP') return;
-          const date = new Date().toISOString();
-          changes.set('lastStateTs', date);
+          changes.lastStateTs = new Date().toISOString();
           if (old === 'ACTIVE' && value === 'UNAVAILABLE') {
             // The connection dropped mid-cycle, which isn't the end of the cycle
             interruptedCycles.add(device.name);
@@ -107,28 +107,13 @@ function processJSON(data: MTConnectResponse) {
               const now = Date.now();
               const lastState = new Date(machine.getState().lastStateTs).valueOf();
               const time = now - lastState;
-              changes.set('lastCycle', time);
+              changes.lastCycle = time;
             }
           }
         }
       }
     });
 
-    const previousStatus = machine.getStatus();
-    // setState below can overwrite lastStateTs, so keep when the previous state began
-    const previousStateTs = machine.getState().lastStateTs;
-
-    if (changes.size) {
-      machine.setState(changes);
-      machine.updateStatus();
-    }
-
-    const currentStatus = machine.getStatus();
-
-    if (previousStatus === 'yellow' && currentStatus !== 'yellow' && currentStatus !== 'offline') {
-      const lastOperatorTime: Changes = new Map();
-      lastOperatorTime.set('lastOperatorTime', Date.now() - new Date(previousStateTs).valueOf());
-      machine.setState(lastOperatorTime);
-    }
+    if (Object.keys(changes).length) machine.update(changes as StateChanges<MTConnectState>);
   });
 }

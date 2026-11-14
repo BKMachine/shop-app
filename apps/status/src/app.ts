@@ -17,7 +17,8 @@ const HAAS_SERIAL_ENABLED = process.env.HAAS_SERIAL_ENABLED === 'true';
 export async function start(): Promise<void> {
   await database.connect();
   const seedStates = await loadRecentMachineStateSnapshot();
-  await machines.initMachines(seedStates);
+  await machines.loadMachines(seedStates);
+  machines.startSync();
   await influx.connect().catch((err) => {
     logger.error('Failed to connect to InfluxDB:', err);
   });
@@ -30,6 +31,7 @@ export async function start(): Promise<void> {
 
 export async function stop(): Promise<void> {
   await server.stop();
+  machines.stopSync();
   if (HAAS_SERIAL_ENABLED) serial.stop();
   mtconnect.stop();
   arduino.stop();
