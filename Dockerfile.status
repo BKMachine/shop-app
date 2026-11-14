@@ -1,9 +1,9 @@
-FROM node:24 AS base
+FROM node:26 AS base
 WORKDIR /app
 ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV pnpm_config_store_dir="/pnpm/store"
 ENV PATH="${PATH}:${PNPM_HOME}/bin"
-RUN npm install -g pnpm@12.11.2 turbo@2.11.8
+RUN npm install -g pnpm@12.18.0 turbo@2.11.8
 
 FROM base AS source
 COPY . .
@@ -30,7 +30,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm deploy --filter=status --prod /app/deploy/status
 
 # Same Node major as the build stages, so production runs what CI tested.
-FROM node:24-slim AS runner
+FROM node:26-slim AS runner
 WORKDIR /app
 COPY --from=status-deploy /app/deploy/status/node_modules /app/apps/status/node_modules
 # package.json carries "type": "module"; without it Node only runs dist as ESM by sniffing syntax.
