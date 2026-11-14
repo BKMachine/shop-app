@@ -6,7 +6,7 @@
     "outDir": "dist",
     "rootDir": "./src",
     "sourceMap": false,
-    "types": ["@types/shop-app"]
+    "types": ["@types/shop-app", "jest", "node"]
   },
   "include": ["src"],
   "ignore": ["node_modules", "dist"]

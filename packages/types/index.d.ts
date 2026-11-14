@@ -6,7 +6,6 @@
 /// <reference path="./src/mtconnect.d.ts" />
 /// <reference path="./src/parts.d.ts" />
 /// <reference path="./src/pdf_parser.d.ts" />
-/// <reference path="./src/remote_serial_port.d.ts" />
 /// <reference path="./src/socket.io.d.ts" />
 /// <reference path="./src/tooling.d.ts" />
 

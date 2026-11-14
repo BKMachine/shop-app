@@ -10,29 +10,29 @@
     "lint": "biome lint --write",
     "check": "biome check",
     "ci": "biome ci",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "jest"
   },
   "engineStrict": true,
   "dependencies": {
+    "@hono/node-server": "^2.1.8",
+    "@hono/zod-validator": "^0.9.1",
     "@repo/utilities": "workspace:*",
-    "cors": "^2.8.6",
-    "cross-env": "^10.1.0",
-    "dotenv": "^18.0.8",
-    "express": "^5.3.0",
+    "hono": "^4.13.13",
     "http-terminator": "^3.2.0",
-    "morgan": "^1.12.1",
-    "remote-serial-port-client": "^0.4.0",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/lodash": "^4.17.26",
-    "@types/morgan": "^1.9.10",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.19.2",
     "@types/shop-app": "workspace:*",
+    "cross-env": "^10.1.0",
+    "dotenv": "^18.0.8",
+    "jest": "^30.5.2",
     "rimraf": "^6.1.3",
+    "ts-jest": "^29.4.14",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   }

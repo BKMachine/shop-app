@@ -1,181 +1,131 @@
-import { RemoteSerialPort } from 'remote-serial-port-client';
+import net from 'node:net';
 import logger from './logger.js';
 
-type PendingRequest = {
-  resolve: (value: string[][]) => void;
-  reject: (reason?: unknown) => void;
-};
+const TIMEOUT_MS = 1000;
 
-const queue = new Map<string, PendingRequest[]>();
-const inProgress = new Set<string>();
+// https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
+const COMMANDS: QCode[] = [
+  104, // MODE, xxxxx
+  303, // LASTCYCLE, xxxxxxx
+  500, // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
+];
 
-export async function fetch(url: string): Promise<string[][]> {
-  // Add this request to the queue for this URL
-  logger.debug(`Received request for ${url}`);
-  const pending = new Promise<string[][]>((resolve, reject) => {
-    const urlQueue = queue.get(url) ?? [];
-    if (!queue.has(url)) {
-      queue.set(url, urlQueue);
-    }
-    urlQueue.push({ resolve, reject });
-
-    // If no request is already in progress for this URL, start one
-    if (!inProgress.has(url)) {
-      logger.debug(`Starting new request for ${url}`);
-      inProgress.add(url);
-      serial(url)
-        .then((result) => {
-          // Resolve all pending requests for this URL
-          const pendingRequests = queue.get(url) ?? [];
-          queue.delete(url);
-          logger.debug(
-            `Request for ${url} completed, resolving ${pendingRequests.length} pending requests`,
-          );
-          pendingRequests.forEach(({ resolve: res }) => {
-            res(result);
-          });
-        })
-        .catch((error) => {
-          // Reject all pending requests for this URL
-          const pendingRequests = queue.get(url) ?? [];
-          queue.delete(url);
-          logger.debug(
-            `Request for ${url} failed, rejecting ${pendingRequests.length} pending requests: ${error.message}`,
-          );
-          pendingRequests.forEach(({ reject: rej }) => {
-            rej(error);
-          });
-        })
-        .finally(() => {
-          inProgress.delete(url);
-        });
-    }
-  });
-
-  return pending;
+export interface Address {
+  host: string;
+  port: number;
 }
 
-async function serial(url: string): Promise<string[][]> {
-  const { hostname, port } = new URL(url);
-  const responses: string[][] = [];
-  const tcp: RSPC = new RemoteSerialPort({ mode: 'tcp', host: hostname, port, reconnect: false });
+/** A machine couldn't be read. The status is the one to answer the request with. */
+export class SerialError extends Error {
+  readonly status: 502 | 503 | 504;
 
-  try {
-    logger.debug(`Attempting to open serial communication to ${url}`);
-    await open(tcp);
-    logger.debug(`Serial communication to ${url} opened successfully`);
-  } catch (error: any) {
-    logger.debug(`Error during open serial communication to ${url}: ${error.message}`);
-    tcp.close();
-    error.status = 503; // Service Unavailable
-    throw error;
+  constructor(status: 502 | 503 | 504, message: string) {
+    super(message);
+    this.name = 'SerialError';
+    this.status = status;
   }
+}
 
-  // https://www.haascnc.com/service/troubleshooting-and-how-to/how-to/machine-data-collection---ngc.html
+const readings = new Map<string, Promise<string[][]>>();
+
+/**
+ * Reads a machine's status, as its reply to each command split into values.
+ *
+ * A machine's serial server takes one connection at a time, so requests arriving while it is
+ * already being read share that reading.
+ */
+export function readStatus(
+  { host, port }: Address,
+  timeoutMs: number = TIMEOUT_MS,
+): Promise<string[][]> {
+  const machine = `${host}:${port}`;
+  let reading = readings.get(machine);
+  if (!reading) {
+    logger.debug(`Reading ${machine}`);
+    reading = query(host, port, timeoutMs).finally(() => readings.delete(machine));
+    readings.set(machine, reading);
+  }
+  return reading;
+}
+
+async function query(host: string, port: number, timeoutMs: number): Promise<string[][]> {
+  const socket = await connect(host, port, timeoutMs);
   try {
-    responses.push(await send(tcp, 104, url)); // MODE, xxxxx
-    responses.push(await send(tcp, 303, url)); // LASTCYCLE, xxxxxxx
-    responses.push(await send(tcp, 500, url)); // PROGRAM, Oxxxxx, STATUS, PARTS, xxxxx
-  } catch (error: any) {
-    logger.debug(`Error during serial communication to ${url}: ${error.message}`);
-    tcp.close();
+    const replies: string[][] = [];
+    for (const code of COMMANDS) replies.push(await send(socket, code, timeoutMs));
+    return replies;
+  } catch (error) {
+    logger.debug(`Reading ${host}:${port} failed: ${(error as Error).message}`);
     throw error;
   } finally {
-    logger.debug(`Closing serial communication to ${url}`);
-    tcp.close();
+    socket.destroy();
   }
-  return responses;
 }
 
-function open(tcp: RSPC): Promise<void> {
-  const seconds = 1;
-
+function connect(host: string, port: number, timeoutMs: number): Promise<net.Socket> {
   return new Promise((resolve, reject) => {
-    let finished = false;
+    const socket = net.connect({ host, port });
 
-    const timeout = setTimeout(() => {
-      if (finished) return;
-      finished = true;
-      tcp.close();
-      reject(new Error(`Connection timeout after ${seconds} seconds`));
-    }, seconds * 1000);
-
-    const handleError = (error: any) => {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timeout);
-      tcp.close();
-      reject(error);
+    const fail = (message: string) => {
+      clearTimeout(timer);
+      socket.destroy();
+      logger.debug(`Connecting to ${host}:${port} failed: ${message}`);
+      reject(new SerialError(503, message));
     };
+    const timer = setTimeout(() => fail(`Connection timeout after ${timeoutMs}ms`), timeoutMs);
+    const onError = (error: Error) => fail(error.message);
 
-    tcp.on('error', handleError);
-
-    tcp.open((error?: Error) => {
-      if (finished) return;
-      clearTimeout(timeout);
-      finished = true;
-      if (error) {
-        tcp.close();
-        reject(error);
-      } else {
-        resolve();
-      }
+    socket.once('error', onError);
+    socket.once('connect', () => {
+      clearTimeout(timer);
+      socket.off('error', onError);
+      // An error with nothing listening for it would exit this service, and one can still
+      // arrive between commands or after the last reply.
+      socket.on('error', (error) => logger.debug(`Socket error from ${host}:${port}: ${error}`));
+      resolve(socket);
     });
-
-    // The client library neither listens for socket errors nor passes them on, so one reaching
-    // nothing would exit this service and stop polling for every machine.
-    tcp.options.client?.on('error', (error) => tcp.emit('error', error));
   });
 }
 
-async function send(tcp: RSPC, code: QCode, url: string): Promise<string[]> {
+function send(socket: net.Socket, code: QCode, timeoutMs: number): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    let data = Buffer.alloc(0);
-    let finished = false;
-
-    const onRead = (result: any) => {
-      if (finished) return;
-
-      data = Buffer.concat([data, result.data]);
-
-      // Check if we've received the EOL (CR LF)
-      if (data.includes('\r\n')) {
-        logger.debug(
-          `Received response for Q${code} from ${url}: ${data.toString('ascii').trim().replace(/\r?\n/g, '')}`,
-        );
-        finished = true;
-        clearTimeout(timeout);
-        resolve(parse(data));
-      }
-    };
-
-    const onError = (error: any) => {
-      logger.debug(`Error while waiting for response to Q${code} from ${url}: ${error.message}`);
-      if (finished) return;
-      finished = true;
-      clearTimeout(timeout);
-      reject(error);
-    };
-
-    // Add a safety timeout in case no EOL is received
-    const timeout = setTimeout(() => {
-      if (finished) return;
-      finished = true;
-      reject(new Error('No EOL received within timeout'));
-    }, 1000);
-
-    tcp.on('read', onRead);
-    tcp.on('error', onError);
-
-    try {
-      logger.debug(`Sending command Q${code} to ${url}`);
-      tcp.write(`Q${code}\r\n`);
-      logger.debug(`Command Q${code} sent, waiting for response...`);
-    } catch (error) {
-      finished = true;
-      clearTimeout(timeout);
-      reject(error);
+    if (socket.destroyed || !socket.writable) {
+      reject(new SerialError(502, `Connection closed before Q${code} could be sent`));
+      return;
     }
+
+    let data = Buffer.alloc(0);
+
+    const finish = () => {
+      clearTimeout(timer);
+      socket.off('data', onData);
+      socket.off('error', onError);
+      socket.off('close', onClose);
+    };
+    const fail = (status: 502 | 504, message: string) => {
+      finish();
+      reject(new SerialError(status, message));
+    };
+
+    const onData = (chunk: Buffer) => {
+      data = Buffer.concat([data, chunk]);
+      // A reply ends with CR LF
+      if (!data.includes('\r\n')) return;
+      finish();
+      logger.debug(`Reply to Q${code}: ${data.toString('ascii').replace(/[\r\n]/g, '')}`);
+      resolve(parse(data));
+    };
+    const onError = (error: Error) => fail(502, error.message);
+    const onClose = () => fail(502, `Connection closed before the reply to Q${code}`);
+    const timer = setTimeout(
+      () => fail(504, `No reply to Q${code} within ${timeoutMs}ms`),
+      timeoutMs,
+    );
+
+    socket.on('data', onData);
+    socket.on('error', onError);
+    socket.on('close', onClose);
+    socket.write(`Q${code}\r\n`);
   });
 }
 
