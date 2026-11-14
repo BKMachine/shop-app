@@ -37,23 +37,29 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ ! -x "${PYTHON_BIN}" ]]; then
-  if ! python3 -m venv "${VENV_DIR}" >/tmp/shop-app-image-processor-rembg-venv.log 2>&1; then
+if [[ -x "${PYTHON_BIN}" ]] && "${PYTHON_BIN}" -c "import rembg" >/dev/null 2>&1; then
+  echo "rembg dependencies already available in ${VENV_DIR}."
+  exit 0
+fi
+
+# A virtualenv kept from an image with another Python version, or one whose creation was cut
+# short, still has a python but no pip that it can load. Nothing in it is usable, so it is rebuilt.
+if [[ ! -x "${PYTHON_BIN}" ]] || ! "${PYTHON_BIN}" -m pip --version >/dev/null 2>&1; then
+  if [[ -e "${VENV_DIR}" ]]; then
+    echo "The rembg virtualenv at ${VENV_DIR} has no working pip, rebuilding it."
+  fi
+
+  if ! python3 -m venv --clear "${VENV_DIR}" >/tmp/shop-app-image-processor-rembg-venv.log 2>&1; then
     cat /tmp/shop-app-image-processor-rembg-venv.log >&2
     echo >&2
     echo "rembg install could not create ${VENV_DIR}." >&2
     echo "On Debian/Ubuntu, install the missing venv support with:" >&2
-    echo "  sudo apt install python3.12-venv" >&2
+    echo "  sudo apt install python3-venv" >&2
     echo "Then rerun: pnpm --dir apps/image_processor run install:rembg" >&2
     exit 1
   fi
 
   created_venv=1
-fi
-
-if "${PYTHON_BIN}" -c "import rembg" >/dev/null 2>&1; then
-  echo "rembg dependencies already available in ${VENV_DIR}."
-  exit 0
 fi
 
 if [[ "${created_venv}" == "1" ]]; then
