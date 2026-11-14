@@ -1,0 +1,159 @@
+# Docker keeps each container's console output, and without a limit it is never trimmed.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  mqtt:
+    image: eclipse-mosquitto
+    restart: unless-stopped
+    logging: *logging
+    container_name: cnc-status-mqtt
+    ports:
+      - 1883:1883
+    volumes:
+      - /mnt/nvme10/apps/cnc-status/mqtt/config:/mosquitto/config
+      - /mnt/nvme10/apps/cnc-status/mqtt/data:/mosquitto/data
+      - /mnt/nvme10/apps/cnc-status/mqtt/log:/mosquitto/log
+    networks:
+      default:
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -p 1883 -t healthcheck -m ok || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  fanuc-driver:
+    image: ladder99/fanuc-driver:linux64-2d3738b
+    depends_on:
+      mqtt:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+    container_name: cnc-status-fanuc-driver
+    volumes:
+      - /mnt/nvme10/apps/cnc-status/fanuc-driver/config:/etc/fanuc
+    networks:
+      default:
+    dns:
+      - 10.1.1.10
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q 'fanuc.dll' /proc/1/cmdline"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  mtconnect:
+    image: mtconnect/agent:2.6
+    restart: unless-stopped
+    logging: *logging
+    container_name: cnc-status-mtconnect
+    ports:
+      - 5000:5000
+    volumes:
+      - /mnt/nvme10/apps/cnc-status/mtconnect/config:/mtconnect/config
+      - /mnt/nvme10/apps/cnc-status/mtconnect/data:/mtconnect/data
+      - /mnt/nvme10/apps/cnc-status/mtconnect/logs:/mtconnect/log
+    networks:
+      default:
+    dns:
+      - 10.1.1.10
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5000/current || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  influx:
+    image: influxdb:3-core
+    restart: unless-stopped
+    logging: *logging
+    container_name: cnc-status-db
+    user: root
+    ports:
+      - 8181:8181
+    environment:
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+    volumes:
+      - /mnt/nvme10/apps/cnc-status/influxdb/data:/var/lib/influxdb3/data
+      - /mnt/nvme10/apps/cnc-status/influxdb/plugins:/var/lib/influxdb3/plugins
+    networks:
+      default:
+      monitoring:
+        aliases:
+          - cnc-status-influx
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS -H \"Authorization: Bearer $$INFLUX_TOKEN\" http://localhost:8181/health >/dev/null || exit 1"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  haas-serial:
+    image: bkmachine/haas-serial
+    restart: unless-stopped
+    logging: *logging
+    container_name: cnc-status-haas-serial
+    ports:
+      - 3020:3000
+    volumes:
+      - /mnt/nvme10/apps/cnc-status/logs:/logs
+    environment:
+      - HAAS_SERIAL_API_KEY=${HAAS_SERIAL_API_KEY}
+      - HAAS_SERIAL_ALLOWED_HOSTS=10.30.1.0/24
+      - TZ=America/Boise
+    networks:
+      default:
+    dns:
+      - 10.1.1.10
+
+  app:
+    image: bkmachine/cnc-status
+    restart: unless-stopped
+    logging: *logging
+    container_name: cnc-status
+    volumes:
+      - /mnt/nvme10/apps/cnc-status/logs:/logs
+      - /mnt/nvme10/apps/cnc-status/data:/app/data
+    environment:
+      - MONGO_URL=${MONGO_URL}
+      - MQTT_URL=mqtt://mqtt:1883
+      - MTCONNECT_URL=http://mtconnect:5000
+      - INFLUX_HOST=http://influx:8181
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_DATABASE=cncstatus
+      - HAAS_SERIAL_ENABLED=true
+      - HAAS_SERIAL_URL=http://haas-serial:3000/api/serial/status
+      - HAAS_SERIAL_API_KEY=${HAAS_SERIAL_API_KEY}
+      - CORS_ORIGIN=https://app.bkmachine.net
+      - TZ=America/Boise
+    networks:
+      default:
+      proxy:
+        aliases:
+          - cnc-status
+    dns:
+      - 10.1.1.10
+
+networks:
+  default:
+  monitoring:
+    external: true
+  proxy:
+    external: true

@@ -1,0 +1,88 @@
+# Docker keeps each container's console output, and without a limit it is never trimmed.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  db:
+    image: mongo:8.0.13
+    restart: unless-stopped
+    logging: *logging
+    container_name: shop-app-db
+    user: root
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - 27017:27017
+    volumes:
+      - /mnt/nvme10/apps/shop-app/mongodb/data:/data/db
+      - /mnt/nvme10/apps/shop-app/mongodb/configdb:/data/configdb
+    networks:
+      default:
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval \"try { rs.status().ok } catch (e) { db.adminCommand('ping').ok }\""
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  image_processor:
+    image: bkmachine/image-processor
+    restart: unless-stopped
+    logging: *logging
+    container_name: shop-app-image-processor
+    volumes:
+      - /mnt/nvme10/apps/shop-app/image_processor/models:/app/apps/image_processor/models
+      - /mnt/nvme10/apps/shop-app/image_processor/.venv:/app/apps/image_processor/.venv
+      - /mnt/nvme10/apps/shop-app/image_processor/data:/app/data
+      - /mnt/nvme10/apps/shop-app/logs:/logs
+    environment:
+      - TZ=America/Boise
+    networks:
+      default:
+    dns:
+      - 10.1.1.10
+
+  app:
+    image: bkmachine/shop-app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+    container_name: shop-app
+    volumes:
+      - /mnt/nvme10/apps/shop-app/logs:/logs
+      - /mnt/nvme10/apps/shop-app/data:/app/data
+    environment:
+      - MONGO_URL=${MONGO_URL}
+      - BASE_URL=https://app.bkmachine.net
+      - SMTP_USER=noreply@bkmachine.net
+      - SMTP_PASS=${SMTP_PASS}
+      - IMAGE_PROCESSOR_URL=http://image_processor:3000
+      - CUPS_PRINT_ENABLED=true
+      - CUPS_SERVER=printserver:631
+      - CUPS_ADDRESS_QUEUE=DYMO_Address
+      - TZ=America/Boise
+    networks:
+      default:
+      proxy:
+        aliases:
+          - shop-app
+      monitoring:
+        aliases:
+          - shop-app
+    dns:
+      - 10.1.1.10
+
+networks:
+  default:
+  proxy:
+    external: true
+  monitoring:
+    external: true
