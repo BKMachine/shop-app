@@ -38,7 +38,8 @@ declare global {
       | 'shipper'
       | 'vendor'
       | 'report'
-      | 'part_note';
+      | 'part_note'
+      | 'schedule';
     timestamp: string;
     device: Device;
     old: any | null;

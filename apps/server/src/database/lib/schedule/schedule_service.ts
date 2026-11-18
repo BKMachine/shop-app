@@ -1,0 +1,295 @@
+import { addDays, DEFAULT_SCHEDULE_SETTINGS, scheduleEnd } from '@repo/utilities/schedule';
+import type { Types } from 'mongoose';
+import { emit } from '../../../server/sockets.js';
+import AuditService from '../audit/audit_service.js';
+import DepartmentService from '../department/department_service.js';
+import Job from '../job/job_model.js';
+import Machine from '../machine/machine_model.js';
+import ScheduleEntryModel from './schedule_model.js';
+import ScheduleSettingsModel, { SCHEDULE_SETTINGS_ID } from './schedule_settings_model.js';
+
+export class ScheduleNotFoundError extends Error {}
+
+type PopulatedJob = {
+  _id: Types.ObjectId;
+  jobNumber: number;
+  customer: Types.ObjectId;
+  customerName?: string;
+  partNumber?: string;
+  partDescription?: string;
+  qty: number;
+  dueDate?: Date | null;
+  status: JobStatus;
+  priority?: JobPriority;
+};
+
+type LeanEntry = {
+  _id: Types.ObjectId;
+  job: PopulatedJob | null;
+  machineId: string;
+  start: string;
+  days: number;
+};
+
+/** What the audit trail keeps for a booking: readable names rather than ids alone. */
+type ScheduleAuditRecord = {
+  _id: string;
+  description: string;
+  job: string;
+  jobNumber: number | null;
+  machineId: string;
+  machine: string;
+  start: string;
+  lastDay: string;
+  days: number;
+};
+
+const JOB_FIELDS =
+  'jobNumber customer customerName partNumber partDescription qty dueDate status priority';
+
+function toEntry(doc: LeanEntry): ScheduleEntry | null {
+  const { job } = doc;
+  if (!job) return null;
+
+  return {
+    _id: doc._id.toString(),
+    machineId: doc.machineId,
+    start: doc.start,
+    days: doc.days,
+    job: {
+      _id: job._id.toString(),
+      jobNumber: job.jobNumber,
+      customerId: job.customer.toString(),
+      customerName: job.customerName ?? '',
+      partNumber: job.partNumber ?? '',
+      partDescription: job.partDescription ?? '',
+      qty: job.qty,
+      // Due dates are saved at noon UTC, so the UTC date is the day that was picked.
+      dueDate: job.dueDate ? job.dueDate.toISOString().slice(0, 10) : null,
+      status: job.status,
+      priority: job.priority ?? 'normal',
+    },
+  };
+}
+
+/** Entries that run on or after `from`, and start before `to` when given. */
+async function list(range: { from: string; to?: string }): Promise<ScheduleEntry[]> {
+  const filter: Record<string, unknown> = { end: { $gt: range.from } };
+  if (range.to) filter.start = { $lt: range.to };
+
+  const docs = await ScheduleEntryModel.find(filter)
+    .sort({ machineId: 1, start: 1 })
+    .populate('job', JOB_FIELDS)
+    .lean<LeanEntry[]>();
+
+  return docs.map(toEntry).filter((entry): entry is ScheduleEntry => entry !== null);
+}
+
+async function findMany(ids: string[]): Promise<LeanEntry[]> {
+  if (!ids.length) return [];
+  return ScheduleEntryModel.find({ _id: { $in: ids } })
+    .populate('job', 'jobNumber')
+    .lean<LeanEntry[]>();
+}
+
+async function machineNames(): Promise<Map<string, string>> {
+  const machines = await Machine.find({}, { name: 1, displayName: 1 }).lean();
+  return new Map(
+    machines.map((machine) => [machine._id.toString(), machine.displayName || machine.name]),
+  );
+}
+
+function toAuditRecord(entry: LeanEntry, names: Map<string, string>): ScheduleAuditRecord {
+  const machine = names.get(entry.machineId) ?? entry.machineId;
+  const jobNumber = entry.job?.jobNumber ?? null;
+  return {
+    _id: entry._id.toString(),
+    description: `Job #${jobNumber ?? '?'} on ${machine}`,
+    job: entry.job?._id.toString() ?? '',
+    jobNumber,
+    machineId: entry.machineId,
+    machine,
+    start: entry.start,
+    lastDay: addDays(entry.start, entry.days - 1),
+    days: entry.days,
+  };
+}
+
+/** Audits each booking that moved between the two snapshots, by id. */
+async function auditChanges(
+  before: LeanEntry[],
+  after: LeanEntry[],
+  deviceId: string,
+): Promise<void> {
+  if (!before.length && !after.length) return;
+  const names = await machineNames();
+  const ids = new Set([...before, ...after].map((entry) => entry._id.toString()));
+  const beforeById = new Map(before.map((entry) => [entry._id.toString(), entry]));
+  const afterById = new Map(after.map((entry) => [entry._id.toString(), entry]));
+
+  for (const id of ids) {
+    const oldEntry = beforeById.get(id);
+    const newEntry = afterById.get(id);
+    const unchanged =
+      oldEntry &&
+      newEntry &&
+      oldEntry.machineId === newEntry.machineId &&
+      oldEntry.start === newEntry.start &&
+      oldEntry.days === newEntry.days;
+    if (unchanged) continue;
+
+    await AuditService.addAudit(
+      'schedule',
+      oldEntry ? toAuditRecord(oldEntry, names) : null,
+      newEntry ? toAuditRecord(newEntry, names) : null,
+      deviceId,
+    );
+  }
+}
+
+/** Books a job and applies any placements the booking pushed along with it. */
+async function create(
+  data: ScheduleEntryCreate,
+  pushed: ScheduleEntryPlacement[],
+  deviceId: string,
+): Promise<ScheduleEntry> {
+  const jobExists = await Job.exists({ _id: data.job });
+  if (!jobExists) throw new ScheduleNotFoundError(`Missing job document id: ${data.job}`);
+
+  const pushedIds = pushed.map((placement) => placement._id);
+  const before = await findMany(pushedIds);
+  const created = await ScheduleEntryModel.create({ ...data, end: scheduleEnd(data) });
+  if (pushed.length) await writePlacements(pushed);
+
+  const after = await findMany([created._id.toString(), ...pushedIds]);
+  await auditChanges(before, after, deviceId);
+
+  const populated = await ScheduleEntryModel.findById(created._id)
+    .populate('job', JOB_FIELDS)
+    .lean<LeanEntry>();
+  const entry = populated ? toEntry(populated) : null;
+  if (!entry) throw new Error(`Unable to read back schedule entry id: ${created._id}`);
+  emit('schedule');
+  return entry;
+}
+
+async function place(placements: ScheduleEntryPlacement[], deviceId: string): Promise<void> {
+  const ids = placements.map((placement) => placement._id);
+  const before = await findMany(ids);
+  const matched = await writePlacements(placements);
+  const after = await findMany(ids);
+  await auditChanges(before, after, deviceId);
+  emit('schedule');
+
+  if (matched !== placements.length) {
+    throw new ScheduleNotFoundError('One or more schedule entries no longer exist.');
+  }
+}
+
+async function writePlacements(placements: ScheduleEntryPlacement[]): Promise<number> {
+  const result = await ScheduleEntryModel.bulkWrite(
+    placements.map((placement) => ({
+      updateOne: {
+        filter: { _id: placement._id },
+        update: {
+          $set: {
+            machineId: placement.machineId,
+            start: placement.start,
+            days: placement.days,
+            end: scheduleEnd(placement),
+          },
+        },
+      },
+    })),
+  );
+  return result.matchedCount;
+}
+
+async function remove(id: string, deviceId: string): Promise<boolean> {
+  const [existing] = await findMany([id]);
+  if (!existing) return false;
+  await ScheduleEntryModel.deleteOne({ _id: id });
+  await auditChanges([existing], [], deviceId);
+  emit('schedule');
+  return true;
+}
+
+/** Drops every booking for a job, used when the job itself is deleted. */
+async function removeByJob(jobId: string, deviceId: string): Promise<void> {
+  const existing = await ScheduleEntryModel.find({ job: jobId })
+    .populate('job', 'jobNumber')
+    .lean<LeanEntry[]>();
+  if (!existing.length) return;
+  await ScheduleEntryModel.deleteMany({ job: jobId });
+  await auditChanges(existing, [], deviceId);
+  emit('schedule');
+}
+
+/* ---------- Settings ---------- */
+
+function normalizeSettings(data: Partial<ScheduleSettings> | null | undefined): ScheduleSettings {
+  const defaults = DEFAULT_SCHEDULE_SETTINGS;
+  const utilization = data?.departmentUtilization ?? {};
+  const entries =
+    utilization instanceof Map ? [...utilization.entries()] : Object.entries(utilization);
+  return {
+    workdayStartHour: data?.workdayStartHour ?? defaults.workdayStartHour,
+    workdayEndHour: data?.workdayEndHour ?? defaults.workdayEndHour,
+    workdays: [...(data?.workdays ?? defaults.workdays)].sort((left, right) => left - right),
+    defaultUtilization: data?.defaultUtilization ?? defaults.defaultUtilization,
+    departmentUtilization: Object.fromEntries(entries),
+  };
+}
+
+async function getSettings(): Promise<ScheduleSettings> {
+  const doc = await ScheduleSettingsModel.findById(SCHEDULE_SETTINGS_ID).lean();
+  return normalizeSettings(doc);
+}
+
+/** Settings as the audit trail shows them, with department names in place of ids. */
+async function toSettingsAuditRecord(settings: ScheduleSettings) {
+  const names = await DepartmentService.getNameById();
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return {
+    _id: SCHEDULE_SETTINGS_ID,
+    description: 'Schedule settings',
+    workday: `${settings.workdayStartHour}:00–${settings.workdayEndHour}:00`,
+    workdays: settings.workdays.map((day) => weekdays[day]).join(', '),
+    defaultUtilization: settings.defaultUtilization,
+    departmentUtilization: Object.fromEntries(
+      Object.entries(settings.departmentUtilization).map(([id, value]) => [
+        names.get(id) ?? id,
+        value,
+      ]),
+    ),
+  };
+}
+
+async function updateSettings(data: ScheduleSettings, deviceId: string): Promise<ScheduleSettings> {
+  const before = await getSettings();
+  const next = normalizeSettings(data);
+  await ScheduleSettingsModel.replaceOne(
+    { _id: SCHEDULE_SETTINGS_ID },
+    { ...next, _id: SCHEDULE_SETTINGS_ID },
+    { upsert: true },
+  );
+
+  await AuditService.addAudit(
+    'schedule',
+    await toSettingsAuditRecord(before),
+    await toSettingsAuditRecord(next),
+    deviceId,
+  );
+  emit('scheduleSettings', next);
+  return next;
+}
+
+export default {
+  list,
+  create,
+  place,
+  remove,
+  removeByJob,
+  getSettings,
+  updateSettings,
+};

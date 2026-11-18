@@ -15,6 +15,7 @@ import PartNoteRoutes from './routes/part_notes.js';
 import PartRoutes from './routes/parts.js';
 import PrintRoutes from './routes/print.js';
 import ReportRoutes from './routes/reports.js';
+import ScheduleRoutes from './routes/schedule.js';
 import ShipmentRoutes from './routes/shipments.js';
 import ShipperRoutes from './routes/shippers.js';
 import SupplierRoutes from './routes/suppliers.js';
@@ -55,6 +56,7 @@ router.use(ShipmentRoutes);
 router.use(ShipperRoutes);
 router.use(DeviceRoutes);
 router.use(ReportRoutes);
+router.use(ScheduleRoutes);
 
 router.use('/documents', DocumentRoutes);
 router.use('/images', ImageRoutes);

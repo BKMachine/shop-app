@@ -11,6 +11,7 @@ import Customer from '../customer/customer_model.js';
 import Machine from '../machine/index.js';
 import type { MachineDoc } from '../machine/machine_model.js';
 import Part from '../part/part_model.js';
+import ScheduleService from '../schedule/schedule_service.js';
 import SequenceService from '../sequence/sequence_service.js';
 import Job, { type JobDoc } from './job_model.js';
 
@@ -716,6 +717,7 @@ async function remove(id: string, deviceId: string): Promise<boolean> {
   if (!result) return false;
 
   await AuditService.addJobAudit(oldJob, null, deviceId);
+  await ScheduleService.removeByJob(id, deviceId);
   emit('jobDeleted', { id });
   return true;
 }

@@ -12,4 +12,5 @@ export const uiIcons: Record<Audit['type'], string> = {
   vendor: 'mdi-storefront-outline',
   report: 'mdi-email-open-outline',
   part_note: 'mdi-note-text-outline',
+  schedule: 'mdi-calendar-clock',
 };
