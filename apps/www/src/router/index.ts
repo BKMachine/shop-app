@@ -9,6 +9,7 @@ import MachiningCalculatorView from '@/views/MachiningCalculatorView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
 import PartsView from '@/views/parts/PartsView.vue';
 import PartView from '@/views/parts/PartView.vue';
+import ScheduleView from '@/views/ScheduleView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import ShipmentArchiveView from '@/views/ShipmentArchiveView.vue';
 import StatusView from '@/views/StatusView.vue';
@@ -55,6 +56,11 @@ const router = createRouter({
       path: '/job/:id',
       name: 'viewJob',
       component: JobView,
+    },
+    {
+      path: '/schedule',
+      name: 'schedule',
+      component: ScheduleView,
     },
     {
       path: '/locations',
