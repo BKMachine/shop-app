@@ -47,7 +47,7 @@
         <v-tab value="production"> Production </v-tab>
         <v-tab value="shipments"> Shipments </v-tab>
       </v-tabs>
-      <div class="tab-bar__actions job-header__actions px-2">
+      <div class="tab-bar__actions job-header__actions">
         <v-btn v-if="showDelete" color="error" variant="text" @click="deleteConfirm = true">
           Delete
         </v-btn>
@@ -61,10 +61,13 @@
           Traveler
         </v-btn>
         <v-btn
+          class="mr-2"
           color="green"
+          density="comfortable"
           :disabled="!canSaveJob"
           :loading="saving"
           prepend-icon="mdi-content-save-outline"
+          variant="elevated"
           @click="saveJob"
         >
           {{ isCreateRoute ? 'Create' : 'Save' }}
