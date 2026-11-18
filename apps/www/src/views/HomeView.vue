@@ -141,16 +141,23 @@
                         <span>{{ item.machine.machineName }}</span>
                       </h3>
                     </div>
-                    <RouterLink
-                      v-if="item.machine.jobId"
-                      class="machine-card__job-link"
-                      :to="{ name: 'viewJob', params: { id: item.machine.jobId } }"
-                    >
-                      Job #{{ item.machine.jobNumber ?? '—' }}
-                    </RouterLink>
-                    <p v-else class="machine-card__subtitle">
-                      Job {{ item.machine.jobNumber ?? '—' }}
-                    </p>
+                    <div class="machine-card__job">
+                      <ScheduleMismatchIcon
+                        v-if="item.machine.scheduleMismatch"
+                        :running-job-numbers="[item.machine.jobNumber]"
+                        :scheduled-job-number="item.machine.scheduledJobNumber"
+                      />
+                      <RouterLink
+                        v-if="item.machine.jobId"
+                        class="machine-card__job-link"
+                        :to="{ name: 'viewJob', params: { id: item.machine.jobId } }"
+                      >
+                        Job #{{ item.machine.jobNumber ?? '—' }}
+                      </RouterLink>
+                      <p v-else class="machine-card__subtitle">
+                        Job {{ item.machine.jobNumber ?? '—' }}
+                      </p>
+                    </div>
                   </div>
 
                   <div class="machine-card__body">
@@ -280,6 +287,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import logo from '@/assets/img/bk_logo.png';
+import ScheduleMismatchIcon from '@/components/schedule/ScheduleMismatchIcon.vue';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import { fetchMachineDepartmentOptions } from '@/lib/machineDepartments';
 import api from '@/plugins/axios';
@@ -583,12 +591,14 @@ onMounted(() => {
   socket.on('job', refreshMachineDashboard);
   socket.on('jobDeleted', refreshMachineDashboard);
   socket.on('part', refreshMachineDashboard);
+  socket.on('schedule', refreshMachineDashboard);
 });
 
 onBeforeUnmount(() => {
   socket.off('job', refreshMachineDashboard);
   socket.off('jobDeleted', refreshMachineDashboard);
   socket.off('part', refreshMachineDashboard);
+  socket.off('schedule', refreshMachineDashboard);
 });
 
 if (typeof window !== 'undefined') {
@@ -889,6 +899,12 @@ watch(includedDepartmentKeys, (value) => {
   font-weight: 600;
   color: rgba(88, 77, 65, 0.72);
   text-decoration: none;
+}
+
+.machine-card__job {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .machine-card__job-link {

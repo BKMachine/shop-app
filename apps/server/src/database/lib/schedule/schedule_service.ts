@@ -1,4 +1,5 @@
 import { addDays, DEFAULT_SCHEDULE_SETTINGS, scheduleEnd } from '@repo/utilities/schedule';
+import { DEFAULT_BUSINESS_TIME_ZONE } from '@repo/utilities/time';
 import type { Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import AuditService from '../audit/audit_service.js';
@@ -225,6 +226,34 @@ async function removeByJob(jobId: string, deviceId: string): Promise<void> {
   emit('schedule');
 }
 
+/** Today's calendar day in the shop's time zone, as a schedule day key. */
+function shopToday(): string {
+  // en-CA formats a date as YYYY-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: DEFAULT_BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+/** The job booked on each machine today, by machine id. Bookings never overlap on a machine. */
+async function bookedToday(): Promise<Map<string, { jobId: string; jobNumber: number | null }>> {
+  const today = shopToday();
+  const entries = await ScheduleEntryModel.find({ start: { $lte: today }, end: { $gt: today } })
+    .populate('job', 'jobNumber')
+    .lean<LeanEntry[]>();
+
+  return new Map(
+    entries
+      .filter((entry) => entry.job)
+      .map((entry) => [
+        entry.machineId,
+        { jobId: entry.job?._id.toString() ?? '', jobNumber: entry.job?.jobNumber ?? null },
+      ]),
+  );
+}
+
 /* ---------- Settings ---------- */
 
 function normalizeSettings(data: Partial<ScheduleSettings> | null | undefined): ScheduleSettings {
@@ -290,6 +319,7 @@ export default {
   place,
   remove,
   removeByJob,
+  bookedToday,
   getSettings,
   updateSettings,
 };

@@ -11,7 +11,16 @@
         </span>
       </div>
       <img v-if="!isOnline" alt="OFFLINE" class="offline" :src="offlineImg" />
-      <img :alt="data.brand" aria-label="brand" class="logo" :src="logos.brand[data.brand]" />
+      <div class="header__end">
+        <ScheduleMismatchIcon
+          v-if="data.scheduleMismatch"
+          class="schedule-mismatch-chip"
+          :running-job-numbers="jobs.length ? jobs.map((job) => job.jobNumber) : [data.jobNumber]"
+          :scheduled-job-number="data.scheduledJobNumber"
+          size="12"
+        />
+        <img :alt="data.brand" aria-label="brand" class="logo" :src="logos.brand[data.brand]" />
+      </div>
     </div>
     <div v-if="isOnline">
       <div class="details">
@@ -161,6 +170,7 @@
 import { Duration } from 'luxon';
 import { computed } from 'vue';
 import offlineImg from '@/assets/img/offline.png';
+import ScheduleMismatchIcon from '@/components/schedule/ScheduleMismatchIcon.vue';
 import logos from '@/plugins/dynamic_logos.js';
 import { alarms as alarmMutations } from '@/plugins/mutations.js';
 import useNowStore from '@/stores/now.js';
@@ -388,6 +398,20 @@ const rapid = computed(() => {
 
 .machine-name {
   font-family: "Roboto Mono", monospace;
+}
+
+.header__end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Readable on every status colour, the amber tile included. */
+.schedule-mismatch-chip {
+  padding: 1px 3px;
+  border-radius: 4px;
+  background: rgba(18, 18, 18, 0.68);
+  color: #ffca28;
 }
 
 .logo {

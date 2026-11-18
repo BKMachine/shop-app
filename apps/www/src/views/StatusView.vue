@@ -184,6 +184,8 @@ type MachineDashboardMetadata = Pick<
   | 'partHasIncompleteData'
   | 'partHourlyRate'
   | 'partSummary'
+  | 'scheduleMismatch'
+  | 'scheduledJobNumber'
 > & { jobs: MachineJobSummary[] };
 
 interface DepartmentPerformanceEntry {
@@ -354,6 +356,7 @@ onMounted(async () => {
   appSocket.on('job', fetchMachines);
   appSocket.on('jobDeleted', fetchMachines);
   appSocket.on('part', fetchMachines);
+  appSocket.on('schedule', fetchMachines);
   departmentPerformanceTimer = setInterval(() => {
     void fetchDepartmentPerformance();
   }, DEPARTMENT_PERFORMANCE_INTERVAL_MS);
@@ -364,6 +367,7 @@ onBeforeUnmount(() => {
   appSocket.off('job', fetchMachines);
   appSocket.off('jobDeleted', fetchMachines);
   appSocket.off('part', fetchMachines);
+  appSocket.off('schedule', fetchMachines);
   socket.disconnect();
   clearBlankTilePressTimer();
   if (departmentPerformanceTimer) {
@@ -412,6 +416,8 @@ async function fetchMachineDashboardMetadata() {
       const existing = metadata.get(machine.machineId);
       if (existing) {
         existing.jobs.push(job);
+        // Any job on the machine that isn't today's booking flags the tile.
+        existing.scheduleMismatch = existing.scheduleMismatch || machine.scheduleMismatch;
         continue;
       }
       metadata.set(machine.machineId, {
@@ -424,6 +430,8 @@ async function fetchMachineDashboardMetadata() {
         partHasIncompleteData: machine.partHasIncompleteData ?? false,
         partHourlyRate: machine.partHourlyRate ?? null,
         partSummary: machine.partSummary,
+        scheduleMismatch: machine.scheduleMismatch ?? false,
+        scheduledJobNumber: machine.scheduledJobNumber ?? null,
       });
     }
     cachedMachineDashboardMetadata = metadata;

@@ -418,6 +418,16 @@ jestWithEsmMocks.unstable_mockModule('../../audit/audit_service.js', () => ({
   },
 }));
 
+/** What the schedule has booked on each machine today, by machine id. */
+const bookedToday = new Map<string, { jobId: string; jobNumber: number | null }>();
+
+jestWithEsmMocks.unstable_mockModule('../../schedule/schedule_service.js', () => ({
+  default: {
+    bookedToday: jest.fn(async () => bookedToday),
+    removeByJob: jest.fn(async () => undefined),
+  },
+}));
+
 jestWithEsmMocks.unstable_mockModule('../../../../server/sockets.js', () => ({
   emit,
 }));
@@ -475,6 +485,7 @@ beforeEach(() => {
   partStore.clear();
   customerStore.clear();
   machineStore.clear();
+  bookedToday.clear();
   nextJobNumber = 1000;
   nextJobId = 1;
 });
@@ -1612,4 +1623,57 @@ test('listMachineDashboard flags incomplete cost data for in-process subcomponen
       priority: 'normal',
     }),
   ]);
+});
+
+test('listMachineDashboard flags in-process jobs that are not booked on the machine today', async () => {
+  machineStore.set('machine-1', buildMachine());
+  partStore.set(PART_ID_1, buildPart());
+  const inProcessJob = (id: string, jobNumber: number) => ({
+    _id: id,
+    jobNumber,
+    customer: CUSTOMER_ID_1 as unknown as Customer,
+    part: PART_ID_1 as unknown as Part,
+    qty: 3,
+    status: 'in_process' as const,
+    dueDate: null,
+    startedOn: new Date('2026-07-15T00:00:00.000Z'),
+    completedOn: null,
+    customerPo: '',
+    priority: 'normal' as const,
+    notes: '',
+    customerName: 'Acme',
+    partNumber: 'PART-100',
+    partDescription: 'Widget',
+    partRevision: 'A',
+    productionTasks: [
+      {
+        id: `task-${id}`,
+        machineId: 'machine-1',
+        machineName: 'VF-2',
+        machineType: 'mill' as const,
+        startedAt: new Date('2026-07-16T14:00:00.000Z'),
+        endedAt: null,
+      },
+    ],
+    createdAt: new Date('2026-07-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-15T00:00:00.000Z'),
+  });
+  jobStore.set('job-1', inProcessJob('job-1', 1001));
+  jobStore.set('job-2', inProcessJob('job-2', 1002));
+  bookedToday.set('machine-1', { jobId: 'job-1', jobNumber: 1001 });
+
+  const { default: JobService } = await loadJobService();
+  const response = await JobService.listMachineDashboard();
+
+  const byJob = new Map(response.active.map((row) => [row.jobId, row]));
+  expect(byJob.get('job-1')).toEqual(
+    expect.objectContaining({ scheduledJobNumber: 1001, scheduleMismatch: false }),
+  );
+  expect(byJob.get('job-2')).toEqual(
+    expect.objectContaining({ scheduledJobNumber: 1001, scheduleMismatch: true }),
+  );
+
+  bookedToday.clear();
+  const unbooked = await JobService.listMachineDashboard();
+  expect(unbooked.active.every((row) => row.scheduleMismatch)).toBe(true);
 });

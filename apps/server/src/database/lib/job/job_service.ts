@@ -474,7 +474,7 @@ function getMachineDepartmentName(value: MachineDoc['department']): string {
 }
 
 async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
-  const [machines, jobs] = await Promise.all([
+  const [machines, jobs, booked] = await Promise.all([
     Machine.find().populate('department').sort({ name: 1 }),
     Job.find({ status: 'in_process' })
       .populate('part', {
@@ -493,6 +493,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         'derived.shopRate': 1,
       })
       .sort({ dueDate: 1, jobNumber: -1 }),
+    ScheduleService.bookedToday(),
   ]);
 
   const activeJobsByMachineId = new Map<
@@ -542,6 +543,11 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
     const machineId = machine._id.toString();
     const machineName = machine.displayName?.trim() || machine.name;
     const activeEntries = activeJobsByMachineId.get(machineId) ?? [];
+    const booking = booked.get(machineId);
+    const scheduled = {
+      scheduledJobId: booking?.jobId ?? null,
+      scheduledJobNumber: booking?.jobNumber ?? null,
+    };
 
     if (activeEntries.length) {
       const sortedEntries = [...activeEntries].sort(
@@ -575,6 +581,9 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
             activeEntry.job.partNumber,
             activeEntry.job.partDescription,
           ),
+          ...scheduled,
+          // Running a job that isn't today's booking, including when nothing is booked today.
+          scheduleMismatch: activeEntry.job._id !== booking?.jobId,
         });
       }
     } else {
@@ -597,6 +606,8 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         partHasIncompleteData: false,
         partHourlyRate: null,
         partSummary: '',
+        ...scheduled,
+        scheduleMismatch: false,
       });
     }
   }

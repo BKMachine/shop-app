@@ -151,9 +151,16 @@
                 { 'schedule-board__label--department-start': departmentBreaks.includes(row) },
                 display ? `schedule-board__label--status-${statusTones.get(machine.id) ?? 'none'}` : '',
                 { 'schedule-board__label--flash-off': display && flashOffPhase },
+                { 'schedule-board__label--mismatch': runningByMachine.get(machine.id)?.mismatch },
               ]"
               :style="{ height: `${rowHeight}px` }"
             >
+              <ScheduleMismatchIcon
+                v-if="runningByMachine.get(machine.id)?.mismatch"
+                class="schedule-board__mismatch"
+                :running-job-numbers="runningByMachine.get(machine.id)?.jobNumbers"
+                :scheduled-job-number="runningByMachine.get(machine.id)?.scheduledJobNumber"
+              />
               <div class="schedule-board__machine">{{ machine.displayName }}</div>
               <div class="schedule-board__department">{{ machine.department }}</div>
             </div>
@@ -345,6 +352,7 @@ import {
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ScheduleEntryDialog from '@/components/schedule/ScheduleEntryDialog.vue';
+import ScheduleMismatchIcon from '@/components/schedule/ScheduleMismatchIcon.vue';
 import ScheduleTile from '@/components/schedule/ScheduleTile.vue';
 import { dueDateColor } from '@/lib/job_dates';
 import { fetchMachineDepartmentOptions } from '@/lib/machineDepartments';
@@ -550,6 +558,49 @@ const shadedDays = computed(() =>
 const weekStarts = computed(() =>
   rangeDayKeys.value.filter(({ key }) => dayOfWeek(key) === 1).map(({ offset }) => offset),
 );
+
+/* ---------- Running jobs vs the schedule ---------- */
+
+interface RunningJobs {
+  jobNumbers: number[];
+  scheduledJobNumber: number | null;
+  /** A job running on the machine is not today's booking. */
+  mismatch: boolean;
+}
+
+const runningByMachine = ref(new Map<string, RunningJobs>());
+let runningRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function fetchRunningJobs() {
+  try {
+    const { data } = await api.get<MachineJobDashboardResponse>('/jobs/machine-dashboard');
+    const next = new Map<string, RunningJobs>();
+    for (const row of data.active) {
+      const entry = next.get(row.machineId) ?? {
+        jobNumbers: [],
+        scheduledJobNumber: row.scheduledJobNumber ?? null,
+        mismatch: false,
+      };
+      if (row.jobNumber != null) entry.jobNumbers.push(row.jobNumber);
+      entry.mismatch = entry.mismatch || Boolean(row.scheduleMismatch);
+      next.set(row.machineId, entry);
+    }
+    runningByMachine.value = next;
+  } catch (error) {
+    console.warn('Unable to load running jobs.', error);
+  }
+}
+
+/** Running jobs and bookings both change the comparison; batch bursts of updates into one load. */
+function refreshRunningJobs() {
+  if (runningRefreshTimer) clearTimeout(runningRefreshTimer);
+  runningRefreshTimer = setTimeout(() => {
+    runningRefreshTimer = null;
+    void fetchRunningJobs();
+  }, 500);
+}
+
+const RUNNING_JOB_EVENTS = ['schedule', 'job', 'jobDeleted', 'part'] as const;
 
 /* ---------- Machine status (wall display) ---------- */
 
@@ -1170,12 +1221,15 @@ let displayRefreshTimer: ReturnType<typeof setInterval> | null = null;
 function refreshDisplay() {
   scheduleStore.refresh();
   void scheduleStore.fetchSettings().catch(() => undefined);
+  refreshRunningJobs();
 }
 
 onMounted(() => {
   void fetchMachines().then(() => requestAnimationFrame(measureBoard));
   scheduleStore.listen();
   void scheduleStore.fetchSettings().catch(() => undefined);
+  void fetchRunningJobs();
+  for (const event of RUNNING_JOB_EVENTS) socket.on(event, refreshRunningJobs);
 
   if (props.display) {
     socket.io.on('reconnect', refreshDisplay);
@@ -1201,6 +1255,8 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   if (backlogRefreshTimer) clearTimeout(backlogRefreshTimer);
   socket.io.off('reconnect', refreshDisplay);
+  for (const event of RUNNING_JOB_EVENTS) socket.off(event, refreshRunningJobs);
+  if (runningRefreshTimer) clearTimeout(runningRefreshTimer);
   if (displayRefreshTimer) clearInterval(displayRefreshTimer);
 });
 </script>
@@ -1409,6 +1465,7 @@ onBeforeUnmount(() => {
 }
 
 .schedule-board__label {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1454,6 +1511,17 @@ onBeforeUnmount(() => {
 /* Offline: the idle grey hatched with the offline tile colour. */
 .schedule-view--display .schedule-board__label--status-offline {
   --status-edge: repeating-linear-gradient(-45deg, #6c6c6c 0 4px, #282828 4px 8px);
+}
+
+/* Keep long names clear of the mismatch icon in the corner. */
+.schedule-board__label--mismatch {
+  padding-right: 26px;
+}
+
+.schedule-board__mismatch {
+  position: absolute;
+  top: 3px;
+  right: 4px;
 }
 
 .schedule-board__machine {

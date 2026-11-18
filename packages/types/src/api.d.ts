@@ -393,6 +393,11 @@ declare global {
     partHasIncompleteData?: boolean;
     partHourlyRate?: number | null;
     partSummary: string;
+    /** The job booked on this machine for today on the schedule, if any. */
+    scheduledJobId?: string | null;
+    scheduledJobNumber?: number | null;
+    /** This row's in-process job is not the job the schedule has on the machine today. */
+    scheduleMismatch?: boolean;
   }
 
   interface MachineJobDashboardResponse {
