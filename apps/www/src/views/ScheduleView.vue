@@ -149,6 +149,8 @@
               :class="[
                 'schedule-board__label',
                 { 'schedule-board__label--department-start': departmentBreaks.includes(row) },
+                display ? `schedule-board__label--status-${statusTones.get(machine.id) ?? 'none'}` : '',
+                { 'schedule-board__label--flash-off': display && flashOffPhase },
               ]"
               :style="{ height: `${rowHeight}px` }"
             >
@@ -356,6 +358,11 @@ import {
   type ScheduleRangePreset,
   toScheduleEntryJob,
 } from '@/lib/schedule';
+import {
+  type MachineStatusTone,
+  machineStatusTone,
+  useMachineStatus,
+} from '@/lib/useMachineStatus';
 import api from '@/plugins/axios';
 import { socket } from '@/plugins/socket';
 import { toastError } from '@/plugins/vue-toast-notification';
@@ -477,8 +484,8 @@ const boardEl = ref<HTMLElement | null>(null);
 const labelsEl = ref<HTMLElement | null>(null);
 const timelineEl = ref<HTMLElement | null>(null);
 const headerEl = ref<HTMLElement | null>(null);
-const availableWidth = ref(0);
 const availableHeight = ref(0);
+const availableWidth = ref(0);
 let resizeObserver: ResizeObserver | null = null;
 
 // Rounded down to a hundredth of a pixel so the days never add up to a sliver of sideways scroll.
@@ -543,6 +550,23 @@ const shadedDays = computed(() =>
 const weekStarts = computed(() =>
   rangeDayKeys.value.filter(({ key }) => dayOfWeek(key) === 1).map(({ offset }) => offset),
 );
+
+/* ---------- Machine status (wall display) ---------- */
+
+const { machines: liveMachines } = useMachineStatus(() => Boolean(props.display));
+
+/** Each machine's status colour, re-evaluated every second so a long red starts to flash. */
+const statusTones = computed(() => {
+  const tones = new Map<string, MachineStatusTone>();
+  if (!props.display) return tones;
+  for (const [id, machine] of liveMachines.value) {
+    tones.set(id, machineStatusTone(machine, nowStore.now));
+  }
+  return tones;
+});
+
+/** Odd seconds dim a flashing status, in step with the status tiles. */
+const flashOffPhase = computed(() => Math.floor(nowStore.now.valueOf() / 1000) % 2 === 1);
 
 /* ---------- Machines & departments ---------- */
 
@@ -1201,6 +1225,8 @@ onBeforeUnmount(() => {
 }
 
 .schedule-view--display {
+  /* Wider names column to make room for the status strip. */
+  --schedule-label-width: 180px;
   height: 100dvh;
 }
 
@@ -1389,6 +1415,45 @@ onBeforeUnmount(() => {
   padding: 0 12px;
   border-bottom: 1px solid var(--schedule-divider);
   overflow: hidden;
+}
+
+/* Wall display: machine status as a wide strip down the left edge, in the status tiles' colours. */
+.schedule-view--display .schedule-board__label {
+  position: relative;
+  padding-left: 28px;
+}
+
+.schedule-view--display .schedule-board__label::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16px;
+  background: var(--status-edge, rgba(var(--v-theme-on-surface), 0.12));
+}
+
+.schedule-view--display .schedule-board__label--status-green {
+  --status-edge: #287428;
+}
+
+.schedule-view--display .schedule-board__label--status-yellow {
+  --status-edge: #e89a23;
+}
+
+.schedule-view--display .schedule-board__label--status-red,
+.schedule-view--display .schedule-board__label--status-red-flash {
+  --status-edge: #bd0000;
+}
+
+.schedule-view--display .schedule-board__label--status-red-flash.schedule-board__label--flash-off,
+.schedule-view--display .schedule-board__label--status-idle {
+  --status-edge: #6c6c6c;
+}
+
+/* Offline: the idle grey hatched with the offline tile colour. */
+.schedule-view--display .schedule-board__label--status-offline {
+  --status-edge: repeating-linear-gradient(-45deg, #6c6c6c 0 4px, #282828 4px 8px);
 }
 
 .schedule-board__machine {
