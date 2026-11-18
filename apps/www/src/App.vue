@@ -1,6 +1,6 @@
 <template>
   <v-app v-cloak>
-    <v-app-bar class="elevation-2">
+    <v-app-bar v-if="!isBare" class="elevation-2">
       <v-app-bar-nav-icon @click.stop="toggleDrawer" />
       <v-app-bar-title>
         <v-avatar class="pointer" size="48" @click="router.push({ name: 'home' })">
@@ -35,7 +35,7 @@
         />
       </div>
     </v-app-bar>
-    <v-navigation-drawer v-model="drawer" :rail="drawerRail && !mobile">
+    <v-navigation-drawer v-if="!isBare" v-model="drawer" :rail="drawerRail && !mobile">
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.job" :to="{ name: 'jobs' }"> Jobs </v-list-item>
@@ -256,6 +256,8 @@ function scheduleIdleHomeRedirect() {
     idleHomeRedirectTimeoutId = null;
     if (!useIdleHomeRedirectEnabled.value) return;
     if (router.currentRoute.value.name === 'home') return;
+    // Wall displays stay on their page.
+    if (router.currentRoute.value.meta.bare) return;
     void router.push({ name: 'home' });
   }, IDLE_HOME_REDIRECT_TIMEOUT_MS);
 }
@@ -338,6 +340,9 @@ const showDev = computed<boolean>(() => {
 const isLan = computed<boolean>(() => Boolean(deviceState.current?.isLan));
 
 const isAdmin = computed<boolean>(() => Boolean(deviceState.current?.isAdmin));
+
+/** Pages such as wall displays that show without the app bar and menu. */
+const isBare = computed<boolean>(() => Boolean(router.currentRoute.value.meta.bare));
 </script>
 
 <style scoped>

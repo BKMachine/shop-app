@@ -1,6 +1,19 @@
 <template>
-  <div class="schedule-view">
-    <header class="schedule-toolbar">
+  <div :class="['schedule-view', { 'schedule-view--display': display }]">
+    <header v-if="display" class="schedule-toolbar schedule-toolbar--display">
+      <div class="schedule-toolbar__title">Schedule</div>
+      <div class="schedule-toolbar__departments">{{ displayDepartmentsLabel }}</div>
+      <span class="schedule-toolbar__range">{{ rangeLabel }}</span>
+      <v-spacer />
+      <div class="schedule-legend">
+        <span class="schedule-legend__item schedule-legend__item--late">Late</span>
+        <span class="schedule-legend__item schedule-legend__item--tight">
+          Due within {{ SCHEDULE_TIGHT_SLACK_DAYS }}d
+        </span>
+        <span class="schedule-legend__item schedule-legend__item--ok">On track</span>
+      </div>
+    </header>
+    <header v-else class="schedule-toolbar">
       <div class="schedule-toolbar__title">Schedule</div>
 
       <div class="schedule-toolbar__group">
@@ -96,7 +109,7 @@
 
     <div class="schedule-main">
       <div ref="boardEl" class="schedule-board">
-        <div class="schedule-board__header">
+        <div ref="headerEl" class="schedule-board__header">
           <div class="schedule-board__corner">Machine</div>
           <div class="schedule-board__scale" :style="{ width: `${timelineWidth}px` }">
             <div class="schedule-board__months">
@@ -137,7 +150,7 @@
                 'schedule-board__label',
                 { 'schedule-board__label--department-start': departmentBreaks.includes(row) },
               ]"
-              :style="{ height: `${ROW_HEIGHT}px` }"
+              :style="{ height: `${rowHeight}px` }"
             >
               <div class="schedule-board__machine">{{ machine.displayName }}</div>
               <div class="schedule-board__department">{{ machine.department }}</div>
@@ -150,9 +163,9 @@
             :class="{ 'schedule-board__timeline--day-lines': dayWidth >= 14 }"
             :style="{
               width: `${timelineWidth}px`,
-              height: `${visibleMachines.length * ROW_HEIGHT}px`,
+              height: `${visibleMachines.length * rowHeight}px`,
               '--day-width': `${dayWidth}px`,
-              '--row-height': `${ROW_HEIGHT}px`,
+              '--row-height': `${rowHeight}px`,
             }"
           >
             <div
@@ -168,7 +181,7 @@
               v-for="row in departmentBreaks"
               :key="`department-${row}`"
               class="schedule-board__department-line"
-              :style="{ top: `${row * ROW_HEIGHT - 1}px` }"
+              :style="{ top: `${row * rowHeight - 1}px` }"
             />
             <div
               v-for="offset in weekStarts"
@@ -193,17 +206,17 @@
               :clipped-end="tile.clippedEnd"
               :clipped-start="tile.clippedStart"
               :entry="tile.entry"
-              resizable
+              :resizable="!display"
               :style="{
                 left: `${tile.left}px`,
                 top: `${tile.top}px`,
                 width: `${tile.width}px`,
-                height: `${ROW_HEIGHT - TILE_INSET * 2}px`,
+                height: `${rowHeight - TILE_INSET * 2}px`,
               }"
               :today="today"
               :width="tile.width"
               @contextmenu.prevent
-              @pointerdown="onTilePointerDown($event, tile.entry)"
+              @pointerdown="display ? undefined : onTilePointerDown($event, tile.entry)"
             />
           </div>
         </div>
@@ -213,7 +226,7 @@
         </div>
       </div>
 
-      <aside v-if="backlogOpen" class="schedule-backlog">
+      <aside v-if="backlogOpen && !display" class="schedule-backlog">
         <div class="schedule-backlog__header">
           <v-text-field
             v-model="backlogSearch"
@@ -301,6 +314,7 @@
     </div>
 
     <ScheduleEntryDialog
+      v-if="!display"
       v-model="dialogOpen"
       :entry="dialogEntry"
       :estimator="estimateFor"
@@ -322,10 +336,12 @@ import {
   estimateScheduleLength,
   isScheduleWorkday,
   placeScheduleEntry,
+  SCHEDULE_TIGHT_SLACK_DAYS,
   type ScheduleEstimate,
   scheduleEnd,
 } from '@repo/utilities/schedule';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import ScheduleEntryDialog from '@/components/schedule/ScheduleEntryDialog.vue';
 import ScheduleTile from '@/components/schedule/ScheduleTile.vue';
 import { dueDateColor } from '@/lib/job_dates';
@@ -349,6 +365,13 @@ import useNowStore from '@/stores/now';
 import { useScheduleStore } from '@/stores/schedule_store';
 
 const ROW_HEIGHT = 52;
+/** Row height limits when display mode stretches the rows to fill the screen. */
+const DISPLAY_MIN_ROW_HEIGHT = 28;
+const DISPLAY_MAX_ROW_HEIGHT = 84;
+const DISPLAY_DEFAULT_DAYS = 14;
+const DISPLAY_MAX_DAYS = 182;
+/** Display mode reloads this often as well, in case a socket update was missed. */
+const DISPLAY_REFRESH_MS = 5 * 60 * 1000;
 const TILE_INSET = 4;
 /** Narrowest a day column gets; past this the board scrolls sideways instead. */
 const MIN_DAY_WIDTH = 4;
@@ -387,6 +410,15 @@ interface DragState {
   preview: Placement | null;
 }
 
+const props = defineProps<{
+  /**
+   * Read-only wall display: the range is today plus `?days=`, departments come from
+   * `?departments=` (comma separated names), and nothing can be moved or opened.
+   */
+  display?: boolean;
+}>();
+
+const route = useRoute();
 const scheduleStore = useScheduleStore();
 const customerStore = useCustomerStore();
 const nowStore = useNowStore();
@@ -398,9 +430,23 @@ const isTouchDevice =
 /* ---------- Range ---------- */
 
 const preset = ref<ScheduleRangePreset>(readPreset());
-const rangeStart = ref(defaultRangeStart(preset.value, today.value));
+const rangeStart = ref(props.display ? today.value : defaultRangeStart(preset.value, today.value));
 
-const rangeDays = computed(() => SCHEDULE_RANGE_PRESETS[preset.value].days);
+/** `?days=` for display mode. */
+const displayDays = computed(() => {
+  const days = Number.parseInt(String(route.query.days ?? ''), 10);
+  if (!Number.isFinite(days)) return DISPLAY_DEFAULT_DAYS;
+  return Math.min(Math.max(days, 1), DISPLAY_MAX_DAYS);
+});
+
+const rangeDays = computed(() =>
+  props.display ? displayDays.value : SCHEDULE_RANGE_PRESETS[preset.value].days,
+);
+
+// A wall display always starts at today, so it moves on by itself at midnight.
+watch(today, (day) => {
+  if (props.display) rangeStart.value = day;
+});
 const rangeEnd = computed(() => addDays(rangeStart.value, rangeDays.value));
 const rangeLabel = computed(() => formatRangeLabel(rangeStart.value, rangeDays.value));
 
@@ -430,7 +476,9 @@ function readPreset(): ScheduleRangePreset {
 const boardEl = ref<HTMLElement | null>(null);
 const labelsEl = ref<HTMLElement | null>(null);
 const timelineEl = ref<HTMLElement | null>(null);
+const headerEl = ref<HTMLElement | null>(null);
 const availableWidth = ref(0);
+const availableHeight = ref(0);
 let resizeObserver: ResizeObserver | null = null;
 
 // Rounded down to a hundredth of a pixel so the days never add up to a sliver of sideways scroll.
@@ -446,7 +494,18 @@ function measureBoard() {
   if (!boardEl.value) return;
   const labelsWidth = labelsEl.value?.offsetWidth ?? 0;
   availableWidth.value = Math.max(0, boardEl.value.clientWidth - labelsWidth);
+  availableHeight.value = Math.max(
+    0,
+    boardEl.value.clientHeight - (headerEl.value?.offsetHeight ?? 0),
+  );
 }
+
+/** Fixed in the app; on a wall display the rows stretch to fill the screen. */
+const rowHeight = computed(() => {
+  if (!props.display || !visibleMachines.value.length) return ROW_HEIGHT;
+  const fit = Math.floor(availableHeight.value / visibleMachines.value.length);
+  return Math.min(Math.max(fit, DISPLAY_MIN_ROW_HEIGHT), DISPLAY_MAX_ROW_HEIGHT);
+});
 
 const months = computed(() => monthSpans(rangeStart.value, rangeDays.value));
 
@@ -563,6 +622,30 @@ function orderMachines(list: MachineConfig[]): MachineConfig[] {
   });
 }
 
+/** `?departments=` names, matched without regard to case; none given means every department. */
+const queryDepartments = computed(() =>
+  [route.query.departments]
+    .flat()
+    .flatMap((value) => String(value ?? '').split(','))
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean),
+);
+
+function applyDepartmentQuery() {
+  const wanted = queryDepartments.value;
+  includedDepartments.value = wanted.length
+    ? departmentOptions.value.filter((department) => wanted.includes(department.toLowerCase()))
+    : [...departmentOptions.value];
+}
+
+watch(queryDepartments, () => {
+  if (props.display) applyDepartmentQuery();
+});
+
+const displayDepartmentsLabel = computed(() =>
+  areAllDepartmentsIncluded.value ? 'All Departments' : includedDepartments.value.join(' · '),
+);
+
 async function fetchMachines() {
   loadingMachines.value = true;
   try {
@@ -572,6 +655,10 @@ async function fetchMachines() {
     ]);
     machines.value = orderMachines(data);
     departmentOptions.value = departments;
+    if (props.display) {
+      applyDepartmentQuery();
+      return;
+    }
     const known = includedDepartments.value.filter((department) =>
       departments.includes(department),
     );
@@ -638,7 +725,7 @@ const tiles = computed(() => {
         width: Math.max(right - left - 2, 3),
         clippedStart: rawLeft < 0,
         clippedEnd: rawRight > timelineWidth.value,
-        top: row * ROW_HEIGHT + TILE_INSET,
+        top: row * rowHeight.value + TILE_INSET,
       },
     ];
   });
@@ -977,7 +1064,7 @@ function updatePreview() {
 
   const day = Math.floor((state.lastX - rect.left) / dayWidth.value);
   const row = Math.min(
-    Math.max(Math.floor((state.lastY - rect.top) / ROW_HEIGHT), 0),
+    Math.max(Math.floor((state.lastY - rect.top) / rowHeight.value), 0),
     visibleMachines.value.length - 1,
   );
   const machineId = visibleMachines.value[row]?.id;
@@ -1053,15 +1140,28 @@ function startAutoScroll() {
 
 /* ---------- Lifecycle ---------- */
 
+let displayRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+/** Catches up after the socket reconnects, or on the display's safety interval. */
+function refreshDisplay() {
+  scheduleStore.refresh();
+  void scheduleStore.fetchSettings().catch(() => undefined);
+}
+
 onMounted(() => {
   void fetchMachines().then(() => requestAnimationFrame(measureBoard));
   scheduleStore.listen();
   void scheduleStore.fetchSettings().catch(() => undefined);
 
-  void fetchBacklog();
-  socket.on('job', refreshBacklog);
-  socket.on('jobDeleted', refreshBacklog);
-  document.addEventListener('touchmove', preventTouchScroll, { passive: false });
+  if (props.display) {
+    socket.io.on('reconnect', refreshDisplay);
+    displayRefreshTimer = setInterval(refreshDisplay, DISPLAY_REFRESH_MS);
+  } else {
+    void fetchBacklog();
+    socket.on('job', refreshBacklog);
+    socket.on('jobDeleted', refreshBacklog);
+    document.addEventListener('touchmove', preventTouchScroll, { passive: false });
+  }
 
   measureBoard();
   resizeObserver = new ResizeObserver(measureBoard);
@@ -1076,6 +1176,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('touchmove', preventTouchScroll);
   resizeObserver?.disconnect();
   if (backlogRefreshTimer) clearTimeout(backlogRefreshTimer);
+  socket.io.off('reconnect', refreshDisplay);
+  if (displayRefreshTimer) clearInterval(displayRefreshTimer);
 });
 </script>
 
@@ -1096,6 +1198,61 @@ onBeforeUnmount(() => {
   gap: 8px 12px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--schedule-divider);
+}
+
+.schedule-view--display {
+  height: 100dvh;
+}
+
+.schedule-view--display .schedule-board {
+  overflow: hidden;
+}
+
+.schedule-view--display .schedule-board__tile {
+  cursor: default;
+}
+
+.schedule-toolbar--display {
+  padding: 8px 16px;
+}
+
+.schedule-toolbar__departments {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.schedule-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.85rem;
+}
+
+.schedule-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-legend__item::before {
+  content: "";
+  width: 18px;
+  height: 12px;
+  border: 3px solid currentColor;
+  border-radius: 3px;
+}
+
+.schedule-legend__item--late::before {
+  color: rgb(var(--v-theme-error));
+}
+
+.schedule-legend__item--tight::before {
+  color: rgb(var(--v-theme-warning));
+}
+
+.schedule-legend__item--ok::before {
+  border-width: 2px;
+  color: rgb(var(--v-theme-success));
 }
 
 .schedule-toolbar__title {

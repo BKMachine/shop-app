@@ -19,6 +19,13 @@ import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
 import ToolView from '@/views/tools/ToolView.vue';
 
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** Full-screen page with no app bar or menu, e.g. a wall display. */
+    bare?: boolean;
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -61,6 +68,14 @@ const router = createRouter({
       path: '/schedule',
       name: 'schedule',
       component: ScheduleView,
+    },
+    {
+      // Read-only wall display for the shop TVs: /view/schedule?departments=Mills,Lathes&days=14
+      path: '/view/schedule',
+      name: 'scheduleDisplay',
+      component: ScheduleView,
+      props: { display: true },
+      meta: { bare: true },
     },
     {
       path: '/locations',

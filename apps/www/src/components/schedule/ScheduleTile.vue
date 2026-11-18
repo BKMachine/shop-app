@@ -125,6 +125,8 @@ const tooltip = computed(() => {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   transition: box-shadow 120ms ease;
+  /* Lets the content adapt to the tile's own height, which a wall display stretches. */
+  container-type: size;
 }
 
 .v-theme--dark .schedule-tile {
@@ -261,5 +263,20 @@ const tooltip = computed(() => {
 
 .schedule-tile--tiny .schedule-tile__resize {
   width: 40%;
+}
+
+/* Last, so they win over the plain rules above: a container query adds no specificity. */
+@container (max-height: 34px) {
+  .schedule-tile__part,
+  .schedule-tile__days-line {
+    display: none;
+  }
+}
+
+@container (min-height: 56px) {
+  .schedule-tile__body,
+  .schedule-tile__days {
+    font-size: 0.95rem;
+  }
 }
 </style>
