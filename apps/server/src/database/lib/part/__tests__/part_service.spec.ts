@@ -262,7 +262,7 @@ function buildPart(overrides: Partial<PartRecord>): PartRecord {
     barLength: 0,
     remnantLength: 0,
     createdAt: new Date('2025-01-01T00:00:00.000Z'),
-    cycleTimes: [],
+    routing: [],
     additionalCosts: [],
     price: 0,
     subComponentIds: [],
@@ -287,7 +287,7 @@ test('update refreshes parent derived shop rate when a child part changes', asyn
     part: 'CHILD-1',
     description: 'Child part',
     price: 50,
-    cycleTimes: [{ operation: 'mill', time: 60 }],
+    routing: [{ op: 10, operation: 'mill', department: 'other', time: 60 }],
     derived: {
       shopRate: 50,
       directSubComponentCount: 0,
@@ -314,7 +314,7 @@ test('update refreshes parent derived shop rate when a child part changes', asyn
   const updatedPart = await PartService.update(
     {
       ...child,
-      cycleTimes: [{ operation: 'mill', time: 30 }],
+      routing: [{ op: 10, operation: 'mill', department: 'other', time: 30 }],
     },
     'device-1',
   );
@@ -329,6 +329,34 @@ test('update refreshes parent derived shop rate when a child part changes', asyn
         shopRate: 200,
       }),
     }),
+  );
+});
+
+test('update renumbers routing ops by row order and clears time on untimed ops', async () => {
+  const part = buildPart({ _id: 'part-1', part: 'PART-1', description: 'Part', price: 50 });
+  partStore.set(part._id, part);
+
+  const PartService = await loadPartService();
+  await PartService.update(
+    {
+      ...part,
+      routing: [
+        { op: 30, operation: ' Lathe ', department: 'other', time: 10 },
+        { op: 10, operation: 'Inspect', department: null, time: 4, noCycleTime: true },
+      ],
+    },
+    'device-1',
+  );
+
+  expect(PartModelMock.findByIdAndUpdate).toHaveBeenCalledWith(
+    'part-1',
+    expect.objectContaining({
+      routing: [
+        { op: 10, operation: 'Lathe', department: 'other', time: 10, noCycleTime: false },
+        { op: 20, operation: 'Inspect', department: null, time: 0, noCycleTime: true },
+      ],
+    }),
+    expect.anything(),
   );
 });
 

@@ -47,6 +47,8 @@ const productionTaskSchema = new Schema<JobProductionTaskDocumentFields>(
     machineId: { type: String, required: true },
     machineName: { type: String, required: true },
     machineType: { type: String, enum: ['lathe', 'mill', 'swiss'], required: true },
+    op: { type: Number, default: null },
+    operation: { type: String, default: null },
     startedAt: { type: Date, required: true },
     endedAt: { type: Date, default: null },
     runs: { type: [productionTaskRunSchema], default: undefined },

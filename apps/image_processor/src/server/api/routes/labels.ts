@@ -96,6 +96,15 @@ router.post('/job-traveler', async (req, res, next) => {
             }))
             .filter((shipment) => shipment.shipDate && shipment.qty)
         : undefined,
+      routing: Array.isArray(body.routing)
+        ? body.routing
+            .map((operation) => ({
+              op: trimmedStringOrEmpty(operation?.op),
+              operation: trimmedStringOrEmpty(operation?.operation),
+              department: trimmedStringOrEmpty(operation?.department),
+            }))
+            .filter((operation) => operation.op)
+        : undefined,
       operatorNotes: typeof body.operatorNotes === 'string' ? body.operatorNotes.trim() : undefined,
     });
     res.setHeader('Content-Type', 'application/pdf');

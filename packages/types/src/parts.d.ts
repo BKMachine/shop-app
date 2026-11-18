@@ -17,7 +17,7 @@ declare global {
     blanksPerPart?: number;
     barLength: number;
     remnantLength: number;
-    cycleTimes: CycleTimes[];
+    routing: RoutingOperation[];
     additionalCosts: AdditionalCost[];
     price: number;
     subComponentIds?: PartSubComponent[];
@@ -48,9 +48,17 @@ declare global {
     hasIncompleteSubComponentCosts?: boolean;
   }
 
-  interface CycleTimes {
+  /** One manufacturing operation on a part's routing, in run order. */
+  interface RoutingOperation {
+    /** Operation number: 10, 20, 30... always sequential by row order. */
+    op: number;
     operation: string;
+    /** Department `_id`, `'other'`, or null while unassigned (counts as missing data). */
+    department: string | null;
+    /** Cycle time in minutes; ignored when `noCycleTime` is set. */
     time: number;
+    /** Op that is not costed with a cycle time (inspection, deburr, outside process...). */
+    noCycleTime?: boolean;
   }
 
   interface AdditionalCost {

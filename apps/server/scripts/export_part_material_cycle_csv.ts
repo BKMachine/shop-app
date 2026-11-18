@@ -20,7 +20,7 @@ type ExportPart = Pick<
   | 'materialLength'
   | 'barLength'
   | 'remnantLength'
-  | 'cycleTimes'
+  | 'routing'
 > & {
   customer?: Pick<Customer, 'name'> | null;
   material?:
@@ -28,10 +28,10 @@ type ExportPart = Pick<
     | null;
 };
 
-function hasCompleteCycleData(part: Pick<PartFields, 'cycleTimes'>) {
-  const cycleTimes = part.cycleTimes || [];
-  if (!cycleTimes.length) return false;
-  return cycleTimes.every((cycle) => Number(cycle.time) > 0);
+function hasCompleteCycleData(part: Pick<PartFields, 'routing'>) {
+  const timedOperations = (part.routing || []).filter((operation) => !operation.noCycleTime);
+  if (!timedOperations.length) return false;
+  return timedOperations.every((operation) => Number(operation.time) > 0);
 }
 
 function getPartMaterialCost(part: ExportPart): number | null {
@@ -123,7 +123,7 @@ async function main() {
 
     if (!materialCost && !hasCompleteCycle) continue;
 
-    const cycleTimeMinutes = hasCompleteCycle ? calculateTotalCycleMinutes(part.cycleTimes) : null;
+    const cycleTimeMinutes = hasCompleteCycle ? calculateTotalCycleMinutes(part.routing) : null;
 
     const row = [
       escapeCsvCell(part.part || ''),

@@ -1,4 +1,11 @@
-import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from 'pdf-lib';
+import {
+  PDFDocument,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+  rgb,
+  StandardFonts,
+} from 'pdf-lib';
 import sharp from 'sharp';
 import {
   buildQrCodeWithCenteredLogoBuffer,
@@ -15,7 +22,8 @@ const PAGE_MARGIN = inches(0.38);
 const HEADER_HEIGHT = inches(1.5);
 const HEADER_TITLE_TOP_OFFSET = 10;
 const SECTION_GAP = inches(0.16);
-const DETAIL_ROW_HEIGHT = 30;
+const DETAIL_GRID_COLUMNS = 4;
+const DETAIL_CELL_HEIGHT = 30;
 const IMAGE_BOX_SIZE = inches(1.3);
 const CODE_BOX_SIZE = inches(1.3);
 const HEADER_BOX_GAP = inches(0.16);
@@ -23,6 +31,22 @@ const BORDER_COLOR = rgb(0.18, 0.18, 0.18);
 const MUTED_COLOR = rgb(0.4, 0.4, 0.4);
 const SECTION_FILL = rgb(0.985, 0.985, 0.985);
 const BAND_FILL = rgb(0.955, 0.955, 0.955);
+const RULE_COLOR = rgb(0.86, 0.86, 0.86);
+// Section card chrome: title band plus the inset drawSectionCard leaves above (6) and below (10).
+const SECTION_BAND_HEIGHT = 22;
+const SECTION_CHROME_HEIGHT = SECTION_BAND_HEIGHT + 16;
+const ROUTING_HEADER_HEIGHT = 16;
+// Rows are sign-off cells operators write in, so they never shrink below ~1/4".
+const ROUTING_ROW_HEIGHT = 22;
+const ROUTING_MIN_ROW_HEIGHT = 18;
+const ROUTING_FIXED_HEIGHT = SECTION_CHROME_HEIGHT + ROUTING_HEADER_HEIGHT;
+const MIN_NOTES_HEIGHT = inches(1);
+// Shipment plan shares the bottom row with the notes, taking this share of the width.
+const SHIPMENT_PLAN_WIDTH_RATIO = 0.46;
+// Tall enough to cover the "JOB TRAVELER" corner text in the page background.
+const CONTINUATION_HEADER_HEIGHT = inches(1);
+// Helvetica cap height as a fraction of the font size, for centering text on a row.
+const CAP_HEIGHT_RATIO = 0.718;
 
 type Box = {
   x: number;
@@ -235,170 +259,92 @@ function drawMultilineText(
   }
 }
 
-function getSectionTableRowHeights(
-  font: PDFFont,
-  rows: PrintJobTravelerRow[],
-  boxWidth: number,
-  options: {
-    columns: number;
-    labelWidthRatio: number;
-    rowHeight?: number;
-    valueFontSize?: number;
-    minValueFontSize?: number;
-  },
-) {
-  if (!rows.length) return [];
+type DetailCell = PrintJobTravelerRow & { span: number };
 
-  const padding = 6;
-  const columnCount = Math.max(1, options.columns);
-  const columnGap = 14;
-  const columnWidth = (boxWidth - columnGap * (columnCount - 1)) / columnCount;
-  const rowsPerColumn = Math.max(1, Math.ceil(rows.length / columnCount));
-  const baseRowHeight = options.rowHeight ?? DETAIL_ROW_HEIGHT;
-  const valueBaseSize = options.valueFontSize ?? 13;
-  const minValueSize = options.minValueFontSize ?? 8.5;
-  const rowHeights = new Array<number>(rowsPerColumn).fill(baseRowHeight);
+// Customer and part number are already printed large in the header.
+const HEADER_DETAIL_LABELS = new Set(['Customer', 'Part']);
+const WIDE_DETAIL_LABELS = new Set(['Description', 'Material', 'Estimated Material']);
 
-  rows.forEach((row, index) => {
-    const rowIndex = index % rowsPerColumn;
-    const labelWidth = Math.max(64, columnWidth * options.labelWidthRatio);
-    const valueWidth = Math.max(20, columnWidth - labelWidth - 8 - padding);
-    const value = sanitize(row.value);
-    const shouldWrapValue = font.widthOfTextAtSize(value, minValueSize) > valueWidth;
+/** Flows detail fields into rows of a 4-column grid; long-valued fields take two columns. */
+function layoutDetailGrid(rows: PrintJobTravelerRow[]): DetailCell[][] {
+  const gridRows: DetailCell[][] = [];
+  let current: DetailCell[] = [];
+  let used = 0;
 
-    if (!shouldWrapValue) return;
+  for (const row of rows) {
+    if (HEADER_DETAIL_LABELS.has(row.label)) continue;
+    const span = WIDE_DETAIL_LABELS.has(row.label) ? 2 : 1;
+    if (used + span > DETAIL_GRID_COLUMNS) {
+      gridRows.push(current);
+      current = [];
+      used = 0;
+    }
+    current.push({ ...row, span });
+    used += span;
+  }
 
-    const layout = getWrappedTextLayout(font, value, valueWidth, {
-      fontSize: Math.min(valueBaseSize, 11),
-      lineGap: 2,
-      minFontSize: minValueSize,
-    });
-    rowHeights[rowIndex] = Math.max(rowHeights[rowIndex] ?? baseRowHeight, layout.totalHeight + 8);
-  });
-
-  return rowHeights;
+  if (current.length) gridRows.push(current);
+  return gridRows;
 }
 
-function getSectionTableHeight(
-  font: PDFFont,
-  rows: PrintJobTravelerRow[],
-  boxWidth: number,
-  options: {
-    columns: number;
-    labelWidthRatio: number;
-    rowHeight?: number;
-    valueFontSize?: number;
-    minValueFontSize?: number;
-  },
-) {
-  return getSectionTableRowHeights(font, rows, boxWidth, options).reduce(
-    (sum, height) => sum + height,
-    0,
-  );
+function getDetailGridHeight(gridRows: DetailCell[][]) {
+  return gridRows.length ? SECTION_CHROME_HEIGHT + gridRows.length * DETAIL_CELL_HEIGHT : 0;
 }
 
-function drawSectionTable(
-  page: PDFPage,
-  font: PDFFont,
-  rows: PrintJobTravelerRow[],
-  box: Box,
-  options: {
-    columns: number;
-    labelWidthRatio: number;
-    rowHeight?: number;
-    valueFontSize?: number;
-    minValueFontSize?: number;
-  },
-) {
-  if (!rows.length) return;
+function drawDetailGrid(page: PDFPage, font: PDFFont, gridRows: DetailCell[][], box: Box) {
+  const columnWidth = box.width / DETAIL_GRID_COLUMNS;
+  const cellPadding = 10;
+  const labelSize = 7.5;
+  const tableTop = box.y + box.height;
 
-  const padding = 6;
-  const innerBox: Box = {
-    x: box.x,
-    y: box.y,
-    width: box.width,
-    height: box.height,
-  };
-  const columnCount = Math.max(1, options.columns);
-  const columnGap = 14;
-  const columnWidth = (innerBox.width - columnGap * (columnCount - 1)) / columnCount;
-  const rowsPerColumn = Math.max(1, Math.ceil(rows.length / columnCount));
-  const labelSize = 8.5;
-  const valueBaseSize = options.valueFontSize ?? 13;
-  const minValueSize = options.minValueFontSize ?? 8.5;
-  const tableTopY = innerBox.y + innerBox.height;
-  const rowHeights = getSectionTableRowHeights(font, rows, innerBox.width, options);
-  const rowTops = rowHeights.map((_, index) => {
-    const previousHeights = rowHeights.slice(0, index).reduce((sum, height) => sum + height, 0);
-    return tableTopY - previousHeights;
-  });
-
-  rows.forEach((row, index) => {
-    const columnIndex = Math.floor(index / rowsPerColumn);
-    const rowIndex = index % rowsPerColumn;
-    const rowHeight = rowHeights[rowIndex] ?? options.rowHeight ?? innerBox.height / rowsPerColumn;
-    const rowBox: Box = {
-      x: innerBox.x + columnIndex * (columnWidth + columnGap),
-      y: (rowTops[rowIndex] ?? tableTopY) - rowHeight,
-      width: columnWidth,
-      height: rowHeight,
-    };
-    const label = sanitize(row.label).toUpperCase();
-    const value = sanitize(row.value);
-    const labelWidth = Math.max(64, rowBox.width * options.labelWidthRatio);
-    const valueX = rowBox.x + labelWidth + 8;
-    const valueWidth = Math.max(20, rowBox.width - (valueX - rowBox.x) - padding);
-    const valueSize = fitText(font, value, valueWidth, valueBaseSize, minValueSize);
-    const fittedLabelSize = fitText(font, label, labelWidth + 2, labelSize, 6.5);
-    const labelHeight = font.heightAtSize(fittedLabelSize);
-    const valueHeight = font.heightAtSize(valueSize);
-    const centerY = rowBox.y + rowBox.height / 2;
-    const labelY = centerY - labelHeight / 2 + 1;
-    const valueY = centerY - valueHeight / 2 + 1;
+  gridRows.forEach((gridRow, rowIndex) => {
+    const rowTop = tableTop - rowIndex * DETAIL_CELL_HEIGHT;
+    const rowBottom = rowTop - DETAIL_CELL_HEIGHT;
+    let column = 0;
 
     if (rowIndex > 0) {
       page.drawLine({
-        start: { x: rowBox.x, y: rowBox.y + rowBox.height },
-        end: { x: rowBox.x + rowBox.width, y: rowBox.y + rowBox.height },
+        start: { x: box.x, y: rowTop },
+        end: { x: box.x + box.width, y: rowTop },
         thickness: 0.35,
-        color: rgb(0.86, 0.86, 0.86),
+        color: RULE_COLOR,
       });
     }
 
-    page.drawText(label, {
-      x: rowBox.x + padding,
-      y: labelY,
-      size: fittedLabelSize,
-      font,
-      color: MUTED_COLOR,
-    });
+    for (const cell of gridRow) {
+      const cellX = box.x + column * columnWidth;
+      const textX = column === 0 ? cellX : cellX + cellPadding;
+      const textWidth = cell.span * columnWidth - (textX - cellX) - cellPadding;
 
-    const shouldWrapValue = font.widthOfTextAtSize(value, minValueSize) > valueWidth;
-    if (shouldWrapValue) {
-      drawMultilineText(
-        page,
+      if (column > 0) {
+        page.drawLine({
+          start: { x: cellX, y: rowTop - 4 },
+          end: { x: cellX, y: rowBottom + 4 },
+          thickness: 0.35,
+          color: RULE_COLOR,
+        });
+      }
+
+      const label = sanitize(cell.label).toUpperCase();
+      page.drawText(truncateText(font, label, labelSize, textWidth), {
+        x: textX,
+        y: rowTop - 11,
+        size: labelSize,
         font,
-        value,
-        {
-          x: valueX,
-          y: rowBox.y + 4,
-          width: valueWidth,
-          height: Math.max(0, rowBox.height - 8),
-        },
-        {
-          fontSize: Math.min(valueBaseSize, 11),
-          lineGap: 2,
-          minFontSize: minValueSize,
-        },
-      );
-    } else {
-      page.drawText(value, {
-        x: valueX,
-        y: valueY,
+        color: MUTED_COLOR,
+      });
+
+      const value = sanitize(cell.value);
+      const valueSize = fitText(font, value, textWidth, 12, 9);
+      page.drawText(truncateText(font, value, valueSize, textWidth), {
+        x: textX,
+        y: rowBottom + 6,
         size: valueSize,
         font,
         color: BORDER_COLOR,
       });
+
+      column += cell.span;
     }
   });
 }
@@ -424,8 +370,8 @@ function drawShipmentPlan(
 ) {
   const content = drawSectionCard(page, font, 'Shipment Plan', box);
   const checkboxColumnWidth = 36;
-  const dateWidth = 106;
-  const qtyWidth = 64;
+  const dateWidth = 84;
+  const qtyWidth = 50;
   const poX = content.x + checkboxColumnWidth + dateWidth + qtyWidth;
   const tableTopY = content.y + content.height;
   const headerY = tableTopY - 9;
@@ -491,56 +437,238 @@ function drawShipmentPlan(
   });
 }
 
+function getRoutingHeight(rowCount: number, rowHeight: number) {
+  return rowCount ? ROUTING_FIXED_HEIGHT + rowCount * rowHeight : 0;
+}
+
+function routingRowsThatFit(height: number, rowHeight: number) {
+  return Math.max(0, Math.floor((height - ROUTING_FIXED_HEIGHT) / rowHeight));
+}
+
+function truncateText(font: PDFFont, text: string, size: number, maxWidth: number) {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+
+  let truncated = text;
+  while (truncated && font.widthOfTextAtSize(`${truncated}...`, size) > maxWidth) {
+    truncated = truncated.slice(0, -1);
+  }
+  return truncated ? `${truncated.trimEnd()}...` : '';
+}
+
+/** Baseline that vertically centers capital-height text in a row spanning bottom..bottom+height. */
+function centeredBaseline(bottom: number, height: number, size: number) {
+  return bottom + (height - size * CAP_HEIGHT_RATIO) / 2;
+}
+
+function drawRouting(
+  page: PDFPage,
+  font: PDFFont,
+  boldFont: PDFFont,
+  title: string,
+  routing: PrintJobTravelerRoutingOp[],
+  box: Box,
+  rowHeight: number,
+) {
+  const content = drawSectionCard(page, font, title, box);
+  const columnGap = 8;
+  const columns = {
+    op: 44,
+    department: 118,
+    qty: 52,
+    initials: 62,
+    date: 72,
+  };
+  const operationWidth =
+    content.width - columns.op - columns.department - columns.qty - columns.initials - columns.date;
+  const columnX = {
+    op: content.x,
+    operation: content.x + columns.op,
+    department: content.x + columns.op + operationWidth,
+    qty: content.x + columns.op + operationWidth + columns.department,
+    initials: content.x + columns.op + operationWidth + columns.department + columns.qty,
+    date:
+      content.x + columns.op + operationWidth + columns.department + columns.qty + columns.initials,
+  };
+  const tableTop = content.y + content.height;
+  const headerBottom = tableTop - ROUTING_HEADER_HEIGHT;
+  const headerSize = 8.5;
+  const headerBaseline = centeredBaseline(headerBottom, ROUTING_HEADER_HEIGHT, headerSize);
+  const headers: Array<[string, number]> = [
+    ['OP', columnX.op],
+    ['OPERATION', columnX.operation],
+    ['DEPARTMENT', columnX.department],
+    ['QTY', columnX.qty + 6],
+    ['INITIALS', columnX.initials + 6],
+    ['DATE', columnX.date + 6],
+  ];
+  for (const [label, x] of headers) {
+    page.drawText(label, { x, y: headerBaseline, size: headerSize, font, color: MUTED_COLOR });
+  }
+
+  page.drawLine({
+    start: { x: content.x, y: headerBottom },
+    end: { x: content.x + content.width, y: headerBottom },
+    thickness: 0.6,
+    color: BORDER_COLOR,
+  });
+
+  const textSize = Math.min(11, Math.max(8.5, rowHeight * 0.46));
+  routing.forEach((operation, index) => {
+    const rowBottom = headerBottom - (index + 1) * rowHeight;
+    const baseline = centeredBaseline(rowBottom, rowHeight, textSize);
+
+    page.drawText(operation.op, {
+      x: columnX.op,
+      y: baseline,
+      size: textSize,
+      font: boldFont,
+      color: BORDER_COLOR,
+    });
+
+    const operationText = sanitize(operation.operation) || '-';
+    const operationMaxWidth = operationWidth - columnGap;
+    const operationSize = fitText(font, operationText, operationMaxWidth, textSize, 9);
+    page.drawText(truncateText(font, operationText, operationSize, operationMaxWidth), {
+      x: columnX.operation,
+      y: centeredBaseline(rowBottom, rowHeight, operationSize),
+      size: operationSize,
+      font,
+      color: BORDER_COLOR,
+    });
+
+    const departmentText = sanitize(operation.department) || '-';
+    const departmentMaxWidth = columns.department - columnGap;
+    const departmentSize = fitText(font, departmentText, departmentMaxWidth, textSize, 9);
+    page.drawText(truncateText(font, departmentText, departmentSize, departmentMaxWidth), {
+      x: columnX.department,
+      y: centeredBaseline(rowBottom, rowHeight, departmentSize),
+      size: departmentSize,
+      font,
+      color: BORDER_COLOR,
+    });
+
+    if (index < routing.length - 1) {
+      page.drawLine({
+        start: { x: content.x, y: rowBottom },
+        end: { x: content.x + content.width, y: rowBottom },
+        thickness: 0.35,
+        color: RULE_COLOR,
+      });
+    }
+  });
+
+  // Write-in sign-off columns, ruled off so operators have a cell per op.
+  const rowsBottom = headerBottom - routing.length * rowHeight;
+  for (const x of [columnX.qty, columnX.initials, columnX.date]) {
+    page.drawLine({
+      start: { x, y: headerBottom },
+      end: { x, y: rowsBottom },
+      thickness: 0.35,
+      color: RULE_COLOR,
+    });
+  }
+}
+
+function drawRoutingContinuationPages(
+  pdf: PDFDocument,
+  font: PDFFont,
+  boldFont: PDFFont,
+  options: {
+    backgroundImage: PDFImage;
+    title: string;
+    routing: PrintJobTravelerRoutingOp[];
+  },
+) {
+  const width = PAGE_WIDTH - PAGE_MARGIN * 2;
+  const headerBox: Box = {
+    x: PAGE_MARGIN,
+    y: PAGE_HEIGHT - PAGE_MARGIN - CONTINUATION_HEADER_HEIGHT,
+    width,
+    height: CONTINUATION_HEADER_HEIGHT,
+  };
+  const rowsPerPage = routingRowsThatFit(
+    headerBox.y - SECTION_GAP - PAGE_MARGIN,
+    ROUTING_ROW_HEIGHT,
+  );
+  let remaining = options.routing;
+  let continued = false;
+
+  while (remaining.length) {
+    const pageRouting = remaining.slice(0, rowsPerPage);
+    remaining = remaining.slice(rowsPerPage);
+    const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    page.drawImage(options.backgroundImage, {
+      x: -PAGE_BLEED,
+      y: -PAGE_BLEED,
+      width: PAGE_WIDTH + PAGE_BLEED * 2,
+      height: PAGE_HEIGHT + PAGE_BLEED * 2,
+    });
+
+    drawBox(page, headerBox, 0.95, SECTION_FILL);
+    const titleSize = fitText(font, options.title, headerBox.width - 36, 20, 12);
+    page.drawText(options.title, {
+      x: headerBox.x + 18,
+      y: centeredBaseline(headerBox.y, headerBox.height, titleSize),
+      size: titleSize,
+      font,
+      color: BORDER_COLOR,
+    });
+
+    const routingHeight = getRoutingHeight(pageRouting.length, ROUTING_ROW_HEIGHT);
+    let title = continued ? 'Routing (continued)' : 'Routing';
+    if (remaining.length) title += ' - more on next page';
+    drawRouting(
+      page,
+      font,
+      boldFont,
+      title,
+      pageRouting,
+      {
+        x: PAGE_MARGIN,
+        y: headerBox.y - SECTION_GAP - routingHeight,
+        width,
+        height: routingHeight,
+      },
+      ROUTING_ROW_HEIGHT,
+    );
+    continued = true;
+  }
+}
+
 export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
   const pdf = await PDFDocument.create();
 
   const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const jobDetailsColumns = 2;
-  const detailContentPadding = 16;
-  const sectionBandHeight = 22;
-  const detailSectionContentWidth = PAGE_WIDTH - PAGE_MARGIN * 2 - 24;
-  const jobDetailsTableOptions = {
-    columns: jobDetailsColumns,
-    labelWidthRatio: 0.26,
-    rowHeight: 24,
-    valueFontSize: 13,
-    minValueFontSize: 8.5,
-  };
-  const materialDetails = body.partDetails.filter((row) => row.label === 'Material');
-  const remainingPartDetails = body.partDetails.filter((row) => row.label !== 'Material');
-  const materialDetailsTableOptions = {
-    columns: 1,
-    labelWidthRatio: 0.18,
-    rowHeight: 24,
-    valueFontSize: 13,
-    minValueFontSize: 8.5,
-  };
-  const remainingPartDetailsTableOptions = {
-    ...materialDetailsTableOptions,
-    columns: 2,
-    labelWidthRatio: 0.36,
-  };
-  const jobDetailsHeight =
-    detailContentPadding +
-    sectionBandHeight +
-    getSectionTableHeight(font, body.jobDetails, detailSectionContentWidth, jobDetailsTableOptions);
-  const materialDetailsHeight = getSectionTableHeight(
-    font,
-    materialDetails,
-    detailSectionContentWidth,
-    materialDetailsTableOptions,
-  );
-  const remainingPartDetailsHeight = getSectionTableHeight(
-    font,
-    remainingPartDetails,
-    detailSectionContentWidth,
-    remainingPartDetailsTableOptions,
-  );
-  const partDetailsHeight =
-    detailContentPadding + sectionBandHeight + materialDetailsHeight + remainingPartDetailsHeight;
+  const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const jobDetailGrid = layoutDetailGrid(body.jobDetails);
+  const partDetailGrid = layoutDetailGrid(body.partDetails);
+  const jobDetailsHeight = getDetailGridHeight(jobDetailGrid);
+  const partDetailsHeight = getDetailGridHeight(partDetailGrid);
   const shipmentPlan = body.shipmentPlan ?? [];
   const shipmentPlanHeight = getShipmentPlanHeight(shipmentPlan);
+  const routing = body.routing ?? [];
+  // Shipment plan and notes share the bottom row, which is at least as tall as either needs.
+  const bottomRowMinHeight = Math.max(MIN_NOTES_HEIGHT, shipmentPlanHeight);
+  const detailsBottomY =
+    PAGE_HEIGHT -
+    PAGE_MARGIN -
+    HEADER_HEIGHT -
+    (jobDetailsHeight ? SECTION_GAP + jobDetailsHeight : 0) -
+    (partDetailsHeight ? SECTION_GAP + partDetailsHeight : 0);
+  const routingSpace =
+    detailsBottomY - SECTION_GAP - SECTION_GAP - bottomRowMinHeight - PAGE_MARGIN;
+  // A routing that fits stays on page one; a longer one moves whole to its own page rather than
+  // splitting mid-route.
+  const routingOnFirstPage =
+    routing.length > 0 &&
+    routingRowsThatFit(routingSpace, ROUTING_MIN_ROW_HEIGHT) >= routing.length;
+  const firstPageRouting = routingOnFirstPage ? routing : [];
+  const continuedRouting = routingOnFirstPage ? [] : routing;
+  const routingRowHeight = Math.min(
+    ROUTING_ROW_HEIGHT,
+    (routingSpace - ROUTING_FIXED_HEIGHT) / Math.max(1, firstPageRouting.length),
+  );
 
   const backgroundImage = await pdf.embedPng(
     await buildJobTravelerBackgroundBuffer(Math.round(PAGE_WIDTH * 2), Math.round(PAGE_HEIGHT * 2)),
@@ -559,37 +687,46 @@ export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
     width: PAGE_WIDTH - PAGE_MARGIN * 2,
     height: HEADER_HEIGHT,
   };
-  const jobDetailsBox: Box = {
-    x: PAGE_MARGIN,
-    y: headerBox.y - SECTION_GAP - jobDetailsHeight,
-    width: headerBox.width,
-    height: jobDetailsHeight,
-  };
-  const partDetailsBox: Box = {
-    x: PAGE_MARGIN,
-    y: jobDetailsBox.y - SECTION_GAP - partDetailsHeight,
-    width: headerBox.width,
-    height: partDetailsHeight,
-  };
-  const notesBox: Box = {
-    x: PAGE_MARGIN,
-    y: PAGE_MARGIN,
-    width: headerBox.width,
-    height:
-      partDetailsBox.y -
-      SECTION_GAP -
-      shipmentPlanHeight -
-      (shipmentPlanHeight ? SECTION_GAP : 0) -
-      PAGE_MARGIN,
-  };
-  const shipmentPlanBox: Box | null = shipmentPlanHeight
+  const jobDetailsBox: Box | null = jobDetailsHeight
     ? {
         x: PAGE_MARGIN,
-        y: partDetailsBox.y - SECTION_GAP - shipmentPlanHeight,
+        y: headerBox.y - SECTION_GAP - jobDetailsHeight,
         width: headerBox.width,
-        height: shipmentPlanHeight,
+        height: jobDetailsHeight,
       }
     : null;
+  const partDetailsBox: Box | null = partDetailsHeight
+    ? {
+        x: PAGE_MARGIN,
+        y: (jobDetailsBox?.y ?? headerBox.y) - SECTION_GAP - partDetailsHeight,
+        width: headerBox.width,
+        height: partDetailsHeight,
+      }
+    : null;
+  const routingHeight = getRoutingHeight(firstPageRouting.length, routingRowHeight);
+  const routingBox: Box | null = routingHeight
+    ? {
+        x: PAGE_MARGIN,
+        y: detailsBottomY - SECTION_GAP - routingHeight,
+        width: headerBox.width,
+        height: routingHeight,
+      }
+    : null;
+  const bottomRowTop = (routingBox?.y ?? detailsBottomY) - SECTION_GAP;
+  const bottomRowHeight = bottomRowTop - PAGE_MARGIN;
+  const shipmentPlanWidth = shipmentPlanHeight
+    ? Math.round(headerBox.width * SHIPMENT_PLAN_WIDTH_RATIO)
+    : 0;
+  const shipmentPlanBox: Box | null = shipmentPlanHeight
+    ? { x: PAGE_MARGIN, y: PAGE_MARGIN, width: shipmentPlanWidth, height: bottomRowHeight }
+    : null;
+  const notesX = shipmentPlanBox ? PAGE_MARGIN + shipmentPlanWidth + SECTION_GAP : PAGE_MARGIN;
+  const notesBox: Box = {
+    x: notesX,
+    y: PAGE_MARGIN,
+    width: headerBox.x + headerBox.width - notesX,
+    height: bottomRowHeight,
+  };
 
   drawBox(page, headerBox, 0.95, SECTION_FILL);
 
@@ -678,50 +815,45 @@ export async function buildJobTravelerPdf(body: PrintJobTravelerBody) {
     height: codeBox.height - 8,
   });
 
-  const jobDetailsContent = drawSectionCard(page, font, 'Job Details', jobDetailsBox);
-  const partDetailsContent = drawSectionCard(page, font, 'Part Details', partDetailsBox);
+  if (jobDetailsBox) {
+    const content = drawSectionCard(page, font, 'Job Details', jobDetailsBox);
+    drawDetailGrid(page, font, jobDetailGrid, content);
+  }
+  if (partDetailsBox) {
+    const content = drawSectionCard(page, font, 'Part Details', partDetailsBox);
+    drawDetailGrid(page, font, partDetailGrid, content);
+  }
+  if (routingBox) {
+    drawRouting(page, font, boldFont, 'Routing', firstPageRouting, routingBox, routingRowHeight);
+  }
   if (shipmentPlanBox) drawShipmentPlan(page, font, shipmentPlan, shipmentPlanBox);
   const notesContent = drawSectionCard(page, font, 'Operator Notes', notesBox);
-
-  drawSectionTable(page, font, body.jobDetails, jobDetailsContent, jobDetailsTableOptions);
-  const remainingPartDetailsBox: Box = {
-    x: partDetailsContent.x,
-    y: partDetailsContent.y,
-    width: partDetailsContent.width,
-    height: remainingPartDetailsHeight,
-  };
-  const materialDetailsBox: Box = {
-    x: partDetailsContent.x,
-    y: partDetailsContent.y + remainingPartDetailsHeight,
-    width: partDetailsContent.width,
-    height: materialDetailsHeight,
-  };
-  drawSectionTable(page, font, materialDetails, materialDetailsBox, materialDetailsTableOptions);
-  drawSectionTable(
-    page,
-    font,
-    remainingPartDetails,
-    remainingPartDetailsBox,
-    remainingPartDetailsTableOptions,
-  );
-  if (materialDetails.length && remainingPartDetails.length) {
-    page.drawLine({
-      start: { x: partDetailsContent.x, y: materialDetailsBox.y },
-      end: { x: partDetailsContent.x + partDetailsContent.width, y: materialDetailsBox.y },
-      thickness: 0.35,
-      color: rgb(0.86, 0.86, 0.86),
+  const flagBox = partDetailsBox ?? jobDetailsBox;
+  if (continuedRouting.length && flagBox) {
+    const flag = 'ROUTING ON PAGE 2';
+    const flagSize = 10;
+    page.drawText(flag, {
+      x: flagBox.x + flagBox.width - 12 - boldFont.widthOfTextAtSize(flag, flagSize),
+      y: flagBox.y + flagBox.height - SECTION_BAND_HEIGHT + 6,
+      size: flagSize,
+      font: boldFont,
+      color: BORDER_COLOR,
     });
   }
 
   const notesText = buildNotesText(body);
-  if (!notesText) {
-    return Buffer.from(await pdf.save());
+  if (notesText) {
+    drawMultilineText(page, font, notesText, notesContent, {
+      fontSize: 14,
+      lineGap: 5,
+      minFontSize: 10,
+    });
   }
 
-  drawMultilineText(page, font, notesText, notesContent, {
-    fontSize: 14,
-    lineGap: 5,
-    minFontSize: 10,
+  drawRoutingContinuationPages(pdf, font, boldFont, {
+    backgroundImage,
+    title: `${headerText}${partValue ? `  -  ${partValue}` : ''}`,
+    routing: continuedRouting,
   });
 
   return Buffer.from(await pdf.save());

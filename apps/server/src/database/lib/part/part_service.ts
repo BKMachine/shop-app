@@ -3,6 +3,8 @@ import {
   calculateAssemblyMaterialCost,
   calculatePartShopRate,
   hasIncompleteAssemblyLeafCosts,
+  renumberRouting,
+  routingOpNumber,
 } from '@repo/utilities/parts';
 import { emit } from '../../../server/sockets.js';
 import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
@@ -10,6 +12,7 @@ import escapeRegExp from '../../../utilities/escapeRegExp.js';
 import { clampLimit, clampOffset } from '../../../utilities/pagination.js';
 import { getSortDirection } from '../../../utilities/sorting.js';
 import Audit from '../audit/audit_service.js';
+import DepartmentModel from '../department/department_model.js';
 import MaterialModel from '../material/material_model.js';
 import Part, { type PartDoc } from './part_model.js';
 
@@ -17,6 +20,26 @@ type PartMutation = Part | PartUpdate | PartDoc;
 
 function normalizeBlanksPerPart(value: unknown): number {
   return Math.max(1, Number(value) || 1);
+}
+
+function normalizeRouting(routing: unknown): RoutingOperation[] {
+  if (!Array.isArray(routing)) return [];
+
+  return renumberRouting(
+    routing.map((entry: Partial<RoutingOperation>) => {
+      const noCycleTime = Boolean(entry?.noCycleTime);
+      return {
+        op: 0,
+        operation: typeof entry?.operation === 'string' ? entry.operation.trim() : '',
+        department:
+          typeof entry?.department === 'string' && entry.department.trim()
+            ? entry.department.trim()
+            : null,
+        time: noCycleTime ? 0 : Math.max(0, Number(entry?.time) || 0),
+        noCycleTime,
+      };
+    }),
+  );
 }
 
 function getCustomerName(value: unknown): string {
@@ -66,7 +89,7 @@ async function buildDerivedPartCandidate(part: unknown): Promise<Part> {
       plainPart.createdAt instanceof Date
         ? plainPart.createdAt
         : new Date(plainPart.createdAt ?? Date.now()),
-    cycleTimes: plainPart.cycleTimes ?? [],
+    routing: normalizeRouting(plainPart.routing),
     additionalCosts: plainPart.additionalCosts ?? [],
     price: Number(plainPart.price) || 0,
     subComponentIds: normalizeSubComponentIds(plainPart.subComponentIds),
@@ -90,6 +113,7 @@ async function buildPersistencePayload(
     customer: getEntityId(plainPart.customer),
     material: getEntityId(plainPart.material) ?? null,
     blanksPerPart: normalizeBlanksPerPart(plainPart.blanksPerPart),
+    routing: normalizeRouting(plainPart.routing),
     createdAt:
       plainPart.createdAt instanceof Date
         ? plainPart.createdAt
@@ -568,6 +592,53 @@ async function refreshAllStoredDerivedProperties(): Promise<number> {
   return parts.length;
 }
 
+type LegacyCycleTime = { operation?: unknown; time?: unknown };
+
+/**
+ * One-time bulk conversion of legacy `cycleTimes` into `routing` (OP10, OP20, ...). Only parts
+ * that have never had a routing are touched, so it is safe to run on every start. An operation
+ * whose name exactly matches a department name gets that department; the rest stay unassigned
+ * and show as missing data until someone picks one. `cycleTimes` is left in place.
+ */
+async function migratePartRoutingFromCycleTimes(): Promise<number> {
+  const legacyParts = await Part.collection
+    .find({ routing: { $exists: false } }, { projection: { _id: 1, cycleTimes: 1 } })
+    .toArray();
+  if (!legacyParts.length) return 0;
+
+  const departments = await DepartmentModel.find({}, { name: 1 }).lean();
+  const departmentIdByName = new Map(
+    departments.map((department) => [
+      department.name.trim().toLowerCase(),
+      department._id.toString(),
+    ]),
+  );
+
+  await Part.collection.bulkWrite(
+    legacyParts.map((legacyPart) => {
+      const cycleTimes: LegacyCycleTime[] = Array.isArray(legacyPart.cycleTimes)
+        ? legacyPart.cycleTimes
+        : [];
+      const routing = cycleTimes.map((cycle, index) => {
+        const operation = typeof cycle?.operation === 'string' ? cycle.operation.trim() : '';
+        return {
+          op: routingOpNumber(index),
+          operation,
+          department: departmentIdByName.get(operation.toLowerCase()) ?? null,
+          time: Math.max(0, Number(cycle?.time) || 0),
+          noCycleTime: false,
+        };
+      });
+
+      return { updateOne: { filter: { _id: legacyPart._id }, update: { $set: { routing } } } };
+    }),
+  );
+
+  // Unassigned departments change the missing-data flags assemblies store for their children.
+  await refreshAllStoredDerivedProperties();
+  return legacyParts.length;
+}
+
 function calculateTotalValue(parts: Array<Pick<PartFields, 'price' | 'stock'>>): number {
   return parts.reduce(
     (sum, part) => sum + (Number(part.price) || 0) * (Number(part.stock) || 0),
@@ -760,6 +831,7 @@ export default {
   getPartLocations,
   getPartPositions,
   refreshAllStoredDerivedProperties,
+  migratePartRoutingFromCycleTimes,
 };
 
-export { refreshAllStoredDerivedProperties };
+export { migratePartRoutingFromCycleTimes, refreshAllStoredDerivedProperties };

@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col cols="12" md="7">
+    <v-col cols="12" lg="8" md="7">
       <v-row no-gutters>
         <v-col cols="11">
           <v-text-field
@@ -21,14 +21,13 @@
       </v-row>
 
       <v-divider class="my-1" />
-      <div class="mb-2 font-weight-bold">
-        {{ hasSubComponents ? 'Sub-Component Cycle Summary' : 'Cycle Times' }}
-      </div>
       <template v-if="hasSubComponents">
-        <v-card border class="mb-2" variant="tonal">
+        <div class="mb-2 font-weight-bold">Sub-Component Cycle Summary</div>
+        <v-card border class="mb-4" variant="tonal">
           <v-card-text>
             <div class="text-body-2 text-medium-emphasis mb-3">
-              Cycle time for this assembly is derived from its attached sub-components.
+              Cycle time for this assembly is derived from its attached sub-components plus its own
+              routing below.
             </div>
             <v-table class="rounded bg-transparent" density="compact">
               <colgroup>
@@ -71,68 +70,91 @@
           </v-card-text>
         </v-card>
       </template>
-      <template v-else>
+
+      <div class="routing-heading mb-2">
+        <span class="font-weight-bold">{{
+          hasSubComponents ? 'Assembly Routing' : 'Routing'
+        }}</span>
+        <span v-if="routingEntries.length" class="text-body-2 text-medium-emphasis">
+          {{ routingSummary }}
+        </span>
+      </div>
+      <div class="routing-list">
         <draggable
-          v-if="cycleEntries.length"
-          v-model="cycleEntries"
-          class="cycle-times-list"
-          drag-class="cycle-time-row--dragging"
-          ghost-class="cycle-time-row--ghost"
-          handle=".cycle-time-drag-handle"
+          v-if="routingEntries.length"
+          v-model="routingEntries"
+          drag-class="routing-row--dragging"
+          ghost-class="routing-row--ghost"
+          handle=".routing-drag-handle"
           item-key="rowId"
         >
           <template #item="{ element, index }">
-            <v-row class="mb-2 align-center cycle-time-row" no-gutters>
-              <v-col cols="11">
-                <v-row class="mb-2" no-gutters>
-                  <v-col cols="8">
-                    <div class="cycle-operation-field mr-1">
-                      <span
-                        v-if="element.cycle.operation"
-                        class="cycle-time-drag-handle cycle-operation-field__handle"
-                      >
-                        <v-icon icon="mdi-drag" size="small" />
-                      </span>
-                      <v-text-field
-                        v-model="element.cycle.operation"
-                        class="cycle-operation-field__input"
-                        dense
-                        hide-details
-                        label="Operation"
-                      />
-                    </div>
-                  </v-col>
-                  <v-col cols="4">
-                    <v-text-field
-                      class="ml-2"
-                      dense
-                      hide-details
-                      label="Cycle Time (mm:ss)"
-                      :model-value="getCycleInputValue(element.rowId, element.cycle.time)"
-                      @blur="onCycleBlur(element.rowId, index)"
-                      @focus="onCycleFocus(element.rowId, element.cycle.time)"
-                      @keydown.enter.prevent="onCycleBlur(element.rowId, index)"
-                      @update:model-value="onCycleInput(element.rowId, $event)"
-                    />
-                  </v-col>
-                </v-row>
-              </v-col>
-              <v-col cols="1">
-                <v-icon
-                  class="ml-4"
-                  color="red"
-                  icon="mdi-delete-circle"
-                  size="x-large"
-                  @click="removeCycleTime(element.rowId, index)"
-                />
-              </v-col>
-            </v-row>
+            <div class="routing-row">
+              <div class="routing-row__op">
+                <v-icon class="routing-drag-handle" icon="mdi-drag" size="small" />
+                <span class="routing-row__op-number">{{
+                  formatRoutingOp(element.operation.op)
+                }}</span>
+              </div>
+              <v-text-field
+                v-model="element.operation.operation"
+                class="routing-row__name"
+                hide-details
+                label="Operation"
+              />
+              <v-select
+                v-model="element.operation.department"
+                class="routing-row__department"
+                :error="!element.operation.department"
+                hide-details
+                :items="departmentOptions"
+                label="Department"
+              />
+              <v-text-field
+                class="routing-row__time"
+                :disabled="element.operation.noCycleTime"
+                hide-details
+                label="Cycle Time"
+                :model-value="
+                  element.operation.noCycleTime
+                    ? 'None'
+                    : getCycleInputValue(element.rowId, element.operation.time)
+                "
+                placeholder="m:ss"
+                @blur="onCycleBlur(element.rowId, index)"
+                @focus="onCycleFocus(element.rowId, element.operation.time)"
+                @keydown.enter.prevent="onCycleBlur(element.rowId, index)"
+                @update:model-value="onCycleInput(element.rowId, $event)"
+              />
+              <v-btn
+                :aria-pressed="Boolean(element.operation.noCycleTime)"
+                class="routing-row__no-time"
+                :color="element.operation.noCycleTime ? 'warning' : undefined"
+                :icon="element.operation.noCycleTime ? 'mdi-clock-minus-outline' : 'mdi-clock-outline'"
+                :title="
+                  element.operation.noCycleTime
+                    ? 'No cycle time: op is not costed. Click to give it a cycle time.'
+                    : 'Timed op. Click to mark it as having no cycle time (inspection, deburr, outside process...).'
+                "
+                :variant="element.operation.noCycleTime ? 'tonal' : 'text'"
+                @click="setNoCycleTime(element.rowId, index, !element.operation.noCycleTime)"
+              />
+              <v-btn
+                class="routing-row__delete"
+                color="red"
+                icon="mdi-delete-circle"
+                size="large"
+                title="Remove Operation"
+                variant="text"
+                @click="removeRoutingOperation(element.rowId, index)"
+              />
+            </div>
           </template>
         </draggable>
-        <v-btn color="primary" variant="outlined" @click="addCycleTime">
-          <v-icon icon="mdi-plus" left />Add Cycle Time
-        </v-btn>
-      </template>
+      </div>
+      <v-btn color="primary" variant="outlined" @click="addRoutingOperation">
+        <v-icon icon="mdi-plus" left />Add Operation
+      </v-btn>
 
       <v-divider class="my-4" />
 
@@ -247,7 +269,7 @@
       </v-expansion-panels>
     </v-col>
 
-    <v-col cols="12" md="5">
+    <v-col cols="12" lg="4" md="5">
       <v-sheet border class="pa-4 rounded-lg mb-6">
         <div class="text-subtitle-1 font-weight-bold mb-3">Summary & Details</div>
 
@@ -361,8 +383,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { formatRoutingOp, ROUTING_OTHER_DEPARTMENT, routingOpNumber } from '@repo/utilities/parts';
+import { computed, onMounted, ref, watch } from 'vue';
 import draggable from 'vuedraggable';
+import { fetchDepartments } from '@/lib/machineDepartments';
 import {
   buildRateThresholdGradient,
   getToneForRate,
@@ -371,12 +395,14 @@ import {
 import {
   calculateAssemblyCycleMinutes,
   calculatePartShopRate,
+  calculateTotalCycleMinutes,
   formatCost,
   formatCycle,
   formatCycleLonghand,
   onlyAllowNumeric,
   parseCycle,
 } from '@/plugins/utils';
+import { toastError } from '@/plugins/vue-toast-notification';
 import router from '@/router';
 import { usePartStore } from '@/stores/parts_store';
 
@@ -391,41 +417,62 @@ const { part, partMaterialCost, subComponents } = defineProps<{
 }>();
 const partStore = usePartStore();
 
-// Cycle Times
+// Routing
 
-type CycleEntry = {
-  cycle: Part['cycleTimes'][number];
+type RoutingEntry = {
+  operation: RoutingOperation;
   idx: number;
   rowId: string;
 };
 
 const cycleTimeInputs = ref<Record<string, string>>({});
 const editingCycleInputs = ref<Record<string, boolean>>({});
-const cycleRowIds = ref<string[]>([]);
-let nextCycleRowId = 0;
+const routingRowIds = ref<string[]>([]);
+const departments = ref<Department[]>([]);
+let nextRoutingRowId = 0;
 
-const cycleEntries = computed<CycleEntry[]>({
+onMounted(async () => {
+  try {
+    departments.value = await fetchDepartments();
+  } catch {
+    toastError('Unable to load departments.');
+  }
+});
+
+const departmentOptions = computed(() => [
+  ...departments.value.map((department) => ({ title: department.name, value: department._id })),
+  { title: 'Other', value: ROUTING_OTHER_DEPARTMENT },
+]);
+
+// Op numbers always follow row order: OP10, OP20, OP30...
+function renumberRoutingInPlace() {
+  (part.routing || []).forEach((operation, index) => {
+    const op = routingOpNumber(index);
+    if (operation.op !== op) operation.op = op;
+  });
+}
+
+const routingEntries = computed<RoutingEntry[]>({
   get: () =>
-    (part.cycleTimes || []).map((cycle, idx) => ({
-      cycle,
+    (part.routing || []).map((operation, idx) => ({
+      operation,
       idx,
-      rowId: cycleRowIds.value[idx] ?? `cycle-missing-${idx}`,
+      rowId: routingRowIds.value[idx] ?? `routing-missing-${idx}`,
     })),
   set: (entries) => {
-    part.cycleTimes = entries.map((entry) => entry.cycle);
-    cycleRowIds.value = entries.map((entry) => entry.rowId);
+    part.routing = entries.map((entry) => entry.operation);
+    routingRowIds.value = entries.map((entry) => entry.rowId);
+    renumberRoutingInPlace();
   },
 });
 
-const totalCycleTime = computed(() =>
-  cycleEntries.value.reduce((total, entry) => {
-    if (editingCycleInputs.value[entry.rowId]) {
-      return total + parseCycle(cycleTimeInputs.value[entry.rowId]);
-    }
+const routingSummary = computed(() => {
+  const operations = part.routing || [];
+  const untimedCount = operations.filter((operation) => operation.noCycleTime).length;
+  const count = `${operations.length} op${operations.length === 1 ? '' : 's'}`;
+  return untimedCount ? `${count}, ${untimedCount} without cycle time` : count;
+});
 
-    return total + (entry.cycle.time || 0);
-  }, 0),
-);
 const hasSubComponents = computed(() => (subComponents || []).length > 0);
 const subComponentById = computed(() => {
   return new Map(partStore.parts.map((component) => [component._id, component]));
@@ -440,7 +487,7 @@ const subComponentCycleRows = computed(() => {
     qty: Math.max(1, Number(subComponent.entry.qty) || 1),
     part: subComponent.part.part,
     description: subComponent.part.description,
-    operationCount: (subComponent.part.cycleTimes || []).length,
+    operationCount: (subComponent.part.routing || []).length,
     totalCycleTime:
       calculateAssemblyCycleMinutes(subComponent.part, resolvePart) *
       Math.max(1, Number(subComponent.entry.qty) || 1),
@@ -450,29 +497,29 @@ const effectiveTotalCycleTime = computed(() => {
   if (hasSubComponents.value) {
     return subComponentCycleRows.value.reduce(
       (total, component) => total + component.totalCycleTime,
-      0,
+      calculateTotalCycleMinutes(part.routing),
     );
   }
 
   return calculateAssemblyCycleMinutes(part, resolvePart);
 });
 
-const createCycleRowId = () => `cycle-${nextCycleRowId++}`;
+const createRoutingRowId = () => `routing-${nextRoutingRowId++}`;
 
-const syncCycleRowIds = (count: number) => {
-  while (cycleRowIds.value.length < count) {
-    cycleRowIds.value.push(createCycleRowId());
+const syncRoutingRowIds = (count: number) => {
+  while (routingRowIds.value.length < count) {
+    routingRowIds.value.push(createRoutingRowId());
   }
 
-  if (cycleRowIds.value.length > count) {
-    cycleRowIds.value.splice(count);
+  if (routingRowIds.value.length > count) {
+    routingRowIds.value.splice(count);
   }
 };
 
 watch(
-  () => part.cycleTimes?.length ?? 0,
+  () => part.routing?.length ?? 0,
   (count) => {
-    syncCycleRowIds(count);
+    syncRoutingRowIds(count);
   },
   { immediate: true },
 );
@@ -502,34 +549,49 @@ const onCycleInput = (rowId: string, value: string) => {
 };
 
 const onCycleBlur = (rowId: string, idx: number) => {
-  if (!part.cycleTimes?.[idx]) {
+  const operation = part.routing?.[idx];
+  if (!operation || operation.noCycleTime) {
+    editingCycleInputs.value[rowId] = false;
     return;
   }
 
   const parsed = parseCycle(cycleTimeInputs.value[rowId]);
-  part.cycleTimes[idx].time = parsed;
+  operation.time = parsed;
   cycleTimeInputs.value[rowId] = formatCycle(parsed);
   editingCycleInputs.value[rowId] = false;
 };
 
-const addCycleTime = () => {
-  if (part.cycleTimes) {
-    part.cycleTimes.push({ operation: '', time: 0 });
-    const rowId = createCycleRowId();
-    cycleRowIds.value.push(rowId);
-    return;
-  }
+const setNoCycleTime = (rowId: string, idx: number, noCycleTime: boolean) => {
+  const operation = part.routing?.[idx];
+  if (!operation) return;
 
-  part.cycleTimes = [{ operation: '', time: 0 }];
-  const rowId = createCycleRowId();
-  cycleRowIds.value = [rowId];
+  operation.noCycleTime = noCycleTime;
+  if (noCycleTime) {
+    operation.time = 0;
+    delete cycleTimeInputs.value[rowId];
+    editingCycleInputs.value[rowId] = false;
+  }
 };
 
-const removeCycleTime = (rowId: string, idx: number) => {
-  part.cycleTimes.splice(idx, 1);
-  cycleRowIds.value.splice(idx, 1);
+const addRoutingOperation = () => {
+  if (!part.routing) part.routing = [];
+
+  part.routing.push({
+    op: routingOpNumber(part.routing.length),
+    operation: '',
+    department: null,
+    time: 0,
+    noCycleTime: false,
+  });
+  routingRowIds.value.push(createRoutingRowId());
+};
+
+const removeRoutingOperation = (rowId: string, idx: number) => {
+  part.routing.splice(idx, 1);
+  routingRowIds.value.splice(idx, 1);
   delete cycleTimeInputs.value[rowId];
   delete editingCycleInputs.value[rowId];
+  renumberRoutingInPlace();
 };
 
 // Pricing
@@ -775,31 +837,82 @@ function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
   font-size: 0.7rem;
 }
 
-.cycle-operation-field {
-  position: relative;
+.routing-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.cycle-time-drag-handle {
+.routing-list {
+  container-type: inline-size;
+}
+
+.routing-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 170px 128px auto 44px;
+  grid-template-areas: "op name department time no-time delete";
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.routing-row__op {
+  grid-area: op;
   display: inline-flex;
   align-items: center;
-  cursor: grab;
+  gap: 2px;
 }
 
-.cycle-operation-field__handle {
-  position: absolute;
-  top: 38px;
-  left: 12px;
-  transform: translateY(-50%);
-  z-index: 1;
+.routing-row__op-number {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.routing-row__name {
+  grid-area: name;
+}
+
+.routing-row__department {
+  grid-area: department;
+}
+
+.routing-row__time {
+  grid-area: time;
+}
+
+.routing-row__no-time {
+  grid-area: no-time;
+  white-space: nowrap;
+}
+
+.routing-row__delete {
+  grid-area: delete;
+}
+
+/* Narrow editors: operation name gets its own line, the rest wraps beneath it. */
+@container (max-width: 640px) {
+  .routing-row {
+    grid-template-columns: 76px minmax(0, 1fr) 128px auto 44px;
+    grid-template-areas:
+      "op name name name delete"
+      ". department time no-time no-time";
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  }
+}
+
+.routing-drag-handle {
+  cursor: grab;
   color: rgba(var(--v-theme-on-surface), 0.65);
 }
 
-.cycle-operation-field__input .v-field__input {
-  padding-inline-start: 32px;
+.routing-drag-handle:active {
+  cursor: grabbing;
 }
 
-.cycle-time-drag-handle:active {
-  cursor: grabbing;
+.routing-row--ghost {
+  opacity: 0.4;
 }
 
 .target-slider .v-slider-track {

@@ -142,7 +142,13 @@
                     <v-card-text>
                       <div class="production-entry__header mb-4">
                         <div>
-                          <div class="text-subtitle-1 font-weight-medium">Task {{ index + 1 }}</div>
+                          <div class="text-subtitle-1 font-weight-medium">
+                            Task {{ index + 1 }}
+                            <span v-if="task.op" class="production-entry__op">
+                              {{ formatRoutingOp(task.op) }}
+                              <template v-if="task.operation"> · {{ task.operation }}</template>
+                            </span>
+                          </div>
                           <div class="text-body-2 text-medium-emphasis">
                             {{ task.machineName }}
                             • {{ machineTypeLabel(task.machineType) }}
@@ -619,6 +625,28 @@
           <div v-if="selectedStartTaskMachine" class="text-body-2 mt-4">
             Selected machine: {{ selectedStartTaskMachine.displayName }}
           </div>
+
+          <v-select
+            v-if="jobRouting.length && selectedStartTaskMachine"
+            v-model="selectedStartTaskOp"
+            class="mt-4"
+            clearable
+            :disabled="!startTaskDepartmentOps.length"
+            :hint="startTaskOpHint"
+            item-title="title"
+            item-value="value"
+            :items="startTaskOpOptions"
+            label="Operation"
+            persistent-hint
+          >
+            <template #item="{ props, item }">
+              <v-list-item v-bind="props" :subtitle="item.subtitle">
+                <template v-if="item.suggested" #append>
+                  <v-chip color="success" size="x-small" variant="tonal">Next</v-chip>
+                </template>
+              </v-list-item>
+            </template>
+          </v-select>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -734,6 +762,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatRoutingOp } from '@repo/utilities/parts';
 import { calculateTaskBusinessDurationMs } from '@repo/utilities/time';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -974,6 +1003,47 @@ const canOpenStartTaskDialog = computed(
 );
 const canConfirmStartTask = computed(
   () => canOpenStartTaskDialog.value && Boolean(selectedStartTaskMachine.value),
+);
+const selectedStartTaskOp = ref<number | null>(null);
+const jobRouting = computed<RoutingOperation[]>(() => {
+  const jobPart = job.value?.part;
+  return jobPart && typeof jobPart === 'object' ? (jobPart.routing ?? []) : [];
+});
+// Ops routed to the selected machine's department; the task may pick any of them.
+const startTaskDepartmentOps = computed(() => {
+  const departmentId = selectedStartTaskMachine.value?.departmentId;
+  if (!departmentId) return [];
+  return jobRouting.value.filter((operation) => operation.department === departmentId);
+});
+const startedTaskOps = computed(
+  () => new Set(productionTasks.value.map((task) => task.op).filter(Boolean)),
+);
+// Next op: the department's first op no task on this job has started yet.
+const suggestedStartTaskOp = computed(
+  () =>
+    startTaskDepartmentOps.value.find((operation) => !startedTaskOps.value.has(operation.op)) ??
+    null,
+);
+const startTaskOpOptions = computed(() =>
+  startTaskDepartmentOps.value.map((operation) => ({
+    title: [formatRoutingOp(operation.op), operation.operation].filter(Boolean).join(' · '),
+    value: operation.op,
+    subtitle: startedTaskOps.value.has(operation.op) ? 'Already started on this job' : undefined,
+    suggested: operation.op === suggestedStartTaskOp.value?.op,
+  })),
+);
+const startTaskOpHint = computed(() => {
+  const departmentName = selectedStartTaskMachine.value?.department || 'this department';
+  if (!startTaskDepartmentOps.value.length) return `No routing ops for ${departmentName}.`;
+  if (!suggestedStartTaskOp.value) return `Every ${departmentName} op has been started.`;
+  return `Suggested next op for ${departmentName}.`;
+});
+
+watch(
+  () => selectedStartTaskMachine.value?.id,
+  () => {
+    selectedStartTaskOp.value = suggestedStartTaskOp.value?.op ?? null;
+  },
 );
 
 watch(
@@ -1949,6 +2019,7 @@ function openStartTaskDialog() {
 function closeStartTaskDialog() {
   startTaskDialog.value = false;
   resetStartTaskMachineSelection();
+  selectedStartTaskOp.value = null;
 }
 
 async function confirmStartTask() {
@@ -1962,6 +2033,7 @@ async function confirmStartTask() {
       machineName:
         selectedStartTaskMachine.value.displayName || selectedStartTaskMachine.value.name,
       machineType: selectedStartTaskMachine.value.type,
+      ...startTaskOperationFields(),
       startedAt: currentTimestampValue(),
       endedAt: null,
     },
@@ -1981,6 +2053,13 @@ async function confirmStartTask() {
   } finally {
     productionTaskLoading.value = false;
   }
+}
+
+function startTaskOperationFields() {
+  const operation = startTaskDepartmentOps.value.find(
+    (candidate) => candidate.op === selectedStartTaskOp.value,
+  );
+  return operation ? { op: operation.op, operation: operation.operation || null } : {};
 }
 
 function requestEndProductionTask(taskId: string) {
@@ -2472,6 +2551,12 @@ function machineAvailabilityClass(machine: StartTaskMachineOption) {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.production-entry__op {
+  margin-left: 8px;
+  font-weight: 700;
+  color: rgb(var(--v-theme-primary));
 }
 
 .production-dialog__details {

@@ -1,7 +1,11 @@
+import { formatRoutingOp } from '@repo/utilities/parts';
 import { calculateTaskBusinessDurationMs } from '@repo/utilities/time';
 import { DateTime } from 'luxon';
 import type { Transporter } from 'nodemailer';
 import JobModel from '../database/lib/job/job_model.js';
+// Registers the departments model that machine.department populates from.
+import '../database/lib/department/department_model.js';
+import Machine from '../database/lib/machine/index.js';
 import Reports from '../database/lib/report/report_service.js';
 import logger from '../logger.js';
 
@@ -20,6 +24,8 @@ type JobReportTask = JobProductionTask & {
   /** When this row's start or stop happened; a reopened task has one start per run. */
   eventAt: string | Date | null | undefined;
   reopened: boolean;
+  /** Department of the machine the task ran on. */
+  department: string;
 };
 
 type JobReportShipment = JobShipmentRecord & {
@@ -40,8 +46,11 @@ export async function sendProductionReport(
 
   const now = getReportNow(reportDate);
   const window = getReportWindow(period, now);
-  const jobs = await loadJobsForReport(window.start.toJSDate(), window.end.toJSDate());
-  const report = buildJobReport(jobs, window, now, period);
+  const [jobs, departmentByMachineId] = await Promise.all([
+    loadJobsForReport(window.start.toJSDate(), window.end.toJSDate()),
+    loadMachineDepartments(),
+  ]);
+  const report = buildJobReport(jobs, window, now, period, departmentByMachineId);
 
   return transporter.sendMail({
     from: 'noreply@bkmachine.net',
@@ -114,11 +123,26 @@ async function loadJobsForReport(start: Date, end: Date): Promise<JobReportJob[]
     .sort({ jobNumber: 1 })) as unknown as JobReportJob[];
 }
 
+async function loadMachineDepartments(): Promise<Map<string, string>> {
+  const machines = await Machine.find({}, { department: 1 }).populate('department');
+  return new Map(
+    machines.map((machine) => {
+      const department = machine.department as unknown;
+      const name =
+        department && typeof department === 'object' && 'name' in department
+          ? String(department.name ?? '').trim()
+          : '';
+      return [machine._id.toString(), name];
+    }),
+  );
+}
+
 function buildJobReport(
   jobs: JobReportJob[],
   window: { start: DateTime; end: DateTime },
   now: DateTime,
   period: JobReportPeriod,
+  departmentByMachineId: ReadonlyMap<string, string> = new Map(),
 ) {
   const createdJobs = jobs
     .filter((job) => isDateInWindow(job.createdAt, window))
@@ -129,8 +153,8 @@ function buildJobReport(
   const closedJobs = jobs
     .filter((job) => isDateInWindow(job.completedOn, window))
     .sort(compareReportJobs);
-  const startedTasks = collectTaskEvents(jobs, window, now, 'startedAt');
-  const stoppedTasks = collectTaskEvents(jobs, window, now, 'endedAt');
+  const startedTasks = collectTaskEvents(jobs, window, now, 'startedAt', departmentByMachineId);
+  const stoppedTasks = collectTaskEvents(jobs, window, now, 'endedAt', departmentByMachineId);
   const shipments = collectShipments(jobs, window);
 
   return {
@@ -162,6 +186,7 @@ function collectTaskEvents(
   window: { start: DateTime; end: DateTime },
   now: DateTime,
   field: 'startedAt' | 'endedAt',
+  departmentByMachineId: ReadonlyMap<string, string>,
 ): JobReportTask[] {
   const results: JobReportTask[] = [];
   for (const job of jobs) {
@@ -182,9 +207,12 @@ function collectTaskEvents(
           machineId: task.machineId,
           machineName: task.machineName,
           machineType: task.machineType,
+          op: task.op ?? null,
+          operation: task.operation ?? null,
           startedAt: task.startedAt,
           endedAt: task.endedAt,
           runs: task.runs,
+          department: departmentByMachineId.get(task.machineId) ?? '',
           job,
           businessDurationMs,
           ...event,
@@ -312,12 +340,10 @@ function renderTaskSection(title: string, tasks: JobReportTask[], field: 'starte
   const includeMachiningComplete = field === 'endedAt';
   const includeProductionQty = field === 'endedAt';
   const widths = includeDuration
-    ? ['6%', '14%', '28%', '10%', '8%', '7%', '8%', '5%', '12%']
-    : ['6%', '14%', '35%', '18%', '15%', '12%'];
+    ? ['5%', '10%', '18%', '11%', '9%', '12%', '7%', '9%', '9%', '10%']
+    : ['6%', '13%', '27%', '15%', '15%', '15%', '9%'];
   const eventTimeHeader = includeEventTime ? tableHeader(isStarted ? 'Started' : 'Stopped') : '';
-  const taskHeaders = isStarted
-    ? `${eventTimeHeader}${tableHeader('Machine')}`
-    : `${eventTimeHeader}${tableHeader('Machine')}`;
+  const taskHeaders = `${eventTimeHeader}${tableHeader('Machine')}${tableHeader('Op')}`;
   return `<h3 style="margin: 18px 0 8px 0;">${escapeHtml(title)}</h3><table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px;">${tableColumns(widths)}<thead><tr>${tableHeader('Job #')}${tableHeader('Customer')}${tableHeader('Part')}${taskHeaders}${includeDuration ? tableHeader('Est. Days') : ''}${includeMachiningComplete ? tableHeader('Machining Complete') : ''}${includeProductionQty ? tableHeader('Production Qty') : ''}${tableHeader('PO #s')}</tr></thead><tbody>${tasks
     .map((task) =>
       renderTaskRow(
@@ -362,8 +388,21 @@ function renderTaskRow(
   const isMachiningComplete = task.job.status === 'machining_complete';
   const productionQty = isMachiningComplete ? String(task.job.actualProductionQty ?? '') : '';
   const eventTimeCell = includeEventTime ? tableCell(formatReportDate(task.eventAt)) : '';
-  const taskCells = `${eventTimeCell}${tableCell(formatReportTaskMachine(task))}`;
+  const taskCells = `${eventTimeCell}${machineCell(task)}${tableCell(formatReportTaskOp(task))}`;
   return `<tr>${tableCell(task.job.jobNumber)}${tableCell(getCustomerName(task.job))}${tableCell(getPartName(task.job))}${taskCells}${includeDuration ? tableCell(formatBusinessDays(task.businessDurationMs)) : ''}${includeMachiningComplete ? tableCell(isMachiningComplete ? '[x]' : '[ ]') : ''}${includeProductionQty ? tableCell(productionQty) : ''}${tableCell(formatJobPurchaseOrders(task.job))}</tr>`;
+}
+
+// Machine name with its department as a muted second line.
+function machineCell(task: JobReportTask) {
+  const department = task.department
+    ? `<div style="color: #666; font-size: 12px;">${escapeHtml(task.department)}</div>`
+    : '';
+  return `<td style="padding: 8px; border-bottom: 1px solid #eee; vertical-align: top;">${escapeHtml(formatReportTaskMachine(task))}${department}</td>`;
+}
+
+function formatReportTaskOp(task: JobReportTask) {
+  if (!task.op) return '';
+  return [formatRoutingOp(task.op), task.operation].filter(Boolean).join(' - ');
 }
 
 function formatReportTaskMachine(task: JobReportTask) {
@@ -497,6 +536,9 @@ function buildJobReportCsv(
     'productionQty',
     'po',
     'jobPoNumbers',
+    'department',
+    'op',
+    'operation',
   ];
   const rows = [
     ...createdJobs.map((job) => [
@@ -510,7 +552,7 @@ function buildJobReportCsv(
       '',
       '',
       '',
-      formatJobPurchaseOrdersCsv(job),
+      formatJobPurchaseOrders(job),
       '',
     ]),
     ...startedJobs.map((job) => [
@@ -524,7 +566,7 @@ function buildJobReportCsv(
       '',
       '',
       '',
-      formatJobPurchaseOrdersCsv(job),
+      formatJobPurchaseOrders(job),
       '',
     ]),
     ...startedTasks.map((task) => [
@@ -538,8 +580,9 @@ function buildJobReportCsv(
       '',
       '',
       '',
-      formatJobPurchaseOrdersCsv(task.job),
+      formatJobPurchaseOrders(task.job),
       '',
+      ...taskCsvColumns(task),
     ]),
     ...stoppedTasks.map((task) => [
       'Tasks Stopped',
@@ -553,7 +596,8 @@ function buildJobReportCsv(
       task.job.status === 'machining_complete' ? 'true' : 'false',
       task.job.status === 'machining_complete' ? String(task.job.actualProductionQty ?? '') : '',
       '',
-      formatJobPurchaseOrdersCsv(task.job),
+      formatJobPurchaseOrders(task.job),
+      ...taskCsvColumns(task),
     ]),
     ...shipments.map((shipment) => [
       'Shipments Made',
@@ -567,7 +611,7 @@ function buildJobReportCsv(
       '',
       '',
       shipment.po || shipment.job.customerPo || '',
-      formatJobPurchaseOrdersCsv(shipment.job),
+      formatJobPurchaseOrders(shipment.job),
     ]),
     ...closedJobs.map((job) => [
       'Jobs Closed',
@@ -581,10 +625,20 @@ function buildJobReportCsv(
       '',
       '',
       '',
-      formatJobPurchaseOrdersCsv(job),
+      formatJobPurchaseOrders(job),
     ]),
   ];
-  return [header, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n');
+  return [header, ...rows.map((row) => padCsvRow(row, header.length))]
+    .map((row) => row.map(escapeCsvValue).join(','))
+    .join('\n');
+}
+
+function taskCsvColumns(task: JobReportTask) {
+  return [task.department, task.op ? formatRoutingOp(task.op) : '', task.operation ?? ''];
+}
+
+function padCsvRow(row: string[], length: number) {
+  return row.length < length ? [...row, ...new Array(length - row.length).fill('')] : row;
 }
 
 function formatCsvDate(value: string | Date | null | undefined) {
@@ -597,10 +651,6 @@ function formatCsvDate(value: string | Date | null | undefined) {
 function formatShipmentCsvDate(value: string | Date | null | undefined) {
   const date = normalizeReportDate(value);
   return date ? DateTime.fromJSDate(date, { zone: REPORT_TIME_ZONE }).toFormat('yyyy-LL-dd') : '';
-}
-
-function formatJobPurchaseOrdersCsv(job: JobReportJob) {
-  return JSON.stringify(getJobPurchaseOrders(job));
 }
 
 function escapeCsvValue(value: unknown) {

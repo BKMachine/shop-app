@@ -86,11 +86,19 @@ function normalizeProductionTasks(
       machineId,
       machineName,
       machineType: task.machineType,
+      ...normalizeProductionTaskOperation(task),
       startedAt: runs?.[0]?.startedAt ?? startedAt,
       endedAt: runs ? (runs[runs.length - 1]?.endedAt ?? null) : normalizeDate(task.endedAt),
       ...(runs ? { runs } : {}),
     };
   });
+}
+
+function normalizeProductionTaskOperation(task: JobProductionTask) {
+  const op = Number(task.op);
+  if (!Number.isInteger(op) || op <= 0) return {};
+
+  return { op, operation: task.operation?.trim() || null };
 }
 
 function normalizeProductionTaskRuns(taskId: string, runs: JobProductionTaskRun[] | undefined) {
@@ -425,7 +433,7 @@ function extractPartCostData(
     'price' in value ||
     'derived' in value ||
     'subComponentIds' in value ||
-    'cycleTimes' in value ||
+    'routing' in value ||
     'additionalCosts' in value ||
     'customerSuppliedMaterial' in value ||
     'material' in value
@@ -473,7 +481,7 @@ async function listMachineDashboard(): Promise<MachineJobDashboardResponse> {
         description: 1,
         img: 1,
         price: 1,
-        cycleTimes: 1,
+        routing: 1,
         additionalCosts: 1,
         material: 1,
         customerSuppliedMaterial: 1,

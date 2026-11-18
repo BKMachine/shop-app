@@ -10,6 +10,18 @@ type PartDocumentFields = Omit<PartFields, 'customer' | 'material'> & {
   derived?: PartDerived;
 };
 
+const routingOperationSchema = new Schema<RoutingOperation>(
+  {
+    op: { type: Number, required: true },
+    operation: { type: String, default: '' },
+    // Department _id, 'other', or null while unassigned.
+    department: { type: String, default: null },
+    time: { type: Number, default: 0 },
+    noCycleTime: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
+
 const schema = new Schema<PartDocumentFields>({
   part: { type: String, required: true },
   description: { type: String, required: true },
@@ -29,7 +41,9 @@ const schema = new Schema<PartDocumentFields>({
   barLength: { type: Number, default: 0 },
   remnantLength: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
-  cycleTimes: [{ operation: String, time: Number }],
+  // Legacy `cycleTimes` stays in stored documents until it is dropped after the routing rollout;
+  // migratePartRoutingFromCycleTimes copies it into `routing`.
+  routing: { type: [routingOperationSchema], default: undefined },
   additionalCosts: [{ name: String, cost: Number, url: String }],
   price: { type: Number, default: 0 },
   subComponentIds: [

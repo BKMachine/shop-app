@@ -10,9 +10,12 @@ interface MaterialCostInput extends MaterialUsageInput {
   customerSuppliedMaterial?: boolean;
 }
 
-interface CycleTimeInput {
+interface RoutingOperationInput {
+  op?: number | null;
   operation?: string | null;
+  department?: string | null;
   time?: number | null;
+  noCycleTime?: boolean | null;
 }
 
 interface AdditionalCostInput {
@@ -20,14 +23,14 @@ interface AdditionalCostInput {
 }
 
 interface RateInputPart extends MaterialCostInput {
-  cycleTimes?: CycleTimeInput[] | null;
+  routing?: RoutingOperationInput[] | null;
   additionalCosts?: AdditionalCostInput[] | null;
   material?: unknown;
 }
 
 interface AssemblyPartInput extends MaterialCostInput {
   _id?: string;
-  cycleTimes?: CycleTimeInput[] | null;
+  routing?: RoutingOperationInput[] | null;
   additionalCosts?: AdditionalCostInput[] | null;
   material?: unknown;
   subComponentIds?: unknown;
@@ -90,10 +93,59 @@ export function calculatePartMaterialCost<TPart extends MaterialCostInput>(
   return (materialCost / partsPerBar) * blanksPerPart;
 }
 
-export function calculateTotalCycleMinutes<TCycleTime extends CycleTimeInput>(
-  cycleTimes: TCycleTime[] | null | undefined,
+/** Department value for routing ops done outside the shop's named departments. */
+export const ROUTING_OTHER_DEPARTMENT = 'other';
+
+export const ROUTING_OP_INCREMENT = 10;
+
+/** Op number for a routing row: OP10, OP20, OP30... by position. */
+export function routingOpNumber(index: number): number {
+  return (index + 1) * ROUTING_OP_INCREMENT;
+}
+
+export function formatRoutingOp(op: number | null | undefined): string {
+  return `OP${Number(op) || 0}`;
+}
+
+/** Op numbers always follow row order in increments of 10. */
+export function renumberRouting<TOperation extends RoutingOperationInput>(
+  routing: TOperation[] | null | undefined,
+): TOperation[] {
+  return (routing || []).map((operation, index) => ({ ...operation, op: routingOpNumber(index) }));
+}
+
+/** Display name for a routing op's department: the department name, 'Other', or '' if unset. */
+export function routingDepartmentLabel(
+  department: string | null | undefined,
+  departmentNameById: ReadonlyMap<string, string>,
+): string {
+  if (!department) return '';
+  if (department === ROUTING_OTHER_DEPARTMENT) return 'Other';
+  return departmentNameById.get(department) ?? '';
+}
+
+export function isTimedRoutingOperation(operation: RoutingOperationInput): boolean {
+  return !operation.noCycleTime;
+}
+
+export function calculateTotalCycleMinutes<TOperation extends RoutingOperationInput>(
+  routing: TOperation[] | null | undefined,
 ): number {
-  return (cycleTimes || []).reduce((total, cycle) => total + (Number(cycle.time) || 0), 0);
+  return (routing || []).reduce(
+    (total, operation) =>
+      isTimedRoutingOperation(operation) ? total + (Number(operation.time) || 0) : total,
+    0,
+  );
+}
+
+/**
+ * A routing row is complete with an operation name, a department (Other counts) and, unless
+ * flagged as having no cycle time, a time above zero. Placeholder rows count as incomplete.
+ */
+export function isIncompleteRoutingOperation(operation: RoutingOperationInput): boolean {
+  if (!operation.operation?.trim()) return true;
+  if (!operation.department?.trim()) return true;
+  return isTimedRoutingOperation(operation) && !(Number(operation.time) > 0);
 }
 
 function normalizeSubComponentIds(subComponentIds: unknown): PartSubComponent[] {
@@ -125,13 +177,13 @@ export function calculateAssemblyCycleMinutes<TPart extends AssemblyPartInput>(
   resolvePart: (id: string) => TPart | undefined,
   visited = new Set<string>(),
 ): number {
-  if (!part?._id) return calculateTotalCycleMinutes(part?.cycleTimes);
+  if (!part?._id) return calculateTotalCycleMinutes(part?.routing);
   if (visited.has(part._id)) return 0;
 
   const nextVisited = new Set(visited);
   nextVisited.add(part._id);
 
-  const ownCycleMinutes = calculateTotalCycleMinutes(part.cycleTimes);
+  const ownCycleMinutes = calculateTotalCycleMinutes(part.routing);
   const subComponents = normalizeSubComponentIds(part.subComponentIds);
   if (!subComponents.length) return ownCycleMinutes;
 
@@ -185,17 +237,18 @@ export function calculatePartShopRate(
 }
 
 export function hasMissingRateInputs<TPart extends RateInputPart>(part: TPart): boolean {
-  const hasCycleTimes = (part.cycleTimes || []).some((cycle) => Number(cycle.time) > 0);
-  // Every cycle row needs both an operation name and a time. Rows added as
-  // placeholders for upcoming operations (no name yet) count as incomplete.
-  const hasIncompleteCycleTimeEntry = (part.cycleTimes || []).some((cycle) => {
-    const operationName = cycle.operation?.trim() || '';
-    return !operationName || !(Number(cycle.time) > 0);
-  });
+  const routing = part.routing || [];
+  // An op explicitly marked "no cycle time" is real routing info, just like a timed op.
+  const hasRoutingTimeInfo = routing.some(
+    (operation) => !isTimedRoutingOperation(operation) || Number(operation.time) > 0,
+  );
+  const hasIncompleteCycleTimeEntry = routing.some(isIncompleteRoutingOperation);
   const hasAdditionalCost = (part.additionalCosts || []).some((cost) => Number(cost.cost) > 0);
   const isMissingMaterial = !part.material && !part.customerSuppliedMaterial;
 
-  return (!hasCycleTimes && !hasAdditionalCost) || hasIncompleteCycleTimeEntry || isMissingMaterial;
+  return (
+    (!hasRoutingTimeInfo && !hasAdditionalCost) || hasIncompleteCycleTimeEntry || isMissingMaterial
+  );
 }
 
 export function hasIncompletePartCostData(part: AssemblyPartInput | null | undefined): boolean {
@@ -209,7 +262,11 @@ export function hasIncompletePartCostData(part: AssemblyPartInput | null | undef
     part.hasSubComponents === true || normalizeSubComponentIds(part.subComponentIds).length > 0;
 
   if (hasSubComponents) {
-    return Boolean(part.derived?.hasIncompleteSubComponentCosts);
+    // An assembly's own routing (assemble, inspect...) still needs complete rows.
+    return (
+      Boolean(part.derived?.hasIncompleteSubComponentCosts) ||
+      (part.routing || []).some(isIncompleteRoutingOperation)
+    );
   }
 
   return hasMissingRateInputs(part);

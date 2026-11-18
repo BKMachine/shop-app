@@ -619,7 +619,7 @@ const defaultPartValues: Pick<
   | 'blanksPerPart'
   | 'barLength'
   | 'remnantLength'
-  | 'cycleTimes'
+  | 'routing'
   | 'additionalCosts'
   | 'price'
   | 'needsReview'
@@ -631,7 +631,7 @@ const defaultPartValues: Pick<
   blanksPerPart: 1,
   barLength: 0,
   remnantLength: 0,
-  cycleTimes: [],
+  routing: [],
   additionalCosts: [],
   price: 0,
   needsReview: true,
@@ -1357,7 +1357,7 @@ const comparableFieldLabels = {
   materialLength: 'Material Length',
   barLength: 'Bar Length',
   remnantLength: 'Remnant Length',
-  cycleTimes: 'Cycle Times',
+  routing: 'Routing',
   additionalCosts: 'Additional Costs',
   price: 'Price',
   stock: 'Stock Qty',
@@ -1423,9 +1423,9 @@ function formatChangedPartFieldValue(
 
     return labels.slice(0, 3).join(', ') + (labels.length > 3 ? ` +${labels.length - 3} more` : '');
   }
-  if (key === 'cycleTimes') {
-    const cycleTimes = rawValue as unknown[] | undefined;
-    return `${cycleTimes?.length || 0} entries`;
+  if (key === 'routing') {
+    const routing = rawValue as unknown[] | undefined;
+    return `${routing?.length || 0} ops`;
   }
   if (key === 'additionalCosts') {
     const additionalCosts = rawValue as unknown[] | undefined;

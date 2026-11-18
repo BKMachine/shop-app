@@ -1,5 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
+import { routingDepartmentLabel } from '@repo/utilities/parts';
 import * as z from 'zod';
+import Departments from '../../database/lib/department/department_service.js';
 import Parts from '../../database/lib/part/part_service.js';
 import mongoObjectId from '../../utilities/mongoObjectId.js';
 import { findCustomerId, jsonResult, PageInput, pageResult } from './utils.js';
@@ -58,7 +60,7 @@ export default function registerPartTools(server: McpServer): void {
     {
       title: 'Find parts',
       description:
-        'Search the parts the shop makes for customers. Results are summaries with the part id; use get_part for cycle times, material and costs. price is the sale price per part and shopRate the earnings in $/hour after material.',
+        'Search the parts the shop makes for customers. Results are summaries with the part id; use get_part for routing and cycle times, material and costs. price is the sale price per part and shopRate the earnings in $/hour after material.',
       inputSchema: FindPartsInput,
       annotations: { readOnlyHint: true },
     },
@@ -76,15 +78,16 @@ export default function registerPartTools(server: McpServer): void {
     {
       title: 'Get part',
       description:
-        "A part's full details: customer, stock and location, sale price, material and how it is cut, cycle times per operation in minutes, additional costs, the assemblies it is used in and its sub-components. costs gives the per-part material cost, total cycle minutes and shop rate ($/hour after material), counting sub-components. Lengths are in inches.",
+        "A part's full details: customer, stock and location, sale price, material and how it is cut, routing (operations in run order with op number, department and cycle minutes; ops flagged noCycleTime are not costed), additional costs, the assemblies it is used in and its sub-components. costs gives the per-part material cost, total cycle minutes and shop rate ($/hour after material), counting sub-components. Lengths are in inches.",
       inputSchema: GetPartInput,
       annotations: { readOnlyHint: true },
     },
     async ({ partId }) => {
-      const [part, costs, relations] = await Promise.all([
+      const [part, costs, relations, departmentNameById] = await Promise.all([
         Parts.findById(partId),
         Parts.getCostSummary(partId),
         Parts.listRelations(partId),
+        Departments.getNameById(),
       ]);
       if (!part) throw new Error(`No part with id ${partId}.`);
 
@@ -120,7 +123,13 @@ export default function registerPartTools(server: McpServer): void {
         blanksPerPart: part.blanksPerPart,
         barLength: part.barLength,
         remnantLength: part.remnantLength,
-        cycleTimes: part.cycleTimes.map(({ operation, time }) => ({ operation, minutes: time })),
+        routing: (part.routing || []).map((operation) => ({
+          op: operation.op,
+          operation: operation.operation,
+          department: routingDepartmentLabel(operation.department, departmentNameById) || null,
+          minutes: operation.noCycleTime ? null : operation.time,
+          noCycleTime: Boolean(operation.noCycleTime),
+        })),
         additionalCosts: part.additionalCosts.map(({ name, cost, url }) => ({
           name,
           cost,

@@ -1,3 +1,4 @@
+import { renumberRouting } from '@repo/utilities/parts';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from '@/plugins/axios';
@@ -151,9 +152,12 @@ export const usePartStore = defineStore('parts', () => {
       blanksPerPart: Math.max(1, Number(part.blanksPerPart) || 1),
       barLength: part.barLength,
       remnantLength: part.remnantLength,
-      cycleTimes: (part.cycleTimes || []).map((cycle) => ({
-        operation: cycle.operation,
-        time: Number(cycle.time) || 0,
+      routing: renumberRouting(part.routing).map((operation) => ({
+        op: operation.op,
+        operation: operation.operation?.trim() || '',
+        department: operation.department || null,
+        time: operation.noCycleTime ? 0 : Math.max(0, Number(operation.time) || 0),
+        noCycleTime: Boolean(operation.noCycleTime),
       })),
       additionalCosts: (part.additionalCosts || []).map((cost) => ({
         name: cost.name,

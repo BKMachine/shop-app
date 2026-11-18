@@ -8,7 +8,7 @@ type PartRecord = Pick<Part, '_id' | 'customer' | 'part' | 'description' | 'revi
     Pick<
       Part,
       | 'img'
-      | 'cycleTimes'
+      | 'routing'
       | 'additionalCosts'
       | 'material'
       | 'customerSuppliedMaterial'
@@ -443,7 +443,7 @@ function buildPart(overrides: Partial<PartRecord> = {}): PartRecord {
     description: 'Widget',
     revision: 'A',
     price: 0,
-    cycleTimes: [],
+    routing: [],
     additionalCosts: [],
     material: undefined,
     customerSuppliedMaterial: false,
@@ -699,6 +699,8 @@ test('update stores production tasks on the job', async () => {
           machineId: 'machine-1',
           machineName: 'VF-2',
           machineType: 'mill',
+          op: 20,
+          operation: ' Mill flats ',
           startedAt: new Date('2026-07-16T14:00:00.000Z'),
           endedAt: new Date('2026-07-16T15:30:00.000Z'),
         },
@@ -713,6 +715,8 @@ test('update stores production tasks on the job', async () => {
       machineId: 'machine-1',
       machineName: 'VF-2',
       machineType: 'mill',
+      op: 20,
+      operation: 'Mill flats',
     }),
   ]);
   expect(updated.status).toBe('in_process');
@@ -1557,7 +1561,7 @@ test('listMachineDashboard flags incomplete cost data for in-process subcomponen
     PART_ID_1,
     buildPart({
       price: 0,
-      cycleTimes: [{ operation: 'Op 10', time: 0 }],
+      routing: [{ op: 10, operation: 'Op 10', department: 'other', time: 0 }],
       derived: {
         shopRate: 0,
         directSubComponentCount: 0,

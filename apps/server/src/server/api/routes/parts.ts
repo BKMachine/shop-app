@@ -1,3 +1,4 @@
+import { ROUTING_OTHER_DEPARTMENT } from '@repo/utilities/parts';
 import { Router } from 'express';
 import * as z from 'zod';
 import { isValidId } from '../../../database/index.js';
@@ -13,9 +14,12 @@ import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
-const PartCycleTimeSchema = z.strictObject({
+const PartRoutingOperationSchema = z.strictObject({
+  op: z.number().int().nonnegative(),
   operation: z.string(),
-  time: z.number(),
+  department: z.union([mongoObjectId, z.literal(ROUTING_OTHER_DEPARTMENT)]).nullable(),
+  time: z.number().nonnegative(),
+  noCycleTime: z.boolean().optional(),
 });
 
 const PartAdditionalCostSchema = z.strictObject({
@@ -47,7 +51,7 @@ const PartFieldsSchema = z.strictObject({
   blanksPerPart: z.number().positive().optional(),
   barLength: z.number(),
   remnantLength: z.number(),
-  cycleTimes: z.array(PartCycleTimeSchema),
+  routing: z.array(PartRoutingOperationSchema),
   additionalCosts: z.array(PartAdditionalCostSchema),
   price: z.number(),
   subComponentIds: z.array(PartSubComponentSchema).optional(),

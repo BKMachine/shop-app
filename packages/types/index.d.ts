@@ -51,6 +51,13 @@ declare global {
     po?: string;
   }
 
+  interface PrintJobTravelerRoutingOp {
+    /** Display op number, e.g. "OP10". */
+    op: string;
+    operation: string;
+    department: string;
+  }
+
   interface PrintJobTravelerBody {
     jobNumber: number;
     barcodeText: string;
@@ -58,6 +65,7 @@ declare global {
     jobDetails: PrintJobTravelerRow[];
     partDetails: PrintJobTravelerRow[];
     shipmentPlan?: PrintJobTravelerShipment[];
+    routing?: PrintJobTravelerRoutingOp[];
     operatorNotes?: string;
   }
 

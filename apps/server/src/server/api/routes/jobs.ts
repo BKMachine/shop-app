@@ -44,6 +44,8 @@ const productionTaskSchema = z.strictObject({
   machineId: z.string().trim().min(1),
   machineName: z.string().trim().min(1),
   machineType: z.enum(['lathe', 'mill', 'swiss']),
+  op: z.number().int().positive().nullish(),
+  operation: z.string().trim().max(200).nullish(),
   startedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullish(),
   runs: z.array(productionTaskRunSchema).optional(),

@@ -230,6 +230,10 @@ declare global {
     machineId: string;
     machineName: string;
     machineType: MachineType;
+    /** Routing op number (10, 20...) the task works on, as numbered when it started. */
+    op?: number | null;
+    /** Routing operation name, snapshotted when the task started. */
+    operation?: string | null;
     /** First start of the task. */
     startedAt: string | Date;
     /** Latest end of the task; null while a run is active. */

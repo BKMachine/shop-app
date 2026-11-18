@@ -1,7 +1,12 @@
 import { isPieceMaterial } from '@repo/utilities/materials';
-import { calculatePartsPerBar } from '@repo/utilities/parts';
+import {
+  calculatePartsPerBar,
+  formatRoutingOp,
+  routingDepartmentLabel,
+} from '@repo/utilities/parts';
 import { Router } from 'express';
 import { isValidId } from '../../../database/index.js';
+import Departments from '../../../database/lib/department/department_service.js';
 import Jobs from '../../../database/lib/job/job_service.js';
 import MiscSettings from '../../../database/lib/misc_settings/misc_settings_service.js';
 import Part from '../../../database/lib/part/part_model.js';
@@ -115,7 +120,25 @@ function estimatedMaterialUsage(job: Job, part: Part | null) {
   return `${(totalBlanks / partsPerBar).toFixed(1)} bars (${totalBlanks} blanks)`;
 }
 
-function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
+function buildTravelerRouting(
+  part: Part | null,
+  departmentNameById: ReadonlyMap<string, string>,
+): PrintJobTravelerRoutingOp[] | undefined {
+  const routing = part?.routing ?? [];
+  if (!routing.length) return undefined;
+
+  return routing.map((operation) => ({
+    op: formatRoutingOp(operation.op),
+    operation: normalizeTravelerText(operation.operation || ''),
+    department: routingDepartmentLabel(operation.department, departmentNameById),
+  }));
+}
+
+function buildTravelerRows(
+  job: Job,
+  part: Part | null,
+  departmentNameById: ReadonlyMap<string, string> = new Map(),
+): PrintJobTravelerBody {
   const customer = typeof job.customer === 'string' ? null : job.customer;
   const jobPart = typeof job.part === 'string' ? null : job.part;
   const resolvedPart = part ?? jobPart;
@@ -181,6 +204,7 @@ function buildTravelerRows(job: Job, part: Part | null): PrintJobTravelerBody {
     jobDetails,
     partDetails,
     shipmentPlan: travelerShipmentPlan,
+    routing: buildTravelerRouting(resolvedPart, departmentNameById),
     operatorNotes: job.notes || '',
   };
 }
@@ -256,7 +280,8 @@ router.get('/print/jobs/:id/traveler', requireKnownDevice, async (req, res, next
       partId && isValidId(partId)
         ? ((await Part.findById(partId).populate('material').lean()) as Part | null)
         : null;
-    const body = buildTravelerRows(job as unknown as Job, part);
+    const departmentNameById = await Departments.getNameById();
+    const body = buildTravelerRows(job as unknown as Job, part, departmentNameById);
 
     if (body.partImageUrl) {
       body.partImageUrl = new URL(
