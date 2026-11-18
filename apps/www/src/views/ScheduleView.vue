@@ -1416,6 +1416,8 @@ onBeforeUnmount(() => {
     var(--schedule-divider) calc(var(--row-height) - 1px)
   );
   background-size: 100% var(--row-height);
+  /* Vuetify's reset sets no-repeat on everything; these gradients draw one row/day and repeat. */
+  background-repeat: repeat;
 }
 
 .schedule-board__timeline--day-lines {
