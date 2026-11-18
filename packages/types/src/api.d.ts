@@ -57,7 +57,10 @@ declare global {
 
   /* CUSTOMER */
 
-  interface CustomerFields extends PartyFields {}
+  interface CustomerFields extends PartyFields {
+    /** `#rrggbb` used for the customer's jobs on the schedule; empty uses the default. */
+    color?: string;
+  }
 
   interface Customer extends CustomerFields {
     _id: string;
@@ -310,6 +313,63 @@ declare global {
   interface JobListResponse extends PaginatedResultWithValue<Job> {}
 
   interface JobHistoryListResponse extends PaginatedResult<Job> {}
+
+  /* SCHEDULE */
+
+  /** The job fields a schedule tile needs, read from the job when the schedule is loaded. */
+  interface ScheduleEntryJob {
+    _id: string;
+    jobNumber: number;
+    customerId: string;
+    customerName: string;
+    partNumber: string;
+    partDescription: string;
+    qty: number;
+    /** `YYYY-MM-DD`, or null when the job has no due date. */
+    dueDate: string | null;
+    status: JobStatus;
+    priority: JobPriority;
+  }
+
+  /** A job booked onto a machine for a run of whole days. */
+  interface ScheduleEntry {
+    _id: string;
+    job: ScheduleEntryJob;
+    machineId: string;
+    /** First scheduled day, `YYYY-MM-DD`. */
+    start: string;
+    /** Whole days booked, at least 1. */
+    days: number;
+  }
+
+  interface ScheduleEntryCreate {
+    job: string;
+    machineId: string;
+    start: string;
+    days: number;
+  }
+
+  /** How the schedule turns a job's cycle time into a booking length. */
+  interface ScheduleSettings {
+    /** Hour the working day starts, 0–23. */
+    workdayStartHour: number;
+    /** Hour the working day ends, 1–24, after the start. */
+    workdayEndHour: number;
+    /** Working days of the week, 0 = Sunday ... 6 = Saturday. */
+    workdays: number[];
+    /** Percent of the working day a machine is actually cutting, for departments not listed. */
+    defaultUtilization: number;
+    /** Percent of the working day a machine is actually cutting, by department `_id`. */
+    departmentUtilization: Record<string, number>;
+  }
+
+  /** A new machine, start or length for an existing entry. */
+  interface ScheduleEntryPlacement {
+    _id: string;
+    machineId: string;
+    start: string;
+    days: number;
+  }
 
   interface MachineJobDashboardRow {
     machineId: string;

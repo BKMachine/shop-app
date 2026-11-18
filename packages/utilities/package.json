@@ -28,6 +28,10 @@
     "./parts": {
       "import": "./dist/parts.js",
       "types": "./dist/parts.d.ts"
+    },
+    "./schedule": {
+      "import": "./dist/schedule.js",
+      "types": "./dist/schedule.d.ts"
     }
   },
   "scripts": {
