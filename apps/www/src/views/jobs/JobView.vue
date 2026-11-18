@@ -41,12 +41,13 @@
       </div>
     </div>
 
-    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="yellow">
-      <v-tab value="general"> General </v-tab>
-      <v-tab value="production"> Production </v-tab>
-      <v-tab value="shipments"> Shipments </v-tab>
-      <v-spacer />
-      <div class="job-header__actions px-2">
+    <div class="tab-bar mb-4">
+      <v-tabs v-model="tab" bg-color="#555555" class="tab-bar__tabs" color="yellow" show-arrows>
+        <v-tab value="general"> General </v-tab>
+        <v-tab value="production"> Production </v-tab>
+        <v-tab value="shipments"> Shipments </v-tab>
+      </v-tabs>
+      <div class="tab-bar__actions job-header__actions px-2">
         <v-btn v-if="showDelete" color="error" variant="text" @click="deleteConfirm = true">
           Delete
         </v-btn>
@@ -69,7 +70,7 @@
           {{ isCreateRoute ? 'Create' : 'Save' }}
         </v-btn>
       </div>
-    </v-tabs>
+    </div>
 
     <v-card>
       <v-window v-model="tab">
@@ -1009,34 +1010,66 @@ const jobRouting = computed<RoutingOperation[]>(() => {
   const jobPart = job.value?.part;
   return jobPart && typeof jobPart === 'object' ? (jobPart.routing ?? []) : [];
 });
-// Ops routed to the selected machine's department; the task may pick any of them.
+// Departments are grouped by the machine types they run (DTs, Robodrill and 3 Axis are all mills),
+// so a machine can take any op routed to a department running its type, not only its own.
+const departmentMachineTypes = computed(() => {
+  const typesByDepartment = new Map<string, Set<MachineType>>();
+  for (const machine of machines.value) {
+    if (!machine.departmentId) continue;
+    const types = typesByDepartment.get(machine.departmentId) ?? new Set<MachineType>();
+    types.add(machine.type);
+    typesByDepartment.set(machine.departmentId, types);
+  }
+  return typesByDepartment;
+});
+const departmentNameById = computed(
+  () =>
+    new Map(
+      machines.value
+        .filter((machine) => machine.departmentId && machine.department)
+        .map((machine) => [machine.departmentId as string, machine.department]),
+    ),
+);
 const startTaskDepartmentOps = computed(() => {
-  const departmentId = selectedStartTaskMachine.value?.departmentId;
-  if (!departmentId) return [];
-  return jobRouting.value.filter((operation) => operation.department === departmentId);
+  const machine = selectedStartTaskMachine.value;
+  if (!machine) return [];
+  return jobRouting.value.filter(
+    (operation) =>
+      Boolean(operation.department) &&
+      (operation.department === machine.departmentId ||
+        Boolean(departmentMachineTypes.value.get(operation.department ?? '')?.has(machine.type))),
+  );
 });
 const startedTaskOps = computed(
   () => new Set(productionTasks.value.map((task) => task.op).filter(Boolean)),
 );
-// Next op: the department's first op no task on this job has started yet.
+// Next op: the first op in routing order, among those this machine can run, not yet started.
 const suggestedStartTaskOp = computed(
   () =>
     startTaskDepartmentOps.value.find((operation) => !startedTaskOps.value.has(operation.op)) ??
     null,
 );
 const startTaskOpOptions = computed(() =>
-  startTaskDepartmentOps.value.map((operation) => ({
-    title: [formatRoutingOp(operation.op), operation.operation].filter(Boolean).join(' · '),
-    value: operation.op,
-    subtitle: startedTaskOps.value.has(operation.op) ? 'Already started on this job' : undefined,
-    suggested: operation.op === suggestedStartTaskOp.value?.op,
-  })),
+  startTaskDepartmentOps.value.map((operation) => {
+    const otherDepartment =
+      operation.department !== selectedStartTaskMachine.value?.departmentId
+        ? departmentNameById.value.get(operation.department ?? '')
+        : undefined;
+    const started = startedTaskOps.value.has(operation.op) ? 'Already started on this job' : '';
+    return {
+      title: [formatRoutingOp(operation.op), operation.operation].filter(Boolean).join(' · '),
+      value: operation.op,
+      subtitle: [otherDepartment, started].filter(Boolean).join(' · ') || undefined,
+      suggested: operation.op === suggestedStartTaskOp.value?.op,
+    };
+  }),
 );
 const startTaskOpHint = computed(() => {
-  const departmentName = selectedStartTaskMachine.value?.department || 'this department';
-  if (!startTaskDepartmentOps.value.length) return `No routing ops for ${departmentName}.`;
-  if (!suggestedStartTaskOp.value) return `Every ${departmentName} op has been started.`;
-  return `Suggested next op for ${departmentName}.`;
+  const machineType = selectedStartTaskMachine.value?.type;
+  const groupName = machineType ? machineTypeLabel(machineType).toLowerCase() : 'this machine';
+  if (!startTaskDepartmentOps.value.length) return `No routing ops for ${groupName} departments.`;
+  if (!suggestedStartTaskOp.value) return `Every ${groupName} op has been started.`;
+  return `Suggested next ${groupName} op.`;
 });
 
 watch(

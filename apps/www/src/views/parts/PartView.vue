@@ -95,17 +95,18 @@
       </div>
     </teleport>
 
-    <v-tabs v-model="tab" bg-color="#555555" class="mb-4" color="yellow">
-      <v-tab value="general"> General </v-tab>
-      <v-tab value="material"> Material </v-tab>
-      <v-tab value="cost"> Cost </v-tab>
-      <v-tab value="stock"> Stock </v-tab>
-      <v-tab value="docs"> Docs </v-tab>
-      <v-tab value="images"> Images </v-tab>
-      <v-tab value="notes"> Notes </v-tab>
-      <v-tab value="jobs"> Jobs </v-tab>
-      <v-spacer />
-      <div class="d-flex align-center">
+    <div class="tab-bar mb-4">
+      <v-tabs v-model="tab" bg-color="#555555" class="tab-bar__tabs" color="yellow" show-arrows>
+        <v-tab value="general"> General </v-tab>
+        <v-tab value="material"> Material </v-tab>
+        <v-tab value="cost"> Cost </v-tab>
+        <v-tab value="stock"> Stock </v-tab>
+        <v-tab value="docs"> Docs </v-tab>
+        <v-tab value="images"> Images </v-tab>
+        <v-tab value="notes"> Notes </v-tab>
+        <v-tab value="jobs"> Jobs </v-tab>
+      </v-tabs>
+      <div class="tab-bar__actions d-flex align-center">
         <v-checkbox
           v-if="showNeedsReviewControl"
           v-model="part.needsReview"
@@ -173,7 +174,7 @@
           <v-icon icon="mdi-printer" />
         </v-btn>
       </div>
-    </v-tabs>
+    </div>
     <v-form v-model="valid">
       <v-window v-model="tab" class="tab-window">
         <v-window-item value="general">

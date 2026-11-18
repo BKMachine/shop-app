@@ -2,7 +2,7 @@
   <v-row>
     <v-col cols="12" lg="8" md="7">
       <v-row no-gutters>
-        <v-col cols="11">
+        <v-col cols="12">
           <v-text-field
             :hint="productPriceHint"
             inputmode="decimal"
@@ -128,8 +128,9 @@
               />
               <v-btn
                 :aria-pressed="Boolean(element.operation.noCycleTime)"
-                class="routing-row__no-time"
+                class="routing-row__action routing-row__no-time"
                 :color="element.operation.noCycleTime ? 'warning' : undefined"
+                density="comfortable"
                 :icon="element.operation.noCycleTime ? 'mdi-clock-minus-outline' : 'mdi-clock-outline'"
                 :title="
                   element.operation.noCycleTime
@@ -140,10 +141,10 @@
                 @click="setNoCycleTime(element.rowId, index, !element.operation.noCycleTime)"
               />
               <v-btn
-                class="routing-row__delete"
+                class="routing-row__action routing-row__delete"
                 color="red"
+                density="comfortable"
                 icon="mdi-delete-circle"
-                size="large"
                 title="Remove Operation"
                 variant="text"
                 @click="removeRoutingOperation(element.rowId, index)"
@@ -152,7 +153,7 @@
           </template>
         </draggable>
       </div>
-      <v-btn color="primary" variant="outlined" @click="addRoutingOperation">
+      <v-btn class="mt-2" color="primary" variant="outlined" @click="addRoutingOperation">
         <v-icon icon="mdi-plus" left />Add Operation
       </v-btn>
 
@@ -850,7 +851,7 @@ function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
 
 .routing-row {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) 170px 128px auto 44px;
+  grid-template-columns: 76px minmax(0, 1fr) 170px 128px auto auto;
   grid-template-areas: "op name department time no-time delete";
   align-items: center;
   gap: 8px;
@@ -881,19 +882,25 @@ function onAdditionalCostsUpdate(value: string, rowId: string, idx: number) {
   grid-area: time;
 }
 
+/* Neutral circle behind the row's icon buttons; the clock's warning tonal style overrides it. */
+.routing-row__action.v-btn--variant-text {
+  background-color: rgba(var(--v-theme-on-surface), 0.06);
+}
+
 .routing-row__no-time {
   grid-area: no-time;
-  white-space: nowrap;
+  justify-self: center;
 }
 
 .routing-row__delete {
   grid-area: delete;
+  justify-self: center;
 }
 
 /* Narrow editors: operation name gets its own line, the rest wraps beneath it. */
 @container (max-width: 640px) {
   .routing-row {
-    grid-template-columns: 76px minmax(0, 1fr) 128px auto 44px;
+    grid-template-columns: 76px minmax(0, 1fr) 128px auto auto;
     grid-template-areas:
       "op name name name delete"
       ". department time no-time no-time";

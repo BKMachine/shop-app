@@ -91,3 +91,27 @@ body,
 .v-toast__text {
   white-space: pre-line;
 }
+
+/* Page tab bar with action buttons (Part, Job, Tool views). The tabs scroll with arrows when they
+   run out of room; the actions stay visible and wrap onto their own line on narrow screens. */
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  background: #555555;
+  color: #fff;
+}
+
+.tab-bar__tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tab-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+  padding: 4px 0 4px 8px;
+}

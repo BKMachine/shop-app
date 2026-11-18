@@ -1,7 +1,7 @@
 <template>
   <v-app v-cloak>
     <v-app-bar class="elevation-2">
-      <v-app-bar-nav-icon @click.stop="drawerRail = !drawerRail" />
+      <v-app-bar-nav-icon @click.stop="toggleDrawer" />
       <v-app-bar-title>
         <v-avatar class="pointer" size="48" @click="router.push({ name: 'home' })">
           <v-img src="@/assets/img/bk_logo.png" />
@@ -35,7 +35,7 @@
         />
       </div>
     </v-app-bar>
-    <v-navigation-drawer v-model="drawer" :rail="drawerRail">
+    <v-navigation-drawer v-model="drawer" :rail="drawerRail && !mobile">
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.job" :to="{ name: 'jobs' }"> Jobs </v-list-item>
@@ -105,7 +105,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
-import { useTheme } from 'vuetify';
+import { useDisplay, useTheme } from 'vuetify';
 import DisplayNameDialog from '@/components/DisplayNameDialog.vue';
 import ScanDialog404 from '@/components/scanning/ScanDialog404.vue';
 import ScanDialogTool from '@/components/scanning/ScanDialogTool.vue';
@@ -196,8 +196,21 @@ function readStoredDrawerRail(): boolean {
   return window.localStorage.getItem(DRAWER_RAIL_STORAGE_KEY) === 'true';
 }
 
+const { mobile } = useDisplay();
 const drawer = ref(true);
 const drawerRail = ref(readStoredDrawerRail());
+
+// Below Vuetify's mobile breakpoint the drawer is a hidden overlay, so the menu button opens and
+// closes it; on wider screens it collapses the drawer to icons (rail) instead.
+function toggleDrawer() {
+  if (mobile.value) {
+    drawer.value = !drawer.value;
+    return;
+  }
+
+  drawer.value = true;
+  drawerRail.value = !drawerRail.value;
+}
 let idleHomeRedirectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const isDarkTheme = computed(() => theme.global.name.value === 'dark');
