@@ -348,7 +348,6 @@ import { dueDateColor } from '@/lib/job_dates';
 import { fetchMachineDepartmentOptions } from '@/lib/machineDepartments';
 import {
   customerColor,
-  defaultRangeStart,
   formatDay,
   formatRangeLabel,
   isScheduleRangePreset,
@@ -430,7 +429,8 @@ const isTouchDevice =
 /* ---------- Range ---------- */
 
 const preset = ref<ScheduleRangePreset>(readPreset());
-const rangeStart = ref(props.display ? today.value : defaultRangeStart(preset.value, today.value));
+// Every range starts at today; the arrows move back to see earlier work.
+const rangeStart = ref(today.value);
 
 /** `?days=` for display mode. */
 const displayDays = computed(() => {
@@ -452,7 +452,7 @@ const rangeLabel = computed(() => formatRangeLabel(rangeStart.value, rangeDays.v
 
 watch(preset, (value) => {
   window.localStorage.setItem(PRESET_STORAGE_KEY, value);
-  rangeStart.value = defaultRangeStart(value, today.value);
+  rangeStart.value = today.value;
 });
 
 function shiftRange(direction: 1 | -1) {
@@ -463,7 +463,7 @@ function shiftRange(direction: 1 | -1) {
 }
 
 function goToToday() {
-  rangeStart.value = defaultRangeStart(preset.value, today.value);
+  rangeStart.value = today.value;
 }
 
 function readPreset(): ScheduleRangePreset {

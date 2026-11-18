@@ -1,4 +1,4 @@
-import { addDays, dayOfWeek, diffDays } from '@repo/utilities/schedule';
+import { addDays, diffDays } from '@repo/utilities/schedule';
 
 export type ScheduleRangePreset = '1w' | '2w' | '1m' | '3m' | '6m';
 
@@ -7,30 +7,18 @@ interface RangePresetConfig {
   days: number;
   /** Days the prev/next buttons move the range. */
   step: number;
-  /** Days shown before the start of the current week, so recent work stays in view. */
-  lead: number;
 }
 
 export const SCHEDULE_RANGE_PRESETS: Record<ScheduleRangePreset, RangePresetConfig> = {
-  '1w': { label: '1W', days: 7, step: 7, lead: 0 },
-  '2w': { label: '2W', days: 14, step: 7, lead: 0 },
-  '1m': { label: '1M', days: 35, step: 7, lead: 7 },
-  '3m': { label: '3M', days: 91, step: 28, lead: 7 },
-  '6m': { label: '6M', days: 182, step: 56, lead: 14 },
+  '1w': { label: '1W', days: 7, step: 7 },
+  '2w': { label: '2W', days: 14, step: 7 },
+  '1m': { label: '1M', days: 35, step: 7 },
+  '3m': { label: '3M', days: 91, step: 28 },
+  '6m': { label: '6M', days: 182, step: 56 },
 };
 
 export function isScheduleRangePreset(value: unknown): value is ScheduleRangePreset {
   return typeof value === 'string' && value in SCHEDULE_RANGE_PRESETS;
-}
-
-/** Monday of the week `key` falls in. */
-export function startOfWeek(key: string): string {
-  return addDays(key, -((dayOfWeek(key) + 6) % 7));
-}
-
-/** Where a preset's range starts when showing `today`. */
-export function defaultRangeStart(preset: ScheduleRangePreset, today: string): string {
-  return addDays(startOfWeek(today), -SCHEDULE_RANGE_PRESETS[preset].lead);
 }
 
 function dayKeyToDate(key: string): Date {
