@@ -50,6 +50,11 @@ declare global {
 
   /** One manufacturing operation on a part's routing, in run order. */
   interface RoutingOperation {
+    /**
+     * Stable id that stays with the op through reorders, inserts and renumbering; schedule bookings
+     * point at it. The server assigns one to new ops, so it is only missing on an unsaved row.
+     */
+    _id?: string;
     /** Operation number: 10, 20, 30... always sequential by row order. */
     op: number;
     operation: string;

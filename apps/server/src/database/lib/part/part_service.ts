@@ -6,6 +6,7 @@ import {
   renumberRouting,
   routingOpNumber,
 } from '@repo/utilities/parts';
+import { isValidObjectId, Types } from 'mongoose';
 import { emit } from '../../../server/sockets.js';
 import { getEntityId, normalizeIdArray, toPlainEntity } from '../../../utilities/entities.js';
 import escapeRegExp from '../../../utilities/escapeRegExp.js';
@@ -22,13 +23,27 @@ function normalizeBlanksPerPart(value: unknown): number {
   return Math.max(1, Number(value) || 1);
 }
 
+/**
+ * An op's id as a string: the one it has, or a new one for a new op (or a duplicate, so two rows
+ * never share an id).
+ */
+function routingOperationId(value: unknown, seen: Set<string>): string {
+  const id = value == null ? '' : String(value);
+  const usable = isValidObjectId(id) && /^[0-9a-f]{24}$/i.test(id) && !seen.has(id);
+  const result = usable ? id : new Types.ObjectId().toString();
+  seen.add(result);
+  return result;
+}
+
 function normalizeRouting(routing: unknown): RoutingOperation[] {
   if (!Array.isArray(routing)) return [];
 
+  const seenIds = new Set<string>();
   return renumberRouting(
     routing.map((entry: Partial<RoutingOperation>) => {
       const noCycleTime = Boolean(entry?.noCycleTime);
       return {
+        _id: routingOperationId(entry?._id, seenIds),
         op: 0,
         operation: typeof entry?.operation === 'string' ? entry.operation.trim() : '',
         department:
@@ -622,6 +637,7 @@ async function migratePartRoutingFromCycleTimes(): Promise<number> {
       const routing = cycleTimes.map((cycle, index) => {
         const operation = typeof cycle?.operation === 'string' ? cycle.operation.trim() : '';
         return {
+          _id: new Types.ObjectId(),
           op: routingOpNumber(index),
           operation,
           department: departmentIdByName.get(operation.toLowerCase()) ?? null,
@@ -637,6 +653,37 @@ async function migratePartRoutingFromCycleTimes(): Promise<number> {
   // Unassigned departments change the missing-data flags assemblies store for their children.
   await refreshAllStoredDerivedProperties();
   return legacyParts.length;
+}
+
+/**
+ * Gives every routing op without an `_id` one, for routing saved before ops had ids. Ops that
+ * already have one keep it, so it is safe to run on every start. Returns how many parts changed.
+ */
+async function ensureRoutingOperationIds(): Promise<number> {
+  const parts = await Part.collection
+    .find(
+      { routing: { $elemMatch: { _id: { $exists: false } } } },
+      { projection: { _id: 1, routing: 1 } },
+    )
+    .toArray();
+  if (!parts.length) return 0;
+
+  await Part.collection.bulkWrite(
+    parts.map((part) => {
+      const routing = (Array.isArray(part.routing) ? part.routing : []).map(
+        (operation: Record<string, unknown>) =>
+          operation._id ? operation : { _id: new Types.ObjectId(), ...operation },
+      );
+      // Matching on the old routing too, so a save that landed meanwhile isn't overwritten.
+      return {
+        updateOne: {
+          filter: { _id: part._id, routing: part.routing },
+          update: { $set: { routing } },
+        },
+      };
+    }),
+  );
+  return parts.length;
 }
 
 function calculateTotalValue(parts: Array<Pick<PartFields, 'price' | 'stock'>>): number {
@@ -832,6 +879,11 @@ export default {
   getPartPositions,
   refreshAllStoredDerivedProperties,
   migratePartRoutingFromCycleTimes,
+  ensureRoutingOperationIds,
 };
 
-export { migratePartRoutingFromCycleTimes, refreshAllStoredDerivedProperties };
+export {
+  ensureRoutingOperationIds,
+  migratePartRoutingFromCycleTimes,
+  refreshAllStoredDerivedProperties,
+};

@@ -352,12 +352,65 @@ test('update renumbers routing ops by row order and clears time on untimed ops',
     'part-1',
     expect.objectContaining({
       routing: [
-        { op: 10, operation: 'Lathe', department: 'other', time: 10, noCycleTime: false },
-        { op: 20, operation: 'Inspect', department: null, time: 0, noCycleTime: true },
+        {
+          _id: expect.stringMatching(/^[0-9a-f]{24}$/),
+          op: 10,
+          operation: 'Lathe',
+          department: 'other',
+          time: 10,
+          noCycleTime: false,
+        },
+        {
+          _id: expect.stringMatching(/^[0-9a-f]{24}$/),
+          op: 20,
+          operation: 'Inspect',
+          department: null,
+          time: 0,
+          noCycleTime: true,
+        },
       ],
     }),
     expect.anything(),
   );
+});
+
+test('update keeps each routing op id through inserts and reorders', async () => {
+  const turnId = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+  const millId = 'bbbbbbbbbbbbbbbbbbbbbbbb';
+  const part = buildPart({ _id: 'part-1', part: 'PART-1', description: 'Part', price: 50 });
+  partStore.set(part._id, part);
+
+  const PartService = await loadPartService();
+  await PartService.update(
+    {
+      ...part,
+      routing: [
+        { _id: turnId, op: 10, operation: 'Turn', department: 'other', time: 5 },
+        // A new op inserted between them, then a copy of an existing id that must not be shared.
+        { op: 0, operation: 'Drill', department: 'other', time: 2 },
+        { _id: millId, op: 20, operation: 'Mill', department: 'other', time: 8 },
+        { _id: millId, op: 30, operation: 'Deburr', department: 'other', time: 1 },
+      ],
+    },
+    'device-1',
+  );
+
+  const [, update] = PartModelMock.findByIdAndUpdate.mock.calls.at(-1) as [
+    string,
+    { routing: RoutingOperation[] },
+  ];
+  const routing = update.routing;
+  expect(routing.map((operation) => [operation.op, operation.operation])).toEqual([
+    [10, 'Turn'],
+    [20, 'Drill'],
+    [30, 'Mill'],
+    [40, 'Deburr'],
+  ]);
+  expect(routing[0]?._id).toBe(turnId);
+  expect(routing[2]?._id).toBe(millId);
+  expect(routing[1]?._id).toMatch(/^[0-9a-f]{24}$/);
+  expect(routing[3]?._id).toMatch(/^[0-9a-f]{24}$/);
+  expect(new Set(routing.map((operation) => operation._id)).size).toBe(4);
 });
 
 test('list sorts parts by price ascending and descending', async () => {

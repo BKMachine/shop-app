@@ -28,6 +28,7 @@ const PlacementSchema = z.strictObject({ _id: mongoObjectId, ...placementFields 
 export const CreateScheduleEntryRequest = z.strictObject({
   entry: z.strictObject({
     job: mongoObjectId,
+    routingId: mongoObjectId.nullish(),
     op: z.number().int().positive().nullish(),
     operation: z.string().trim().max(200).nullish(),
     department: z.union([mongoObjectId, z.literal('other')]).nullish(),

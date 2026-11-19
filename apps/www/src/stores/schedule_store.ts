@@ -100,7 +100,7 @@ export const useScheduleStore = defineStore('schedule', () => {
   async function add(
     job: ScheduleEntryJob,
     placement: Omit<ScheduleEntryPlacement, '_id'>,
-    op: Pick<ScheduleEntryCreate, 'op' | 'operation' | 'department'> = {},
+    op: Pick<ScheduleEntryCreate, 'routingId' | 'op' | 'operation' | 'department'> = {},
   ) {
     const draftId = `draft:${job._id}:${Date.now()}`;
     const before = entries.value;

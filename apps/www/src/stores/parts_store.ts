@@ -153,6 +153,8 @@ export const usePartStore = defineStore('parts', () => {
       barLength: part.barLength,
       remnantLength: part.remnantLength,
       routing: renumberRouting(part.routing).map((operation) => ({
+        // Kept so bookings stay on the op when it is renumbered; new ops get one from the server.
+        ...(operation._id ? { _id: operation._id } : {}),
         op: operation.op,
         operation: operation.operation?.trim() || '',
         department: operation.department || null,

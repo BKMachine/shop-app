@@ -2,7 +2,9 @@ import { type HydratedDocument, model, Schema, type Types } from 'mongoose';
 
 export interface ScheduleEntryFields {
   job: Types.ObjectId;
-  /** Routing op number booked; null for a booking of the whole job. */
+  /** `_id` of the routing op booked, which survives renumbering; null for a whole job. */
+  routingId: string | null;
+  /** Routing op number when it was booked; null for a booking of the whole job. */
   op: number | null;
   /** The op's name when it was booked. */
   operation: string | null;
@@ -21,6 +23,7 @@ export interface ScheduleEntryFields {
 const schema = new Schema<ScheduleEntryFields>(
   {
     job: { type: Schema.Types.ObjectId, ref: 'jobs', required: true, index: true },
+    routingId: { type: String, default: null },
     op: { type: Number, default: null },
     operation: { type: String, default: null },
     department: { type: String, default: null },

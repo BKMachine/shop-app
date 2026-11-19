@@ -27,6 +27,7 @@ type PopulatedJob = {
 type LeanEntry = {
   _id: Types.ObjectId;
   job: PopulatedJob | null;
+  routingId?: string | null;
   op?: number | null;
   operation?: string | null;
   department?: string | null;
@@ -41,6 +42,7 @@ type ScheduleAuditRecord = {
   description: string;
   job: string;
   jobNumber: number | null;
+  routingId: string | null;
   op: number | null;
   operation: string | null;
   machineId: string;
@@ -59,6 +61,7 @@ function toEntry(doc: LeanEntry): ScheduleEntry | null {
 
   return {
     _id: doc._id.toString(),
+    routingId: doc.routingId ?? null,
     op: doc.op ?? null,
     operation: doc.operation ?? null,
     department: doc.department ?? null,
@@ -117,6 +120,7 @@ function toAuditRecord(entry: LeanEntry, names: Map<string, string>): ScheduleAu
     description: `Job #${jobNumber ?? '?'}${op ? ` op ${op}` : ''} on ${machine}`,
     job: entry.job?._id.toString() ?? '',
     jobNumber,
+    routingId: entry.routingId ?? null,
     op,
     operation: entry.operation ?? null,
     machineId: entry.machineId,
@@ -324,7 +328,62 @@ async function updateSettings(data: ScheduleSettings, deviceId: string): Promise
   return next;
 }
 
+/**
+ * Points op bookings at their routing op's id, by the op number they were booked with, for
+ * bookings made before bookings kept the id. Also re-links a booking whose op id is no longer on
+ * the part (a save from an older server drops op ids and the next start assigns new ones) when an
+ * op with the same number and name is still there. Safe to run on every start. Returns how many
+ * bookings changed.
+ */
+async function backfillRoutingIds(): Promise<number> {
+  const entries = await ScheduleEntryModel.find(
+    { op: { $ne: null } },
+    { job: 1, op: 1, operation: 1, routingId: 1 },
+  ).lean();
+  if (!entries.length) return 0;
+
+  const jobs = await Job.find(
+    { _id: { $in: [...new Set(entries.map((entry) => entry.job.toString()))] } },
+    { part: 1 },
+  )
+    .populate<{
+      part: { routing?: Array<{ _id?: Types.ObjectId; op: number; operation?: string }> } | null;
+    }>('part', 'routing')
+    .lean();
+  const routingByJob = new Map(jobs.map((job) => [job._id.toString(), job.part?.routing ?? []]));
+  const sameName = (left?: string | null, right?: string | null) =>
+    (left ?? '').trim().toLowerCase() === (right ?? '').trim().toLowerCase();
+
+  const updates = entries.flatMap((entry) => {
+    const routing = routingByJob.get(entry.job.toString());
+    if (!routing) return [];
+    if (
+      entry.routingId &&
+      routing.some((operation) => operation._id?.toString() === entry.routingId)
+    ) {
+      return [];
+    }
+    const operation = routing.find(
+      (candidate) =>
+        candidate.op === entry.op &&
+        (!entry.routingId || sameName(candidate.operation, entry.operation)),
+    );
+    if (!operation?._id) return [];
+    return [
+      {
+        updateOne: {
+          filter: { _id: entry._id, routingId: entry.routingId ?? null },
+          update: { $set: { routingId: operation._id.toString() } },
+        },
+      },
+    ];
+  });
+  if (updates.length) await ScheduleEntryModel.bulkWrite(updates);
+  return updates.length;
+}
+
 export default {
+  backfillRoutingIds,
   list,
   create,
   place,

@@ -336,7 +336,13 @@ declare global {
   interface ScheduleEntry {
     _id: string;
     job: ScheduleEntryJob;
-    /** Routing op number booked (10, 20...); null when the whole job is booked. */
+    /**
+     * `_id` of the routing op booked. It stays with the op when ops are inserted, removed or
+     * reordered, so the op's current number and name come from the routing, not `op`/`operation`.
+     * Null for a whole job.
+     */
+    routingId?: string | null;
+    /** Routing op number when it was booked (10, 20...); null when the whole job is booked. */
     op?: number | null;
     /** The op's name, as it was when booked. */
     operation?: string | null;
@@ -351,6 +357,7 @@ declare global {
 
   interface ScheduleEntryCreate {
     job: string;
+    routingId?: string | null;
     op?: number | null;
     operation?: string | null;
     department?: string | null;

@@ -24,7 +24,11 @@
           size="14"
         />
         <span class="schedule-tile__job">#{{ entry.job.jobNumber }}</span>
-        <span v-if="entry.op != null && width >= 56" class="schedule-tile__op">
+        <span
+          v-if="entry.op != null && width >= 56"
+          class="schedule-tile__op"
+          :class="{ 'schedule-tile__op--removed': opRemoved }"
+        >
           {{ entry.op }}
         </span>
         <span v-if="width >= 150" class="schedule-tile__customer">
@@ -64,6 +68,8 @@ const props = defineProps<{
   clippedStart?: boolean;
   /** The booking ends after the visible range. */
   clippedEnd?: boolean;
+  /** The booked op has been removed from the part's routing. */
+  opRemoved?: boolean;
 }>();
 
 const customerStore = useCustomerStore();
@@ -97,7 +103,9 @@ const tooltip = computed(() => {
   const lines = [
     `#${job.jobNumber} · ${job.customerName}`,
     props.entry.op != null
-      ? `Op ${props.entry.op}${props.entry.operation ? ` · ${props.entry.operation}` : ''}`
+      ? `Op ${props.entry.op}${props.entry.operation ? ` · ${props.entry.operation}` : ''}${
+          props.opRemoved ? ' (removed from the routing)' : ''
+        }`
       : 'Whole job',
     [job.partNumber, job.partDescription].filter(Boolean).join(' – '),
     `Qty ${job.qty}`,
@@ -228,6 +236,13 @@ const tooltip = computed(() => {
   font-size: 0.68rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* The booked op is gone from the routing. */
+.schedule-tile__op--removed {
+  background: rgb(var(--v-theme-error));
+  color: rgb(var(--v-theme-on-error));
+  text-decoration: line-through;
 }
 
 .schedule-tile__customer,

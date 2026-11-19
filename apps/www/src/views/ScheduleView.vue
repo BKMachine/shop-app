@@ -221,7 +221,8 @@
               :class="{ 'schedule-board__tile--active': tile.active }"
               :clipped-end="tile.clippedEnd"
               :clipped-start="tile.clippedStart"
-              :entry="tile.entry"
+              :entry="tileEntry(tile.entry)"
+              :op-removed="entryOps.get(tile.entry._id)?.removed"
               :resizable="!display"
               :style="{
                 left: `${tile.left}px`,
@@ -350,6 +351,7 @@
       :job="dialogJob"
       :machines="dialogMachines"
       :op="dialogBookable?.op ?? null"
+      :op-removed="dialogBookable?.removed"
       :operation="dialogBookable?.operation ?? null"
       @remove="removeDialogEntry"
       @save="saveDialog"
@@ -432,11 +434,15 @@ type Placement = Omit<ScheduleEntryPlacement, '_id'>;
 interface Bookable {
   key: string;
   job: ScheduleEntryJob;
+  /** `_id` of the routing op; null for a whole job. */
+  routingId: string | null;
   op: number | null;
   operation: string | null;
   /** The op's department `_id`, 'other', or null; it only fits that department's machines. */
   department: string | null;
   cycleMinutes: number | null;
+  /** A booked op that is no longer on the part's routing. */
+  removed?: boolean;
 }
 
 interface DragState {
@@ -872,15 +878,21 @@ watch(backlogOpen, (open) => {
   requestAnimationFrame(measureBoard);
 });
 
-function bookableKey(jobId: string, op: number | null | undefined) {
-  return `${jobId}:${op ?? 'job'}`;
+/** Identifies an op across bookings: by its routing id, by op number without one, or the job. */
+function bookableKey(
+  jobId: string,
+  routingId: string | null | undefined,
+  op: number | null | undefined,
+) {
+  if (routingId) return `${jobId}:${routingId}`;
+  return op != null ? `${jobId}:op${op}` : `${jobId}:job`;
 }
 
 /** How many times each op (or whole job) is booked, by bookable key. */
 const scheduledCounts = computed(() => {
   const counts = new Map<string, number>();
   for (const entry of scheduleStore.entries) {
-    const key = bookableKey(entry.job._id, entry.op);
+    const key = bookableKey(entry.job._id, entry.routingId, entry.op);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return counts;
@@ -893,8 +905,9 @@ const bookables = computed<Bookable[]>(() =>
     if (!ops.length) {
       return [
         {
-          key: bookableKey(job._id, null),
+          key: bookableKey(job._id, null, null),
           job,
+          routingId: null,
           op: null,
           operation: null,
           department: null,
@@ -903,8 +916,9 @@ const bookables = computed<Bookable[]>(() =>
       ];
     }
     return ops.map((operation) => ({
-      key: bookableKey(job._id, operation.op),
+      key: bookableKey(job._id, operation._id, operation.op),
       job,
+      routingId: operation._id ?? null,
       op: operation.op,
       operation: operation.operation?.trim() || null,
       department: operation.department ?? null,
@@ -1029,11 +1043,9 @@ function colorForCustomer(customerId: string) {
   return customerColor(customerColors.value.get(customerId));
 }
 
-/** An op's cycle minutes from its job's routing; null for a whole job or an untimed op. */
-function cycleMinutesFor(jobId: string, op: number | null | undefined): number | null {
-  if (op == null) return null;
-  const operation = routingByJob.value.get(jobId)?.find((candidate) => candidate.op === op);
-  return operation && isSchedulableOperation(operation) && Number(operation.time) > 0
+/** An op's cycle minutes; null for an untimed op or one without a time. */
+function cycleMinutesOf(operation: RoutingOperation): number | null {
+  return isSchedulableOperation(operation) && Number(operation.time) > 0
     ? Number(operation.time)
     : null;
 }
@@ -1079,15 +1091,48 @@ const dialogEstimator = computed(() => {
     estimateFor(bookable.job, bookable.cycleMinutes, machineId, start);
 });
 
+/**
+ * The op a booking is for, as the part's routing has it now: found by its routing id, so a booked
+ * op that was renumbered shows its new number and name. Falls back to what was saved with the
+ * booking when the job's routing isn't loaded (closed jobs), and flags an op that was removed.
+ */
 function bookableForEntry(entry: ScheduleEntry): Bookable {
-  return {
-    key: bookableKey(entry.job._id, entry.op),
+  const saved: Bookable = {
+    key: bookableKey(entry.job._id, entry.routingId, entry.op),
     job: entry.job,
+    routingId: entry.routingId ?? null,
     op: entry.op ?? null,
     operation: entry.operation ?? null,
     department: entry.department ?? null,
-    cycleMinutes: cycleMinutesFor(entry.job._id, entry.op),
+    cycleMinutes: null,
   };
+  if (entry.op == null && !entry.routingId) return saved;
+
+  const routing = routingByJob.value.get(entry.job._id);
+  if (!routing) return saved;
+  const operation = entry.routingId
+    ? routing.find((candidate) => candidate._id === entry.routingId)
+    : routing.find((candidate) => candidate.op === entry.op);
+  if (!operation) return { ...saved, removed: true };
+
+  return {
+    ...saved,
+    op: operation.op,
+    operation: operation.operation?.trim() || null,
+    department: operation.department ?? null,
+    cycleMinutes: cycleMinutesOf(operation),
+  };
+}
+
+/** Each booking's op as the routing has it now, by booking id. */
+const entryOps = computed(
+  () => new Map(scheduleStore.entries.map((entry) => [entry._id, bookableForEntry(entry)])),
+);
+
+/** A booking with its op's current number and name, for showing on a tile. */
+function tileEntry(entry: ScheduleEntry) {
+  const current = entryOps.value.get(entry._id);
+  return current ? { ...entry, op: current.op, operation: current.operation } : entry;
 }
 
 function openEntryDialog(entry: ScheduleEntry) {
@@ -1156,7 +1201,7 @@ function onTilePointerDown(event: PointerEvent, entry: ScheduleEntry) {
     kind: resizing ? 'resize' : 'move',
     job: entry.job,
     bookable: null,
-    department: entry.department ?? null,
+    department: entryOps.value.get(entry._id)?.department ?? entry.department ?? null,
     entryId: entry._id,
     origin: { machineId: entry.machineId, start: entry.start, days: entry.days },
     grabOffset: pointerDay - diffDays(rangeStart.value, entry.start),
@@ -1376,7 +1421,12 @@ function newBookingPlacement(
 
 /** The op details a new booking is saved with. */
 function bookingOp(bookable: Bookable) {
-  return { op: bookable.op, operation: bookable.operation, department: bookable.department };
+  return {
+    routingId: bookable.routingId,
+    op: bookable.op,
+    operation: bookable.operation,
+    department: bookable.department,
+  };
 }
 
 /** Machines the op being dragged can't go on, greyed out while it is held. */

@@ -20,7 +20,11 @@ describe('CreateScheduleEntryRequest', () => {
 
   it('accepts a booking of one routing op', () => {
     expect(accepts({ op: 20, operation: 'Mill' })).toBe(true);
-    expect(accepts({ op: null, operation: null })).toBe(true);
+    expect(accepts({ routingId: '6a72c18abaa971f25ff86a2d', op: 20, operation: 'Mill' })).toBe(
+      true,
+    );
+    expect(accepts({ routingId: null, op: null, operation: null })).toBe(true);
+    expect(accepts({ routingId: 'op-20' })).toBe(false);
     expect(accepts({ op: 0 })).toBe(false);
     expect(accepts({ op: 10.5 })).toBe(false);
   });

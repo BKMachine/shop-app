@@ -117,6 +117,10 @@
             Use {{ estimate.days }}d
           </v-btn>
         </div>
+        <v-alert v-else-if="opRemoved" density="compact" type="warning" variant="tonal">
+          This op is no longer on the part's routing. Remove the booking, or book the op that
+          replaced it from the job list.
+        </v-alert>
         <div v-else-if="estimator" class="text-body-small text-medium-emphasis">
           {{
             op != null
@@ -177,6 +181,8 @@ const props = defineProps<{
   /** Routing op number being booked; null for a whole job. */
   op?: number | null;
   operation?: string | null;
+  /** The booked op has been removed from the part's routing. */
+  opRemoved?: boolean;
   /** Estimates how long the op runs on a machine from a start day. */
   estimator?: (machineId: string, start: string) => ScheduleEstimate | null;
 }>();
