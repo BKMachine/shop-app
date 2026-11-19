@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as z from 'zod';
 import DeviceService from '../../../database/lib/device/device_service.js';
 import logger from '../../../logger.js';
+import { isPrivateIp } from '../../../utilities/ip.js';
 import HttpError from '../../middleware/httpError.js';
 import {
   getClientIp,
@@ -10,6 +11,15 @@ import {
 } from '../../middleware/knownDevices.js';
 
 const router: Router = Router();
+
+/**
+ * A device as the app sees it: `isLan` is true for a request from the shop network, or when the
+ * device is flagged as LAN in the database (an override for a device reaching in from outside).
+ */
+function withLanFlag(device: DeviceFields | { toObject(): DeviceFields }, clientIp: string | null) {
+  const fields = 'toObject' in device ? device.toObject() : device;
+  return { ...fields, isLan: Boolean(fields.isLan) || isPrivateIp(clientIp) };
+}
 
 const RegisterDeviceRequest = z.strictObject({
   deviceId: z.string().trim().min(1),
@@ -48,7 +58,7 @@ router.post('/devices/register', async (req, res, next) => {
       updatedAt: new Date(),
     });
 
-    return res.status(201).json({ device });
+    return res.status(201).json({ device: withLanFlag(device, clientIp) });
   } catch (error) {
     next(error);
   }
@@ -58,7 +68,9 @@ router.get('/devices/me', requireKnownDevice, async (req, res, next) => {
   narrowKnownDevice(req);
 
   try {
-    return res.status(200).json({ device: req.device });
+    return res.status(200).json({
+      device: withLanFlag(req.device, req.deviceContext.clientIp),
+    });
   } catch (error) {
     next(error);
   }
