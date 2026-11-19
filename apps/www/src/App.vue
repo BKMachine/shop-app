@@ -39,7 +39,7 @@
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.job" :to="{ name: 'jobs' }"> Jobs </v-list-item>
-        <v-list-item link prepend-icon="mdi-calendar-clock" :to="{ name: 'schedule' }">
+        <v-list-item v-if="isLan" link prepend-icon="mdi-calendar-clock" :to="{ name: 'schedule' }">
           Schedule
         </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.part" :to="{ name: 'parts' }"> Parts </v-list-item>
@@ -120,7 +120,7 @@ import {
   startAppFocusTracking,
   useIdleHomeRedirectEnabled,
 } from '@/state/app_focus';
-import { deviceState, fetchCurrentDevice } from '@/state/device';
+import { currentDeviceReady, deviceState } from '@/state/device';
 import { useJobScanDestination } from '@/state/scannerSettings';
 import { useCustomerStore } from '@/stores/customer_store';
 import { useMaterialsStore } from '@/stores/materials_store';
@@ -291,7 +291,7 @@ onBeforeMount(() => {
   void supplierStore.fetch();
   void toolCategoryStore.fetch();
   void vendorStore.fetch();
-  void fetchCurrentDevice();
+  void currentDeviceReady();
 
   const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
   if (storedTheme === 'light' || storedTheme === 'dark') {

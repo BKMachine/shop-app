@@ -86,7 +86,7 @@
         <v-expansion-panel-text> <SettingsLabelLayout /> </v-expansion-panel-text>
       </v-expansion-panel>
 
-      <v-expansion-panel>
+      <v-expansion-panel v-if="isLan">
         <v-expansion-panel-title>
           <v-icon class="mr-2" :icon="uiIcons.schedule" />
           Schedule
@@ -144,6 +144,7 @@ import ToolCategorySettings from '@/components/settings/SettingsToolCategories.v
 import VendorSettings from '@/components/settings/SettingsVendor.vue';
 import { uiIcons } from '@/lib/uiIcons';
 import { toastError, toastSuccess } from '@/plugins/vue-toast-notification';
+import { isLan } from '@/state/device';
 import { useFolderHelperState } from '@/state/folderHelper';
 
 const {

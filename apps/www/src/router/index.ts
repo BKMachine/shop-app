@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { currentDeviceReady, deviceState } from '@/state/device';
 import ActivityView from '@/views/ActivityView.vue';
 import AuditTrailView from '@/views/AuditTrailView.vue';
 import HomeView from '@/views/HomeView.vue';
@@ -23,6 +24,8 @@ declare module 'vue-router' {
   interface RouteMeta {
     /** Full-screen page with no app bar or menu, e.g. a wall display. */
     bare?: boolean;
+    /** Only for devices flagged as on the shop LAN; others are sent home. */
+    lanOnly?: boolean;
   }
 }
 
@@ -68,6 +71,7 @@ const router = createRouter({
       path: '/schedule',
       name: 'schedule',
       component: ScheduleView,
+      meta: { lanOnly: true },
     },
     {
       // Read-only wall display for the shop TVs: /view/schedule?departments=Mills,Lathes&days=14
@@ -75,7 +79,7 @@ const router = createRouter({
       name: 'scheduleDisplay',
       component: ScheduleView,
       props: { display: true },
-      meta: { bare: true },
+      meta: { bare: true, lanOnly: true },
     },
     {
       path: '/locations',
@@ -148,6 +152,12 @@ const router = createRouter({
       component: MachiningCalculatorView,
     },
   ],
+});
+
+router.beforeEach(async (to) => {
+  if (!to.meta.lanOnly) return true;
+  await currentDeviceReady();
+  return deviceState.current?.isLan ? true : { name: 'home' };
 });
 
 export default router;
