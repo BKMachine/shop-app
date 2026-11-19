@@ -12,6 +12,10 @@ const CustomerFieldsSchema = z.strictObject({
   name: z.string().trim().min(1).max(20),
   homepage: z.httpUrl().optional(),
   logo: z.string().optional(),
+  color: z
+    .string()
+    .regex(/^(#[0-9a-f]{6})?$/i)
+    .optional(),
 });
 
 const CreateCustomerRequest = z.strictObject({

@@ -38,7 +38,8 @@ declare global {
       | 'shipper'
       | 'vendor'
       | 'report'
-      | 'part_note';
+      | 'part_note'
+      | 'schedule';
     timestamp: string;
     device: Device;
     old: any | null;
@@ -57,7 +58,10 @@ declare global {
 
   /* CUSTOMER */
 
-  interface CustomerFields extends PartyFields {}
+  interface CustomerFields extends PartyFields {
+    /** `#rrggbb` used for the customer's jobs on the schedule; empty uses the default. */
+    color?: string;
+  }
 
   interface Customer extends CustomerFields {
     _id: string;
@@ -311,6 +315,79 @@ declare global {
 
   interface JobHistoryListResponse extends PaginatedResult<Job> {}
 
+  /* SCHEDULE */
+
+  /** The job fields a schedule tile needs, read from the job when the schedule is loaded. */
+  interface ScheduleEntryJob {
+    _id: string;
+    jobNumber: number;
+    customerId: string;
+    customerName: string;
+    partNumber: string;
+    partDescription: string;
+    qty: number;
+    /** `YYYY-MM-DD`, or null when the job has no due date. */
+    dueDate: string | null;
+    status: JobStatus;
+    priority: JobPriority;
+  }
+
+  /** A job booked onto a machine for a run of whole days. */
+  interface ScheduleEntry {
+    _id: string;
+    job: ScheduleEntryJob;
+    /**
+     * `_id` of the routing op booked. It stays with the op when ops are inserted, removed or
+     * reordered, so the op's current number and name come from the routing, not `op`/`operation`.
+     * Null for a whole job.
+     */
+    routingId?: string | null;
+    /** Routing op number when it was booked (10, 20...); null when the whole job is booked. */
+    op?: number | null;
+    /** The op's name, as it was when booked. */
+    operation?: string | null;
+    /** The op's department `_id` when booked; it can only go on that department's machines. */
+    department?: string | null;
+    machineId: string;
+    /** First scheduled day, `YYYY-MM-DD`. */
+    start: string;
+    /** Whole days booked, at least 1. */
+    days: number;
+  }
+
+  interface ScheduleEntryCreate {
+    job: string;
+    routingId?: string | null;
+    op?: number | null;
+    operation?: string | null;
+    department?: string | null;
+    machineId: string;
+    start: string;
+    days: number;
+  }
+
+  /** How the schedule turns a job's cycle time into a booking length. */
+  interface ScheduleSettings {
+    /** Hour the working day starts, 0–23. */
+    workdayStartHour: number;
+    /** Hour the working day ends, 1–24, after the start. */
+    workdayEndHour: number;
+    /** Working days of the week, 0 = Sunday ... 6 = Saturday. */
+    workdays: number[];
+    /** Percent of the working day a machine is actually cutting, for departments not listed. */
+    defaultUtilization: number;
+    /** Percent of the working day a machine is actually cutting, by department `_id`. */
+    departmentUtilization: Record<string, number>;
+  }
+
+  /** A new machine, start or length for an existing entry. */
+  interface ScheduleEntryPlacement {
+    _id: string;
+    machineId: string;
+    start: string;
+    days: number;
+  }
+
   interface MachineJobDashboardRow {
     machineId: string;
     machineName: string;
@@ -332,6 +409,11 @@ declare global {
     partHasIncompleteData?: boolean;
     partHourlyRate?: number | null;
     partSummary: string;
+    /** The job booked on this machine for today on the schedule, if any. */
+    scheduledJobId?: string | null;
+    scheduledJobNumber?: number | null;
+    /** This row's in-process job is not the job the schedule has on the machine today. */
+    scheduleMismatch?: boolean;
   }
 
   interface MachineJobDashboardResponse {

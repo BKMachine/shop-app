@@ -15,6 +15,8 @@ import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 const router: Router = Router();
 
 const PartRoutingOperationSchema = z.strictObject({
+  /** Missing on a new op; the server assigns one. */
+  _id: mongoObjectId.optional(),
   op: z.number().int().nonnegative(),
   operation: z.string(),
   department: z.union([mongoObjectId, z.literal(ROUTING_OTHER_DEPARTMENT)]).nullable(),

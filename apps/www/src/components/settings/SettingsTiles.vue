@@ -2,7 +2,8 @@
   <v-btn
     v-for="(item, index) in items"
     :key="item._id"
-    class="tile elevation-2"
+    :class="['tile', 'elevation-2', { 'tile--colored': item.color }]"
+    :style="item.color ? { '--tile-color': item.color } : undefined"
     @click="$emit('edit', index)"
   >
     <v-img v-if="item.logo" class="logo" :src="item.logo" />
@@ -22,6 +23,8 @@ type TileItem = {
   _id: string;
   name: string;
   logo?: string | null;
+  /** Border colour, e.g. a customer's schedule colour; the default border when empty. */
+  color?: string | null;
 };
 
 defineProps<{
@@ -38,6 +41,9 @@ defineEmits(['create', 'edit']);
   margin: 8px;
   border-radius: 20px;
   position: relative;
+}
+.tile--colored {
+  border: 3px solid var(--tile-color);
 }
 .logo {
   width: 100px;

@@ -153,6 +153,10 @@ declare global {
     partHasIncompleteData?: boolean;
     partHourlyRate?: number | null;
     partSummary?: string | null;
+    /** A job running on the machine is not the one the schedule has on it today. */
+    scheduleMismatch?: boolean;
+    /** The job booked on the machine for today, for explaining a mismatch. */
+    scheduledJobNumber?: number | null;
     index?: number;
   }
 

@@ -17,6 +17,7 @@ const schema = new Schema<AuditDoc>({
       'vendor',
       'report',
       'part_note',
+      'schedule',
     ],
     required: true,
   },

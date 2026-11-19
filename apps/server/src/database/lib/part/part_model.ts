@@ -19,7 +19,8 @@ const routingOperationSchema = new Schema<RoutingOperation>(
     time: { type: Number, default: 0 },
     noCycleTime: { type: Boolean, default: false },
   },
-  { _id: false },
+  // Each op keeps an `_id` through reorders, so schedule bookings can point at it.
+  { _id: true },
 );
 
 const schema = new Schema<PartDocumentFields>({

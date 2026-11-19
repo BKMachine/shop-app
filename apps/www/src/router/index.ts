@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { currentDeviceReady, deviceState } from '@/state/device';
 import ActivityView from '@/views/ActivityView.vue';
 import AuditTrailView from '@/views/AuditTrailView.vue';
 import HomeView from '@/views/HomeView.vue';
@@ -9,6 +10,7 @@ import MachiningCalculatorView from '@/views/MachiningCalculatorView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
 import PartsView from '@/views/parts/PartsView.vue';
 import PartView from '@/views/parts/PartView.vue';
+import ScheduleView from '@/views/ScheduleView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import ShipmentArchiveView from '@/views/ShipmentArchiveView.vue';
 import StatusView from '@/views/StatusView.vue';
@@ -17,6 +19,15 @@ import TestView from '@/views/TestView.vue';
 import ToolReportView from '@/views/tools/ToolReportView.vue';
 import ToolsView from '@/views/tools/ToolsView.vue';
 import ToolView from '@/views/tools/ToolView.vue';
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** Full-screen page with no app bar or menu, e.g. a wall display. */
+    bare?: boolean;
+    /** Only for devices flagged as on the shop LAN; others are sent home. */
+    lanOnly?: boolean;
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -55,6 +66,20 @@ const router = createRouter({
       path: '/job/:id',
       name: 'viewJob',
       component: JobView,
+    },
+    {
+      path: '/schedule',
+      name: 'schedule',
+      component: ScheduleView,
+      meta: { lanOnly: true },
+    },
+    {
+      // Read-only wall display for the shop TVs: /view/schedule?departments=Mills,Lathes&days=14
+      path: '/view/schedule',
+      name: 'scheduleDisplay',
+      component: ScheduleView,
+      props: { display: true },
+      meta: { bare: true, lanOnly: true },
     },
     {
       path: '/locations',
@@ -127,6 +152,12 @@ const router = createRouter({
       component: MachiningCalculatorView,
     },
   ],
+});
+
+router.beforeEach(async (to) => {
+  if (!to.meta.lanOnly) return true;
+  await currentDeviceReady();
+  return deviceState.current?.isLan ? true : { name: 'home' };
 });
 
 export default router;

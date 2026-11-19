@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <SettingsTiles :items="customerStore.customers" @create="create" @edit="edit" />
+    <SettingsTiles :items="customerTiles" @create="create" @edit="edit" />
   </div>
   <v-dialog v-model="dialog" class="dialog">
     <v-card>
@@ -55,6 +55,41 @@
               </div>
             </div>
           </div>
+          <div class="color-section py-2">
+            <ColorWheel v-model="editingColor" :size="148" />
+            <div class="color-section__content">
+              <div class="text-subtitle-2">Schedule Colour</div>
+              <div class="text-body-2 text-medium-emphasis">
+                Tiles for this customer's jobs on the schedule use this colour.
+              </div>
+              <div class="d-flex align-center ga-3 pt-3">
+                <div class="color-swatch" :style="{ background: previewColor }" />
+                <v-text-field
+                  v-model="hexInput"
+                  class="color-hex"
+                  density="compact"
+                  hide-details="auto"
+                  label="Hex"
+                  persistent-placeholder
+                  placeholder="CCCCCC"
+                  prefix="#"
+                  :rules="[rules.hex]"
+                  spellcheck="false"
+                  variant="outlined"
+                  @blur="syncHexInput"
+                />
+                <v-btn
+                  v-if="editingItem.color"
+                  prepend-icon="mdi-backup-restore"
+                  size="small"
+                  variant="text"
+                  @click="editingColor = ''"
+                >
+                  Use Default
+                </v-btn>
+              </div>
+            </div>
+          </div>
           <v-text-field
             v-model="editingItem.homepage"
             append-inner-icon="mdi-open-in-new"
@@ -92,11 +127,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import ColorWheel from '@/components/ColorWheel.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import ImageManagerDialog from '@/components/ImageManagerDialog.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import SettingsTiles from '@/components/settings/SettingsTiles.vue';
+import { customerColor } from '@/lib/schedule';
 import api from '@/plugins/axios';
 import { useCustomerStore } from '@/stores/customer_store';
 
@@ -111,6 +148,57 @@ const removingImage = ref(false);
 const draftLogo = ref<MyImageData | null>(null);
 
 const isEditing = computed(() => editingIndex.value > -1);
+
+const editingColor = computed({
+  get: () => editingItem.value.color ?? '',
+  set: (value: string) => {
+    editingItem.value.color = value;
+  },
+});
+
+/** `#rrggbb` from a typed hex (with or without `#`, 3 or 6 digits), '' for empty, or null. */
+function parseHex(value: string | null | undefined): string | null {
+  const trimmed = (value ?? '').trim().replace(/^#/, '');
+  if (!trimmed) return '';
+  if (/^[0-9a-f]{3}$/i.test(trimmed)) {
+    return `#${[...trimmed].map((digit) => digit + digit).join('')}`.toLowerCase();
+  }
+  if (/^[0-9a-f]{6}$/i.test(trimmed)) return `#${trimmed}`.toLowerCase();
+  return null;
+}
+
+/** The hex as typed, without its `#`; the colour only changes once it reads as a valid hex. */
+const hexInput = ref('');
+
+/** On leaving the field, show the colour in use: tidies `e53` to `EE5533`, drops invalid text. */
+function syncHexInput() {
+  hexInput.value = editingColor.value.replace(/^#/, '').toUpperCase();
+}
+
+watch(hexInput, (value) => {
+  const parsed = parseHex(value);
+  if (parsed !== null && parsed !== editingColor.value) editingColor.value = parsed;
+});
+
+// Follow the wheel and dialog opening, but leave the field alone while it is being typed in.
+watch(
+  editingColor,
+  (color) => {
+    if (parseHex(hexInput.value) !== color) hexInput.value = color.replace(/^#/, '').toUpperCase();
+  },
+  { immediate: true },
+);
+
+/** The colour the schedule will use, the default included. */
+const previewColor = computed(() => customerColor(editingItem.value.color));
+
+/** Customers whose tiles carry their colour, the default when none is set. */
+const customerTiles = computed(() =>
+  customerStore.customers.map((customer) => ({
+    ...customer,
+    color: customerColor(customer.color),
+  })),
+);
 
 const cardTitle = computed(() => {
   const prefix = isEditing.value ? 'Edit' : 'Add';
@@ -155,6 +243,7 @@ const names = computed(() => {
 const rules = {
   required: (value) => !!value || 'Required',
   counter: (value) => value.length <= 20 || 'Max 20 characters',
+  hex: (value) => parseHex(value) !== null || 'Invalid hex colour',
   unique: (value) =>
     isEditing.value || !names.value.includes(value.toLowerCase()) || 'Name already used',
 } satisfies Rules;
@@ -259,5 +348,23 @@ async function removeLogo() {
 }
 .logo-section__content {
   flex: 1;
+}
+.color-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.color-section__content {
+  flex: 1 1 220px;
+}
+.color-hex {
+  flex: 0 0 150px;
+}
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgb(0 0 0 / 25%);
+  border-radius: 8px;
 }
 </style>

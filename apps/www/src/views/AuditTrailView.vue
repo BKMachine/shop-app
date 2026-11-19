@@ -344,6 +344,7 @@ function getEntityLabel(type: Audit['type']) {
     vendor: 'Vendor',
     report: 'Email Report',
     part_note: 'Part Note',
+    schedule: 'Schedule',
   };
 
   return labels[type] ?? type;
@@ -871,6 +872,11 @@ function getJsonLineClass(line: AuditJsonLine) {
   --audit-theme-soft: rgba(239, 108, 0, 0.12);
 }
 
+.audit-theme-schedule {
+  --audit-theme-color: #3949ab;
+  --audit-theme-soft: rgba(57, 73, 171, 0.12);
+}
+
 .audit-card.audit-theme-tool,
 .audit-card.audit-theme-part,
 .audit-card.audit-theme-shipment,
@@ -882,7 +888,8 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-card.audit-theme-shipper,
 .audit-card.audit-theme-vendor,
 .audit-card.audit-theme-report,
-.audit-card.audit-theme-part_note {
+.audit-card.audit-theme-part_note,
+.audit-card.audit-theme-schedule {
   background-image: linear-gradient(180deg, var(--audit-theme-soft) 0%, transparent 56px);
 }
 
@@ -897,7 +904,8 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-icon.audit-theme-shipper,
 .audit-icon.audit-theme-vendor,
 .audit-icon.audit-theme-report,
-.audit-icon.audit-theme-part_note {
+.audit-icon.audit-theme-part_note,
+.audit-icon.audit-theme-schedule {
   background: var(--audit-theme-color);
   box-shadow: inset 0 -8px 16px rgba(15, 23, 32, 0.18);
 }
