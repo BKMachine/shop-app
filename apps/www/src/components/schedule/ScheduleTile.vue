@@ -159,9 +159,15 @@ const tooltip = computed(() => tooltipLines.value.join('\n'));
 
 <style scoped>
 .schedule-tile {
-  --tile-bg: color-mix(in srgb, var(--customer-color) 32%, white);
-  --tile-edge: color-mix(in srgb, var(--customer-color) 80%, black);
-  --tile-text: color-mix(in srgb, var(--customer-color) 25%, black);
+  /*
+   * The customer shows as a stripe down the left edge and a faint wash, not a fill: a red or
+   * green customer would otherwise read as a late or on-time booking. Only the border means
+   * due status.
+   */
+  --tile-bg: color-mix(in srgb, var(--customer-color) 10%, #f6f6f6);
+  --tile-edge: #9e9e9e;
+  --tile-text: rgb(0 0 0 / 87%);
+  --tile-stripe: inset 5px 0 0 var(--customer-color);
   position: relative;
   display: flex;
   align-items: stretch;
@@ -170,6 +176,7 @@ const tooltip = computed(() => tooltipLines.value.join('\n'));
   border: 2px solid var(--tile-edge);
   border-radius: 6px;
   background: var(--tile-bg);
+  box-shadow: var(--tile-stripe);
   color: var(--tile-text);
   font-size: 0.75rem;
   line-height: 1.2;
@@ -183,9 +190,9 @@ const tooltip = computed(() => tooltipLines.value.join('\n'));
 }
 
 .v-theme--dark .schedule-tile {
-  --tile-bg: color-mix(in srgb, var(--customer-color) 45%, #1e1e1e);
-  --tile-edge: color-mix(in srgb, var(--customer-color) 75%, #1e1e1e);
-  --tile-text: color-mix(in srgb, var(--customer-color) 12%, white);
+  --tile-bg: color-mix(in srgb, var(--customer-color) 14%, #2a2a2a);
+  --tile-edge: #757575;
+  --tile-text: rgb(255 255 255 / 92%);
 }
 
 /* Due date thresholds: the border says whether the booking finishes in time. */
@@ -220,7 +227,9 @@ const tooltip = computed(() => tooltipLines.value.join('\n'));
 }
 
 .schedule-tile--active {
-  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+  box-shadow:
+    var(--tile-stripe),
+    0 6px 18px rgb(0 0 0 / 35%);
   cursor: grabbing;
 }
 
@@ -231,11 +240,15 @@ const tooltip = computed(() => tooltipLines.value.join('\n'));
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  padding: 0 4px 0 6px;
+  padding: 0 4px 0 9px;
+}
+
+.schedule-tile--narrow {
+  --tile-stripe: inset 4px 0 0 var(--customer-color);
 }
 
 .schedule-tile--narrow .schedule-tile__body {
-  padding: 0 2px;
+  padding: 0 2px 0 6px;
 }
 
 .schedule-tile--tiny .schedule-tile__body {
