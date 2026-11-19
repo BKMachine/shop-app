@@ -63,6 +63,9 @@ export interface SchedulePlacement {
  * otherwise before it, so dropping onto the front half of a job inserts ahead of it. Entries only
  * ever move later; gaps that were already in the row stay.
  *
+ * Shortening an entry in place (same machine and start) is the exception: everything after it on
+ * the machine moves earlier by the days it lost, so the gaps behind it keep their size.
+ *
  * Returns every entry, with the ones that moved replaced.
  */
 export function placeScheduleEntry<T extends SchedulePlacement>(
@@ -71,6 +74,15 @@ export function placeScheduleEntry<T extends SchedulePlacement>(
 ): T[] {
   const existing = entries.find((entry) => entry._id === placed._id);
   const moved = { ...(existing as T), ...placed, days: Math.max(1, Math.round(placed.days)) };
+
+  if (
+    existing &&
+    existing.machineId === moved.machineId &&
+    existing.start === moved.start &&
+    moved.days < existing.days
+  ) {
+    return pullScheduleEntriesBack(entries, moved, existing.days - moved.days);
+  }
 
   const row = entries.filter(
     (entry) => entry.machineId === moved.machineId && entry._id !== moved._id,
@@ -102,6 +114,20 @@ export function placeScheduleEntry<T extends SchedulePlacement>(
   const result = entries.map((entry) => updated.get(entry._id) ?? entry);
   if (!existing) result.push(moved);
   return result;
+}
+
+/** Shortens `shortened` and moves every entry after it on its machine `days` earlier. */
+function pullScheduleEntriesBack<T extends SchedulePlacement>(
+  entries: readonly T[],
+  shortened: T,
+  days: number,
+): T[] {
+  return entries.map((entry) => {
+    if (entry._id === shortened._id) return shortened;
+    if (entry.machineId !== shortened.machineId) return entry;
+    if (diffDays(shortened.start, entry.start) <= 0) return entry;
+    return { ...entry, start: addDays(entry.start, -days) };
+  });
 }
 
 /** The entries in `after` whose machine, start or length differ from `before`. */

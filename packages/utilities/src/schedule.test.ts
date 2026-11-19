@@ -68,6 +68,30 @@ test('lengthening a job pushes the jobs behind it', () => {
   assert.deepEqual(result, [entry('a', '2026-11-02', 4), entry('b', '2026-11-06', 2)]);
 });
 
+test('shortening a job pulls the jobs behind it back and keeps the gaps', () => {
+  const entries = [
+    entry('before', '2026-10-28', 2),
+    entry('a', '2026-11-02', 5), // 2nd..6th
+    entry('b', '2026-11-07', 2), // right behind
+    entry('c', '2026-11-12', 1), // three day gap after b
+    entry('other', '2026-11-08', 3, 'm2'),
+  ];
+  const result = placeScheduleEntry(entries, entry('a', '2026-11-02', 3));
+  assert.deepEqual(result, [
+    entry('before', '2026-10-28', 2),
+    entry('a', '2026-11-02', 3),
+    entry('b', '2026-11-05', 2),
+    entry('c', '2026-11-10', 1),
+    entry('other', '2026-11-08', 3, 'm2'),
+  ]);
+});
+
+test('shortening a job with a gap behind it keeps that gap', () => {
+  const entries = [entry('a', '2026-11-02', 4), entry('b', '2026-11-10', 2)];
+  const result = placeScheduleEntry(entries, entry('a', '2026-11-02', 2));
+  assert.deepEqual(result, [entry('a', '2026-11-02', 2), entry('b', '2026-11-08', 2)]);
+});
+
 test('other machines are left alone and a new entry is appended', () => {
   const entries = [entry('a', '2026-11-02', 4, 'm2')];
   const result = placeScheduleEntry(entries, entry('new', '2026-11-03', 1));

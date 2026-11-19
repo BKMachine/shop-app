@@ -24,5 +24,8 @@ export async function start(): Promise<void> {
 
 export async function stop(): Promise<void> {
   await server.stop();
+  // After the server stops taking requests, so nothing is queued behind the flush.
+  const flushedAudits = await ScheduleService.flushAudits();
+  if (flushedAudits) logger.info(`Flushed queued schedule audits for ${flushedAudits} bookings.`);
   await database.disconnect();
 }

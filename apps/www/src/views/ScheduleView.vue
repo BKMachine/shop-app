@@ -104,6 +104,14 @@
           :content="unscheduledCount"
           inline
         />
+        <v-badge
+          v-if="hiddenWholeJobCount"
+          class="ml-1"
+          color="grey"
+          :content="`+${hiddenWholeJobCount}`"
+          inline
+          :title="`${hiddenWholeJobCount} unscheduled whole ${hiddenWholeJobCount === 1 ? 'job' : 'jobs'} hidden (no machine ops in routing)`"
+        />
       </v-btn>
     </header>
 
@@ -254,13 +262,36 @@
             prepend-inner-icon="mdi-magnify"
             variant="outlined"
           />
-          <v-switch
-            v-model="hideScheduled"
-            color="primary"
-            density="compact"
-            hide-details
-            label="Unscheduled only"
-          />
+          <v-chip-group
+            v-model="backlogFilters"
+            class="schedule-backlog__filters"
+            column
+            multiple
+            selected-class="text-primary"
+          >
+            <v-chip
+              density="comfortable"
+              filter
+              size="small"
+              value="unscheduled"
+              variant="outlined"
+            >
+              Unscheduled
+            </v-chip>
+            <v-chip
+              density="comfortable"
+              filter
+              size="small"
+              title="Jobs with no machine ops in their routing, booked whole"
+              value="whole"
+              variant="outlined"
+            >
+              Whole jobs
+              <span v-if="wholeJobsInList" class="schedule-backlog__filter-count">
+                {{ wholeJobsInList }}
+              </span>
+            </v-chip>
+          </v-chip-group>
           <div class="text-body-small text-medium-emphasis">
             Drag an op onto a machine{{ isTouchDevice ? ' (press and hold)' : '' }}, or tap it.
           </div>
@@ -322,9 +353,23 @@
               <span v-else class="ml-auto text-medium-emphasis">No due date</span>
             </div>
           </div>
-          <div v-if="!backlogItems.length" class="schedule-backlog__empty">
+          <div
+            v-if="!backlogItems.length && !hiddenWholeJobsInList"
+            class="schedule-backlog__empty"
+          >
             {{ backlogJobs.length ? 'Every op shown here is on the schedule.' : 'No open jobs.' }}
           </div>
+          <button
+            v-if="hiddenWholeJobsInList"
+            class="schedule-backlog__hidden"
+            type="button"
+            @click="showWholeJobs = true"
+          >
+            <v-icon icon="mdi-eye-off-outline" size="16" />
+            {{ hiddenWholeJobsInList }} whole {{ hiddenWholeJobsInList === 1 ? 'job' : 'jobs' }}
+            hidden
+            <span class="schedule-backlog__hidden-action">Show</span>
+          </button>
         </div>
       </aside>
     </div>
@@ -427,6 +472,7 @@ const BACKLOG_REFRESH_DEBOUNCE_MS = 500;
 const PRESET_STORAGE_KEY = 'schedule-range-preset';
 const DEPARTMENTS_STORAGE_KEY = 'schedule-included-departments';
 const BACKLOG_STORAGE_KEY = 'schedule-backlog-open';
+const WHOLE_JOBS_STORAGE_KEY = 'schedule-show-whole-jobs';
 
 type Placement = Omit<ScheduleEntryPlacement, '_id'>;
 
@@ -871,7 +917,26 @@ const backlogJobs = ref<ScheduleEntryJob[]>([]);
 const routingByJob = ref(new Map<string, RoutingOperation[]>());
 const backlogSearch = ref('');
 const hideScheduled = ref(true);
+/**
+ * Jobs with no machine ops in their routing are booked whole. They are mostly routing that hasn't
+ * been filled in yet, so the list leaves them out unless asked.
+ */
+const showWholeJobs = ref(window.localStorage.getItem(WHOLE_JOBS_STORAGE_KEY) === 'true');
 let backlogRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** The job list's filter chips, as the chip group selects them. */
+const backlogFilters = computed({
+  get: () => [
+    ...(hideScheduled.value ? ['unscheduled'] : []),
+    ...(showWholeJobs.value ? ['whole'] : []),
+  ],
+  set: (selected: string[]) => {
+    hideScheduled.value = selected.includes('unscheduled');
+    showWholeJobs.value = selected.includes('whole');
+  },
+});
+
+watch(showWholeJobs, (show) => window.localStorage.setItem(WHOLE_JOBS_STORAGE_KEY, String(show)));
 
 watch(backlogOpen, (open) => {
   window.localStorage.setItem(BACKLOG_STORAGE_KEY, String(open));
@@ -940,11 +1005,21 @@ const departmentBookables = computed(() =>
     : bookables.value,
 );
 
-const unscheduledCount = computed(
-  () => departmentBookables.value.filter((item) => !scheduledCounts.value.has(item.key)).length,
+const unscheduledBookables = computed(() =>
+  departmentBookables.value.filter((item) => !scheduledCounts.value.has(item.key)),
 );
 
-const backlogItems = computed(() => {
+const unscheduledCount = computed(
+  () => unscheduledBookables.value.filter((item) => showWholeJobs.value || item.op != null).length,
+);
+
+/** Unscheduled whole jobs left out of the list while whole jobs are hidden. */
+const hiddenWholeJobCount = computed(() =>
+  showWholeJobs.value ? 0 : unscheduledBookables.value.filter((item) => item.op == null).length,
+);
+
+/** The list's cards by its search and filters, whole jobs included. */
+const matchingBookables = computed(() => {
   const search = backlogSearch.value?.trim().toLowerCase() ?? '';
   return departmentBookables.value
     .map((item) => ({ ...item, scheduledCount: scheduledCounts.value.get(item.key) ?? 0 }))
@@ -963,6 +1038,19 @@ const backlogItems = computed(() => {
         .includes(search);
     });
 });
+
+/** Whole jobs matching the list's search and filters. */
+const wholeJobsInList = computed(
+  () => matchingBookables.value.filter((item) => item.op == null).length,
+);
+
+const hiddenWholeJobsInList = computed(() => (showWholeJobs.value ? 0 : wholeJobsInList.value));
+
+const backlogItems = computed(() =>
+  showWholeJobs.value
+    ? matchingBookables.value
+    : matchingBookables.value.filter((item) => item.op != null),
+);
 
 const departmentNames = computed(
   () =>
@@ -1957,6 +2045,40 @@ onBeforeUnmount(() => {
   gap: 4px;
   padding: 12px;
   border-bottom: 1px solid var(--schedule-divider);
+}
+
+.schedule-backlog__filters {
+  padding: 0;
+}
+
+.schedule-backlog__filter-count {
+  margin-left: 6px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.schedule-backlog__hidden {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 4px;
+  border: 1px dashed var(--schedule-divider);
+  border-radius: 6px;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.schedule-backlog__hidden:hover {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.schedule-backlog__hidden-action {
+  margin-left: auto;
+  color: rgb(var(--v-theme-primary));
+  font-weight: 600;
 }
 
 .schedule-backlog__list {

@@ -1,11 +1,13 @@
 import { addDays, DEFAULT_SCHEDULE_SETTINGS, scheduleEnd } from '@repo/utilities/schedule';
 import { DEFAULT_BUSINESS_TIME_ZONE } from '@repo/utilities/time';
 import type { Types } from 'mongoose';
+import logger from '../../../logger.js';
 import { emit } from '../../../server/sockets.js';
 import AuditService from '../audit/audit_service.js';
 import DepartmentService from '../department/department_service.js';
 import Job from '../job/job_model.js';
 import Machine from '../machine/machine_model.js';
+import { createScheduleAuditQueue, type QueuedScheduleChange } from './schedule_audit_queue.js';
 import ScheduleEntryModel from './schedule_model.js';
 import ScheduleSettingsModel, { SCHEDULE_SETTINGS_ID } from './schedule_settings_model.js';
 
@@ -131,36 +133,54 @@ function toAuditRecord(entry: LeanEntry, names: Map<string, string>): ScheduleAu
   };
 }
 
-/** Audits each booking that moved between the two snapshots, by id. */
-async function auditChanges(
-  before: LeanEntry[],
-  after: LeanEntry[],
-  deviceId: string,
-): Promise<void> {
-  if (!before.length && !after.length) return;
+/** How long a job's bookings go untouched before their changes are audited. */
+export const SCHEDULE_AUDIT_QUIET_MS = 2 * 60_000;
+
+function sameBooking(before: LeanEntry, after: LeanEntry) {
+  return (
+    before.machineId === after.machineId &&
+    before.start === after.start &&
+    before.days === after.days
+  );
+}
+
+async function writeAudits(changes: QueuedScheduleChange<LeanEntry>[]): Promise<void> {
   const names = await machineNames();
-  const ids = new Set([...before, ...after].map((entry) => entry._id.toString()));
-  const beforeById = new Map(before.map((entry) => [entry._id.toString(), entry]));
-  const afterById = new Map(after.map((entry) => [entry._id.toString(), entry]));
-
-  for (const id of ids) {
-    const oldEntry = beforeById.get(id);
-    const newEntry = afterById.get(id);
-    const unchanged =
-      oldEntry &&
-      newEntry &&
-      oldEntry.machineId === newEntry.machineId &&
-      oldEntry.start === newEntry.start &&
-      oldEntry.days === newEntry.days;
-    if (unchanged) continue;
-
+  for (const change of changes) {
     await AuditService.addAudit(
       'schedule',
-      oldEntry ? toAuditRecord(oldEntry, names) : null,
-      newEntry ? toAuditRecord(newEntry, names) : null,
-      deviceId,
+      change.before ? toAuditRecord(change.before, names) : null,
+      change.after ? toAuditRecord(change.after, names) : null,
+      change.deviceId,
+      change.timestamp,
     );
   }
+}
+
+/**
+ * Rearranging the schedule moves bookings many times over, so each job's changes are held until
+ * its bookings sit untouched for {@link SCHEDULE_AUDIT_QUIET_MS}, then audited once, from where
+ * each booking started to where it ended up.
+ */
+const auditQueue = createScheduleAuditQueue<LeanEntry>({
+  quietMs: SCHEDULE_AUDIT_QUIET_MS,
+  idOf: (entry) => entry._id.toString(),
+  groupOf: (entry) => entry.job?._id.toString() ?? entry._id.toString(),
+  same: sameBooking,
+  write: writeAudits,
+  onError: (error) => logger.error('Failed to write schedule audits:', error),
+});
+
+/** Queues an audit for each booking that changed between the two snapshots, by id. */
+function auditChanges(before: LeanEntry[], after: LeanEntry[], deviceId: string): void {
+  auditQueue.queue(before, after, deviceId);
+}
+
+/** Writes the schedule audits still waiting out their quiet time; called on shutdown. */
+async function flushAudits(): Promise<number> {
+  const pending = auditQueue.size();
+  await auditQueue.flush();
+  return pending;
 }
 
 /** Books a job and applies any placements the booking pushed along with it. */
@@ -178,7 +198,7 @@ async function create(
   if (pushed.length) await writePlacements(pushed);
 
   const after = await findMany([created._id.toString(), ...pushedIds]);
-  await auditChanges(before, after, deviceId);
+  auditChanges(before, after, deviceId);
 
   const populated = await ScheduleEntryModel.findById(created._id)
     .populate('job', JOB_FIELDS)
@@ -194,7 +214,7 @@ async function place(placements: ScheduleEntryPlacement[], deviceId: string): Pr
   const before = await findMany(ids);
   const matched = await writePlacements(placements);
   const after = await findMany(ids);
-  await auditChanges(before, after, deviceId);
+  auditChanges(before, after, deviceId);
   emit('schedule');
 
   if (matched !== placements.length) {
@@ -225,7 +245,7 @@ async function remove(id: string, deviceId: string): Promise<boolean> {
   const [existing] = await findMany([id]);
   if (!existing) return false;
   await ScheduleEntryModel.deleteOne({ _id: id });
-  await auditChanges([existing], [], deviceId);
+  auditChanges([existing], [], deviceId);
   emit('schedule');
   return true;
 }
@@ -237,7 +257,7 @@ async function removeByJob(jobId: string, deviceId: string): Promise<void> {
     .lean<LeanEntry[]>();
   if (!existing.length) return;
   await ScheduleEntryModel.deleteMany({ job: jobId });
-  await auditChanges(existing, [], deviceId);
+  auditChanges(existing, [], deviceId);
   emit('schedule');
 }
 
@@ -384,6 +404,7 @@ async function backfillRoutingIds(): Promise<number> {
 
 export default {
   backfillRoutingIds,
+  flushAudits,
   list,
   create,
   place,
