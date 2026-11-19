@@ -58,19 +58,34 @@
           <div class="schedule-dialog__days">
             <v-btn
               aria-label="One day shorter"
-              :disabled="days <= 1"
+              :disabled="days !== null && days <= 1"
               icon="mdi-minus"
               size="small"
               variant="tonal"
-              @click="days = Math.max(1, days - 1)"
+              @click="setDays((days ?? 2) - 1)"
             />
-            <div class="schedule-dialog__days-value">{{ days }} day{{ days === 1 ? '' : 's' }}</div>
+            <v-text-field
+              v-model="daysInput"
+              class="schedule-dialog__days-input"
+              :error="days === null"
+              hide-details
+              inputmode="numeric"
+              label="Days"
+              :max="MAX_SCHEDULE_DAYS"
+              min="1"
+              step="1"
+              type="number"
+              variant="outlined"
+              @blur="tidyDays"
+              @focus="selectAll"
+            />
             <v-btn
               aria-label="One day longer"
+              :disabled="days !== null && days >= MAX_SCHEDULE_DAYS"
               icon="mdi-plus"
               size="small"
               variant="tonal"
-              @click="days += 1"
+              @click="setDays((days ?? 0) + 1)"
             />
           </div>
         </div>
@@ -97,7 +112,7 @@
             v-if="estimate.days !== days"
             size="small"
             variant="tonal"
-            @click="days = estimate.days"
+            @click="setDays(estimate.days)"
           >
             Use {{ estimate.days }}d
           </v-btn>
@@ -109,7 +124,10 @@
               : 'Booked as a whole job, so there is no op cycle time to estimate from.'
           }}
         </div>
-        <div class="text-body-small text-medium-emphasis">
+        <div v-if="days === null" class="text-body-small text-error">
+          Enter a whole number of days from 1 to {{ MAX_SCHEDULE_DAYS }}.
+        </div>
+        <div v-else class="text-body-small text-medium-emphasis">
           Runs through
           {{ formatDay(lastDay, { weekday: 'short', month: 'short', day: 'numeric' }) }}. Later jobs
           on the machine move back if this overlaps them.
@@ -137,7 +155,12 @@
 </template>
 
 <script setup lang="ts">
-import { addDays, isDayKey, type ScheduleEstimate } from '@repo/utilities/schedule';
+import {
+  addDays,
+  isDayKey,
+  MAX_SCHEDULE_DAYS,
+  type ScheduleEstimate,
+} from '@repo/utilities/schedule';
 import { computed, ref, watch } from 'vue';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
 import { formatDay } from '@/lib/schedule';
@@ -165,7 +188,33 @@ const emit = defineEmits<{
 
 const machineId = ref('');
 const start = ref('');
-const days = ref(1);
+/** The days field as typed; kept as text so a half-typed value isn't rewritten under the cursor. */
+const daysInput = ref('1');
+
+/** The typed length, or null while it isn't a whole number of days the server accepts. */
+const days = computed(() => {
+  const value = Number(String(daysInput.value).trim());
+  return String(daysInput.value).trim() !== '' &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= MAX_SCHEDULE_DAYS
+    ? value
+    : null;
+});
+
+function setDays(value: number) {
+  daysInput.value = String(Math.min(Math.max(Math.round(value), 1), MAX_SCHEDULE_DAYS));
+}
+
+/** Rounds or clamps a typed number on leaving the field; leaves anything else to show its error. */
+function tidyDays() {
+  const value = Number(String(daysInput.value).trim());
+  if (String(daysInput.value).trim() !== '' && Number.isFinite(value)) setDays(value);
+}
+
+function selectAll(event: FocusEvent) {
+  (event.target as HTMLInputElement | null)?.select();
+}
 
 watch(
   open,
@@ -173,13 +222,15 @@ watch(
     if (!isOpen) return;
     machineId.value = props.initial.machineId;
     start.value = props.initial.start;
-    days.value = props.initial.days;
+    setDays(props.initial.days);
   },
   { immediate: true },
 );
 
 const lastDay = computed(() =>
-  isDayKey(start.value) ? addDays(start.value, days.value - 1) : props.initial.start,
+  isDayKey(start.value) && days.value !== null
+    ? addDays(start.value, days.value - 1)
+    : props.initial.start,
 );
 
 const estimate = computed(() => {
@@ -191,10 +242,12 @@ function formatMinutes(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-const canSave = computed(() => Boolean(machineId.value) && isDayKey(start.value));
+const canSave = computed(
+  () => Boolean(machineId.value) && isDayKey(start.value) && days.value !== null,
+);
 
 function save() {
-  if (!canSave.value) return;
+  if (!canSave.value || days.value === null) return;
   emit('save', { machineId: machineId.value, start: start.value, days: days.value });
 }
 </script>
@@ -213,6 +266,12 @@ function save() {
 
 .schedule-dialog__start {
   flex: 1 1 180px;
+  min-width: 0;
+}
+
+/* A native date input won't shrink below its picker's width unless told to. */
+.schedule-dialog__start :deep(input) {
+  min-width: 0;
 }
 
 .schedule-dialog__estimate {
@@ -225,15 +284,27 @@ function save() {
 }
 
 .schedule-dialog__days {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.schedule-dialog__days-value {
-  min-width: 64px;
+.schedule-dialog__days-input {
+  flex: 0 0 96px;
+}
+
+.schedule-dialog__days-input :deep(input) {
   font-weight: 600;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  appearance: textfield;
+}
+
+/* The −/+ buttons beside it do the stepping. */
+.schedule-dialog__days-input :deep(input::-webkit-inner-spin-button),
+.schedule-dialog__days-input :deep(input::-webkit-outer-spin-button) {
+  margin: 0;
+  appearance: none;
 }
 </style>

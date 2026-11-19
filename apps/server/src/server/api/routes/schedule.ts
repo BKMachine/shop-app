@@ -1,4 +1,4 @@
-import { isDayKey } from '@repo/utilities/schedule';
+import { isDayKey, MAX_SCHEDULE_DAYS } from '@repo/utilities/schedule';
 import { Router } from 'express';
 import * as z from 'zod';
 import { isValidId } from '../../../database/index.js';
@@ -12,8 +12,6 @@ import { narrowKnownDevice, requireKnownDevice } from '../../middleware/knownDev
 
 const router: Router = Router();
 
-/** The longest single booking, about a year. */
-const MAX_SCHEDULE_DAYS = 366;
 /** The most entries one move can shift; a full row on the busiest machine is well under this. */
 const MAX_PLACEMENTS = 500;
 

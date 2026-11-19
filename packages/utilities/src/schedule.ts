@@ -121,6 +121,9 @@ export function changedSchedulePlacements<T extends SchedulePlacement>(
   });
 }
 
+/** The longest single booking, about a year. */
+export const MAX_SCHEDULE_DAYS = 366;
+
 export type ScheduleDueTone = 'none' | 'ok' | 'tight' | 'late';
 
 /** Days of slack at or under which a booking that still makes its due date is called tight. */
