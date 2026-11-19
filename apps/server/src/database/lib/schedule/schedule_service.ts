@@ -20,6 +20,7 @@ type PopulatedJob = {
   customerName?: string;
   partNumber?: string;
   partDescription?: string;
+  part?: { img?: string } | null;
   qty: number;
   dueDate?: Date | null;
   status: JobStatus;
@@ -55,7 +56,10 @@ type ScheduleAuditRecord = {
 };
 
 const JOB_FIELDS =
-  'jobNumber customer customerName partNumber partDescription qty dueDate status priority';
+  'jobNumber customer customerName part partNumber partDescription qty dueDate status priority';
+
+/** The booked job, with its part's image, as a booking is sent to the app. */
+const JOB_POPULATE = { path: 'job', select: JOB_FIELDS, populate: { path: 'part', select: 'img' } };
 
 function toEntry(doc: LeanEntry): ScheduleEntry | null {
   const { job } = doc;
@@ -77,6 +81,7 @@ function toEntry(doc: LeanEntry): ScheduleEntry | null {
       customerName: job.customerName ?? '',
       partNumber: job.partNumber ?? '',
       partDescription: job.partDescription ?? '',
+      partImg: job.part?.img?.trim() ?? '',
       qty: job.qty,
       // Due dates are saved at noon UTC, so the UTC date is the day that was picked.
       dueDate: job.dueDate ? job.dueDate.toISOString().slice(0, 10) : null,
@@ -93,7 +98,7 @@ async function list(range: { from: string; to?: string }): Promise<ScheduleEntry
 
   const docs = await ScheduleEntryModel.find(filter)
     .sort({ machineId: 1, start: 1 })
-    .populate('job', JOB_FIELDS)
+    .populate(JOB_POPULATE)
     .lean<LeanEntry[]>();
 
   return docs.map(toEntry).filter((entry): entry is ScheduleEntry => entry !== null);
@@ -201,7 +206,7 @@ async function create(
   auditChanges(before, after, deviceId);
 
   const populated = await ScheduleEntryModel.findById(created._id)
-    .populate('job', JOB_FIELDS)
+    .populate(JOB_POPULATE)
     .lean<LeanEntry>();
   const entry = populated ? toEntry(populated) : null;
   if (!entry) throw new Error(`Unable to read back schedule entry id: ${created._id}`);

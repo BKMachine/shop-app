@@ -325,6 +325,8 @@ declare global {
     customerName: string;
     partNumber: string;
     partDescription: string;
+    /** The part's image URL, or empty without one. */
+    partImg: string;
     qty: number;
     /** `YYYY-MM-DD`, or null when the job has no due date. */
     dueDate: string | null;

@@ -1,5 +1,6 @@
 <template>
   <div
+    :aria-label="tooltip"
     :class="[
       'schedule-tile',
       `schedule-tile--${dueTone}`,
@@ -13,8 +14,32 @@
       },
     ]"
     :style="{ '--customer-color': color }"
-    :title="tooltip"
   >
+    <!-- A longer hover opens the booking's details, part image included. -->
+    <v-tooltip
+      activator="parent"
+      content-class="schedule-tile__details"
+      :disabled="active || !details"
+      location="top"
+      max-width="320"
+      :open-delay="DETAILS_DELAY_MS"
+      :open-on-focus="false"
+    >
+      <div class="schedule-tile__details-card">
+        <v-img
+          v-if="entry.job.partImg && !imageFailed"
+          class="schedule-tile__details-img"
+          contain
+          :src="entry.job.partImg"
+          @error="imageFailed = true"
+        />
+        <div class="schedule-tile__details-title">
+          <v-icon v-if="entry.job.priority === 'rush'" color="error" icon="mdi-fire" size="16" />
+          #{{ entry.job.jobNumber }} · {{ entry.job.customerName }}
+        </div>
+        <div v-for="line in tooltipLines.slice(1)" :key="line">{{ line }}</div>
+      </div>
+    </v-tooltip>
     <div class="schedule-tile__body">
       <div class="schedule-tile__line schedule-tile__line--primary">
         <v-icon
@@ -50,12 +75,14 @@
 
 <script setup lang="ts">
 import { diffDays, scheduleDueTone, scheduleEnd } from '@repo/utilities/schedule';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { customerColor, formatDay } from '@/lib/schedule';
 import { useCustomerStore } from '@/stores/customer_store';
 
 /** Width from which a tile shows the part number and a separate days column. */
 const WIDE_TILE_PX = 110;
+/** How long the pointer rests on a tile before its details open. */
+const DETAILS_DELAY_MS = 700;
 
 const props = defineProps<{
   entry: Pick<ScheduleEntry, 'start' | 'days' | 'job' | 'op' | 'operation'>;
@@ -70,7 +97,17 @@ const props = defineProps<{
   clippedEnd?: boolean;
   /** The booked op has been removed from the part's routing. */
   opRemoved?: boolean;
+  /** Open the details card on a long hover (off where nobody hovers, like the wall display). */
+  details?: boolean;
 }>();
+
+const imageFailed = ref(false);
+watch(
+  () => props.entry.job.partImg,
+  () => {
+    imageFailed.value = false;
+  },
+);
 
 const customerStore = useCustomerStore();
 
@@ -98,7 +135,7 @@ const daysLabel = computed(() => {
     : `${remainingDays.value}/${props.entry.days}d`;
 });
 
-const tooltip = computed(() => {
+const tooltipLines = computed(() => {
   const { job } = props.entry;
   const lines = [
     `#${job.jobNumber} · ${job.customerName}`,
@@ -114,8 +151,10 @@ const tooltip = computed(() => {
       : `${remainingDays.value} of ${props.entry.days} days left`,
   ];
   if (job.dueDate) lines.push(`Due ${formatDay(job.dueDate, { month: 'short', day: 'numeric' })}`);
-  return lines.filter(Boolean).join('\n');
+  return lines.filter(Boolean);
 });
+
+const tooltip = computed(() => tooltipLines.value.join('\n'));
 </script>
 
 <style scoped>
@@ -294,6 +333,35 @@ const tooltip = computed(() => {
 
 .schedule-tile--tiny .schedule-tile__resize {
   width: 40%;
+}
+
+/* The tooltip is teleported out of the tile, so its styles can't be scoped to it. */
+:global(.schedule-tile__details) {
+  padding: 8px 10px !important;
+}
+
+:global(.schedule-tile__details-card) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+:global(.schedule-tile__details-img) {
+  width: 300px;
+  max-width: 100%;
+  height: 160px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  background: white;
+}
+
+:global(.schedule-tile__details-title) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
 }
 
 /* Last, so they win over the plain rules above: a container query adds no specificity. */

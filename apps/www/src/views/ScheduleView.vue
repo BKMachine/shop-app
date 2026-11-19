@@ -116,7 +116,7 @@
     </header>
 
     <div class="schedule-main">
-      <div ref="boardEl" class="schedule-board">
+      <div ref="boardEl" class="schedule-board" @wheel="onBoardWheel">
         <div ref="headerEl" class="schedule-board__header">
           <div class="schedule-board__corner">Machine</div>
           <div class="schedule-board__scale" :style="{ width: `${timelineWidth}px` }">
@@ -229,6 +229,7 @@
               :class="{ 'schedule-board__tile--active': tile.active }"
               :clipped-end="tile.clippedEnd"
               :clipped-start="tile.clippedStart"
+              :details="!display && !isTouchDevice && !drag?.active"
               :entry="tileEntry(tile.entry)"
               :op-removed="entryOps.get(tile.entry._id)?.removed"
               :resizable="!display"
@@ -331,7 +332,9 @@
             <div class="schedule-backlog__op">
               <template v-if="item.op != null">
                 <strong>Op {{ item.op }}</strong>
-                <span v-if="item.operation">{{ item.operation }}</span>
+                <span v-if="item.operation" class="schedule-backlog__operation">{{
+                  item.operation
+                }}</span>
                 <span class="text-medium-emphasis">· {{ departmentLabel(item.department) }}</span>
                 <span v-if="item.cycleMinutes" class="ml-auto text-medium-emphasis">
                   {{ formatRunHours(item.cycleMinutes * item.job.qty) }}
@@ -392,12 +395,14 @@
       v-model="dialogOpen"
       :entry="dialogEntry"
       :estimator="dialogEstimator"
+      :first-open-day="dialogFirstOpenDay"
       :initial="dialogInitial"
       :job="dialogJob"
       :machines="dialogMachines"
       :op="dialogBookable?.op ?? null"
       :op-removed="dialogBookable?.removed"
       :operation="dialogBookable?.operation ?? null"
+      :start-follows-machine="!dialogEntry"
       @remove="removeDialogEntry"
       @save="saveDialog"
     />
@@ -448,6 +453,8 @@ import useNowStore from '@/stores/now';
 import { useScheduleStore } from '@/stores/schedule_store';
 
 const ROW_HEIGHT = 52;
+/** How long the range must sit still before bookings for a new start are loaded. */
+const FETCH_DEBOUNCE_MS = 250;
 /** Row height limits when display mode stretches the rows to fill the screen. */
 const DISPLAY_MIN_ROW_HEIGHT = 28;
 const DISPLAY_MAX_ROW_HEIGHT = 84;
@@ -568,6 +575,35 @@ function shiftRange(direction: 1 | -1) {
 
 function goToToday() {
   rangeStart.value = today.value;
+}
+
+/** Sideways scroll not yet worth a whole day, carried to the next wheel event. */
+let wheelPanPx = 0;
+
+/**
+ * Sideways scrolling over the board (a trackpad swipe, shift + wheel, a tilt wheel) slides the
+ * range a day at a time, as far as it was scrolled. Up and down still scroll the machines.
+ */
+function onBoardWheel(event: WheelEvent) {
+  if (props.display || drag.value?.active) return;
+  const sideways = event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX;
+  if (!sideways || (!event.shiftKey && Math.abs(event.deltaY) > Math.abs(event.deltaX))) return;
+  // A zoom wide enough to scroll sideways on its own keeps the native scroll.
+  const board = boardEl.value;
+  if (board && board.scrollWidth > board.clientWidth + 1) return;
+
+  event.preventDefault();
+  const unit =
+    event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      ? 16
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        ? availableWidth.value
+        : 1;
+  wheelPanPx += sideways * unit;
+  const days = Math.trunc(wheelPanPx / dayWidth.value);
+  if (!days) return;
+  wheelPanPx -= days * dayWidth.value;
+  rangeStart.value = addDays(rangeStart.value, days);
 }
 
 function readPreset(): ScheduleRangePreset {
@@ -843,9 +879,19 @@ const fetchFrom = computed(() =>
   diffDays(rangeStart.value, today.value) < 0 ? today.value : rangeStart.value,
 );
 
-watch(fetchFrom, (from) => void scheduleStore.fetch(from).catch(() => undefined), {
-  immediate: true,
-});
+let fetchTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Scrolling back through past days moves this a day at a time, so it settles before loading.
+watch(
+  fetchFrom,
+  (from, previous) => {
+    if (fetchTimer) clearTimeout(fetchTimer);
+    const load = () => void scheduleStore.fetch(from).catch(() => undefined);
+    if (previous === undefined) load();
+    else fetchTimer = setTimeout(load, FETCH_DEBOUNCE_MS);
+  },
+  { immediate: true },
+);
 
 /** The entries as they would be with the drag in progress dropped where it is. */
 const displayEntries = computed<ScheduleEntry[]>(() => {
@@ -1241,12 +1287,19 @@ function openNewBookingDialog(bookable: Bookable) {
   dialogOpen.value = true;
 }
 
-/** The first day from today with nothing booked after it on the machine. */
-function nextOpenDay(machineId: string): string {
+/**
+ * The first day from today with nothing booked after it on the machine: a new booking's start.
+ * `exceptId` leaves out the booking being moved.
+ */
+function nextOpenDay(machineId: string, exceptId?: string): string {
   return scheduleStore.entries
-    .filter((entry) => entry.machineId === machineId)
+    .filter((entry) => entry.machineId === machineId && entry._id !== exceptId)
     .map(scheduleEnd)
     .reduce((latest, end) => (diffDays(latest, end) > 0 ? end : latest), today.value);
+}
+
+function dialogFirstOpenDay(machineId: string): string {
+  return nextOpenDay(machineId, dialogEntry.value?._id);
 }
 
 async function saveDialog(placement: Placement) {
@@ -1616,6 +1669,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('touchmove', preventTouchScroll);
   resizeObserver?.disconnect();
   if (backlogRefreshTimer) clearTimeout(backlogRefreshTimer);
+  if (fetchTimer) clearTimeout(fetchTimer);
   socket.io.off('reconnect', refreshDisplay);
   for (const event of RUNNING_JOB_EVENTS) socket.off(event, refreshRunningJobs);
   if (runningRefreshTimer) clearTimeout(runningRefreshTimer);
@@ -2125,6 +2179,17 @@ onBeforeUnmount(() => {
   min-width: 0;
   font-size: 0.8rem;
   white-space: nowrap;
+}
+
+/* A long op name gives way so the department and run time stay on the card. */
+.schedule-backlog__operation {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-backlog__op > :not(.schedule-backlog__operation) {
+  flex: none;
 }
 
 .schedule-backlog__customer,

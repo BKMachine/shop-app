@@ -92,6 +92,7 @@ export function toScheduleEntryJob(job: Job): ScheduleEntryJob {
       job.customerName || (typeof job.customer === 'string' ? '' : job.customer.name) || '',
     partNumber: job.partNumber ?? '',
     partDescription: job.partDescription ?? '',
+    partImg: typeof job.part === 'string' ? '' : job.part?.img?.trim() || '',
     qty: job.qty,
     dueDate,
     status: job.status,
