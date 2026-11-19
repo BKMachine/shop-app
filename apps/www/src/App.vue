@@ -39,7 +39,12 @@
       <v-list>
         <v-list-item link prepend-icon="mdi-apps" :to="{ name: 'home' }"> Home </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.job" :to="{ name: 'jobs' }"> Jobs </v-list-item>
-        <v-list-item v-if="isLan" link prepend-icon="mdi-calendar-clock" :to="{ name: 'schedule' }">
+        <v-list-item
+          v-if="isAdmin"
+          link
+          prepend-icon="mdi-calendar-clock"
+          :to="{ name: 'schedule' }"
+        >
           Schedule
         </v-list-item>
         <v-list-item link :prepend-icon="uiIcons.part" :to="{ name: 'parts' }"> Parts </v-list-item>
