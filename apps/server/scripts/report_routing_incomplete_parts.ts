@@ -18,8 +18,8 @@ import Part from '../src/database/lib/part/part_model.js';
  * own routing rows must be complete too). Stored parts keep their legacy `cycleTimes`, so both
  * rules can run on the same documents.
  *
- * Writes a CSV of those parts (id, part, description, why it is incomplete now, link to the part)
- * to `backups/`.
+ * Writes a CSV of those parts to `backups/`: id, part, description, why it is incomplete now, the
+ * routing `_id`s of the incomplete ops (in the same order as the reasons) and a link to the part.
  */
 
 const OUTPUT_DIR = path.join('.', 'backups');
@@ -141,7 +141,14 @@ function currentHasIncompleteCostData(part: RawPart, partsById: Map<string, RawP
   });
 }
 
-/** Why a part is incomplete under the current rules, for `--details`. */
+/** The routing `_id`s of a part's incomplete ops, in the order `currentReasons` lists them. */
+function incompleteRoutingIds(part: RawPart): string[] {
+  return (part.routing || [])
+    .filter(isIncompleteRoutingOperation)
+    .map((operation) => (operation._id ? String(operation._id) : ''));
+}
+
+/** Why a part is incomplete under the current rules. */
 function currentReasons(part: RawPart, partsById: Map<string, RawPart>): string[] {
   const reasons: string[] = [];
   for (const operation of part.routing || []) {
@@ -212,7 +219,7 @@ async function main() {
       (left.part ?? '').localeCompare(right.part ?? '', undefined, { numeric: true }),
     );
 
-    const lines = [['id', 'part', 'description', 'reasons', 'link'].join(',')];
+    const lines = [['id', 'part', 'description', 'reasons', 'routingIds', 'link'].join(',')];
     for (const part of newlyIncomplete) {
       lines.push(
         [
@@ -220,6 +227,7 @@ async function main() {
           part.part ?? '',
           part.description ?? '',
           currentReasons(part, partsById).join('; '),
+          incompleteRoutingIds(part).join('; '),
           partLink(part._id),
         ]
           .map(escapeCsvCell)
