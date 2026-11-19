@@ -336,6 +336,12 @@ declare global {
   interface ScheduleEntry {
     _id: string;
     job: ScheduleEntryJob;
+    /** Routing op number booked (10, 20...); null when the whole job is booked. */
+    op?: number | null;
+    /** The op's name, as it was when booked. */
+    operation?: string | null;
+    /** The op's department `_id` when booked; it can only go on that department's machines. */
+    department?: string | null;
     machineId: string;
     /** First scheduled day, `YYYY-MM-DD`. */
     start: string;
@@ -345,6 +351,9 @@ declare global {
 
   interface ScheduleEntryCreate {
     job: string;
+    op?: number | null;
+    operation?: string | null;
+    department?: string | null;
     machineId: string;
     start: string;
     days: number;

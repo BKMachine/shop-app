@@ -28,7 +28,13 @@ const placementFields = {
 const PlacementSchema = z.strictObject({ _id: mongoObjectId, ...placementFields });
 
 export const CreateScheduleEntryRequest = z.strictObject({
-  entry: z.strictObject({ job: mongoObjectId, ...placementFields }),
+  entry: z.strictObject({
+    job: mongoObjectId,
+    op: z.number().int().positive().nullish(),
+    operation: z.string().trim().max(200).nullish(),
+    department: z.union([mongoObjectId, z.literal('other')]).nullish(),
+    ...placementFields,
+  }),
   /** Entries the new booking pushed later on its machine. */
   pushed: z.array(PlacementSchema).max(MAX_PLACEMENTS).optional(),
 });

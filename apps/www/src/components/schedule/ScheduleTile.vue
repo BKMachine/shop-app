@@ -24,6 +24,9 @@
           size="14"
         />
         <span class="schedule-tile__job">#{{ entry.job.jobNumber }}</span>
+        <span v-if="entry.op != null && width >= 56" class="schedule-tile__op">
+          {{ entry.op }}
+        </span>
         <span v-if="width >= 150" class="schedule-tile__customer">
           {{ entry.job.customerName }}
         </span>
@@ -51,7 +54,7 @@ import { useCustomerStore } from '@/stores/customer_store';
 const WIDE_TILE_PX = 110;
 
 const props = defineProps<{
-  entry: Pick<ScheduleEntry, 'start' | 'days' | 'job'>;
+  entry: Pick<ScheduleEntry, 'start' | 'days' | 'job' | 'op' | 'operation'>;
   /** Rendered width in px, used to decide how much fits. */
   width: number;
   today: string;
@@ -93,6 +96,9 @@ const tooltip = computed(() => {
   const { job } = props.entry;
   const lines = [
     `#${job.jobNumber} · ${job.customerName}`,
+    props.entry.op != null
+      ? `Op ${props.entry.op}${props.entry.operation ? ` · ${props.entry.operation}` : ''}`
+      : 'Whole job',
     [job.partNumber, job.partDescription].filter(Boolean).join(' – '),
     `Qty ${job.qty}`,
     remainingDays.value == null
@@ -210,6 +216,16 @@ const tooltip = computed(() => {
 }
 
 .schedule-tile__days-line {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-tile__op {
+  flex: none;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 0.68rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

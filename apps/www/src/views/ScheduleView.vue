@@ -98,10 +98,10 @@
       >
         Jobs
         <v-badge
-          v-if="unscheduledJobCount"
+          v-if="unscheduledCount"
           class="ml-2"
           color="warning"
-          :content="unscheduledJobCount"
+          :content="unscheduledCount"
           inline
         />
       </v-btn>
@@ -152,6 +152,7 @@
                 display ? `schedule-board__label--status-${statusTones.get(machine.id) ?? 'none'}` : '',
                 { 'schedule-board__label--flash-off': display && flashOffPhase },
                 { 'schedule-board__label--mismatch': runningByMachine.get(machine.id)?.mismatch },
+                { 'schedule-board__label--blocked': blockedMachineIds.has(machine.id) },
               ]"
               :style="{ height: `${rowHeight}px` }"
             >
@@ -185,6 +186,12 @@
                 day.key === today ? 'schedule-board__column--today' : 'schedule-board__column--weekend',
               ]"
               :style="{ left: `${day.offset * dayWidth}px`, width: `${dayWidth}px` }"
+            />
+            <div
+              v-for="row in blockedRows"
+              :key="`blocked-${row}`"
+              class="schedule-board__row-blocked"
+              :style="{ top: `${row * rowHeight}px`, height: `${rowHeight}px` }"
             />
             <div
               v-for="row in departmentBreaks"
@@ -254,20 +261,20 @@
             label="Unscheduled only"
           />
           <div class="text-body-small text-medium-emphasis">
-            Drag a job onto a machine{{ isTouchDevice ? ' (press and hold)' : '' }}, or tap it.
+            Drag an op onto a machine{{ isTouchDevice ? ' (press and hold)' : '' }}, or tap it.
           </div>
         </div>
         <div class="schedule-backlog__list">
           <div
             v-for="item in backlogItems"
-            :key="item.job._id"
+            :key="item.key"
             :class="[
               'schedule-backlog__card',
-              { 'schedule-backlog__card--dragging': drag?.kind === 'new' && drag.job._id === item.job._id },
+              { 'schedule-backlog__card--dragging': drag?.kind === 'new' && drag.bookable?.key === item.key },
             ]"
             :style="{ '--customer-color': colorForCustomer(item.job.customerId) }"
             @contextmenu.prevent
-            @pointerdown="onBacklogPointerDown($event, item.job)"
+            @pointerdown="onBacklogPointerDown($event, item)"
           >
             <div class="schedule-backlog__row">
               <v-icon v-if="item.job.priority === 'rush'" color="error" icon="mdi-fire" size="16" />
@@ -289,6 +296,18 @@
                 {{ item.job.partDescription }}
               </span>
             </div>
+            <div class="schedule-backlog__op">
+              <template v-if="item.op != null">
+                <strong>Op {{ item.op }}</strong>
+                <span v-if="item.operation">{{ item.operation }}</span>
+                <span class="text-medium-emphasis">· {{ departmentLabel(item.department) }}</span>
+                <span v-if="item.cycleMinutes" class="ml-auto text-medium-emphasis">
+                  {{ formatRunHours(item.cycleMinutes * item.job.qty) }}
+                </span>
+                <span v-else class="ml-auto text-warning">No cycle time</span>
+              </template>
+              <span v-else class="text-medium-emphasis">Whole job · no machine ops in routing</span>
+            </div>
             <div class="schedule-backlog__row text-body-small">
               <span>Qty {{ item.job.qty }}</span>
               <span v-if="item.job.status === 'in_process'" class="text-info">In process</span>
@@ -303,7 +322,7 @@
             </div>
           </div>
           <div v-if="!backlogItems.length" class="schedule-backlog__empty">
-            {{ backlogJobs.length ? 'Every open job is on the schedule.' : 'No open jobs.' }}
+            {{ backlogJobs.length ? 'Every op shown here is on the schedule.' : 'No open jobs.' }}
           </div>
         </div>
       </aside>
@@ -316,7 +335,7 @@
     >
       <ScheduleTile
         active
-        :entry="{ job: drag.job, start: today, days: 1 }"
+        :entry="{ job: drag.job, op: drag.bookable?.op, operation: drag.bookable?.operation, start: today, days: 1 }"
         :today="today"
         :width="150"
       />
@@ -326,10 +345,12 @@
       v-if="!display"
       v-model="dialogOpen"
       :entry="dialogEntry"
-      :estimator="estimateFor"
+      :estimator="dialogEstimator"
       :initial="dialogInitial"
       :job="dialogJob"
-      :machines="visibleMachines.length ? visibleMachines : machines"
+      :machines="dialogMachines"
+      :op="dialogBookable?.op ?? null"
+      :operation="dialogBookable?.operation ?? null"
       @remove="removeDialogEntry"
       @save="saveDialog"
     />
@@ -343,6 +364,7 @@ import {
   dayOfWeek,
   diffDays,
   estimateScheduleLength,
+  isSchedulableOperation,
   isScheduleWorkday,
   placeScheduleEntry,
   SCHEDULE_TIGHT_SLACK_DAYS,
@@ -406,11 +428,26 @@ const BACKLOG_STORAGE_KEY = 'schedule-backlog-open';
 
 type Placement = Omit<ScheduleEntryPlacement, '_id'>;
 
+/** An op (or a whole job without machine ops) that can be booked, as the job list shows it. */
+interface Bookable {
+  key: string;
+  job: ScheduleEntryJob;
+  op: number | null;
+  operation: string | null;
+  /** The op's department `_id`, 'other', or null; it only fits that department's machines. */
+  department: string | null;
+  cycleMinutes: number | null;
+}
+
 interface DragState {
   kind: 'move' | 'resize' | 'new';
   pointerId: number;
   pointerType: string;
   job: ScheduleEntryJob;
+  /** What a drag from the job list will book. */
+  bookable: Bookable | null;
+  /** Department the booking is limited to; null fits every machine. */
+  department: string | null;
   /** The entry being moved or resized; null when dragging a job in from the list. */
   entryId: string | null;
   origin: Placement | null;
@@ -765,7 +802,13 @@ const displayEntries = computed<ScheduleEntry[]>(() => {
   if (!state?.active || !state.preview) return entries;
 
   if (state.kind === 'new') {
-    const draft: ScheduleEntry = { _id: PREVIEW_ID, job: state.job, ...state.preview };
+    const draft: ScheduleEntry = {
+      _id: PREVIEW_ID,
+      job: state.job,
+      op: state.bookable?.op ?? null,
+      operation: state.bookable?.operation ?? null,
+      ...state.preview,
+    };
     return placeScheduleEntry([...entries, draft], draft);
   }
   if (!state.entryId) return entries;
@@ -829,31 +872,125 @@ watch(backlogOpen, (open) => {
   requestAnimationFrame(measureBoard);
 });
 
+function bookableKey(jobId: string, op: number | null | undefined) {
+  return `${jobId}:${op ?? 'job'}`;
+}
+
+/** How many times each op (or whole job) is booked, by bookable key. */
 const scheduledCounts = computed(() => {
   const counts = new Map<string, number>();
   for (const entry of scheduleStore.entries) {
-    counts.set(entry.job._id, (counts.get(entry.job._id) ?? 0) + 1);
+    const key = bookableKey(entry.job._id, entry.op);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return counts;
 });
 
-const unscheduledJobCount = computed(
-  () => backlogJobs.value.filter((job) => !scheduledCounts.value.has(job._id)).length,
+/** Every op that runs on a machine gets its own card; a job without any is booked whole. */
+const bookables = computed<Bookable[]>(() =>
+  backlogJobs.value.flatMap((job): Bookable[] => {
+    const ops = (routingByJob.value.get(job._id) ?? []).filter(isSchedulableOperation);
+    if (!ops.length) {
+      return [
+        {
+          key: bookableKey(job._id, null),
+          job,
+          op: null,
+          operation: null,
+          department: null,
+          cycleMinutes: null,
+        },
+      ];
+    }
+    return ops.map((operation) => ({
+      key: bookableKey(job._id, operation.op),
+      job,
+      op: operation.op,
+      operation: operation.operation?.trim() || null,
+      department: operation.department ?? null,
+      cycleMinutes: Number(operation.time) > 0 ? Number(operation.time) : null,
+    }));
+  }),
+);
+
+/** With a department filter on, only ops that fit a machine shown (and whole jobs) are listed. */
+const departmentBookables = computed(() =>
+  hasDepartmentFilter.value
+    ? bookables.value.filter(
+        (item) =>
+          item.op == null ||
+          (item.department != null &&
+            departmentTypes.value.has(item.department) &&
+            visibleMachines.value.some((machine) => fitsMachine(item.department, machine))),
+      )
+    : bookables.value,
+);
+
+const unscheduledCount = computed(
+  () => departmentBookables.value.filter((item) => !scheduledCounts.value.has(item.key)).length,
 );
 
 const backlogItems = computed(() => {
   const search = backlogSearch.value?.trim().toLowerCase() ?? '';
-  return backlogJobs.value
-    .map((job) => ({ job, scheduledCount: scheduledCounts.value.get(job._id) ?? 0 }))
-    .filter(({ job, scheduledCount }) => {
+  return departmentBookables.value
+    .map((item) => ({ ...item, scheduledCount: scheduledCounts.value.get(item.key) ?? 0 }))
+    .filter(({ job, operation, scheduledCount }) => {
       if (hideScheduled.value && scheduledCount) return false;
       if (!search) return true;
-      return [String(job.jobNumber), job.customerName, job.partNumber, job.partDescription]
+      return [
+        String(job.jobNumber),
+        job.customerName,
+        job.partNumber,
+        job.partDescription,
+        operation ?? '',
+      ]
         .join(' ')
         .toLowerCase()
         .includes(search);
     });
 });
+
+const departmentNames = computed(
+  () =>
+    new Map(
+      machines.value
+        .filter((machine) => machine.departmentId)
+        .map((machine) => [machine.departmentId as string, machine.department]),
+    ),
+);
+
+function departmentLabel(department: string | null) {
+  if (!department) return 'No department';
+  if (department === 'other') return 'Other';
+  return departmentNames.value.get(department) ?? 'Unknown department';
+}
+
+function formatRunHours(minutes: number) {
+  const hours = minutes / 60;
+  return `${hours >= 10 ? Math.round(hours) : hours.toFixed(1)} h`;
+}
+
+/** The machine types in each department, e.g. Robodrill → mill. */
+const departmentTypes = computed(() => {
+  const types = new Map<string, Set<MachineType>>();
+  for (const machine of machines.value) {
+    if (!machine.departmentId) continue;
+    const set = types.get(machine.departmentId) ?? new Set<MachineType>();
+    set.add(machine.type);
+    types.set(machine.departmentId, set);
+  }
+  return types;
+});
+
+/**
+ * Whether a booking for an op in `department` can go on `machine`: any machine of the same type
+ * as that department's machines, so a 3 Axis op also fits the Robodrills and DTs. Ops in 'Other'
+ * or in a department no machine belongs to are not held to one.
+ */
+function fitsMachine(department: string | null | undefined, machine: MachineConfig) {
+  const types = department ? departmentTypes.value.get(department) : undefined;
+  return !types || types.has(machine.type);
+}
 
 async function fetchBacklog() {
   try {
@@ -892,14 +1029,24 @@ function colorForCustomer(customerId: string) {
   return customerColor(customerColors.value.get(customerId));
 }
 
-/** How long `job` would run on `machineId` from `start`; null without cycle times to go on. */
+/** An op's cycle minutes from its job's routing; null for a whole job or an untimed op. */
+function cycleMinutesFor(jobId: string, op: number | null | undefined): number | null {
+  if (op == null) return null;
+  const operation = routingByJob.value.get(jobId)?.find((candidate) => candidate.op === op);
+  return operation && isSchedulableOperation(operation) && Number(operation.time) > 0
+    ? Number(operation.time)
+    : null;
+}
+
+/** How long an op would run on `machineId` from `start`; null without a cycle time to go on. */
 function estimateFor(
   job: ScheduleEntryJob,
+  cycleMinutes: number | null,
   machineId: string,
   start: string,
 ): ScheduleEstimate | null {
   return estimateScheduleLength({
-    routing: routingByJob.value.get(job._id),
+    cycleMinutes,
     qty: job.qty,
     departmentId: machines.value.find((machine) => machine.id === machineId)?.departmentId,
     start,
@@ -913,21 +1060,51 @@ const dialogOpen = ref(false);
 const dialogEntry = ref<ScheduleEntry | null>(null);
 const dialogJob = ref<ScheduleEntryJob | null>(null);
 const dialogInitial = ref<Placement>({ machineId: '', start: today.value, days: 1 });
+/** The op being booked or edited, with what its estimate and machines depend on. */
+const dialogBookable = ref<Bookable | null>(null);
+
+/** Machines the dialog offers: those the op fits, preferring the ones on screen. */
+const dialogMachines = computed(() => {
+  const department = dialogBookable.value?.department;
+  const fitting = (list: MachineConfig[]) =>
+    list.filter((machine) => fitsMachine(department, machine));
+  const visible = fitting(visibleMachines.value);
+  return visible.length ? visible : fitting(machines.value);
+});
+
+const dialogEstimator = computed(() => {
+  const bookable = dialogBookable.value;
+  if (!bookable) return undefined;
+  return (machineId: string, start: string) =>
+    estimateFor(bookable.job, bookable.cycleMinutes, machineId, start);
+});
+
+function bookableForEntry(entry: ScheduleEntry): Bookable {
+  return {
+    key: bookableKey(entry.job._id, entry.op),
+    job: entry.job,
+    op: entry.op ?? null,
+    operation: entry.operation ?? null,
+    department: entry.department ?? null,
+    cycleMinutes: cycleMinutesFor(entry.job._id, entry.op),
+  };
+}
 
 function openEntryDialog(entry: ScheduleEntry) {
   dialogEntry.value = entry;
   dialogJob.value = entry.job;
+  dialogBookable.value = bookableForEntry(entry);
   dialogInitial.value = { machineId: entry.machineId, start: entry.start, days: entry.days };
   dialogOpen.value = true;
 }
 
-function openNewJobDialog(job: ScheduleEntryJob) {
-  const machineId = visibleMachines.value[0]?.id ?? machines.value[0]?.id ?? '';
+function openNewBookingDialog(bookable: Bookable) {
   dialogEntry.value = null;
-  dialogJob.value = job;
+  dialogJob.value = bookable.job;
+  dialogBookable.value = bookable;
+  const machineId = dialogMachines.value[0]?.id ?? '';
   const start = nextOpenDay(machineId);
-  const days = estimateFor(job, machineId, start)?.days ?? 1;
-  dialogInitial.value = { machineId, start, days };
+  dialogInitial.value = newBookingPlacement(bookable, machineId, start);
   dialogOpen.value = true;
 }
 
@@ -944,8 +1121,8 @@ async function saveDialog(placement: Placement) {
   try {
     if (dialogEntry.value) {
       await scheduleStore.place({ _id: dialogEntry.value._id, ...placement });
-    } else if (dialogJob.value) {
-      await scheduleStore.add(dialogJob.value, placement);
+    } else if (dialogBookable.value) {
+      await scheduleStore.add(dialogBookable.value.job, placement, bookingOp(dialogBookable.value));
     }
   } catch {
     // The store has already reported the failure and reloaded.
@@ -978,6 +1155,8 @@ function onTilePointerDown(event: PointerEvent, entry: ScheduleEntry) {
   beginPointer(event, {
     kind: resizing ? 'resize' : 'move',
     job: entry.job,
+    bookable: null,
+    department: entry.department ?? null,
     entryId: entry._id,
     origin: { machineId: entry.machineId, start: entry.start, days: entry.days },
     grabOffset: pointerDay - diffDays(rangeStart.value, entry.start),
@@ -990,14 +1169,25 @@ function onTilePointerDown(event: PointerEvent, entry: ScheduleEntry) {
   }
 }
 
-function onBacklogPointerDown(event: PointerEvent, job: ScheduleEntryJob) {
+function onBacklogPointerDown(event: PointerEvent, bookable: Bookable) {
   if (drag.value || (event.pointerType === 'mouse' && event.button !== 0)) return;
-  beginPointer(event, { kind: 'new', job, entryId: null, origin: null, grabOffset: 0 });
+  beginPointer(event, {
+    kind: 'new',
+    job: bookable.job,
+    bookable,
+    department: bookable.department,
+    entryId: null,
+    origin: null,
+    grabOffset: 0,
+  });
 }
 
 function beginPointer(
   event: PointerEvent,
-  fields: Pick<DragState, 'kind' | 'job' | 'entryId' | 'origin' | 'grabOffset'>,
+  fields: Pick<
+    DragState,
+    'kind' | 'job' | 'bookable' | 'department' | 'entryId' | 'origin' | 'grabOffset'
+  >,
 ) {
   drag.value = {
     ...fields,
@@ -1063,8 +1253,8 @@ function onPointerUp(event: PointerEvent) {
   } else if (state.entryId) {
     const entry = scheduleStore.entries.find((candidate) => candidate._id === state.entryId);
     if (entry) openEntryDialog(entry);
-  } else {
-    openNewJobDialog(state.job);
+  } else if (state.bookable) {
+    openNewBookingDialog(state.bookable);
   }
   endDrag();
 }
@@ -1104,7 +1294,9 @@ function commitDrag(state: DragState) {
   if (!preview) return;
 
   if (state.kind === 'new') {
-    void scheduleStore.add(state.job, preview).catch(() => undefined);
+    if (state.bookable) {
+      void scheduleStore.add(state.job, preview, bookingOp(state.bookable)).catch(() => undefined);
+    }
     return;
   }
 
@@ -1142,8 +1334,10 @@ function updatePreview() {
     Math.max(Math.floor((state.lastY - rect.top) / rowHeight.value), 0),
     visibleMachines.value.length - 1,
   );
-  const machineId = visibleMachines.value[row]?.id;
-  if (!machineId) return;
+  const target = visibleMachines.value[row];
+  if (!target) return;
+  const fits = blockedMachineIds.value.has(target.id) === false;
+  const machineId = target.id;
 
   if (state.kind === 'resize' && state.origin) {
     const startOffset = diffDays(rangeStart.value, state.origin.start);
@@ -1152,8 +1346,9 @@ function updatePreview() {
   }
 
   if (state.kind === 'move' && state.origin) {
+    // Over a machine the op doesn't fit, it keeps to the last machine it could go on.
     state.preview = {
-      machineId,
+      machineId: fits ? machineId : (state.preview?.machineId ?? state.origin.machineId),
       start: addDays(rangeStart.value, day - state.grabOffset),
       days: state.origin.days,
     };
@@ -1163,14 +1358,43 @@ function updatePreview() {
   // A job from the list only lands once it is over the board; elsewhere it just follows along.
   const overTimeline = state.lastX >= rect.left && state.lastY >= rect.top;
   state.preview =
-    isOverBoard(state.lastX, state.lastY) && overTimeline
-      ? newBookingPlacement(state.job, machineId, addDays(rangeStart.value, day))
+    isOverBoard(state.lastX, state.lastY) && overTimeline && fits
+      ? newBookingPlacement(state.bookable, machineId, addDays(rangeStart.value, day))
       : null;
 }
 
-function newBookingPlacement(job: ScheduleEntryJob, machineId: string, start: string): Placement {
-  return { machineId, start, days: estimateFor(job, machineId, start)?.days ?? 1 };
+function newBookingPlacement(
+  bookable: Bookable | null,
+  machineId: string,
+  start: string,
+): Placement {
+  const estimate = bookable
+    ? estimateFor(bookable.job, bookable.cycleMinutes, machineId, start)
+    : null;
+  return { machineId, start, days: estimate?.days ?? 1 };
 }
+
+/** The op details a new booking is saved with. */
+function bookingOp(bookable: Bookable) {
+  return { op: bookable.op, operation: bookable.operation, department: bookable.department };
+}
+
+/** Machines the op being dragged can't go on, greyed out while it is held. */
+const blockedMachineIds = computed(() => {
+  const state = drag.value;
+  if (!state?.active || state.kind === 'resize') return new Set<string>();
+  return new Set(
+    visibleMachines.value
+      .filter((machine) => !fitsMachine(state.department, machine))
+      .map((machine) => machine.id),
+  );
+});
+
+const blockedRows = computed(() =>
+  visibleMachines.value.flatMap((machine, row) =>
+    blockedMachineIds.value.has(machine.id) ? [row] : [],
+  ),
+);
 
 /** Scrolls the board while a drag is held near its edge. */
 function startAutoScroll() {
@@ -1518,6 +1742,24 @@ onBeforeUnmount(() => {
   padding-right: 26px;
 }
 
+.schedule-board__label--blocked {
+  opacity: 0.35;
+}
+
+/* A machine the op being dragged doesn't fit: greyed out, and it won't take the drop. */
+.schedule-board__row-blocked {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(var(--v-theme-on-surface), 0.1) 0 6px,
+    rgba(var(--v-theme-on-surface), 0.04) 6px 12px
+  );
+  pointer-events: none;
+}
+
 .schedule-board__mismatch {
   position: absolute;
   top: 3px;
@@ -1702,6 +1944,15 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   min-width: 0;
+}
+
+.schedule-backlog__op {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .schedule-backlog__customer,

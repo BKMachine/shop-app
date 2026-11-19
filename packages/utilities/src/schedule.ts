@@ -1,4 +1,3 @@
-import { isTimedRoutingOperation } from './parts.js';
 import { DEFAULT_BUSINESS_END_HOUR, DEFAULT_BUSINESS_START_HOUR } from './time.js';
 
 // Schedule days are calendar days written as `YYYY-MM-DD` keys. They are worked out in UTC so a
@@ -169,19 +168,23 @@ export function isScheduleWorkday(key: string, settings: Pick<ScheduleSettings, 
   return !settings.workdays.length || settings.workdays.includes(dayOfWeek(key));
 }
 
-interface EstimateRoutingOperation {
-  department?: string | null;
-  time?: number | null;
+interface SchedulableRoutingOperation {
   noCycleTime?: boolean | null;
 }
 
+/**
+ * Whether a routing op runs on a machine and so is booked on its own: every op except those
+ * flagged as having no cycle time (inspection, deburr, outside process...).
+ */
+export function isSchedulableOperation(operation: SchedulableRoutingOperation): boolean {
+  return !operation.noCycleTime;
+}
+
 export interface ScheduleEstimate {
-  /** qty × cycle minutes for the ops counted. */
+  /** qty × cycle minutes. */
   runMinutes: number;
-  /** Cycle minutes per part that were counted. */
+  /** Cycle minutes per part for the op. */
   cycleMinutes: number;
-  /** Whether the ops counted were the machine's department's, rather than the whole routing. */
-  departmentOpsOnly: boolean;
   utilization: number;
   /** Cutting minutes a machine gets through in one working day. */
   minutesPerDay: number;
@@ -191,26 +194,19 @@ export interface ScheduleEstimate {
 }
 
 /**
- * How long a job runs on a machine: qty × the cycle time of the part's ops in the machine's
- * department (the whole routing when none are in that department), spread over working days of
- * `workdayStartHour`–`workdayEndHour` with machines cutting `utilization` percent of the time.
- * Null when the routing has no cycle time to go on.
+ * How long an op runs on a machine: qty × the op's cycle time, spread over working days of
+ * `workdayStartHour`–`workdayEndHour` with the machine's department cutting `utilization`
+ * percent of the time. Null without a cycle time or qty to go on.
  */
 export function estimateScheduleLength(input: {
-  routing: readonly EstimateRoutingOperation[] | null | undefined;
+  cycleMinutes: number | null | undefined;
   qty: number;
+  /** Department of the machine the op is booked on, for its utilization. */
   departmentId: string | null | undefined;
   start: string;
   settings: ScheduleSettings;
 }): ScheduleEstimate | null {
-  const timed = (input.routing ?? []).filter(
-    (operation) => isTimedRoutingOperation(operation) && Number(operation.time) > 0,
-  );
-  const departmentOps = input.departmentId
-    ? timed.filter((operation) => operation.department === input.departmentId)
-    : [];
-  const counted = departmentOps.length ? departmentOps : timed;
-  const cycleMinutes = counted.reduce((total, operation) => total + Number(operation.time), 0);
+  const cycleMinutes = Number(input.cycleMinutes) || 0;
   const qty = Math.max(0, Number(input.qty) || 0);
   if (!(cycleMinutes > 0) || !(qty > 0)) return null;
 
@@ -224,7 +220,6 @@ export function estimateScheduleLength(input: {
   return {
     runMinutes,
     cycleMinutes,
-    departmentOpsOnly: departmentOps.length > 0,
     utilization,
     minutesPerDay,
     workingDays,

@@ -7,6 +7,7 @@ import {
   diffDays,
   estimateScheduleLength,
   isDayKey,
+  isSchedulableOperation,
   placeScheduleEntry,
   scheduleDueTone,
 } from './schedule.js';
@@ -99,7 +100,7 @@ const settings = {
 test('estimateScheduleLength spreads qty × cycle over the cutting part of a working day', () => {
   // 9 h days at 40% = 216 cutting minutes; 100 × 6 min = 600 → 3 working days.
   const estimate = estimateScheduleLength({
-    routing: [{ department: 'lathes', time: 6 }],
+    cycleMinutes: 6,
     qty: 100,
     departmentId: 'lathes',
     start: '2026-11-16', // Monday
@@ -111,44 +112,23 @@ test('estimateScheduleLength spreads qty × cycle over the cutting part of a wor
   assert.equal(estimate?.days, 3);
 });
 
-test('estimateScheduleLength counts the machine department ops and its utilization', () => {
-  // Mills at 50% = 270 min/day; only the 3 min mill op counts: 100 × 3 = 300 → 2 days.
+test("estimateScheduleLength uses the machine department's utilization", () => {
+  // Mills at 50% = 270 min/day; 100 × 3 = 300 → 2 days.
   const estimate = estimateScheduleLength({
-    routing: [
-      { department: 'lathes', time: 6 },
-      { department: 'mills', time: 3 },
-      { department: 'mills', time: 9, noCycleTime: true },
-    ],
+    cycleMinutes: 3,
     qty: 100,
     departmentId: 'mills',
     start: '2026-11-16',
     settings,
   });
-  assert.equal(estimate?.cycleMinutes, 3);
-  assert.equal(estimate?.departmentOpsOnly, true);
+  assert.equal(estimate?.utilization, 50);
   assert.equal(estimate?.workingDays, 2);
-});
-
-test('estimateScheduleLength uses the whole routing when no op is in the department', () => {
-  const estimate = estimateScheduleLength({
-    routing: [
-      { department: 'lathes', time: 2 },
-      { department: 'other', time: 1 },
-    ],
-    qty: 10,
-    departmentId: 'swiss',
-    start: '2026-11-16',
-    settings,
-  });
-  assert.equal(estimate?.cycleMinutes, 3);
-  assert.equal(estimate?.departmentOpsOnly, false);
-  assert.equal(estimate?.workingDays, 1);
 });
 
 test('estimateScheduleLength stretches over days off', () => {
   // 4 working days from a Thursday run Thu, Fri, (Sat, Sun), Mon, Tue = 6 calendar days.
   const estimate = estimateScheduleLength({
-    routing: [{ department: 'lathes', time: 8.64 }],
+    cycleMinutes: 8.64,
     qty: 100,
     departmentId: 'lathes',
     start: '2026-11-19',
@@ -159,14 +139,14 @@ test('estimateScheduleLength stretches over days off', () => {
 });
 
 test('estimateScheduleLength gives nothing without cycle time or qty', () => {
-  const base = { qty: 10, departmentId: 'mills', start: '2026-11-16', settings };
-  assert.equal(estimateScheduleLength({ ...base, routing: [] }), null);
-  assert.equal(
-    estimateScheduleLength({ ...base, routing: [{ department: 'mills', time: 0 }] }),
-    null,
-  );
-  assert.equal(
-    estimateScheduleLength({ ...base, qty: 0, routing: [{ department: 'mills', time: 5 }] }),
-    null,
-  );
+  const base = { departmentId: 'mills', start: '2026-11-16', settings };
+  assert.equal(estimateScheduleLength({ ...base, cycleMinutes: 0, qty: 10 }), null);
+  assert.equal(estimateScheduleLength({ ...base, cycleMinutes: null, qty: 10 }), null);
+  assert.equal(estimateScheduleLength({ ...base, cycleMinutes: 5, qty: 0 }), null);
+});
+
+test('isSchedulableOperation leaves out ops with no cycle time', () => {
+  assert.equal(isSchedulableOperation({ noCycleTime: false }), true);
+  assert.equal(isSchedulableOperation({}), true);
+  assert.equal(isSchedulableOperation({ noCycleTime: true }), false);
 });

@@ -3,6 +3,9 @@
     <v-card v-if="job">
       <v-card-title class="d-flex align-center ga-2 pt-4">
         <span>Job #{{ job.jobNumber }}</span>
+        <span v-if="op != null" class="schedule-dialog__op">
+          Op {{ op }}<template v-if="operation"> · {{ operation }}</template>
+        </span>
         <v-chip v-if="job.priority === 'rush'" color="error" prepend-icon="mdi-fire" size="small">
           Rush
         </v-chip>
@@ -83,9 +86,8 @@
               </span>
             </div>
             <div class="text-body-small text-medium-emphasis">
-              {{ job.qty }} × {{ formatMinutes(estimate.cycleMinutes) }} min
-              {{ estimate.departmentOpsOnly ? 'in this department' : 'for the whole routing' }}
-              = {{ formatMinutes(estimate.runMinutes / 60) }} h, at
+              {{ job.qty }} × {{ formatMinutes(estimate.cycleMinutes) }} min =
+              {{ formatMinutes(estimate.runMinutes / 60) }} h, at
               {{ formatMinutes(estimate.minutesPerDay / 60) }} h cutting per day ({{
                 estimate.utilization
               }}%)
@@ -101,7 +103,11 @@
           </v-btn>
         </div>
         <div v-else-if="estimator" class="text-body-small text-medium-emphasis">
-          No cycle time on this part's routing to estimate from.
+          {{
+            op != null
+              ? 'This op has no cycle time to estimate from.'
+              : 'Booked as a whole job, so there is no op cycle time to estimate from.'
+          }}
         </div>
         <div class="text-body-small text-medium-emphasis">
           Runs through
@@ -145,8 +151,11 @@ const props = defineProps<{
   job: ScheduleEntryJob | null;
   machines: MachineConfig[];
   initial: Omit<ScheduleEntryPlacement, '_id'>;
-  /** Estimates how long the job runs on a machine from a start day. */
-  estimator?: (job: ScheduleEntryJob, machineId: string, start: string) => ScheduleEstimate | null;
+  /** Routing op number being booked; null for a whole job. */
+  op?: number | null;
+  operation?: string | null;
+  /** Estimates how long the op runs on a machine from a start day. */
+  estimator?: (machineId: string, start: string) => ScheduleEstimate | null;
 }>();
 
 const emit = defineEmits<{
@@ -174,8 +183,8 @@ const lastDay = computed(() =>
 );
 
 const estimate = computed(() => {
-  if (!props.job || !props.estimator || !machineId.value || !isDayKey(start.value)) return null;
-  return props.estimator(props.job, machineId.value, start.value);
+  if (!props.estimator || !machineId.value || !isDayKey(start.value)) return null;
+  return props.estimator(machineId.value, start.value);
 });
 
 function formatMinutes(value: number) {
@@ -191,6 +200,12 @@ function save() {
 </script>
 
 <style scoped>
+.schedule-dialog__op {
+  font-size: 1rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
 .schedule-dialog__subtitle {
   white-space: normal;
   line-height: 1.5;

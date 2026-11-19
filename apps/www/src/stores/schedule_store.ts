@@ -96,10 +96,15 @@ export const useScheduleStore = defineStore('schedule', () => {
   }
 
   /** Books a job onto a machine, pushing later entries on that machine out of the way. */
-  async function add(job: ScheduleEntryJob, placement: Omit<ScheduleEntryPlacement, '_id'>) {
+  /** Books a job's op (or the whole job, with no op) onto a machine. */
+  async function add(
+    job: ScheduleEntryJob,
+    placement: Omit<ScheduleEntryPlacement, '_id'>,
+    op: Pick<ScheduleEntryCreate, 'op' | 'operation' | 'department'> = {},
+  ) {
     const draftId = `draft:${job._id}:${Date.now()}`;
     const before = entries.value;
-    const draft: ScheduleEntry = { ...placement, _id: draftId, job };
+    const draft: ScheduleEntry = { ...placement, ...op, _id: draftId, job };
     const after = placeScheduleEntry([...before, draft], draft);
     const pushed = changedSchedulePlacements(before, after).filter(
       (entry) => entry._id !== draftId,
@@ -108,7 +113,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     entries.value = after;
     try {
       const { data } = await api.post<ScheduleEntry>('/schedule', {
-        entry: { job: job._id, ...placement },
+        entry: { job: job._id, ...op, ...placement },
         pushed: pushed.map(toPlacement),
       });
       entries.value = entries.value.map((entry) => (entry._id === draftId ? data : entry));

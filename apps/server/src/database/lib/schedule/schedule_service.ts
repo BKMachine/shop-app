@@ -27,6 +27,9 @@ type PopulatedJob = {
 type LeanEntry = {
   _id: Types.ObjectId;
   job: PopulatedJob | null;
+  op?: number | null;
+  operation?: string | null;
+  department?: string | null;
   machineId: string;
   start: string;
   days: number;
@@ -38,6 +41,8 @@ type ScheduleAuditRecord = {
   description: string;
   job: string;
   jobNumber: number | null;
+  op: number | null;
+  operation: string | null;
   machineId: string;
   machine: string;
   start: string;
@@ -54,6 +59,9 @@ function toEntry(doc: LeanEntry): ScheduleEntry | null {
 
   return {
     _id: doc._id.toString(),
+    op: doc.op ?? null,
+    operation: doc.operation ?? null,
+    department: doc.department ?? null,
     machineId: doc.machineId,
     start: doc.start,
     days: doc.days,
@@ -103,11 +111,14 @@ async function machineNames(): Promise<Map<string, string>> {
 function toAuditRecord(entry: LeanEntry, names: Map<string, string>): ScheduleAuditRecord {
   const machine = names.get(entry.machineId) ?? entry.machineId;
   const jobNumber = entry.job?.jobNumber ?? null;
+  const op = entry.op ?? null;
   return {
     _id: entry._id.toString(),
-    description: `Job #${jobNumber ?? '?'} on ${machine}`,
+    description: `Job #${jobNumber ?? '?'}${op ? ` op ${op}` : ''} on ${machine}`,
     job: entry.job?._id.toString() ?? '',
     jobNumber,
+    op,
+    operation: entry.operation ?? null,
     machineId: entry.machineId,
     machine,
     start: entry.start,

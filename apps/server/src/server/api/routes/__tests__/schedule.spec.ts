@@ -18,6 +18,13 @@ describe('CreateScheduleEntryRequest', () => {
     expect(accepts({})).toBe(true);
   });
 
+  it('accepts a booking of one routing op', () => {
+    expect(accepts({ op: 20, operation: 'Mill' })).toBe(true);
+    expect(accepts({ op: null, operation: null })).toBe(true);
+    expect(accepts({ op: 0 })).toBe(false);
+    expect(accepts({ op: 10.5 })).toBe(false);
+  });
+
   it('rejects partial, zero and huge lengths', () => {
     expect(accepts({ days: 1.5 })).toBe(false);
     expect(accepts({ days: 0 })).toBe(false);
