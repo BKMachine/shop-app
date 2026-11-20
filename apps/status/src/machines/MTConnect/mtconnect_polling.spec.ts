@@ -211,6 +211,15 @@ describe('MTConnect polling', () => {
       expect(options.timeout).toBeLessThan(POLL_MS);
     });
 
+    it('opens a new connection for each poll', async () => {
+      const { get, poll } = await start();
+      await poll();
+
+      // A kept-alive connection idles out just as the next poll reuses it.
+      const options = get.mock.calls[0]?.[1];
+      expect(options.httpAgent.keepAlive).toBe(false);
+    });
+
     it('does not start a new request while one is still running', async () => {
       const { get } = await start();
       get.mockReturnValue(new Promise(() => {}));

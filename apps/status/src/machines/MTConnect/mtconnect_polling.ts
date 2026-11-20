@@ -1,3 +1,4 @@
+import http from 'node:http';
 import axios from 'axios';
 import _ from 'lodash';
 import logger from '../../logger.js';
@@ -8,8 +9,13 @@ import mappings from './mtconnect_mappings.js';
 const POLL_INTERVAL_MS = 5000;
 // Shorter than the poll interval so a hung request counts as a miss before the next poll.
 const REQUEST_TIMEOUT_MS = 4000;
-// About one request in 60 to the agent times out, so it takes this many misses in a row.
+// One dropped request shouldn't flash both machines offline, so it takes this many misses in a row.
 const MISSES_BEFORE_OFFLINE = 3;
+// A new connection for each poll. Node's default agent closes an idle kept-alive connection after
+// 5 s, the same as the poll interval, and when that lands as the next poll reuses the connection,
+// axios reports it as its own timeout within milliseconds. In the container that failed 76 of 360
+// polls; new connections failed none.
+const httpAgent = new http.Agent({ keepAlive: false });
 
 let interval: NodeJS.Timeout;
 let requestInFlight = false;
@@ -43,6 +49,7 @@ function run() {
     .get<MTConnectResponse>(url, {
       headers: { Accept: 'application/json' },
       timeout: REQUEST_TIMEOUT_MS,
+      httpAgent,
     })
     .then(({ data }) => {
       processJSON(data);
