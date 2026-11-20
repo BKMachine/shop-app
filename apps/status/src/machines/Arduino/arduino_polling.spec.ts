@@ -253,26 +253,33 @@ describe('Arduino polling', () => {
     });
   });
 
-  // Operators often turn off the panel but not the breaker, so the board keeps answering.
+  // Operators often turn off the panel but not the breaker, so the board keeps answering. The
+  // machine registry checks every machine for this each minute.
   describe('when no lights have been on for 4 hours', () => {
     it('stays idle until 4 hours have passed', async () => {
       const { hold, machine } = await start();
       await hold({}, 4 * HOUR - 2 * POLL);
+      machine.checkIdle();
       expect(machine.getStatus()).toBe('idle');
     });
 
-    it('shows offline after 4 hours', async () => {
-      const { hold, machine } = await start();
+    it('shows offline after 4 hours, while the board is still reachable', async () => {
+      const { hold, machine, state } = await start();
       await hold({}, 4 * HOUR);
+      machine.checkIdle();
       expect(machine.getStatus()).toBe('offline');
+      expect(machine.toJSON().state.online).toBe(false);
+      expect(state().online).toBe(true);
     });
 
     it('comes back when a light comes on, and records that cycle', async () => {
       const { hold, machine, state } = await start();
       await hold({}, 5 * HOUR);
+      machine.checkIdle();
 
       await hold({ green: true }, MINUTE);
       expect(machine.getStatus()).toBe('green');
+      expect(machine.toJSON().state.online).toBe(true);
       await hold({});
 
       expect(state().lastCycle).toEqual([MINUTE]);
@@ -284,6 +291,7 @@ describe('Arduino polling', () => {
       await hold({ yellow: true });
 
       await hold({}, 3 * HOUR);
+      machine.checkIdle();
 
       expect(machine.getStatus()).toBe('idle');
     });
@@ -294,13 +302,15 @@ describe('Arduino polling', () => {
       await noResponse(14 * HOUR);
 
       await hold({}, 2 * HOUR);
+      machine.checkIdle();
 
       expect(machine.getStatus()).toBe('idle');
     });
 
     it('is not treated as a failure', async () => {
-      const { hold, logger } = await start();
+      const { hold, logger, machine } = await start();
       await hold({}, 5 * HOUR);
+      machine.checkIdle();
       expect(logger.warn).not.toHaveBeenCalled();
     });
   });

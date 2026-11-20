@@ -7,9 +7,6 @@ import type ArduinoMachine from './ArduinoMachine.js';
 const POLL_INTERVAL_MS = 5000;
 // One dropped packet shouldn't end a running cycle, so it takes this many misses in a row.
 const MISSES_BEFORE_OFFLINE = 3;
-// The board runs from the machine's 24V supply, so it keeps answering with no lights on when an
-// operator turns off the panel but leaves the breaker on.
-const IDLE_OFFLINE_MS = 4 * 60 * 60 * 1000;
 const LIGHTS = ['green', 'yellow', 'red'] as const;
 
 const axios = _axios.create({
@@ -23,7 +20,6 @@ interface Tracker {
   // When the current cycle or wait started, or null if that isn't known.
   greenSince: number | null;
   yellowSince: number | null;
-  lightsOffSince: number | null;
 }
 
 const trackers = new Map<string, Tracker>();
@@ -74,7 +70,6 @@ function recordFailure(machine: ArduinoMachine, location: string, message: strin
   }
 
   tracker.reachable = false;
-  tracker.lightsOffSince = null;
 
   if (machine.getState().online) machine.update({ online: false });
 }
@@ -124,15 +119,9 @@ function recordLights(machine: ArduinoMachine, location: string, lights: Arduino
     }
   }
 
-  if (LIGHTS.some((light) => lights[light])) tracker.lightsOffSince = null;
-  else tracker.lightsOffSince ??= now;
-
-  const online = tracker.lightsOffSince === null || now - tracker.lightsOffSince < IDLE_OFFLINE_MS;
-  if (online !== state.online) {
-    changes.online = online;
+  if (!state.online) {
+    changes.online = true;
     changes.lastStateTs = timestamp;
-    if (!online)
-      logger.info(`Arduino ${location} has had no lights on for 4 hours, showing offline`);
   }
 
   if (Object.keys(changes).length) machine.update(changes);
@@ -147,7 +136,6 @@ function getTracker(location: string): Tracker {
       lastFailure: null,
       greenSince: null,
       yellowSince: null,
-      lightsOffSince: null,
     };
     trackers.set(location, tracker);
   }

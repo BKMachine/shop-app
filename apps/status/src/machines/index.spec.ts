@@ -156,5 +156,21 @@ describe('machine registry', () => {
       expect(machine()).toBeDefined();
       expect(logger.error).toHaveBeenCalledTimes(1);
     });
+
+    it('shows a machine offline once it has been idle for 4 hours', async () => {
+      const { list, machine, registry } = await setup([]);
+      list.mockResolvedValue([doc()]);
+      const lastStateTs = new Date(Date.now() - 4 * 60 * 60 * 1000 + 30000).toISOString();
+      await registry.loadMachines(
+        new Map([['id-1', { online: true, lastStateTs } as ArduinoState]]),
+      );
+      registry.startSync();
+
+      expect(machine()?.getStatus()).toBe('idle');
+      await jest.advanceTimersByTimeAsync(60000);
+      registry.stopSync();
+
+      expect(machine()?.getStatus()).toBe('offline');
+    });
   });
 });

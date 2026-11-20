@@ -9,6 +9,8 @@ import MTConnectMachine from './MTConnect/MTConnectMachine.js';
 
 // Machines are set up through the main server, which writes them straight to the database.
 const SYNC_INTERVAL_MS = 10000;
+// How often a machine is checked for having sat idle long enough to show offline.
+const IDLE_CHECK_INTERVAL_MS = 60000;
 
 type AnyMachine = FocasMachine | ArduinoMachine | MTConnectMachine | HaasMachine;
 
@@ -35,6 +37,7 @@ const sources: Record<
 // Machines already warned about, so each sync doesn't warn again.
 const unknownSources = new Set<string>();
 let syncTimer: NodeJS.Timeout | undefined;
+let idleTimer: NodeJS.Timeout | undefined;
 let syncInFlight = false;
 let lastSyncFailure: string | null = null;
 
@@ -90,10 +93,16 @@ export async function loadMachines(
 export function startSync(): void {
   stopSync();
   syncTimer = setInterval(sync, SYNC_INTERVAL_MS);
+  idleTimer = setInterval(checkIdle, IDLE_CHECK_INTERVAL_MS);
 }
 
 export function stopSync(): void {
   clearInterval(syncTimer);
+  clearInterval(idleTimer);
+}
+
+function checkIdle(): void {
+  for (const machine of machines.values()) machine.checkIdle();
 }
 
 function sync(): void {
