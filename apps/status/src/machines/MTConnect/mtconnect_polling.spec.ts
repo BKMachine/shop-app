@@ -15,13 +15,23 @@ interface Events {
   estop?: string;
   mode?: string;
   execution?: string;
+  condition?: Partial<Record<ConditionLevel, Partial<ConditionEntry>[]>>;
 }
+
+/** Both conditions normal, as the agent reports them once the adapter connects. */
+const NORMAL = {
+  Normal: [
+    { type: 'MOTION', name: 'motion1' },
+    { type: 'LOGIC_PROGRAM', name: 'logic1' },
+  ],
+};
 
 function response({
   availability = 'AVAILABLE',
   estop = 'ARMED',
   mode = 'AUTOMATIC',
   execution = 'READY',
+  condition,
 }: Events = {}) {
   const event = (value: string) => [{ value }];
   return {
@@ -41,6 +51,7 @@ function response({
                     Mode: event(mode),
                     Execution: event(execution),
                   },
+                  ...(condition ? { Condition: condition } : {}),
                 },
               ],
             },
@@ -113,15 +124,41 @@ describe('MTConnect polling', () => {
   }
 
   describe('when the agent is unreachable', () => {
-    it('updates the status as well as the state', async () => {
+    it('stays online through two missed polls without logging an error', async () => {
+      const { logger, machine, poll, pollFails } = await start();
+      await poll({ execution: 'ACTIVE' });
+
+      await pollFails('timeout of 4000ms exceeded');
+      await pollFails('timeout of 4000ms exceeded');
+
+      expect(machine.getStatus()).toBe('green');
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('goes offline on the third miss in a row', async () => {
       const { machine, state, poll, pollFails } = await start();
       await poll({ execution: 'ACTIVE' });
       expect(machine.getStatus()).toBe('green');
 
       await pollFails();
+      await pollFails();
+      await pollFails();
 
       expect(state().online).toBe(false);
       expect(machine.getStatus()).toBe('offline');
+    });
+
+    it('starts counting misses again after a good poll', async () => {
+      const { machine, poll, pollFails } = await start();
+      await poll();
+      await pollFails();
+      await pollFails();
+      await poll();
+
+      await pollFails();
+      await pollFails();
+
+      expect(machine.getStatus()).toBe('yellow');
     });
 
     it('sends one change and logs once however long the outage lasts', async () => {
@@ -129,9 +166,7 @@ describe('MTConnect polling', () => {
       await poll();
       emit.mockClear();
 
-      await pollFails();
-      await pollFails();
-      await pollFails();
+      for (let i = 0; i < 6; i++) await pollFails();
 
       const changes = emit.mock.calls.filter(([event]) => event === 'change');
       expect(changes).toHaveLength(1);
@@ -140,6 +175,8 @@ describe('MTConnect polling', () => {
 
     it('comes back online and logs the recovery', async () => {
       const { logger, machine, poll, pollFails } = await start();
+      await pollFails();
+      await pollFails();
       await pollFails();
 
       await poll({ execution: 'ACTIVE' });
@@ -154,8 +191,10 @@ describe('MTConnect polling', () => {
       const { get, logger, machine, poll } = await start();
       await poll({ execution: 'ACTIVE' });
 
-      get.mockResolvedValueOnce({ data: { unexpected: true } });
-      await jest.advanceTimersByTimeAsync(POLL_MS);
+      for (let i = 0; i < 3; i++) {
+        get.mockResolvedValueOnce({ data: { unexpected: true } });
+        await jest.advanceTimersByTimeAsync(POLL_MS);
+      }
 
       expect(logger.error).toHaveBeenCalledTimes(1);
       expect(machine.getStatus()).toBe('offline');
@@ -230,11 +269,24 @@ describe('MTConnect polling', () => {
       const { state, poll, pollFails } = await start();
       await poll({ execution: 'ACTIVE' });
       await pollFails();
+      await pollFails();
+      await pollFails();
       await poll({ execution: 'ACTIVE' });
 
       await poll({ execution: 'READY' });
 
       expect(state().lastCycle).toEqual([]);
+    });
+
+    it('keeps timing a cycle through a missed poll', async () => {
+      const { state, poll, pollFails } = await start();
+      await poll({ execution: 'ACTIVE' });
+      await pollFails('timeout of 4000ms exceeded');
+      await poll({ execution: 'ACTIVE' });
+
+      await poll({ execution: 'READY' });
+
+      expect(state().lastCycle).toEqual([3 * POLL_MS]);
     });
 
     it('records the next full cycle after a discarded one', async () => {
@@ -248,6 +300,81 @@ describe('MTConnect polling', () => {
       await poll({ execution: 'READY' });
 
       expect(state().lastCycle).toEqual([POLL_MS]);
+    });
+  });
+
+  describe('alarms', () => {
+    it('lists a fault with its number and text and shows red', async () => {
+      const { machine, state, poll } = await start();
+
+      await poll({
+        execution: 'STOPPED',
+        condition: {
+          Fault: [
+            {
+              type: 'LOGIC_PROGRAM',
+              nativeCode: '2001',
+              value: 'SPINDLE ORIENT ALARM ',
+            },
+          ],
+          Normal: [{ type: 'MOTION' }],
+        },
+      });
+
+      expect(state().alarms).toEqual([
+        { type: 'LOGIC_PROGRAM', level: 'FAULT', code: '2001', message: 'SPINDLE ORIENT ALARM' },
+      ]);
+      expect(machine.getStatus()).toBe('red');
+    });
+
+    it('lists faults before warnings', async () => {
+      const { state, poll } = await start();
+
+      await poll({
+        condition: {
+          Warning: [{ type: 'MOTION', value: '' }],
+          Fault: [{ type: 'MOTION', nativeCode: '0410', value: 'SERVO ALARM' }],
+        },
+      });
+
+      expect(state().alarms.map((alarm) => alarm.level)).toEqual(['FAULT', 'WARNING']);
+    });
+
+    it('does not show red for a warning alone', async () => {
+      const { machine, state, poll } = await start();
+
+      await poll({
+        execution: 'ACTIVE',
+        condition: { Warning: [{ type: 'MOTION' }], Normal: [{ type: 'LOGIC_PROGRAM' }] },
+      });
+
+      expect(state().motion).toBe('WARNING');
+      expect(state().alarms).toEqual([{ type: 'MOTION', level: 'WARNING', code: '', message: '' }]);
+      expect(machine.getStatus()).toBe('green');
+    });
+
+    it('clears the alarms when the conditions go back to normal', async () => {
+      const { emit, machine, state, poll } = await start();
+      await poll({ condition: { Fault: [{ type: 'LOGIC_PROGRAM', nativeCode: '1015' }] } });
+      expect(machine.getStatus()).toBe('red');
+
+      await poll({ condition: NORMAL });
+
+      expect(state().alarms).toEqual([]);
+      expect(state().motion).toBe('NORMAL');
+      expect(machine.getStatus()).toBe('yellow');
+      emit.mockClear();
+      await poll({ condition: NORMAL });
+      expect(emit).not.toHaveBeenCalled();
+    });
+
+    it('leaves the alarms alone when the agent sends no conditions', async () => {
+      const { state, poll } = await start();
+
+      await poll();
+
+      expect(state().alarms).toEqual([]);
+      expect(state().motion).toBe('UNAVAILABLE');
     });
   });
 

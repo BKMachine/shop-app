@@ -78,9 +78,21 @@ declare global {
     execution: Execution;
     program: string;
     motion: 'UNAVAILABLE' | 'NORMAL' | 'WARNING' | 'FAULT';
+    /** Active alarm conditions, faults first. */
+    alarms: MTConnectAlarm[];
     lastCycle: MachineLastCycle;
     lastOperatorTime: number;
     lastStateTs: string;
+  }
+
+  interface MTConnectAlarm {
+    /** The condition's data item type, such as LOGIC_PROGRAM or MOTION. */
+    type: string;
+    level: 'FAULT' | 'WARNING';
+    /** The control's alarm number, or '' when the adapter doesn't send one. */
+    code: string;
+    /** The alarm text, or '' when the adapter doesn't send one. */
+    message: string;
   }
 
   interface MTConnectMappings {

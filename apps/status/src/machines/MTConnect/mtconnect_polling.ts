@@ -6,11 +6,14 @@ import type { StateChanges } from '../Machine.js';
 import mappings from './mtconnect_mappings.js';
 
 const POLL_INTERVAL_MS = 5000;
-// Shorter than the poll interval so a hung agent shows as offline by the next poll.
+// Shorter than the poll interval so a hung request counts as a miss before the next poll.
 const REQUEST_TIMEOUT_MS = 4000;
+// About one request in 60 to the agent times out, so it takes this many misses in a row.
+const MISSES_BEFORE_OFFLINE = 3;
 
 let interval: NodeJS.Timeout;
 let requestInFlight = false;
+let misses = 0;
 let lastFailure: string | null = null;
 // Machines whose running cycle crossed a connection drop, so its time can't be trusted.
 const interruptedCycles = new Set<string>();
@@ -43,6 +46,7 @@ function run() {
     })
     .then(({ data }) => {
       processJSON(data);
+      misses = 0;
       if (lastFailure) {
         logger.info('MTConnect polling recovered');
         lastFailure = null;
@@ -51,6 +55,11 @@ function run() {
     .catch((error: unknown) => {
       // Agent unreachable or its response is unusable - the machine data can't be trusted
       const message = error instanceof Error ? error.message : String(error);
+      misses++;
+      if (misses < MISSES_BEFORE_OFFLINE) {
+        logger.debug(`MTConnect poll missed (${misses} in a row): ${message}`);
+        return;
+      }
       if (message !== lastFailure) {
         logger.error(`MTConnect polling failed: ${message}`);
         lastFailure = message;
@@ -81,6 +90,15 @@ function processJSON(data: MTConnectResponse) {
     const changes: Record<string, unknown> = {};
     const deviceEvents = device.ComponentStream[0].Events;
     if (!deviceEvents) return;
+
+    const condition = device.ComponentStream[0].Condition;
+    if (condition) {
+      const state = machine.getState();
+      const alarms = readAlarms(condition);
+      if (!_.isEqual(state.alarms, alarms)) changes.alarms = alarms;
+      const motion = conditionLevel(condition, 'MOTION');
+      if (motion && motion !== state.motion) changes.motion = motion;
+    }
 
     Object.keys(mappings).forEach((key) => {
       const deviceEvent = deviceEvents[key as keyof typeof deviceEvents];
@@ -116,4 +134,34 @@ function processJSON(data: MTConnectResponse) {
 
     if (Object.keys(changes).length) machine.update(changes as StateChanges<MTConnectState>);
   });
+}
+
+const ALARM_LEVELS = [
+  ['Fault', 'FAULT'],
+  ['Warning', 'WARNING'],
+] as const;
+
+/** Lists the active faults, then warnings, in the order the agent gives them. */
+function readAlarms(condition: NonNullable<Component['Condition']>): MTConnectAlarm[] {
+  return ALARM_LEVELS.flatMap(([key, level]) =>
+    (condition[key] ?? []).map((entry) => ({
+      type: entry.type,
+      level,
+      code: entry.nativeCode ?? '',
+      message: (entry.value ?? '').trim(),
+    })),
+  );
+}
+
+/** The level of the first condition of this type, as the old motion event reported it. */
+function conditionLevel(
+  condition: NonNullable<Component['Condition']>,
+  type: string,
+): MTConnectState['motion'] | null {
+  for (const key of ['Fault', 'Warning', 'Normal', 'Unavailable'] as const) {
+    if (condition[key]?.some((entry) => entry.type === type)) {
+      return key.toUpperCase() as MTConnectState['motion'];
+    }
+  }
+  return null;
 }

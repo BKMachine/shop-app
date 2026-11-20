@@ -41,12 +41,31 @@ declare global {
       Motion: [Event];
       Program: [Event];
     };
+    /** Alarm conditions, grouped by level. Each item reports the level it is at now. */
+    Condition?: Partial<Record<ConditionLevel, ConditionEntry[]>>;
   }
 
   interface Event {
     value: string;
     assetType: string;
     dataItemId: string;
+    sequence: number;
+    timestamp: string;
+  }
+
+  type ConditionLevel = 'Normal' | 'Warning' | 'Fault' | 'Unavailable';
+
+  interface ConditionEntry {
+    /** The alarm text, when the adapter sends one. */
+    value?: string;
+    dataItemId: string;
+    name?: string;
+    /** The data item type, such as LOGIC_PROGRAM or MOTION. */
+    type: string;
+    /** The control's own alarm number. */
+    nativeCode?: string;
+    nativeSeverity?: string;
+    qualifier?: string;
     sequence: number;
     timestamp: string;
   }

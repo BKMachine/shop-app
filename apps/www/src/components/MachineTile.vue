@@ -290,9 +290,19 @@ const hasAlarm = computed(() => {
   } else if (props.data.source === 'arduino') {
     return props.data.state.red;
   } else if (props.data.source === 'mtconnect') {
-    return props.data.state.eStop === 'TRIGGERED' || props.data.state.motion === 'FAULT';
+    return (
+      props.data.state.eStop === 'TRIGGERED' ||
+      props.data.state.motion === 'FAULT' ||
+      mtConnectFaults.value.length > 0
+    );
   }
   return false;
+});
+
+const mtConnectFaults = computed<MTConnectAlarm[]>(() => {
+  if (props.data.source !== 'mtconnect') return [];
+  // Older status servers don't send alarms for MTConnect machines.
+  return (props.data.state.alarms ?? []).filter((alarm) => alarm.level === 'FAULT');
 });
 
 const alarmMessages = computed<string[]>(() => {
@@ -301,6 +311,13 @@ const alarmMessages = computed<string[]>(() => {
       const msg: string = a.message.replace(/\*/g, ' ').replace(/�/g, '').trim();
       return alarmMutations[msg] || msg;
     });
+  } else if (props.data.source === 'mtconnect') {
+    const messages = mtConnectFaults.value.map((alarm) => {
+      if (alarm.message) return alarm.code ? `${alarm.code} ${alarm.message}` : alarm.message;
+      return `${alarm.type.replace(/_/g, ' ')} ALARM ${alarm.code}`.trim();
+    });
+    if (props.data.state.eStop === 'TRIGGERED') messages.push('EMERGENCY STOP');
+    return messages;
   } else {
     return [];
   }
