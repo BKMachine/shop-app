@@ -98,7 +98,27 @@
               </RouterLink>
               <span v-else class="job-row__value">{{ currentPartText || '---' }}</span>
             </div>
-            <div v-if="alarmText" class="alarm" :title="alarmText">{{ alarmText }}</div>
+            <!-- One line for the first alarm; the rest are counted and listed on hover. -->
+            <v-tooltip
+              v-if="alarmText"
+              :disabled="alarmMessages.length < 2"
+              location="bottom"
+              open-delay="150"
+            >
+              <template #activator="{ props: tooltipProps }">
+                <div v-bind="tooltipProps" class="alarm-row">
+                  <span class="alarm" :title="alarmMessages.length < 2 ? alarmText : undefined">
+                    {{ alarmText }}
+                  </span>
+                  <span v-if="alarmMessages.length > 1" class="extra-alarms-chip">
+                    +{{ alarmMessages.length - 1 }}
+                  </span>
+                </div>
+              </template>
+              <div class="alarm-tooltip">
+                <div v-for="message in alarmMessages" :key="message">{{ message }}</div>
+              </div>
+            </v-tooltip>
             <div v-else class="d-flex justify-space-between align-center">
               <div>
                 <div v-if="hasLastCycle">
@@ -307,10 +327,13 @@ const mtConnectFaults = computed<MTConnectAlarm[]>(() => {
 
 const alarmMessages = computed<string[]>(() => {
   if (props.data.source === 'focas') {
-    return Object.values(alarms.value).map((a) => {
+    const messages = Object.values(alarms.value).map((a) => {
       const msg: string = a.message.replace(/\*/g, ' ').replace(/�/g, '').trim();
-      return alarmMutations[msg] || msg;
+      const text = alarmMutations[msg] || msg;
+      // The same alarm on several axes comes once per axis, so name the axis to tell them apart.
+      return a.axis ? `${text} (${a.axis})` : text;
     });
+    return [...new Set(messages)];
   } else if (props.data.source === 'mtconnect') {
     const messages = mtConnectFaults.value.map((alarm) => {
       if (alarm.message) return alarm.code ? `${alarm.code} ${alarm.message}` : alarm.message;
@@ -564,9 +587,38 @@ const rapid = computed(() => {
   background: #6c6c6c;
 }
 
+.alarm-row {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  /* Fill the tile without widening it: tiles size to their content, and a long alarm would. */
+  min-width: 100%;
+  width: 0;
+}
+
 .alarm {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extra-alarms-chip {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: #bd0000;
+  color: #fff;
+  cursor: help;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.alarm-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   white-space: nowrap;
 }
 
