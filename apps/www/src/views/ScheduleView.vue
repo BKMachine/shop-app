@@ -220,6 +220,13 @@
             >
               <span>Due</span>
             </div>
+            <div
+              v-if="priorOpsMarkerOffset != null"
+              class="schedule-board__prior-marker"
+              :style="{ left: `${priorOpsMarkerOffset * dayWidth}px` }"
+            >
+              <span>Prior ops done</span>
+            </div>
 
             <ScheduleTile
               v-for="tile in tiles"
@@ -952,6 +959,34 @@ const dueMarkerOffset = computed(() => {
   const job = drag.value?.active ? drag.value.job : dialogOpen.value ? dialogJob.value : null;
   if (!job?.dueDate) return null;
   const offset = diffDays(rangeStart.value, job.dueDate) + 1;
+  return offset > 0 && offset <= rangeDays.value ? offset : null;
+});
+
+/**
+ * Where the job's earlier ops all finish, as days into the range, for the op being dragged or
+ * edited. Starting a short op later than this can still finish alongside the ops before it.
+ */
+const priorOpsMarkerOffset = computed(() => {
+  const state = drag.value?.active ? drag.value : null;
+  const job = state ? state.job : dialogOpen.value ? dialogJob.value : null;
+  if (!job) return null;
+  const ownId = state ? state.entryId : (dialogEntry.value?._id ?? null);
+  const bookable = state
+    ? (state.bookable ?? (state.entryId ? entryOps.value.get(state.entryId) : null))
+    : dialogBookable.value;
+  const op = bookable?.op;
+  if (op == null) return null;
+
+  let end: string | null = null;
+  for (const entry of displayEntries.value) {
+    if (entry.job._id !== job._id || entry._id === ownId || entry._id === PREVIEW_ID) continue;
+    const entryOp = entryOps.value.get(entry._id)?.op;
+    if (entryOp == null || entryOp >= op) continue;
+    const entryEnd = scheduleEnd(entry);
+    if (!end || entryEnd > end) end = entryEnd;
+  }
+  if (!end) return null;
+  const offset = diffDays(rangeStart.value, end);
   return offset > 0 && offset <= rangeDays.value ? offset : null;
 });
 
@@ -2061,6 +2096,31 @@ onBeforeUnmount(() => {
   color: rgb(var(--v-theme-on-error));
   font-size: 0.68rem;
   font-weight: 700;
+}
+
+.schedule-board__prior-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 0;
+  border-left: 2px dashed rgb(var(--v-theme-info));
+  pointer-events: none;
+}
+
+/* Sits under the Due label so the two stay readable when they land on the same day. */
+.schedule-board__prior-marker span {
+  position: sticky;
+  top: 18px;
+  display: inline-block;
+  margin-top: 18px;
+  padding: 0 4px;
+  border-radius: 0 4px 4px 0;
+  background: rgb(var(--v-theme-info));
+  color: rgb(var(--v-theme-on-info));
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .schedule-board__tile {

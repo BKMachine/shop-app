@@ -138,3 +138,28 @@ body,
 .v-theme--dark img.table-thumb {
   filter: brightness(0.92);
 }
+
+/* Blue hover card shared by the table image preview and the schedule tile details, so floating
+   details stand apart from the page text. Overlays are teleported out of the app, so dark mode is
+   matched by the overlay's own .v-theme--dark class or by .hover-card--dark. */
+.hover-card,
+.v-tooltip > .v-overlay__content.hover-card {
+  --hover-card-bg: #d6e8fb;
+  --hover-card-border: #8bb8ea;
+  --hover-card-ink: #0f2f57;
+  --hover-card-ink-soft: rgba(15, 47, 87, 0.78);
+  border: 1px solid var(--hover-card-border);
+  border-radius: 8px;
+  background: var(--hover-card-bg);
+  color: var(--hover-card-ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+}
+
+.v-theme--dark .hover-card,
+.v-theme--dark.v-tooltip > .v-overlay__content.hover-card,
+.hover-card.hover-card--dark {
+  --hover-card-bg: rgb(var(--v-theme-primary));
+  --hover-card-border: rgba(var(--v-theme-primary), 0.9);
+  --hover-card-ink: rgb(var(--v-theme-on-primary));
+  --hover-card-ink-soft: rgba(var(--v-theme-on-primary), 0.82);
+}

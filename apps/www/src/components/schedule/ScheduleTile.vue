@@ -18,7 +18,7 @@
     <!-- A longer hover opens the booking's details, part image included. -->
     <v-tooltip
       activator="parent"
-      content-class="schedule-tile__details"
+      content-class="schedule-tile__details hover-card"
       :disabled="active || !details"
       location="top"
       max-width="320"
@@ -37,7 +37,9 @@
           <v-icon v-if="entry.job.priority === 'rush'" color="error" icon="mdi-fire" size="16" />
           #{{ entry.job.jobNumber }} · {{ entry.job.customerName }}
         </div>
-        <div v-for="line in tooltipLines.slice(1)" :key="line">{{ line }}</div>
+        <div v-for="line in tooltipLines.slice(1)" :key="line" class="schedule-tile__details-line">
+          {{ line }}
+        </div>
       </div>
     </v-tooltip>
     <div class="schedule-tile__body">
@@ -351,6 +353,10 @@ const tooltip = computed(() => tooltipLines.value.join('\n'));
 /* The tooltip is teleported out of the tile, so its styles can't be scoped to it. */
 :global(.schedule-tile__details) {
   padding: 8px 10px !important;
+}
+
+:global(.schedule-tile__details-line) {
+  color: var(--hover-card-ink-soft);
 }
 
 :global(.schedule-tile__details-card) {

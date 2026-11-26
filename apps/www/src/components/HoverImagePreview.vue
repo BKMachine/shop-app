@@ -2,8 +2,8 @@
   <teleport to="body">
     <div
       v-if="src"
-      class="hover-image-preview"
-      :class="{ 'hover-image-preview--dark': isDarkTheme }"
+      class="hover-image-preview hover-card"
+      :class="{ 'hover-card--dark': isDarkTheme }"
       :style="frameStyle"
     >
       <div class="hover-image-preview__media" :style="mediaStyle">
@@ -114,14 +114,6 @@ const mediaStyle = computed(() => ({
   box-sizing: content-box;
   padding: 6px;
   border-radius: 8px;
-  --preview-bg: #d6e8fb;
-  --preview-border: #8bb8ea;
-  --preview-ink: #0f2f57;
-  --preview-ink-soft: rgba(15, 47, 87, 0.78);
-  border: 1px solid var(--preview-border);
-  background: var(--preview-bg);
-  color: var(--preview-ink);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
 }
 
 .hover-image-preview__media {
@@ -164,13 +156,6 @@ const mediaStyle = computed(() => ({
 
 .hover-image-preview__subtitle {
   font-size: 0.8rem;
-  color: var(--preview-ink-soft);
-}
-
-.hover-image-preview--dark {
-  --preview-bg: rgb(var(--v-theme-primary));
-  --preview-border: rgba(var(--v-theme-primary), 0.9);
-  --preview-ink: rgb(var(--v-theme-on-primary));
-  --preview-ink-soft: rgba(var(--v-theme-on-primary), 0.82);
+  color: var(--hover-card-ink-soft);
 }
 </style>
