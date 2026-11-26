@@ -26,7 +26,7 @@ body,
 }
 
 .v-data-table__tr:hover {
-  background-color: rgba(204, 204, 204, 0.42);
+  background-color: rgba(var(--v-theme-on-surface), 0.09);
 }
 
 .v-card-title .v-btn {
@@ -40,6 +40,10 @@ body,
 
 .readonly-field {
   color: #8d6a00; /* darker gold text for distinction */
+}
+
+.v-theme--dark .readonly-field {
+  color: #e6c35c;
 }
 
 .v-field--disabled {
@@ -114,6 +118,22 @@ body,
   justify-content: flex-end;
   margin-left: auto;
   padding: 4px 0 4px 8px;
+}
+
+/* White tile behind a single product image (part and tool pages), matching the table thumbnails
+   so transparent PNGs and white-background photos look the same in both themes. */
+.image-tile {
+  box-sizing: content-box;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.v-theme--dark .image-tile {
+  border-color: rgba(255, 255, 255, 0.08);
+  filter: brightness(0.92);
 }
 
 /* Uniform image tile for data-table thumbnails. A white tile keeps transparent PNGs and

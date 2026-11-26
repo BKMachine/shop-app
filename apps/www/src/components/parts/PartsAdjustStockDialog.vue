@@ -222,7 +222,7 @@ async function save() {
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background-color: #f8f7ff;
+  background-color: rgba(99, 102, 241, 0.06);
   border-radius: 8px;
   border: 2px solid rgba(99, 102, 241, 0.2);
   text-align: center;

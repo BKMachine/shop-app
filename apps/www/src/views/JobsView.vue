@@ -585,7 +585,7 @@ function statusLabel(status: JobStatus) {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #1e88e5;
+  color: rgb(var(--v-theme-primary));
   font: inherit;
   text-align: left;
   cursor: pointer;

@@ -8,7 +8,7 @@
     </div>
     <div class="d-flex align-center justify-space-between py-4">
       <div class="tool-img-wrapper">
-        <img v-if="tool.img" alt="" class="tool-img" :src="tool.img" />
+        <img v-if="tool.img" alt="" class="tool-img image-tile" :src="tool.img" />
         <MissingImage v-else class="tool-img tool-img-fallback" />
       </div>
       <div class="d-flex">
@@ -210,7 +210,7 @@
               <template #activator="{ props: activatorProps }">
                 <v-btn
                   v-bind="activatorProps"
-                  color="#932c95"
+                  color="accent"
                   density="comfortable"
                   :disabled="!manualOrderEnabled"
                   elevation="2"
@@ -249,7 +249,7 @@
             <v-switch
               v-model="tool.autoReorder"
               class="ml-6"
-              color="#932c95"
+              color="accent"
               density="compact"
               hide-details
               label="Auto Reorder"
@@ -257,7 +257,7 @@
             <v-checkbox
               v-model="tool.onOrder"
               class="ml-3"
-              color="#901394"
+              color="accent"
               density="compact"
               hide-details
               :label="formattedOrderedOn"

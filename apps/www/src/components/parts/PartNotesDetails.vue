@@ -445,7 +445,7 @@ watch(
       rgba(var(--v-theme-error), 0.015) 22%,
       transparent 55%
     ),
-    #fff;
+    rgb(var(--v-theme-surface));
 }
 
 .note-card--default {
@@ -457,7 +457,7 @@ watch(
       rgba(var(--v-theme-primary), 0.015) 22%,
       transparent 55%
     ),
-    #fff;
+    rgb(var(--v-theme-surface));
 }
 
 .note-card__header {
@@ -472,7 +472,7 @@ watch(
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 0 5px rgba(var(--v-theme-surface), 0.7);
 }
 
 .note-card__priority-marker--critical {
@@ -510,13 +510,19 @@ watch(
   font-weight: 700;
 }
 
+.v-theme--dark .note-card__dimension {
+  background: rgba(250, 204, 21, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.3);
+  color: #fde68a;
+}
+
 .note-card__footer {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
   margin-top: 0.85rem;
-  color: rgba(15, 23, 42, 0.68);
+  color: rgba(var(--v-theme-on-surface), 0.68);
 }
 
 .note-card__meta-pill {
@@ -525,7 +531,7 @@ watch(
   gap: 0.25rem;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.05);
+  background: rgba(var(--v-theme-on-surface), 0.06);
 }
 
 .note-editor {
@@ -544,7 +550,7 @@ watch(
 }
 
 .note-editor__hero--default {
-  background: linear-gradient(135deg, rgb(var(--v-theme-primary)), #1d4ed8);
+  background: linear-gradient(135deg, #1867c0, #1d4ed8);
 }
 
 .note-editor__hero-top {
@@ -579,7 +585,7 @@ watch(
   padding: 1rem 1.25rem 0.5rem;
   background:
     radial-gradient(circle at top right, rgba(148, 163, 184, 0.12), transparent 28%),
-    linear-gradient(180deg, #f8fafc, #fff);
+    linear-gradient(180deg, rgba(var(--v-theme-on-surface), 0.03), rgb(var(--v-theme-surface)));
 }
 
 .note-editor__priority-row {
@@ -596,8 +602,8 @@ watch(
   padding: 0.55rem 0.85rem;
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 999px;
-  background: white;
-  color: #0f172a;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   cursor: pointer;
   transition:
     transform 0.16s ease,
@@ -629,6 +635,10 @@ watch(
 
 .note-editor__actions {
   padding: 0.75rem 1.25rem 1.1rem;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0), #f8fafc);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--v-theme-on-surface), 0),
+    rgba(var(--v-theme-on-surface), 0.03)
+  );
 }
 </style>

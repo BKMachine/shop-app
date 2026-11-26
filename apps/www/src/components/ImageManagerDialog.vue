@@ -1448,7 +1448,8 @@ function onUrlPreviewError() {
   flex-direction: column;
   gap: 1rem;
   align-items: center;
-  background: #f8fafd;
+  --upload-bg: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 3%, rgb(var(--v-theme-surface)));
+  background: var(--upload-bg);
   border-radius: 14px;
   padding: 1.2rem 1rem 1rem 1rem;
   max-height: calc(100vh - 220px);
@@ -1458,9 +1459,9 @@ function onUrlPreviewError() {
   width: 100%;
   max-width: 500px;
   min-height: 160px;
-  border: 2px dashed #bfc9da;
+  border: 2px dashed rgba(var(--v-theme-on-surface), 0.25);
   border-radius: 10px;
-  background: #f4f7fb;
+  background: rgba(var(--v-theme-on-surface), 0.04);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1471,12 +1472,12 @@ function onUrlPreviewError() {
   padding: 0.7rem 0.5rem;
 }
 .upload-drop-area:hover {
-  border-color: #1976d2;
+  border-color: rgb(var(--v-theme-primary));
 }
 
 .upload-drop-area--active {
-  border-color: #1976d2;
-  background: #eaf2fd;
+  border-color: rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.1);
 }
 .upload-drop-text {
   font-size: 1rem;
@@ -1484,14 +1485,14 @@ function onUrlPreviewError() {
   margin-bottom: 0.1rem;
 }
 .upload-browse {
-  color: #1976d2;
+  color: rgb(var(--v-theme-primary));
   font-weight: 500;
   cursor: pointer;
   text-decoration: underline;
 }
 .upload-drop-types {
   font-size: 0.9rem;
-  color: #8a94a6;
+  color: rgba(var(--v-theme-on-surface), 0.6);
   margin-bottom: 0.2rem;
 }
 .upload-file-info {
@@ -1500,7 +1501,7 @@ function onUrlPreviewError() {
   gap: 0.3rem;
   width: 100%;
   max-width: 400px;
-  background: #fff;
+  background: rgb(var(--v-theme-surface));
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
   padding: 0.3rem 0.7rem;
@@ -1509,7 +1510,7 @@ function onUrlPreviewError() {
 .upload-file-name {
   flex: 1;
   font-size: 0.97rem;
-  color: #222b45;
+  color: rgb(var(--v-theme-on-surface));
 }
 .upload-progress {
   flex: 2;
@@ -1519,13 +1520,13 @@ function onUrlPreviewError() {
   width: 100%;
   max-width: 400px;
   text-align: center;
-  color: #bfc9da;
+  color: rgba(var(--v-theme-on-surface), 0.45);
   font-size: 0.9rem;
   margin: 0.2rem 0 0.2rem 0;
   position: relative;
 }
 .upload-or-divider span {
-  background: #f8fafd;
+  background: var(--upload-bg);
   padding: 0 0.7rem;
   position: relative;
   z-index: 1;
@@ -1537,7 +1538,7 @@ function onUrlPreviewError() {
   right: 0;
   top: 50%;
   height: 1px;
-  background: #e3e8f0;
+  background: rgba(var(--v-theme-on-surface), 0.12);
   z-index: 0;
 }
 .upload-url-row {
@@ -1556,7 +1557,7 @@ function onUrlPreviewError() {
   justify-content: center;
   padding: 0.5rem;
   background: #fff;
-  border: 1px solid #e3e8f0;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -1569,7 +1570,7 @@ function onUrlPreviewError() {
   justify-content: center;
   padding: 0.5rem;
   background: #fff;
-  border: 1px solid #e3e8f0;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -1605,7 +1606,7 @@ function onUrlPreviewError() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(248, 250, 253, 0.88);
+  background: rgba(var(--v-theme-surface), 0.88);
   border-radius: 12px;
   text-align: center;
 }
@@ -1684,11 +1685,11 @@ function onUrlPreviewError() {
   width: 100%;
   min-height: 100%;
   padding: 0.45rem 0.25rem;
-  border: 1px solid #90caf9;
+  border: 1px solid rgba(var(--v-theme-primary), 0.5);
   border-radius: 8px;
   overflow: hidden;
-  background: linear-gradient(180deg, #edf5ff 0%, #d9ebff 100%);
-  color: #0d47a1;
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
   cursor: pointer;
   transition:
     border-color 0.18s ease,
@@ -1697,8 +1698,8 @@ function onUrlPreviewError() {
 }
 
 .image-card__stack-button:hover:not(:disabled) {
-  border-color: #1976d2;
-  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.16);
+  border-color: rgb(var(--v-theme-primary));
+  box-shadow: 0 4px 10px rgba(var(--v-theme-primary), 0.2);
 }
 
 .image-card__stack-button:disabled {
@@ -1707,7 +1708,7 @@ function onUrlPreviewError() {
 }
 
 .image-card__stack-button--busy {
-  border-color: #1976d2;
+  border-color: rgb(var(--v-theme-primary));
 }
 
 .image-card__stack-label {

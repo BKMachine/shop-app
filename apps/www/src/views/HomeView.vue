@@ -1266,6 +1266,14 @@ watch(includedDepartmentKeys, (value) => {
     inset 0 0 0 1px var(--home-stage-highlight);
 }
 
+.v-theme--dark .scan-stage--ready {
+  color: #81c784;
+}
+
+.v-theme--dark .scan-stage--not-ready {
+  color: #ef9a9a;
+}
+
 @media (max-width: 900px) {
   .scan-stage-shell {
     padding: 10px;

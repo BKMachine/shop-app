@@ -26,8 +26,7 @@
             <v-icon
               v-bind="activatorProps"
               aria-label="Show Columns"
-              class="mr-2"
-              color="grey-darken-2"
+              class="mr-2 text-medium-emphasis"
               icon="mdi-view-column-outline"
               size="24"
             />
@@ -602,7 +601,7 @@ function areFilterQueriesEqual(
   padding: 0;
   border: 0;
   background: transparent;
-  color: #1e88e5;
+  color: rgb(var(--v-theme-primary));
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -619,7 +618,7 @@ function areFilterQueriesEqual(
   background: transparent;
   font-size: 12px;
   font-weight: 300;
-  color: #1e88e5;
+  color: rgb(var(--v-theme-primary));
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
@@ -644,7 +643,7 @@ function areFilterQueriesEqual(
 }
 
 .highlighted {
-  background: #efefef;
+  background: rgba(var(--v-theme-on-surface), 0.06);
 }
 
 .rate-swatch {

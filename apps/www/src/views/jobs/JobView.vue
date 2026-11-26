@@ -2354,7 +2354,7 @@ function machineAvailabilityClass(machine: StartTaskMachineOption) {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(var(--v-theme-on-surface), 0.6);
 }
 
 .shipment-progress-card__value {
@@ -2579,7 +2579,7 @@ function machineAvailabilityClass(machine: StartTaskMachineOption) {
 .job-header-grid__part-subtitle {
   margin-top: 4px;
   font-size: 1rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(var(--v-theme-on-surface), 0.6);
 }
 
 .job-header__actions {
@@ -2648,7 +2648,7 @@ function machineAvailabilityClass(machine: StartTaskMachineOption) {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(var(--v-theme-on-surface), 0.55);
 }
 
 .production-entry__value {

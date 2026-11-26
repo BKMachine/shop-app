@@ -82,10 +82,14 @@ function stateClass(code: IsoMaterialCode): string {
 
 <style scoped>
 .iso-material-selector {
-  border: 1px solid #d6d9de;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.16);
   border-radius: 12px;
   padding: 1rem;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--v-theme-surface)) 0%,
+    rgba(var(--v-theme-on-surface), 0.03) 100%
+  );
 }
 
 .iso-material-legend {
@@ -95,7 +99,7 @@ function stateClass(code: IsoMaterialCode): string {
 }
 
 .legend-swatch {
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.22);
   border-radius: 999px;
   padding: 0.2rem 0.7rem;
   font-size: 0.8rem;
@@ -112,10 +116,11 @@ function stateClass(code: IsoMaterialCode): string {
   align-items: center;
   gap: 0.85rem;
   width: 100%;
-  border: 1px solid #d4d8de;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.16);
   border-radius: 12px;
   padding: 0.8rem 0.9rem;
-  background: #ffffff;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   text-align: left;
   transition:
     border-color 0.15s ease,
@@ -129,7 +134,7 @@ function stateClass(code: IsoMaterialCode): string {
 }
 
 .iso-material-option:focus-visible {
-  outline: 2px solid #1f2937;
+  outline: 2px solid rgb(var(--v-theme-on-surface));
   outline-offset: 2px;
 }
 
@@ -142,12 +147,12 @@ function stateClass(code: IsoMaterialCode): string {
 }
 
 .iso-material-copy__title {
-  color: #111827;
+  color: rgb(var(--v-theme-on-surface));
   font-weight: 600;
 }
 
 .iso-material-copy__state {
-  color: #4b5563;
+  color: rgba(var(--v-theme-on-surface), 0.7);
   font-size: 0.85rem;
 }
 
@@ -163,7 +168,11 @@ function stateClass(code: IsoMaterialCode): string {
 
 .state-2 {
   border-color: var(--iso-material-color);
-  background: linear-gradient(135deg, #ffffff 0%, var(--iso-material-color) 180%);
+  background: linear-gradient(
+    135deg,
+    rgb(var(--v-theme-surface)) 0%,
+    var(--iso-material-color) 180%
+  );
   box-shadow: 0 10px 20px -18px var(--iso-material-color);
 }
 </style>

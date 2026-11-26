@@ -287,7 +287,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(var(--v-theme-on-surface), 0.6);
 }
 
 .part-selection-hint {
@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   /* min-height: 22px; */
   font-size: 0.78rem;
-  color: rgba(0, 0, 0, 0.68);
+  color: rgba(var(--v-theme-on-surface), 0.68);
   white-space: nowrap;
 }
 
@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
 
 .part-selection-hint__divider {
   margin: 0 4px 0 8px;
-  color: rgba(0, 0, 0, 0.42);
+  color: rgba(var(--v-theme-on-surface), 0.42);
 }
 
 .part-option-stock {
@@ -314,6 +314,6 @@ onBeforeUnmount(() => {
   text-align: right;
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.68);
+  color: rgba(var(--v-theme-on-surface), 0.68);
 }
 </style>

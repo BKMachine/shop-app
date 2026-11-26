@@ -210,7 +210,7 @@ function getSortDimensions(material: Material): number[] {
 }
 
 .material-row--selected {
-  background-color: #e3f2fd;
+  background-color: rgba(var(--v-theme-primary), 0.12);
 }
 
 .material-title {
@@ -231,6 +231,6 @@ function getSortDimensions(material: Material): number[] {
 .selected-item,
 .material-row--selected,
 .v-list-item--active {
-  background-color: #e3f2fd;
+  background-color: rgba(var(--v-theme-primary), 0.12);
 }
 </style>

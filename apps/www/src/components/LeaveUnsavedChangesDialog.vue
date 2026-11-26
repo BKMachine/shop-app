@@ -73,7 +73,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .leave-dialog-title {
-  color: #b3261e;
+  color: rgb(var(--v-theme-error));
 }
 
 .leave-dialog-subtitle {
@@ -94,11 +94,11 @@ const emit = defineEmits<{
 }
 
 .leave-changes-item:nth-child(odd) {
-  background: #f2f2f2;
+  background: rgba(var(--v-theme-on-surface), 0.04);
 }
 
 .leave-changes-item:nth-child(even) {
-  background: #e2e2e2;
+  background: rgba(var(--v-theme-on-surface), 0.09);
 }
 
 .leave-changes-row {
@@ -114,7 +114,7 @@ const emit = defineEmits<{
 }
 
 .leave-changes-status {
-  color: #b3261e;
+  color: rgb(var(--v-theme-error));
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.2;

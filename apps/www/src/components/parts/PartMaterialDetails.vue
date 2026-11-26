@@ -129,9 +129,8 @@
                 <div>
                   <v-btn
                     v-if="part.materialCutType === 'bars'"
-                    class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
+                    class="mt-1 px-0 text-body-small swiss-defaults-btn"
                     color="primary"
-                    density="compact"
                     size="x-small"
                     variant="text"
                     @click="setMaterialDefaults('lathe')"
@@ -140,9 +139,8 @@
                   </v-btn>
                   <v-btn
                     v-if="part.materialCutType === 'bars'"
-                    class="mt-1 px-0 ml-4 text-caption-2 swiss-defaults-btn"
+                    class="mt-1 px-0 ml-4 text-body-small swiss-defaults-btn"
                     color="primary"
-                    density="compact"
                     size="x-small"
                     variant="text"
                     @click="setMaterialDefaults('2from1')"
@@ -153,9 +151,8 @@
                 <div>
                   <v-btn
                     v-if="part.materialCutType === 'bars'"
-                    class="mt-1 px-0 text-caption-2 swiss-defaults-btn"
+                    class="mt-1 px-0 text-body-small swiss-defaults-btn"
                     color="primary"
-                    density="compact"
                     size="x-small"
                     variant="text"
                     @click="setMaterialDefaults('swiss')"
@@ -408,7 +405,7 @@
                 <td class="text-medium-emphasis text-body-2 row-1">Material Cost:</td>
                 <td class="text-body-2">
                   <div v-if="isPiece" class="d-flex align-center ga-2">
-                    <v-chip color="purple-darken-2" variant="tonal"
+                    <v-chip color="accent" variant="tonal"
                       >${{ formatCost(billableMaterialCost) }}
                       / piece</v-chip
                     >
@@ -416,7 +413,7 @@
                     <v-chip variant="outlined">{{ effectiveBlanksPerPart }} pieces / part</v-chip>
                   </div>
                   <div v-else class="d-flex align-center ga-2">
-                    <v-chip color="purple-darken-2" variant="tonal"
+                    <v-chip color="accent" variant="tonal"
                       >${{ formatCost(billableMaterialCost) }}</v-chip
                     >
                     <span class="text-medium-emphasis">÷</span>
@@ -811,7 +808,7 @@ const materialUsageLabel = computed(() => {
 }
 
 .sub-component-separator {
-  color: rgba(0, 0, 0, 0.38);
+  color: rgba(var(--v-theme-on-surface), 0.38);
 }
 
 .sub-component-qty-text {
@@ -853,7 +850,7 @@ const materialUsageLabel = computed(() => {
   align-items: center;
   background: transparent;
   border: 0;
-  color: rgba(0, 0, 0, 0.62);
+  color: rgba(var(--v-theme-on-surface), 0.62);
   cursor: pointer;
   display: flex;
   justify-content: space-between;

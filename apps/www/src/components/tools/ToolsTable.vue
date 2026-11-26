@@ -23,7 +23,7 @@
               <v-icon
                 v-bind="activatorProps"
                 aria-label="Hidden Tool Types"
-                color="grey-darken-2"
+                class="text-medium-emphasis"
                 icon="mdi-filter-cog-outline"
                 size="24"
               />
@@ -49,8 +49,7 @@
             <v-icon
               v-bind="activatorProps"
               aria-label="Show Columns"
-              class="mr-2"
-              color="grey-darken-2"
+              class="mr-2 text-medium-emphasis"
               icon="mdi-view-column-outline"
               size="24"
             />
@@ -674,7 +673,7 @@ function toggleHiddenToolType(toolTypeOption: string, enabled: boolean) {
   background: transparent;
   font-size: 12px;
   font-weight: 300;
-  color: #1e88e5;
+  color: rgb(var(--v-theme-primary));
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
@@ -689,7 +688,7 @@ function toggleHiddenToolType(toolTypeOption: string, enabled: boolean) {
 
 <style scoped>
 .highlighted {
-  background: #efefef;
+  background: rgba(var(--v-theme-on-surface), 0.06);
 }
 
 .tool-img {

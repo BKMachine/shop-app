@@ -755,7 +755,7 @@ function isTotalDepartmentPerformance(entry: DepartmentPerformanceEntry): boolea
 }
 
 .status-header__label {
-  color: #7a7a7a;
+  color: rgba(var(--v-theme-on-surface), 0.55);
   font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -763,7 +763,7 @@ function isTotalDepartmentPerformance(entry: DepartmentPerformanceEntry): boolea
 }
 
 .status-header__value {
-  color: #303030;
+  color: rgba(var(--v-theme-on-surface), 0.87);
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1;
@@ -773,6 +773,10 @@ function isTotalDepartmentPerformance(entry: DepartmentPerformanceEntry): boolea
   color: #8a6d1d;
   font-size: 0.6875rem;
   font-weight: 600;
+}
+
+.v-theme--dark .status-header__incomplete {
+  color: #e6c35c;
 }
 
 .inner-container {

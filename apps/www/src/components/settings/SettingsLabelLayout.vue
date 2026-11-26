@@ -304,13 +304,19 @@ async function save() {
   border-radius: 20px;
   background:
     radial-gradient(circle at top left, rgba(52, 152, 219, 0.15), transparent 32%),
-    linear-gradient(135deg, #f6f8fb, #e9eef5);
-  border: 1px solid #d8e0ea;
+    linear-gradient(
+      135deg,
+      rgba(var(--v-theme-on-surface), 0.02),
+      rgba(var(--v-theme-on-surface), 0.07)
+    );
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.14);
   overflow-x: auto;
 }
 
 .label-layout-settings__stock {
   position: relative;
+  /* Paper label preview: always dark ink on white stock, regardless of theme. */
+  color: #0f172a;
   border-radius: 18px;
   background:
     linear-gradient(180deg, #ffffff, #f3f4f6),

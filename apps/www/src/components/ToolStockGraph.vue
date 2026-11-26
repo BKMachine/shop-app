@@ -15,7 +15,7 @@
     </v-col>
   </v-row>
   <v-row class="container" no-gutters>
-    <Line class="chart" :data="chartData" :options="options" />
+    <Line :key="chartTheme" class="chart" :data="chartData" :options="options" />
   </v-row>
 </template>
 
@@ -26,6 +26,7 @@ import { DateTime } from 'luxon';
 import { computed, onMounted, ref } from 'vue';
 import { Line } from 'vue-chartjs';
 import { type GraphPoint, graphRanges, stepPoints, timeScale } from '@/lib/auditGraph';
+import { useChartTheme } from '@/lib/useChartTheme';
 import axios from '@/plugins/axios';
 import 'chartjs-adapter-luxon';
 
@@ -48,6 +49,8 @@ const from = ref<DateTime>(to.value.minus({ months: months.value }));
 onMounted(() => {
   setTimeout(getData, 100);
 });
+
+const chartTheme = useChartTheme();
 
 function getData() {
   const end = DateTime.now();

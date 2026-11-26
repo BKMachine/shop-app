@@ -35,7 +35,7 @@
         <img
           v-if="part.img"
           alt=""
-          class="part-img"
+          class="part-img image-tile"
           :src="part.img"
           @mouseenter="showExpandedImage($event)"
           @mouseleave="hideExpandedImage"
@@ -1797,7 +1797,7 @@ async function loadCriticalNotesCount() {
   background: transparent;
   font-size: 12px;
   font-weight: 300;
-  color: #1e88e5;
+  color: rgb(var(--v-theme-primary));
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;

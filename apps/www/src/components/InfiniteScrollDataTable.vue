@@ -176,7 +176,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(var(--v-theme-on-surface), 0.6);
 }
 
 .infinite-table-progress {
