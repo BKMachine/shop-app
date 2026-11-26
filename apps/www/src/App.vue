@@ -62,16 +62,30 @@
         <v-list-item link prepend-icon="mdi-pulse" :to="{ name: 'status' }"> Status </v-list-item>
       </v-list>
       <template #append>
-        <v-list-item v-if="showDev" link prepend-icon="mdi-test-tube" :to="{name: 'test'}">
-          WIP
-        </v-list-item>
-        <v-list-item
-          v-if="showDev"
-          prepend-icon="mdi-barcode-scan"
-          @click="scannerStore.scan('1650509908')"
-        >
-          Test
-        </v-list-item>
+        <template v-if="showDev">
+          <v-expand-transition>
+            <div v-show="devOpen">
+              <v-list-item link prepend-icon="mdi-test-tube" :to="{ name: 'test' }">
+                WIP
+              </v-list-item>
+              <v-list-item prepend-icon="mdi-barcode-scan" @click="scannerStore.scan('1650509908')">
+                Test
+              </v-list-item>
+            </div>
+          </v-expand-transition>
+          <v-btn
+            :aria-expanded="devOpen"
+            aria-label="Toggle dev tools"
+            block
+            class="dev-toggle"
+            height="24"
+            rounded="0"
+            variant="text"
+            @click="devOpen = !devOpen"
+          >
+            <v-icon :icon="devOpen ? 'mdi-chevron-down' : 'mdi-chevron-up'" size="small" />
+          </v-btn>
+        </template>
         <v-list-item link prepend-icon="mdi-calculator" :to="{ name: 'calculator' }">
           Calculator
         </v-list-item>
@@ -207,6 +221,7 @@ function readStoredDrawerRail(): boolean {
 const { mobile } = useDisplay();
 const drawer = ref(true);
 const drawerRail = ref(readStoredDrawerRail());
+const devOpen = ref(false);
 
 // Below Vuetify's mobile breakpoint the drawer is a hidden overlay, so the menu button opens and
 // closes it; on wider screens it collapses the drawer to icons (rail) instead.
@@ -359,6 +374,14 @@ const isBare = computed<boolean>(() => Boolean(router.currentRoute.value.meta.ba
 
 .app-bar__scan-indicator {
   transition: color 120ms ease;
+}
+
+.dev-toggle {
+  opacity: 0.5;
+}
+
+.dev-toggle:hover {
+  opacity: 1;
 }
 
 .scan-dialog {
