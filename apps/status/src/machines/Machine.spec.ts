@@ -52,6 +52,7 @@ describe('a machine left idle', () => {
   it('is shown to clients as offline while its source still reaches it', () => {
     const machine = idleMachine(5);
     expect(machine.toJSON().state.online).toBe(false);
+    expect(machine.toJSON().state.idleOffline).toBe(true);
     expect(machine.getState().online).toBe(true);
   });
 
@@ -67,10 +68,11 @@ describe('a machine left idle', () => {
     machine.update({ execution: 'ACTIVE', lastStateTs: new Date().toISOString() });
 
     expect(changes.mock.calls.map(([{ changes }]) => changes.online)).toEqual([false, true]);
+    expect(changes.mock.calls.map(([{ changes }]) => changes.idleOffline)).toEqual([true, false]);
     expect(statuses.mock.calls.map(([{ status }]) => status)).toEqual(['offline', 'green']);
   });
 
-  it('does not tell clients it went unreachable while it already shows offline', () => {
+  it('only tells clients it is no longer idle when it goes unreachable while shown offline', () => {
     const machine = idleMachine(5);
     const changes = jest.fn();
     machineEvents.on('change', changes);
@@ -78,7 +80,8 @@ describe('a machine left idle', () => {
     machine.update({ online: false });
 
     expect(machine.getStatus()).toBe('offline');
-    expect(changes).not.toHaveBeenCalled();
+    expect(changes).toHaveBeenCalledTimes(1);
+    expect(changes.mock.calls[0][0].changes).toEqual({ idleOffline: false });
   });
 
   it('starts counting again once it can be reached again', () => {

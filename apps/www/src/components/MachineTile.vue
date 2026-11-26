@@ -10,7 +10,15 @@
           {{ rapid }}
         </span>
       </div>
-      <img v-if="!isOnline" alt="OFFLINE" class="offline" :src="offlineImg" />
+      <v-icon
+        v-if="!isOnline"
+        :aria-label="offlineLabel"
+        class="offline"
+        color="white"
+        :icon="data.state.idleOffline ? 'mdi-timer-sand-complete' : 'mdi-power-plug-off'"
+        size="24"
+        :title="offlineLabel"
+      />
       <div class="header__end">
         <ScheduleMismatchIcon
           v-if="data.scheduleMismatch"
@@ -19,7 +27,7 @@
           :scheduled-job-number="data.scheduledJobNumber"
           size="12"
         />
-        <img :alt="data.brand" aria-label="brand" class="logo" :src="logos.brand[data.brand]" />
+        <img :alt="data.brand" aria-label="brand" class="logo" :src="logoSrc" />
       </div>
     </div>
     <div v-if="isOnline">
@@ -168,7 +176,6 @@
 <script setup lang="ts">
 import { Duration } from 'luxon';
 import { computed } from 'vue';
-import offlineImg from '@/assets/img/offline.png';
 import MachineLastCycle from '@/components/MachineLastCycle.vue';
 import ScheduleMismatchIcon from '@/components/schedule/ScheduleMismatchIcon.vue';
 import logos from '@/plugins/dynamic_logos.js';
@@ -182,8 +189,16 @@ const props = defineProps<{
 }>();
 const nowStore = useNowStore();
 
+// Idle machines can still be reached, so they get their own icon to tell them apart.
+const offlineLabel = computed(() => (props.data.state.idleOffline ? 'Idle for 4 hours' : 'Offline'));
+
 const isOnline = computed(() => {
   return props.data.state.online || false;
+});
+
+// Dark tiles use the on-dark logo where there is one; dark lettering vanishes otherwise.
+const logoSrc = computed(() => {
+  return (!isOnline.value && logos.brandDark[props.data.brand]) || logos.brand[props.data.brand];
 });
 
 const seconds = computed(() => {
@@ -514,6 +529,7 @@ const rapid = computed(() => {
 
 .offline {
   height: 24px;
+  width: 24px;
   position: absolute;
   left: 15%;
 }

@@ -10,6 +10,14 @@ const brand = byName(
   import.meta.glob<string>('../assets/machine_logos/*.png', { eager: true, import: 'default' }),
 );
 
+// Versions for dark (offline) tiles, only for brands whose own logo has dark lettering.
+const brandDark = byName(
+  import.meta.glob<string>('../assets/machine_logos_dark/*.png', {
+    eager: true,
+    import: 'default',
+  }),
+);
+
 const type = byName(
   import.meta.glob<string>('../assets/machine_types/*.png', { eager: true, import: 'default' }),
 );
@@ -20,6 +28,7 @@ const source = byName(
 
 export default {
   brand,
+  brandDark,
   type,
   source,
 };

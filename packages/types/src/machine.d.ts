@@ -4,6 +4,8 @@ declare global {
 
   interface FocasState {
     online: boolean;
+    /** Shown offline because it has sat idle for 4 hours, although the source can reach it. */
+    idleOffline?: boolean;
     mainProgram: string;
     mainComment: string;
     runningProgram: string;
@@ -56,6 +58,8 @@ declare global {
 
   interface ArduinoState {
     online: boolean;
+    /** Shown offline because it has sat idle for 4 hours, although the source can reach it. */
+    idleOffline?: boolean;
     green: boolean;
     yellow: boolean;
     red: boolean;
@@ -79,6 +83,8 @@ declare global {
 
   interface MTConnectState {
     online: boolean;
+    /** Shown offline because it has sat idle for 4 hours, although the source can reach it. */
+    idleOffline?: boolean;
     eStop: 'UNAVAILABLE' | 'ARMED' | 'TRIGGERED';
     mode: Mode;
     execution: Execution;
@@ -107,6 +113,8 @@ declare global {
 
   interface HaasState {
     online: boolean;
+    /** Shown offline because it has sat idle for 4 hours, although the source can reach it. */
+    idleOffline?: boolean;
     mode: HaasMode;
     execution: HaasExecution;
     lastCycle: MachineLastCycle;

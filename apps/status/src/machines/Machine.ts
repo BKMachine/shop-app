@@ -71,7 +71,7 @@ abstract class Machine<S extends MachineState> {
       departmentId,
       department: departmentName,
       location: this.doc.location,
-      state: { ...this.state, online: this.shownOnline() },
+      state: { ...this.state, online: this.shownOnline(), idleOffline: this.idleOffline },
       status: this.status,
     };
   }
@@ -81,6 +81,7 @@ abstract class Machine<S extends MachineState> {
     const previousStatus = this.status;
     const previousStateTs = this.state.lastStateTs;
     const wasShownOnline = this.shownOnline();
+    const wasIdleOffline = this.idleOffline;
     const wasIdle = previousStatus === 'idle' || this.idleOffline;
 
     const sent = this.apply(changes);
@@ -94,6 +95,7 @@ abstract class Machine<S extends MachineState> {
     const shownOnline = this.shownOnline();
     if (shownOnline === wasShownOnline) delete sent.online;
     else sent.online = shownOnline;
+    if (this.idleOffline !== wasIdleOffline) sent.idleOffline = this.idleOffline;
     this.emitChanges(sent);
 
     if (status === previousStatus) return;
