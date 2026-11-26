@@ -190,7 +190,9 @@ const props = defineProps<{
 const nowStore = useNowStore();
 
 // Idle machines can still be reached, so they get their own icon to tell them apart.
-const offlineLabel = computed(() => (props.data.state.idleOffline ? 'Idle for 4 hours' : 'Offline'));
+const offlineLabel = computed(() =>
+  props.data.state.idleOffline ? 'Idle for 4 hours' : 'Offline',
+);
 
 const isOnline = computed(() => {
   return props.data.state.online || false;
