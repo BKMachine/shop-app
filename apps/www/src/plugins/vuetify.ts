@@ -28,6 +28,8 @@ export default createVuetify({
           rateOk: '#4CAF50',
           rateGood: '#2196F3',
           rateTurbo: '#c084fc',
+          dueOverdue: '#e53935',
+          dueSevere: '#b71c1c',
         },
       },
       dark: {
@@ -42,6 +44,8 @@ export default createVuetify({
           rateOk: '#81c784',
           rateGood: '#64b5f6',
           rateTurbo: '#d8b4fe',
+          dueOverdue: '#ef9a9a',
+          dueSevere: '#ff5252',
         },
       },
     },

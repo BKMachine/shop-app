@@ -512,10 +512,10 @@ function normalizeMachineDueDate(value: string | Date | null | undefined) {
 function machineCardDueDateClass(value: string | Date | null | undefined) {
   const color = dueDateColor(value);
 
-  if (color === 'error') return 'machine-card--due-error';
+  if (color === 'dueSevere') return 'machine-card--due-severe';
+  if (color === 'dueOverdue') return 'machine-card--due-error';
   if (color === 'warning') return 'machine-card--due-warning';
   if (color === 'success') return 'machine-card--due-success';
-  if (color === 'purple-lighten-2') return 'machine-card--due-future';
   return 'machine-card--due-default';
 }
 
@@ -915,7 +915,11 @@ watch(includedDepartmentKeys, (value) => {
 }
 
 .machine-card--due-error {
-  --machine-card-accent: rgba(198, 40, 40, 0.95);
+  --machine-card-accent: rgba(var(--v-theme-dueOverdue), 0.95);
+}
+
+.machine-card--due-severe {
+  --machine-card-accent: rgba(var(--v-theme-dueSevere), 0.95);
 }
 
 .machine-card--due-warning {
@@ -924,10 +928,6 @@ watch(includedDepartmentKeys, (value) => {
 
 .machine-card--due-success {
   --machine-card-accent: rgba(67, 160, 71, 0.95);
-}
-
-.machine-card--due-future {
-  --machine-card-accent: rgba(186, 104, 200, 0.95);
 }
 
 .machine-card--incomplete {

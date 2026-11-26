@@ -44,8 +44,8 @@ export function formatRelativeDate(value: unknown) {
 export function dueDateColor(value: unknown) {
   const dayDiff = relativeDayDiff(value);
   if (dayDiff == null) return 'grey';
-  if (dayDiff <= -7) return 'purple-lighten-2';
-  if (dayDiff < 0) return 'error';
+  if (dayDiff <= -14) return 'dueSevere';
+  if (dayDiff < 0) return 'dueOverdue';
   if (dayDiff > 14) return 'success';
   return 'warning';
 }
