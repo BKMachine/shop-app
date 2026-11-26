@@ -439,6 +439,7 @@ import { dueDateColor } from '@/lib/job_dates';
 import { fetchMachineDepartmentOptions } from '@/lib/machineDepartments';
 import {
   customerColor,
+  defaultRangeStart,
   formatDay,
   formatRangeLabel,
   isScheduleRangePreset,
@@ -547,8 +548,7 @@ const isTouchDevice =
 /* ---------- Range ---------- */
 
 const preset = ref<ScheduleRangePreset>(readPreset());
-// Every range starts at today; the arrows move back to see earlier work.
-const rangeStart = ref(today.value);
+const rangeStart = ref(props.display ? today.value : defaultRangeStart(preset.value, today.value));
 
 /** `?days=` for display mode. */
 const displayDays = computed(() => {
@@ -570,7 +570,7 @@ const rangeLabel = computed(() => formatRangeLabel(rangeStart.value, rangeDays.v
 
 watch(preset, (value) => {
   window.localStorage.setItem(PRESET_STORAGE_KEY, value);
-  rangeStart.value = today.value;
+  rangeStart.value = defaultRangeStart(value, today.value);
 });
 
 function shiftRange(direction: 1 | -1) {
@@ -581,7 +581,7 @@ function shiftRange(direction: 1 | -1) {
 }
 
 function goToToday() {
-  rangeStart.value = today.value;
+  rangeStart.value = defaultRangeStart(preset.value, today.value);
 }
 
 /** Sideways scroll not yet worth a whole day, carried to the next wheel event. */
@@ -1894,7 +1894,9 @@ onBeforeUnmount(() => {
 }
 
 .schedule-board__day--today {
-  color: rgb(var(--v-theme-primary));
+  border-radius: 4px 4px 0 0;
+  background: rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-on-primary));
   font-weight: 700;
   opacity: 1;
 }
@@ -2051,7 +2053,10 @@ onBeforeUnmount(() => {
 }
 
 .schedule-board__column--today {
-  background: rgba(var(--v-theme-primary), 0.12);
+  background: rgba(var(--v-theme-primary), 0.22);
+  box-shadow:
+    inset 2px 0 0 rgba(var(--v-theme-primary), 0.85),
+    inset -2px 0 0 rgba(var(--v-theme-primary), 0.85);
 }
 
 .schedule-board__department-line {
@@ -2099,12 +2104,13 @@ onBeforeUnmount(() => {
 }
 
 .schedule-board__prior-marker {
+  --schedule-prior-marker: #c4a1ff;
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 2;
   width: 0;
-  border-left: 2px dashed rgb(var(--v-theme-info));
+  border-left: 2px dashed var(--schedule-prior-marker);
   pointer-events: none;
 }
 
@@ -2116,8 +2122,8 @@ onBeforeUnmount(() => {
   margin-top: 18px;
   padding: 0 4px;
   border-radius: 0 4px 4px 0;
-  background: rgb(var(--v-theme-info));
-  color: rgb(var(--v-theme-on-info));
+  background: var(--schedule-prior-marker);
+  color: #1f1235;
   font-size: 0.68rem;
   font-weight: 700;
   white-space: nowrap;
