@@ -145,6 +145,18 @@
               >
                 {{ day.label }}
               </div>
+              <div
+                v-for="marker in dragDayMarkers"
+                :key="marker.edge"
+                class="schedule-board__drag-day"
+                :style="{
+                  left: `${(marker.offset + 0.5) * dayWidth}px`,
+                  minWidth: `${dayWidth}px`,
+                }"
+                :title="marker.edge === 'start' ? 'Starts' : 'Ends'"
+              >
+                {{ marker.label }}
+              </div>
             </div>
           </div>
         </div>
@@ -682,6 +694,27 @@ const dayLabels = computed(() => {
     // Too narrow for every day: label each Monday across its week.
     if (weekday !== 1) return [];
     return [{ key, offset, width: width * 7, weekend: false, label: String(date) }];
+  });
+});
+
+/** The first and last day of the booking being dragged, called out in the day header. */
+const dragDayMarkers = computed(() => {
+  if (!drag.value?.active) return [];
+  const id = drag.value.entryId ?? PREVIEW_ID;
+  const entry = displayEntries.value.find((candidate) => candidate._id === id);
+  if (!entry) return [];
+  const width = dayWidth.value;
+  const edges = [
+    { edge: 'start', key: entry.start },
+    { edge: 'end', key: addDays(entry.start, entry.days - 1) },
+  ] as const;
+  return edges.flatMap(({ edge, key }) => {
+    const offset = diffDays(rangeStart.value, key);
+    if (offset < 0 || offset >= rangeDays.value) return [];
+    if (edge === 'end' && entry.days === 1) return [];
+    const date = Number(key.slice(8));
+    const label = width >= 44 ? `${formatDay(key, { weekday: 'short' })} ${date}` : String(date);
+    return [{ edge, offset, label }];
   });
 });
 
@@ -1911,6 +1944,25 @@ onBeforeUnmount(() => {
   color: rgb(var(--v-theme-on-primary));
   font-weight: 700;
   opacity: 1;
+}
+
+/* Drawn over the day labels so it shows at every zoom, even where only Mondays are labelled. */
+.schedule-board__drag-day {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  z-index: 1;
+  padding: 2px 3px 0;
+  border-radius: 4px;
+  /* Solid, not translucent, so the day label underneath doesn't show through. */
+  background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 30%, rgb(var(--v-theme-surface)));
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .schedule-board__body {
