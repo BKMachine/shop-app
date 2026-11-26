@@ -102,9 +102,22 @@
              with the buried end of the tool as hidden lines. Chips are thrown off behind the
              cutter, to the left, and climb out of the cut. -->
         <rect class="fig-block fig-block--front" height="50" width="300" x="20" y="250" />
-        <rect class="fig-block-hatch" fill="url(#mm-hatch)" height="50" width="300" x="20" y="250" />
-        <path class="fig-hidden" d="M154 250 V 290 Q 154 292 156 292 H 184 Q 186 292 186 290 V 250" />
-        <path class="fig-chip" d="M153 246 q -12 -2 -16 -10 q -4 -8 -14 -6 M153 249 q -14 0 -22 -6" />
+        <rect
+          class="fig-block-hatch"
+          fill="url(#mm-hatch)"
+          height="50"
+          width="300"
+          x="20"
+          y="250"
+        />
+        <path
+          class="fig-hidden"
+          d="M154 250 V 290 Q 154 292 156 292 H 184 Q 186 292 186 290 V 250"
+        />
+        <path
+          class="fig-chip"
+          d="M153 246 q -12 -2 -16 -10 q -4 -8 -14 -6 M153 249 q -14 0 -22 -6"
+        />
 
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
           <!-- Ends 12px clear of the holder's sides (x 126-214). The head's base sits on the
