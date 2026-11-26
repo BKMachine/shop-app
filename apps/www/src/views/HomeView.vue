@@ -43,7 +43,7 @@
                       <v-icon
                         v-bind="activatorProps"
                         aria-label="Filter departments"
-                        color="grey-darken-2"
+                        :color="isDarkTheme ? 'grey-lighten-1' : 'grey-darken-2'"
                         icon="mdi-domain-switch"
                         size="24"
                       />
@@ -82,9 +82,9 @@
                 </v-menu>
                 <v-select
                   v-model="machineSortMode"
-                  base-color="grey-darken-3"
+                  :base-color="isDarkTheme ? 'grey-lighten-1' : 'grey-darken-3'"
                   class="machine-section__sort"
-                  color="grey-darken-3"
+                  :color="isDarkTheme ? 'grey-lighten-2' : 'grey-darken-3'"
                   density="compact"
                   hide-details
                   item-title="label"
@@ -259,7 +259,6 @@
                   v-for="machine in idleMachines"
                   :key="machine.machineId"
                   class="idle-machine-strip__chip"
-                  color="grey-lighten-1"
                   size="small"
                   variant="flat"
                 >
@@ -286,6 +285,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useTheme } from 'vuetify';
 import logo from '@/assets/img/bk_logo.png';
 import ScheduleMismatchIcon from '@/components/schedule/ScheduleMismatchIcon.vue';
 import { dueDateColor, formatRelativeDate } from '@/lib/job_dates';
@@ -313,6 +313,8 @@ type ActiveMachineListItem =
       variant: 'rush' | 'normal';
     };
 
+const theme = useTheme();
+const isDarkTheme = computed(() => theme.global.current.value.dark);
 const idleHomeRedirectEnabled = useIdleHomeRedirectEnabled;
 const loading = ref(false);
 const loadFailed = ref(false);
@@ -636,15 +638,77 @@ watch(includedDepartmentKeys, (value) => {
 
 <style scoped>
 .home-view {
-  position: relative;
-  min-height: calc(100dvh - 64px);
-  overflow: hidden;
-  background: radial-gradient(
+  --home-bg: radial-gradient(
     circle at center,
     rgba(255, 255, 255, 0.94) 0%,
     rgba(248, 245, 238, 0.98) 62%,
     rgba(240, 236, 228, 1) 100%
   );
+  --home-logo-opacity: 0.08;
+  --home-logo-filter: grayscale(1);
+  --home-stage-bg: rgba(255, 255, 255, 0.72);
+  --home-stage-shadow: rgba(0, 0, 0, 0.08);
+  --home-stage-highlight: rgba(255, 255, 255, 0.45);
+  --home-section-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.18));
+  --home-error-ink: rgb(146, 0, 0);
+  --home-error-bg: rgba(255, 255, 255, 0.78);
+  --home-ink: rgba(27, 21, 15, 0.9);
+  --home-ink-soft: rgba(50, 42, 34, 0.88);
+  --home-label: rgba(88, 77, 65, 0.7);
+  --home-muted: rgba(58, 53, 48, 0.68);
+  --home-divider-ink: rgba(88, 77, 65, 0.76);
+  --home-divider-line-start: rgba(88, 77, 65, 0.12);
+  --home-divider-line-end: rgba(88, 77, 65, 0.3);
+  --home-rush-ink: rgba(183, 28, 28, 0.92);
+  --home-card-bg: rgba(255, 255, 255, 0.82);
+  --home-card-shadow: rgba(0, 0, 0, 0.04);
+  --home-thumb-border: rgba(50, 42, 34, 0.08);
+  --home-thumb-border-hover: rgba(50, 42, 34, 0.18);
+  --home-rule-start: rgba(50, 42, 34, 0.04);
+  --home-rule-end: rgba(50, 42, 34, 0.14);
+  --home-toggle-bg: rgba(125, 135, 145, 0.18);
+  --home-toggle-bg-hover: rgba(125, 135, 145, 0.28);
+  --home-chip-ink: rgba(46, 42, 38, 0.92);
+  --home-chip-bg: rgba(191, 196, 201, 0.9);
+  position: relative;
+  min-height: calc(100dvh - 64px);
+  overflow: hidden;
+  background: var(--home-bg);
+}
+
+.v-theme--dark .home-view {
+  --home-bg: radial-gradient(
+    circle at center,
+    rgba(30, 40, 49, 0.96) 0%,
+    rgba(21, 28, 35, 0.98) 62%,
+    rgba(17, 22, 27, 1) 100%
+  );
+  --home-logo-opacity: 0.06;
+  --home-logo-filter: grayscale(1) invert(1);
+  --home-stage-bg: rgba(26, 35, 43, 0.78);
+  --home-stage-shadow: rgba(0, 0, 0, 0.4);
+  --home-stage-highlight: rgba(255, 255, 255, 0.05);
+  --home-section-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  --home-error-ink: #ef9a9a;
+  --home-error-bg: rgba(26, 35, 43, 0.92);
+  --home-ink: rgba(232, 238, 243, 0.94);
+  --home-ink-soft: rgba(214, 223, 231, 0.86);
+  --home-label: rgba(170, 184, 197, 0.78);
+  --home-muted: rgba(170, 184, 197, 0.7);
+  --home-divider-ink: rgba(170, 184, 197, 0.78);
+  --home-divider-line-start: rgba(170, 184, 197, 0.08);
+  --home-divider-line-end: rgba(170, 184, 197, 0.26);
+  --home-rush-ink: #ef9a9a;
+  --home-card-bg: rgba(33, 44, 54, 0.92);
+  --home-card-shadow: rgba(0, 0, 0, 0.28);
+  --home-thumb-border: rgba(255, 255, 255, 0.08);
+  --home-thumb-border-hover: rgba(255, 255, 255, 0.2);
+  --home-rule-start: rgba(255, 255, 255, 0.02);
+  --home-rule-end: rgba(255, 255, 255, 0.12);
+  --home-toggle-bg: rgba(170, 184, 197, 0.14);
+  --home-toggle-bg-hover: rgba(170, 184, 197, 0.24);
+  --home-chip-ink: rgba(222, 230, 237, 0.92);
+  --home-chip-bg: rgba(84, 99, 112, 0.75);
 }
 
 .home-view__logo {
@@ -652,8 +716,8 @@ watch(includedDepartmentKeys, (value) => {
   inset: 50% auto auto 50%;
   width: min(52vw, 640px);
   transform: translate(-50%, -50%);
-  opacity: 0.08;
-  filter: grayscale(1);
+  opacity: var(--home-logo-opacity);
+  filter: var(--home-logo-filter);
   pointer-events: none;
   user-select: none;
 }
@@ -671,10 +735,10 @@ watch(includedDepartmentKeys, (value) => {
   width: 100%;
   min-height: calc(100dvh - 92px);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--home-stage-bg);
   box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+    0 18px 48px var(--home-stage-shadow),
+    inset 0 0 0 1px var(--home-stage-highlight);
   backdrop-filter: blur(4px);
   overflow: hidden;
 }
@@ -700,8 +764,8 @@ watch(includedDepartmentKeys, (value) => {
   right: 28px;
   bottom: 60px;
   z-index: 3;
-  color: rgb(146, 0, 0);
-  background: rgba(255, 255, 255, 0.78);
+  color: var(--home-error-ink);
+  background: var(--home-error-bg);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 0.85rem;
@@ -728,7 +792,7 @@ watch(includedDepartmentKeys, (value) => {
 }
 
 .machine-section--active {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.18));
+  background: var(--home-section-bg);
 }
 
 .machine-section__header {
@@ -748,7 +812,7 @@ watch(includedDepartmentKeys, (value) => {
 
 .machine-section__sort {
   width: 156px;
-  color: rgba(50, 42, 34, 0.88);
+  color: var(--home-ink-soft);
 }
 
 .machine-section__department-filter {
@@ -766,7 +830,7 @@ watch(includedDepartmentKeys, (value) => {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(79, 64, 49, 0.66);
+  color: var(--home-label);
 }
 
 .machine-section__title {
@@ -774,7 +838,7 @@ watch(includedDepartmentKeys, (value) => {
   font-size: clamp(1.05rem, 1.2vw, 1.45rem);
   font-weight: 700;
   letter-spacing: 0.01em;
-  color: rgba(27, 21, 15, 0.9);
+  color: var(--home-ink);
 }
 
 .machine-cards-grid {
@@ -790,15 +854,15 @@ watch(includedDepartmentKeys, (value) => {
   align-items: center;
   gap: 10px;
   margin: 2px 0;
-  color: rgba(88, 77, 65, 0.76);
+  color: var(--home-divider-ink);
 }
 
 .machine-cards-divider--rush {
-  color: rgba(183, 28, 28, 0.92);
+  color: var(--home-rush-ink);
 }
 
 .machine-cards-divider--normal {
-  color: rgba(88, 77, 65, 0.76);
+  color: var(--home-divider-ink);
 }
 
 .machine-cards-divider::before,
@@ -806,7 +870,7 @@ watch(includedDepartmentKeys, (value) => {
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(88, 77, 65, 0.12), rgba(88, 77, 65, 0.3));
+  background: linear-gradient(90deg, var(--home-divider-line-start), var(--home-divider-line-end));
 }
 
 .machine-cards-divider--rush::before,
@@ -829,7 +893,7 @@ watch(includedDepartmentKeys, (value) => {
 }
 
 .machine-cards__state {
-  color: rgba(58, 53, 48, 0.72);
+  color: var(--home-muted);
   font-size: 0.95rem;
 }
 
@@ -842,8 +906,8 @@ watch(includedDepartmentKeys, (value) => {
   padding: 5px 12px;
   border: 2px solid var(--machine-card-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.04);
+  background: var(--home-card-bg);
+  box-shadow: 0 10px 22px var(--home-card-shadow);
 }
 
 .machine-card--due-default {
@@ -871,7 +935,7 @@ watch(includedDepartmentKeys, (value) => {
   border-style: dashed;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--machine-card-accent) 50%, transparent),
-    0 10px 22px rgba(0, 0, 0, 0.04);
+    0 10px 22px var(--home-card-shadow);
 }
 
 .machine-card__header {
@@ -889,7 +953,7 @@ watch(includedDepartmentKeys, (value) => {
   font-size: 0.96rem;
   font-weight: 700;
   line-height: 1.2;
-  color: rgba(27, 21, 15, 0.92);
+  color: var(--home-ink);
 }
 
 .machine-card__job-link,
@@ -897,7 +961,7 @@ watch(includedDepartmentKeys, (value) => {
   margin: 2px 0 0;
   font-size: 0.76rem;
   font-weight: 600;
-  color: rgba(88, 77, 65, 0.72);
+  color: var(--home-label);
   text-decoration: none;
 }
 
@@ -925,7 +989,7 @@ watch(includedDepartmentKeys, (value) => {
   border-radius: 8px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(50, 42, 34, 0.08);
+  border: 1px solid var(--home-thumb-border);
   cursor: zoom-in;
   transition:
     transform 140ms ease,
@@ -944,7 +1008,7 @@ watch(includedDepartmentKeys, (value) => {
   transform: scale(4.25);
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.2);
-  border-color: rgba(50, 42, 34, 0.18);
+  border-color: var(--home-thumb-border-hover);
 }
 
 .machine-card__body-main {
@@ -980,18 +1044,18 @@ watch(includedDepartmentKeys, (value) => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(88, 77, 65, 0.64);
+  color: var(--home-label);
 }
 
 .machine-card__meta-value {
   font-size: 0.92rem;
   font-weight: 700;
-  color: rgba(27, 21, 15, 0.92);
+  color: var(--home-ink);
 }
 
 .machine-card__meta-value--empty {
   font-size: 0.8rem;
-  color: rgba(65, 59, 52, 0.58);
+  color: var(--home-muted);
 }
 
 .machine-card__content {
@@ -1003,7 +1067,7 @@ watch(includedDepartmentKeys, (value) => {
 .machine-card__content-value {
   font-size: 0.88rem;
   line-height: 1.2;
-  color: rgba(27, 21, 15, 0.88);
+  color: var(--home-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1043,7 +1107,7 @@ watch(includedDepartmentKeys, (value) => {
   bottom: 24px;
   right: 240px;
   width: 1px;
-  background: linear-gradient(180deg, rgba(50, 42, 34, 0.04), rgba(50, 42, 34, 0.14));
+  background: linear-gradient(180deg, var(--home-rule-start), var(--home-rule-end));
 }
 
 .idle-machine-strip__toggle {
@@ -1055,8 +1119,8 @@ watch(includedDepartmentKeys, (value) => {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(125, 135, 145, 0.18);
-  color: rgba(44, 37, 31, 0.82);
+  background: var(--home-toggle-bg);
+  color: var(--home-ink-soft);
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
@@ -1066,7 +1130,7 @@ watch(includedDepartmentKeys, (value) => {
 }
 
 .idle-machine-strip__toggle:hover {
-  background: rgba(125, 135, 145, 0.28);
+  background: var(--home-toggle-bg-hover);
 }
 
 .idle-machine-strip__toggle--header {
@@ -1098,7 +1162,7 @@ watch(includedDepartmentKeys, (value) => {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(79, 64, 49, 0.7);
+  color: var(--home-label);
 }
 
 .idle-machine-strip--collapsed .idle-machine-strip__title {
@@ -1126,8 +1190,8 @@ watch(includedDepartmentKeys, (value) => {
 .idle-machine-strip__chip {
   align-self: flex-start;
   justify-content: flex-start;
-  color: rgba(46, 42, 38, 0.92);
-  background: rgba(191, 196, 201, 0.9);
+  color: var(--home-chip-ink);
+  background: var(--home-chip-bg);
   font-weight: 600;
   font-size: 0.76rem;
   min-height: 28px;
@@ -1137,7 +1201,7 @@ watch(includedDepartmentKeys, (value) => {
 .idle-machine-strip__state {
   display: flex;
   align-items: center;
-  color: rgba(58, 53, 48, 0.72);
+  color: var(--home-muted);
   font-size: 0.95rem;
 }
 
@@ -1190,16 +1254,16 @@ watch(includedDepartmentKeys, (value) => {
   color: rgb(46, 160, 67);
   box-shadow:
     0 0 0 6px rgba(46, 160, 67, 0.16),
-    0 18px 48px rgba(0, 0, 0, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+    0 18px 48px var(--home-stage-shadow),
+    inset 0 0 0 1px var(--home-stage-highlight);
 }
 
 .scan-stage--not-ready {
   color: rgb(198, 40, 40);
   box-shadow:
     0 0 0 6px rgba(198, 40, 40, 0.14),
-    0 18px 48px rgba(0, 0, 0, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+    0 18px 48px var(--home-stage-shadow),
+    inset 0 0 0 1px var(--home-stage-highlight);
 }
 
 @media (max-width: 900px) {

@@ -94,18 +94,20 @@
         <template #['item.img']="{ item }">
           <v-hover>
             <template #default="{ props }">
-              <v-img
+              <img
                 v-if="hasPartImage(item)"
                 v-bind="props"
                 :id="item._id"
-                class="part-img"
-                contain
+                alt=""
+                class="table-thumb part-img"
+                decoding="async"
+                loading="lazy"
                 :src="displayPartImageSrc(item)"
                 @error="markImageMissing(item._id)"
                 @mouseenter="showExpandedImage(item, $event)"
                 @mouseleave="hideExpandedImage"
               />
-              <MissingImage v-else class="part-img part-img-fallback" />
+              <MissingImage v-else class="table-thumb part-img-fallback" />
             </template>
           </v-hover>
         </template>
@@ -149,21 +151,19 @@
     </v-card-text>
   </v-card>
 
-  <teleport to="body">
-    <div
-      v-if="expandedImage.visible"
-      class="expanded-img-container"
-      :style="{ top: expandedImage.top + 'px', left: expandedImage.left + 'px' }"
-    >
-      <v-img class="expanded-img" :src="expandedImage.src" />
-    </div>
-  </teleport>
+  <HoverImagePreview
+    :anchor="expandedImage.anchor"
+    :src="expandedImage.visible ? expandedImage.src : null"
+    :subtitle="expandedImage.subtitle"
+    :title="expandedImage.title"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { type LocationQueryValue, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
+import HoverImagePreview from '@/components/HoverImagePreview.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MaterialSwatch from '@/components/jobs/MaterialSwatch.vue';
 import MissingImage from '@/components/MissingImage.vue';
@@ -214,12 +214,20 @@ const tableRef = ref<InstanceType<typeof InfiniteScrollDataTable> | null>(null);
 const sortBy = ref<Array<{ key: string; order: 'asc' | 'desc' }>>([]);
 const missingImageIds = ref<Record<string, boolean>>({});
 const isTotalValueVisible = ref(false);
-const expandedImage = ref({
+const expandedImage = ref<{
+  visible: boolean;
+  partId: string;
+  src: string;
+  anchor: DOMRect | null;
+  title: string;
+  subtitle: string;
+}>({
   visible: false,
   partId: '',
   src: '',
-  top: 0,
-  left: 0,
+  anchor: null,
+  title: '',
+  subtitle: '',
 });
 const triggerFilterSync = useDebouncedCallback(syncFiltersToQuery, 250);
 
@@ -237,7 +245,7 @@ const filters = reactive<{
 
 const headers = [
   { title: 'Job#', key: 'jobNumber', width: 110 },
-  { title: '', key: 'img', width: 72, sortable: false },
+  { title: '', key: 'img', width: 124, sortable: false },
   { title: 'Part', key: 'partNumber' },
   { title: 'Customer', key: 'customerName' },
   { title: 'Qty', key: 'qty', width: 90 },
@@ -489,13 +497,13 @@ function showExpandedImage(job: Job, event: MouseEvent) {
   if (!src || !hasPartImage(job)) return;
 
   const target = event.target as HTMLElement;
-  const rect = target.getBoundingClientRect();
   expandedImage.value = {
     visible: true,
     partId: job._id,
     src,
-    top: rect.top,
-    left: rect.right,
+    anchor: target.getBoundingClientRect(),
+    title: [`Job #${job.jobNumber}`, displayPartNumber(job)].filter(Boolean).join(' · '),
+    subtitle: displayPartDescription(job),
   };
 }
 
@@ -504,8 +512,9 @@ function hideExpandedImage() {
     visible: false,
     partId: '',
     src: '',
-    top: 0,
-    left: 0,
+    anchor: null,
+    title: '',
+    subtitle: '',
   };
 }
 
@@ -587,30 +596,11 @@ function statusLabel(status: JobStatus) {
 }
 
 .part-img {
-  width: 38px;
-  height: 38px;
-  margin: 2px auto;
   cursor: zoom-in;
 }
 
 .part-img-fallback {
-  width: 38px;
-  min-height: 38px;
-  margin: 2px auto;
-}
-
-.expanded-img-container {
-  position: absolute;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.expanded-img {
-  width: 360px;
-  max-height: 360px;
-  border: 1px solid #ccc;
-  background: white;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  font-size: 18px;
 }
 
 .part-cell {
@@ -625,7 +615,7 @@ function statusLabel(status: JobStatus) {
 
 .part-cell__description {
   font-size: 0.85rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(var(--v-theme-on-surface), 0.6);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

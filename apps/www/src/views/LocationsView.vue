@@ -21,12 +21,20 @@
 
           <v-row>
             <v-col cols="6">
-              <v-select v-model="location" clearable :items="locations" label="Location" />
+              <v-autocomplete
+                v-model="location"
+                auto-select-first
+                clearable
+                :items="locations"
+                label="Location"
+              />
             </v-col>
             <v-col cols="6">
-              <v-select
+              <v-autocomplete
                 v-model="position"
+                auto-select-first
                 clearable
+                :custom-filter="filterPosition"
                 :item-title="getPositionLabel"
                 item-value="value"
                 :items="positions"
@@ -83,7 +91,7 @@
                     </v-list-item-title>
                   </v-list-item>
                 </template>
-              </v-select>
+              </v-autocomplete>
             </v-col>
           </v-row>
         </div>
@@ -113,8 +121,17 @@
           </template>
 
           <template #['item.img']="{ item }">
-            <v-img v-if="item.img" class="tool-img" :src="item.img" />
-            <MissingImage v-else class="tool-img tool-img-fallback" />
+            <img
+              v-if="item.img"
+              alt=""
+              class="table-thumb inventory-img"
+              decoding="async"
+              loading="lazy"
+              :src="item.img"
+              @mouseenter="showHoverImage(item, $event)"
+              @mouseleave="hideHoverImage"
+            />
+            <MissingImage v-else class="table-thumb tool-img-fallback" />
           </template>
 
           <template #['item.reference']="{ item }"> {{ item.reference }} </template>
@@ -129,12 +146,19 @@
         </InfiniteScrollDataTable>
       </v-card>
     </v-card-text>
+    <HoverImagePreview
+      :anchor="hoverImage?.anchor ?? null"
+      :src="hoverImage?.src ?? null"
+      :subtitle="hoverImage?.subtitle"
+      :title="hoverImage?.title"
+    />
   </v-card>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import HoverImagePreview from '@/components/HoverImagePreview.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import { useDocumentScrollLock } from '@/lib/useDocumentScrollLock';
@@ -462,6 +486,17 @@ function getPositionOption(item: unknown): PositionOption {
   };
 }
 
+function normalizePositionText(text: string) {
+  return text.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Matches on the position itself, ignoring case, dashes and spaces, so "a20" finds "A-20".
+function filterPosition(_value: string, query: string, item?: { raw?: PositionOption }) {
+  const needle = normalizePositionText(query);
+  if (!needle) return true;
+  return normalizePositionText(item?.raw?.value ?? '').includes(needle);
+}
+
 function getPositionLabel(item: unknown) {
   const option = getPositionOption(item);
   if (!option.value) return '';
@@ -583,7 +618,7 @@ const headers: readonly { [key: string]: unknown }[] = [
   },
   {
     key: 'img',
-    width: 96,
+    width: 124,
     sortable: false,
   },
   {
@@ -608,6 +643,25 @@ const headers: readonly { [key: string]: unknown }[] = [
     align: 'center',
   },
 ];
+
+const hoverImage = ref<{ src: string; anchor: DOMRect; title: string; subtitle: string } | null>(
+  null,
+);
+
+function showHoverImage(row: InventoryRow, event: MouseEvent) {
+  if (!row.img) return;
+  const place = [row.location, row.position].filter(Boolean).join(' - ');
+  hoverImage.value = {
+    src: row.img,
+    anchor: (event.target as HTMLElement).getBoundingClientRect(),
+    title: row.reference,
+    subtitle: [row.description, place].filter(Boolean).join(' · '),
+  };
+}
+
+function hideHoverImage() {
+  hoverImage.value = null;
+}
 
 function openInventoryRow(event: unknown, { item }: { item: InventoryRow }) {
   router.push({
@@ -681,17 +735,12 @@ function openInventoryRow(event: unknown, { item }: { item: InventoryRow }) {
   justify-content: center;
 }
 
-.tool-img {
-  max-height: 50px;
+.inventory-img {
+  cursor: zoom-in;
 }
 
 .tool-img-fallback {
-  width: 100px;
-  min-height: 38px;
-  margin: 2px auto;
-  padding: 4px 6px;
-  font-size: 10px;
-  border-radius: 4px;
+  font-size: 18px;
 }
 
 .tool-img--empty {

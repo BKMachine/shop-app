@@ -660,9 +660,38 @@ function getJsonLineClass(line: AuditJsonLine) {
 
 <style scoped>
 .audit-panel {
+  --audit-ink: #243447;
+  --audit-muted: #66778a;
+  --audit-card-bg: #ffffff;
+  --audit-card-border: #0f1720;
+  --audit-hover-shadow: rgba(15, 23, 32, 0.08);
+  --audit-state-border: #d5dde7;
+  --audit-state-bg: linear-gradient(180deg, #fbfcfe 0%, #f5f8fc 100%);
+  --audit-detail-border: #dce6f0;
+  --audit-detail-bg: linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
+  --audit-merged-bg: rgba(41, 128, 185, 0.14);
+  --audit-merged-ink: #1f5f8d;
+  --audit-json-border: transparent;
+  --audit-device: #7890ab;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.v-theme--dark .audit-panel {
+  --audit-ink: #e3ebf3;
+  --audit-muted: #97a8ba;
+  --audit-card-bg: rgb(var(--v-theme-surface));
+  --audit-card-border: rgba(255, 255, 255, 0.14);
+  --audit-hover-shadow: rgba(0, 0, 0, 0.4);
+  --audit-state-border: rgba(255, 255, 255, 0.16);
+  --audit-state-bg: rgb(var(--v-theme-surface));
+  --audit-detail-border: rgba(255, 255, 255, 0.12);
+  --audit-detail-bg: rgb(var(--v-theme-surface));
+  --audit-merged-bg: rgba(100, 181, 246, 0.18);
+  --audit-merged-ink: #9fd0f5;
+  --audit-json-border: rgba(255, 255, 255, 0.08);
+  --audit-device: #8fa6c0;
 }
 
 .audit-toolbar {
@@ -676,20 +705,20 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-title {
   font-size: 18px;
   font-weight: 700;
-  color: #243447;
+  color: var(--audit-ink);
 }
 
 .audit-subtitle {
-  color: #637488;
+  color: var(--audit-muted);
   font-size: 13px;
 }
 
 .audit-state {
   padding: 20px;
   border-radius: 14px;
-  border: 1px dashed #d5dde7;
-  color: #67788b;
-  background: linear-gradient(180deg, #fbfcfe 0%, #f5f8fc 100%);
+  border: 1px dashed var(--audit-state-border);
+  color: var(--audit-muted);
+  background: var(--audit-state-bg);
 }
 
 .audit-layout {
@@ -717,9 +746,9 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-card {
   position: relative;
   border-radius: 16px;
-  border: 1px solid #0f1720;
+  border: 1px solid var(--audit-card-border);
   overflow: hidden;
-  background: white;
+  background-color: var(--audit-card-bg);
   cursor: pointer;
   transition:
     transform 0.14s ease,
@@ -729,7 +758,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 
 .audit-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(15, 23, 32, 0.08);
+  box-shadow: 0 10px 24px var(--audit-hover-shadow);
 }
 
 .audit-card-selected {
@@ -745,7 +774,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   border-radius: inherit;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--audit-theme-color, #7890ab) 34%, white) 0%,
+    color-mix(in srgb, var(--audit-theme-color, #7890ab) 34%, var(--audit-card-bg)) 0%,
     color-mix(in srgb, var(--audit-theme-color, #7890ab) 12%, transparent) 48%,
     transparent 100%
   );
@@ -795,7 +824,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   overflow: hidden;
   border: 1px solid rgba(112, 132, 153, 0.2);
   background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 6px 14px rgba(15, 23, 32, 0.08);
+  box-shadow: 0 6px 14px var(--audit-hover-shadow);
 }
 
 .audit-title-block {
@@ -913,7 +942,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-headline {
   font-size: 13px;
   font-weight: 600;
-  color: #243447;
+  color: var(--audit-ink);
   line-height: 1.25;
   min-width: 0;
 }
@@ -924,7 +953,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 
 .audit-card__meta {
   text-align: right;
-  color: #6a7b8e;
+  color: var(--audit-muted);
   font-size: 11px;
   flex-shrink: 0;
   display: flex;
@@ -952,21 +981,21 @@ function getJsonLineClass(line: AuditJsonLine) {
 }
 
 .audit-change-merged {
-  background: rgba(41, 128, 185, 0.14);
-  color: #1f5f8d;
+  background: var(--audit-merged-bg);
+  color: var(--audit-merged-ink);
 }
 
 .audit-empty-summary {
   font-size: 12px;
-  color: #6e7f92;
+  color: var(--audit-muted);
 }
 
 .audit-detail-panel {
   position: sticky;
   top: 0;
   border-radius: 18px;
-  border: 1px solid #dce6f0;
-  background: linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
+  border: 1px solid var(--audit-detail-border);
+  background: var(--audit-detail-bg);
 }
 
 .audit-detail-panel__content {
@@ -986,7 +1015,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-detail-panel__headline {
   font-size: 16px;
   font-weight: 700;
-  color: #243447;
+  color: var(--audit-ink);
   line-height: 1.3;
 }
 
@@ -995,7 +1024,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   flex-wrap: wrap;
   gap: 8px 12px;
   margin-top: 4px;
-  color: #66788b;
+  color: var(--audit-muted);
   font-size: 12px;
 }
 
@@ -1010,7 +1039,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #607285;
+  color: var(--audit-muted);
   margin-bottom: 8px;
 }
 
@@ -1025,6 +1054,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   padding: 12px;
   border-radius: 12px;
   background: #0f1720;
+  border: 1px solid var(--audit-json-border);
   color: #d9e5f2;
   font-size: 12px;
   line-height: 1.45;
@@ -1061,7 +1091,7 @@ function getJsonLineClass(line: AuditJsonLine) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #7890ab;
+  color: var(--audit-device);
   width: 16px;
   height: 16px;
   cursor: help;
@@ -1070,7 +1100,7 @@ function getJsonLineClass(line: AuditJsonLine) {
 .audit-scroll-state {
   padding: 12px;
   text-align: center;
-  color: #6e7f92;
+  color: var(--audit-muted);
   font-size: 13px;
 }
 

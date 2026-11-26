@@ -661,9 +661,84 @@ function openJob(jobId: string | null) {
 
 <style scoped>
 .container {
+  --act-ink: #2c3e50;
+  --act-muted: #607182;
+  --act-soft: #7f8c8d;
+  --act-faint: #95a5a6;
+  --act-divider: #ecf0f1;
+  --act-shadow: rgba(0, 0, 0, 0.05);
+  --act-shadow-hover: rgba(0, 0, 0, 0.1);
+  --act-stat-bg: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --act-nodata-bg: #f8f9fa;
+  --act-card-bg: #ffffff;
+  --act-card-border: #e8eef5;
+  --act-card-border-hover: #d0dce6;
+  --act-recent-bg: linear-gradient(180deg, #fff8ea 0%, #fff3e1 100%);
+  --act-recent-border: #ecd2aa;
+  --act-recent-border-hover: #e0bf8f;
+  --act-recent-highlight: rgba(255, 255, 255, 0.6);
+  --act-frame-border: #dde6ef;
+  --act-green-ink: #1f8f53;
+  --act-green-bg: #dbf5e7;
+  --act-blue-ink: #2f5e9e;
+  --act-blue-bg: #e4efff;
+  --act-orange-ink: #a85d12;
+  --act-orange-bg: #fff0de;
+  --act-red-ink: #b13535;
+  --act-red-bg: #fde3e3;
+  --act-increase-ink: #27ae60;
+  --act-increase-bg: #d5f4e6;
+  --act-decrease-ink: #e74c3c;
+  --act-decrease-bg: #fadbd8;
+  --act-cost-ink: #667eea;
+  --act-cost-bg: #f0f3ff;
+  --act-merge-ink: #315a7d;
+  --act-merge-bg: #e8f1fb;
+  --act-device: #7890ab;
+  --act-device-hover: #4e6d8f;
   max-width: 1560px;
   margin: 0 auto;
   padding: 12px 8px;
+}
+
+.v-theme--dark .container {
+  --act-ink: #e3ebf3;
+  --act-muted: #a7b6c5;
+  --act-soft: #93a3b3;
+  --act-faint: #7e8f9f;
+  --act-divider: rgba(255, 255, 255, 0.08);
+  --act-shadow: rgba(0, 0, 0, 0.3);
+  --act-shadow-hover: rgba(0, 0, 0, 0.45);
+  --act-stat-bg: linear-gradient(135deg, #222d38 0%, #2f3e52 100%);
+  --act-nodata-bg: rgb(var(--v-theme-surface));
+  --act-card-bg: rgb(var(--v-theme-surface));
+  --act-card-border: rgba(255, 255, 255, 0.08);
+  --act-card-border-hover: rgba(255, 255, 255, 0.18);
+  --act-recent-bg:
+    linear-gradient(180deg, rgba(255, 183, 77, 0.13) 0%, rgba(255, 183, 77, 0.07) 100%),
+    rgb(var(--v-theme-surface));
+  --act-recent-border: rgba(255, 183, 77, 0.32);
+  --act-recent-border-hover: rgba(255, 183, 77, 0.5);
+  --act-recent-highlight: rgba(255, 255, 255, 0.04);
+  --act-frame-border: transparent;
+  --act-green-ink: #81c784;
+  --act-green-bg: rgba(129, 199, 132, 0.16);
+  --act-blue-ink: #90caf9;
+  --act-blue-bg: rgba(100, 181, 246, 0.16);
+  --act-orange-ink: #ffb74d;
+  --act-orange-bg: rgba(255, 183, 77, 0.16);
+  --act-red-ink: #ef9a9a;
+  --act-red-bg: rgba(239, 154, 154, 0.16);
+  --act-increase-ink: #81c784;
+  --act-increase-bg: rgba(129, 199, 132, 0.16);
+  --act-decrease-ink: #ef9a9a;
+  --act-decrease-bg: rgba(239, 154, 154, 0.16);
+  --act-cost-ink: #a5b4fc;
+  --act-cost-bg: rgba(129, 140, 248, 0.16);
+  --act-merge-ink: #9fd0f5;
+  --act-merge-bg: rgba(100, 181, 246, 0.16);
+  --act-device: #8fa6c0;
+  --act-device-hover: #b7c9dc;
 }
 
 .stats-header {
@@ -674,7 +749,7 @@ function openJob(jobId: string | null) {
   font-size: 18px;
   font-weight: 600;
   margin: 0 0 8px 0;
-  color: #2c3e50;
+  color: var(--act-ink);
 }
 
 .stats-grid {
@@ -684,16 +759,17 @@ function openJob(jobId: string | null) {
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: var(--act-stat-bg);
+  color: var(--act-ink);
   border-radius: 6px;
   padding: 10px 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px var(--act-shadow);
   transition: all 0.2s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--act-shadow-hover);
 }
 
 .stat-card.highlight {
@@ -737,7 +813,7 @@ function openJob(jobId: string | null) {
 .column-title {
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--act-ink);
   margin: 0;
   padding: 0 4px;
 }
@@ -747,10 +823,10 @@ function openJob(jobId: string | null) {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #95a5a6;
+  color: var(--act-faint);
   padding: 8px 2px 4px 2px;
   margin-top: 8px;
-  border-top: 1px solid #ecf0f1;
+  border-top: 1px solid var(--act-divider);
 }
 
 .day-header:first-child {
@@ -762,39 +838,39 @@ function openJob(jobId: string | null) {
 .no-data {
   text-align: center;
   padding: 24px 12px;
-  color: #95a5a6;
+  color: var(--act-faint);
   font-size: 14px;
-  background: #f8f9fa;
+  background: var(--act-nodata-bg);
   border-radius: 6px;
-  border: 1px solid #ecf0f1;
+  border: 1px solid var(--act-divider);
 }
 
 .activity-card {
-  background: #ffffff;
+  background: var(--act-card-bg);
   border-radius: 8px;
-  border: 1px solid #e8eef5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--act-card-border);
+  box-shadow: 0 1px 3px var(--act-shadow);
   transition: all 0.2s ease;
   overflow: hidden;
 }
 
 .activity-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-color: #d0dce6;
+  box-shadow: 0 2px 8px var(--act-shadow-hover);
+  border-color: var(--act-card-border-hover);
 }
 
 .recent-activity-card {
-  background: linear-gradient(180deg, #fff8ea 0%, #fff3e1 100%);
-  border-color: #ecd2aa;
+  background: var(--act-recent-bg);
+  border-color: var(--act-recent-border);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 1px 0 var(--act-recent-highlight),
     0 1px 3px rgba(158, 111, 27, 0.04);
 }
 
 .recent-activity-card:hover {
-  border-color: #e0bf8f;
+  border-color: var(--act-recent-border-hover);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 1px 0 var(--act-recent-highlight),
     0 2px 8px rgba(158, 111, 27, 0.08);
 }
 
@@ -803,7 +879,9 @@ function openJob(jobId: string | null) {
 }
 
 .image-col {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
 }
 
 .activity-image-frame {
@@ -815,7 +893,7 @@ function openJob(jobId: string | null) {
   padding: 6px;
   border-radius: 6px;
   background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
-  border: 1px solid #dde6ef;
+  border: 1px solid var(--act-frame-border);
   overflow: hidden;
 }
 
@@ -857,28 +935,28 @@ function openJob(jobId: string | null) {
 }
 
 .job-event-badge-created {
-  color: #1f8f53;
-  background: #dbf5e7;
+  color: var(--act-green-ink);
+  background: var(--act-green-bg);
 }
 
 .job-event-badge-closed {
-  color: #1f5fb4;
-  background: #e1efff;
+  color: var(--act-blue-ink);
+  background: var(--act-blue-bg);
 }
 
 .job-event-badge-task_started {
-  color: #a85d12;
-  background: #fff0de;
+  color: var(--act-orange-ink);
+  background: var(--act-orange-bg);
 }
 
 .job-event-badge-task_reopened {
-  color: #a85d12;
-  background: #fff0de;
+  color: var(--act-orange-ink);
+  background: var(--act-orange-bg);
 }
 
 .job-event-badge-task_stopped {
-  color: #b13535;
-  background: #fde3e3;
+  color: var(--act-red-ink);
+  background: var(--act-red-bg);
 }
 
 .info-col {
@@ -890,7 +968,7 @@ function openJob(jobId: string | null) {
 .item-title {
   font-size: 13px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--act-ink);
   margin-bottom: 3px;
   line-height: 1.2;
   word-break: break-word;
@@ -898,7 +976,7 @@ function openJob(jobId: string | null) {
 
 .item-subtitle {
   font-size: 12px;
-  color: #607182;
+  color: var(--act-muted);
   margin-bottom: 4px;
   line-height: 1.25;
   word-break: break-word;
@@ -922,18 +1000,18 @@ function openJob(jobId: string | null) {
 }
 
 .amount.increase {
-  color: #27ae60;
-  background: #d5f4e6;
+  color: var(--act-increase-ink);
+  background: var(--act-increase-bg);
 }
 
 .amount.decrease {
-  color: #e74c3c;
-  background: #fadbd8;
+  color: var(--act-decrease-ink);
+  background: var(--act-decrease-bg);
 }
 
 .stock-info {
   font-size: 11px;
-  color: #7f8c8d;
+  color: var(--act-soft);
   font-weight: 500;
 }
 
@@ -949,30 +1027,30 @@ function openJob(jobId: string | null) {
 }
 
 .cost-badge {
-  color: #667eea;
-  background: #f0f3ff;
+  color: var(--act-cost-ink);
+  background: var(--act-cost-bg);
 }
 
 .job-badge {
-  color: #2f5e9e;
-  background: #e7f0ff;
+  color: var(--act-blue-ink);
+  background: var(--act-blue-bg);
 }
 
 .machine-badge {
-  color: #8a4f08;
-  background: #fff1df;
+  color: var(--act-orange-ink);
+  background: var(--act-orange-bg);
 }
 
 .merge-badge {
-  background: #e8f1fb;
-  color: #315a7d;
+  background: var(--act-merge-bg);
+  color: var(--act-merge-ink);
 }
 
 .device-indicator {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #7890ab;
+  color: var(--act-device);
   width: 16px;
   height: 16px;
   cursor: help;
@@ -980,12 +1058,12 @@ function openJob(jobId: string | null) {
 }
 
 .device-indicator:hover {
-  color: #4e6d8f;
+  color: var(--act-device-hover);
 }
 
 .timestamp {
   font-size: 10px;
-  color: #95a5a6;
+  color: var(--act-faint);
   font-weight: 400;
   line-height: 1.2;
 }

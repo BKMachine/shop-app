@@ -116,17 +116,20 @@
         <template #['item.img']="{ item }">
           <v-hover>
             <template #default="{ isHovering, props }">
-              <v-img
+              <img
                 v-if="hasPartImage(item)"
                 v-bind="props"
                 :id="item._id"
-                class="part-img"
+                alt=""
+                class="table-thumb part-img"
+                decoding="async"
+                loading="lazy"
                 :src="item.img"
                 @error="markImageMissing(item._id)"
                 @mouseenter="showExpandedImage(item, $event)"
                 @mouseleave="hideExpandedImage"
-              > </v-img>
-              <MissingImage v-else class="part-img part-img-fallback" />
+              />
+              <MissingImage v-else class="table-thumb part-img-fallback" />
             </template>
           </v-hover>
         </template>
@@ -153,15 +156,12 @@
     </v-card-text>
   </v-card>
 
-  <teleport to="body">
-    <div
-      v-if="expandedImage.visible"
-      class="expanded-img-container"
-      :style="{ top: expandedImage.top + 'px', left: expandedImage.left + 'px' }"
-    >
-      <v-img class="expanded-img" :src="expandedImage.src" />
-    </div>
-  </teleport>
+  <HoverImagePreview
+    :anchor="expandedImage.anchor"
+    :src="expandedImage.visible ? expandedImage.src : null"
+    :subtitle="expandedImage.subtitle"
+    :title="expandedImage.title"
+  />
 </template>
 
 <script setup lang="ts">
@@ -169,6 +169,7 @@ import { hasIncompletePartCostData } from '@repo/utilities/parts';
 import { computed, nextTick, ref, watch } from 'vue';
 import { type LocationQueryValue, type LocationQueryValueRaw, useRoute } from 'vue-router';
 import CustomerSelect from '@/components/CustomerSelect.vue';
+import HoverImagePreview from '@/components/HoverImagePreview.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import PartsAdjustStockDialog from '@/components/parts/PartsAdjustStockDialog.vue';
@@ -453,24 +454,32 @@ function markImageMissing(partId: string) {
   }
 }
 
-const expandedImage = ref({
+const expandedImage = ref<{
+  visible: boolean;
+  partId: string;
+  src: string;
+  anchor: DOMRect | null;
+  title: string;
+  subtitle: string;
+}>({
   visible: false,
   partId: '',
   src: '',
-  top: 0,
-  left: 0,
+  anchor: null,
+  title: '',
+  subtitle: '',
 });
 
 function showExpandedImage(part: PartsListRow, event: MouseEvent) {
   if (!hasPartImage(part) || !part.img) return;
   const target = event.target as HTMLElement;
-  const rect = target.getBoundingClientRect();
   expandedImage.value = {
     visible: true,
     partId: part._id,
     src: part.img,
-    top: rect.top,
-    left: rect.right,
+    anchor: target.getBoundingClientRect(),
+    title: part.part || '',
+    subtitle: part.description || '',
   };
 }
 
@@ -479,8 +488,9 @@ function hideExpandedImage() {
     visible: false,
     partId: '',
     src: '',
-    top: 0,
-    left: 0,
+    anchor: null,
+    title: '',
+    subtitle: '',
   };
 }
 
@@ -624,21 +634,7 @@ function areFilterQueriesEqual(
 }
 
 .part-img {
-  max-height: 50px;
-}
-
-.expanded-img-container {
-  position: absolute;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.expanded-img {
-  width: 360px;
-  max-height: 360px;
-  border: 1px solid #ccc;
-  background: white;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: zoom-in;
 }
 
 .rate-swatch-cell {
@@ -709,11 +705,6 @@ function areFilterQueriesEqual(
 }
 
 .part-img-fallback {
-  width: 38px;
-  min-height: 38px;
-  margin: 2px auto;
-  padding: 4px 6px;
-  font-size: 10px;
-  border-radius: 4px;
+  font-size: 18px;
 }
 </style>

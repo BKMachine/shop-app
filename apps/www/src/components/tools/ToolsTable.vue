@@ -237,8 +237,18 @@
           @update:sort-by="updateSearchBy"
         >
           <template #['item.img']="{ item }">
-            <v-img v-if="item.img" :id="item._id" class="tool-img" :src="item.img" />
-            <MissingImage v-else :id="item._id" class="tool-img tool-img-fallback" />
+            <img
+              v-if="item.img"
+              :id="item._id"
+              alt=""
+              class="table-thumb tool-img"
+              decoding="async"
+              loading="lazy"
+              :src="item.img"
+              @mouseenter="showHoverImage(item, $event)"
+              @mouseleave="hideHoverImage"
+            />
+            <MissingImage v-else :id="item._id" class="table-thumb tool-img-fallback" />
           </template>
           <template #['item.cost']="{ item }">
             <span class="stock">${{ formatCost(item.cost) }}</span>
@@ -255,12 +265,19 @@
         </InfiniteScrollDataTable>
       </v-card>
     </v-card-text>
+    <HoverImagePreview
+      :anchor="hoverImage?.anchor ?? null"
+      :src="hoverImage?.src ?? null"
+      :subtitle="hoverImage?.subtitle"
+      :title="hoverImage?.title"
+    />
   </v-card>
 </template>
 
 <script setup lang="ts">
 import { type IsoMaterialCode } from '@repo/utilities/materials';
 import { computed, nextTick, ref, watch } from 'vue';
+import HoverImagePreview from '@/components/HoverImagePreview.vue';
 import InfiniteScrollDataTable from '@/components/InfiniteScrollDataTable.vue';
 import MissingImage from '@/components/MissingImage.vue';
 import IsoMaterialBadgesGrid from '@/components/materials/IsoMaterialBadgesGrid.vue';
@@ -522,6 +539,24 @@ function updateSearchBy(value: { key: string; order: 'asc' | 'desc' }[]) {
   emits('updateSearchBy', value);
 }
 
+const hoverImage = ref<{ src: string; anchor: DOMRect; title: string; subtitle: string } | null>(
+  null,
+);
+
+function showHoverImage(tool: Tool, event: MouseEvent) {
+  if (!tool.img) return;
+  hoverImage.value = {
+    src: tool.img,
+    anchor: (event.target as HTMLElement).getBoundingClientRect(),
+    title: tool.description || '',
+    subtitle: [tool.vendor?.name, tool.item].filter(Boolean).join(' · '),
+  };
+}
+
+function hideHoverImage() {
+  hoverImage.value = null;
+}
+
 function openTool(event: unknown, { item }: { item: Tool }) {
   router.push({ name: 'viewTool', params: { id: item._id } });
 }
@@ -658,14 +693,10 @@ function toggleHiddenToolType(toolTypeOption: string, enabled: boolean) {
 }
 
 .tool-img {
-  max-height: 50px;
+  cursor: zoom-in;
 }
+
 .tool-img-fallback {
-  width: 100px;
-  min-height: 38px;
-  margin: 2px auto;
-  padding: 4px 6px;
-  font-size: 10px;
-  border-radius: 4px;
+  font-size: 18px;
 }
 </style>
