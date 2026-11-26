@@ -259,6 +259,27 @@
   stroke-width: 1;
 }
 
+.fig-block--front {
+  fill-opacity: 0.8;
+}
+
+.fig-block-hatch {
+  pointer-events: none;
+}
+
+.fig-hatch {
+  stroke: var(--steel-edge);
+  stroke-width: 1;
+  opacity: 0.35;
+}
+
+.fig-hidden {
+  fill: none;
+  stroke: var(--steel-edge);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+
 .fig-gullet {
   fill: var(--steel);
 }

@@ -24,13 +24,21 @@
             <stop offset="0" style="stop-color: var(--metal-hi)" />
             <stop offset="1" style="stop-color: var(--metal-lo)" />
           </radialGradient>
+          <pattern
+            id="mm-hatch"
+            height="7"
+            patternTransform="rotate(45)"
+            patternUnits="userSpaceOnUse"
+            width="7"
+          >
+            <line class="fig-hatch" x1="0" x2="0" y1="0" y2="7" />
+          </pattern>
           <clipPath id="mm-flute-clip">
             <rect height="80" rx="2" width="32" x="154" y="212" />
           </clipPath>
         </defs>
 
         <!-- Side view, drawn to scale: a 1/2" x 1-1/4" LOC 3-flute end mill in a powRgrip PG25 holder -->
-        <rect class="fig-block" height="50" width="300" x="20" y="250" />
 
         <polygon class="fig-holder" fill="url(#mm-metal-x)" points="152,4 188,4 204,50 136,50" />
         <polygon
@@ -89,8 +97,14 @@
             </g>
           </g>
         </g>
-        <!-- Climb milling feeding left: chips are thrown off behind the cutter, to the right. -->
-        <path class="fig-chip" d="M188 270 q 12 -2 16 -10 q 4 -8 14 -6 M190 284 q 14 4 16 12" />
+        <!-- Climb milling feeding right, matching the top view: the cutter runs along the back
+             face of the material, so the block is drawn in front of it, hatched and see-through,
+             with the buried end of the tool as hidden lines. Chips are thrown off behind the
+             cutter, to the left, and climb out of the cut. -->
+        <rect class="fig-block fig-block--front" height="50" width="300" x="20" y="250" />
+        <rect class="fig-block-hatch" fill="url(#mm-hatch)" height="50" width="300" x="20" y="250" />
+        <path class="fig-hidden" d="M154 250 V 290 Q 154 292 156 292 H 184 Q 186 292 186 290 V 250" />
+        <path class="fig-chip" d="M153 246 q -12 -2 -16 -10 q -4 -8 -14 -6 M153 249 q -14 0 -22 -6" />
 
         <g class="fig-part fig-rpm" :class="partClass('rpm')">
           <!-- Ends 12px clear of the holder's sides (x 126-214). The head's base sits on the
@@ -107,15 +121,15 @@
           <line x1="160" x2="180" y1="232" y2="232" />
           <polygon :points="arrowHead(155, 232, -1, 0, 6)" />
           <polygon :points="arrowHead(185, 232, 1, 0, 6)" />
-          <text class="fig-label fig-label--halo" text-anchor="end" x="146" y="236">
+          <text class="fig-label fig-label--halo" text-anchor="start" x="194" y="236">
             {{ figureText.dia }}
           </text>
         </g>
 
         <g class="fig-part fig-ipm" :class="partClass('ipm')">
-          <line x1="140" x2="44" y1="274" y2="274" />
-          <polygon :points="arrowHead(36, 274, -1, 0)" />
-          <text class="fig-label fig-label--halo" text-anchor="middle" x="86" y="266">
+          <line x1="200" x2="296" y1="274" y2="274" />
+          <polygon :points="arrowHead(304, 274, 1, 0)" />
+          <text class="fig-label fig-label--halo" text-anchor="middle" x="254" y="266">
             {{ figureText.ipm }}
           </text>
         </g>
