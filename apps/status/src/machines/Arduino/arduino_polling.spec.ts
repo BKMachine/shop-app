@@ -9,6 +9,7 @@ jest.mock('../../logger.js', () => ({
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 jest.mock('../index.js', () => ({ arduinoMachines: new Map() }));
+jest.mock('../../timeseries/arduinoLights.js', () => ({ storeArduinoLights: jest.fn() }));
 
 const POLL = 5000;
 const MINUTE = 60000;
@@ -18,6 +19,8 @@ interface Lights {
   green?: boolean;
   yellow?: boolean;
   red?: boolean;
+  greenStarts?: number;
+  greenMs?: number;
 }
 
 async function setup() {
@@ -28,6 +31,9 @@ async function setup() {
   const { default: logger } = await import('../../logger.js');
   const { arduinoMachines } = await import('../index.js');
   const { default: ArduinoMachine } = await import('./ArduinoMachine.js');
+  const { storeArduinoLights } = (await import('../../timeseries/arduinoLights.js')) as unknown as {
+    storeArduinoLights: jest.Mock;
+  };
   const polling = await import('./arduino_polling.js');
 
   const doc = { _id: 'id-1', location: 'http://me1', brand: 'x' } as unknown as MachineDoc;
@@ -51,7 +57,7 @@ async function setup() {
   }
 
   polling.start();
-  return { get, hold, logger, machine, noResponse, polling, state };
+  return { get, hold, logger, machine, noResponse, polling, state, storeArduinoLights };
 }
 
 describe('Arduino polling', () => {
@@ -312,6 +318,66 @@ describe('Arduino polling', () => {
       await hold({}, 5 * HOUR);
       machine.checkIdle();
       expect(logger.warn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('recording to InfluxDB', () => {
+    /** The readings recorded so far, or null where the board was recorded as not answering. */
+    function recorded(store: jest.Mock) {
+      return store.mock.calls.map(([, reading]) => reading as ArduinoResponse | null);
+    }
+
+    it('records the first reading and each change, but not repeats', async () => {
+      const { hold, storeArduinoLights } = await start();
+      await hold({}, 3 * POLL);
+      await hold({ green: true, greenStarts: 1 }, 3 * POLL);
+      await hold({ yellow: true, greenStarts: 1 }, 2 * POLL);
+
+      expect(recorded(storeArduinoLights).map((r) => r && [r.green, r.yellow])).toEqual([
+        [false, false],
+        [true, false],
+        [false, true],
+      ]);
+    });
+
+    it('records the counters with the lights', async () => {
+      const { hold, storeArduinoLights } = await start();
+      await hold({ green: true, greenStarts: 7, greenMs: 1234 });
+
+      expect(recorded(storeArduinoLights).at(-1)).toMatchObject({
+        green: true,
+        greenStarts: 7,
+        greenMs: 1234,
+      });
+    });
+
+    it('records green coming on again between polls, though the lights look the same', async () => {
+      const { hold, storeArduinoLights } = await start();
+      await hold({ green: true, greenStarts: 3 });
+      // Green went off and on again within one poll interval.
+      await hold({ green: true, greenStarts: 4 });
+
+      expect(recorded(storeArduinoLights).map((r) => r?.greenStarts)).toEqual([undefined, 3, 4]);
+    });
+
+    it('records a board that stops answering once, and its first reading back', async () => {
+      const { hold, noResponse, storeArduinoLights } = await start();
+      await noResponse(10 * POLL);
+      await hold({ green: true });
+
+      expect(recorded(storeArduinoLights)).toEqual([
+        expect.objectContaining({ green: false }),
+        null,
+        expect.objectContaining({ green: true }),
+      ]);
+    });
+
+    it('does not record a missed poll that falls short of going offline', async () => {
+      const { hold, noResponse, storeArduinoLights } = await start();
+      await noResponse(2 * POLL);
+      await hold({});
+
+      expect(recorded(storeArduinoLights)).toHaveLength(1);
     });
   });
 });

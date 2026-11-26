@@ -69,6 +69,12 @@ declare global {
     green: boolean;
     yellow: boolean;
     red: boolean;
+    /** Times green has come on since the board started. Older firmware doesn't send the counters. */
+    greenStarts?: number;
+    /** Milliseconds green has been on since the board started. */
+    greenMs?: number;
+    /** Milliseconds since the board started. Going backwards means it restarted. */
+    uptimeMs?: number;
   }
 
   interface MTConnectState {

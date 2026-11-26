@@ -1,4 +1,4 @@
-import { InfluxDBClient } from '@influxdata/influxdb3-client';
+import { InfluxDBClient, type Point } from '@influxdata/influxdb3-client';
 import logger from '../logger.js';
 import { storeMachineStatus } from './machineStatus.js';
 
@@ -10,6 +10,27 @@ const isWriteEnabled = process.env.NODE_ENV === 'production';
 let influx: InfluxDBClient;
 let statusTimer: NodeJS.Timeout;
 let lastWriteFailure: string | null = null;
+let lastPointsFailure: string | null = null;
+
+/**
+ * Writes points as events happen, in production only. A failed write is logged, not retried: the
+ * points are a record to look back on, and nothing waits for them.
+ */
+export function writePoints(points: Point[]): void {
+  if (!isWriteEnabled || !influx || !points.length) return;
+  influx
+    .write(points, database)
+    .then(() => {
+      if (lastPointsFailure) logger.info('Writing events to InfluxDB recovered');
+      lastPointsFailure = null;
+    })
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message !== lastPointsFailure)
+        logger.error(`Failed to write events to InfluxDB: ${message}`);
+      lastPointsFailure = message;
+    });
+}
 
 export async function connect(): Promise<void> {
   influx = new InfluxDBClient({ host: url, token, database });

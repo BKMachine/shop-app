@@ -1,5 +1,6 @@
 import _axios from 'axios';
 import logger from '../../logger.js';
+import { storeArduinoLights } from '../../timeseries/arduinoLights.js';
 import { arduinoMachines as machines } from '../index.js';
 import type { StateChanges } from '../Machine.js';
 import type ArduinoMachine from './ArduinoMachine.js';
@@ -20,7 +21,11 @@ interface Tracker {
   // When the current cycle or wait started, or null if that isn't known.
   greenSince: number | null;
   yellowSince: number | null;
+  // What was last recorded to InfluxDB, so only changes are written.
+  recorded: string | null;
 }
+
+const UNREACHABLE = 'unreachable';
 
 const trackers = new Map<string, Tracker>();
 let interval: NodeJS.Timeout;
@@ -70,6 +75,7 @@ function recordFailure(machine: ArduinoMachine, location: string, message: strin
   }
 
   tracker.reachable = false;
+  record(machine, tracker, null, Date.now());
 
   if (machine.getState().online) machine.update({ online: false });
 }
@@ -82,6 +88,7 @@ function recordLights(machine: ArduinoMachine, location: string, lights: Arduino
   const changes: StateChanges<ArduinoState> = {};
 
   tracker.misses = 0;
+  record(machine, tracker, lights, now);
   if (tracker.lastFailure) {
     logger.info(`Arduino ${location} is responding again`);
     tracker.lastFailure = null;
@@ -127,6 +134,24 @@ function recordLights(machine: ArduinoMachine, location: string, lights: Arduino
   if (Object.keys(changes).length) machine.update(changes);
 }
 
+/**
+ * Records the lights to InfluxDB when they change, or when green has come on again between polls,
+ * which only the board's start counter shows. A lost board is recorded once.
+ */
+function record(
+  machine: ArduinoMachine,
+  tracker: Tracker,
+  lights: ArduinoResponse | null,
+  now: number,
+) {
+  const key = lights
+    ? `${lights.green}|${lights.yellow}|${lights.red}|${lights.greenStarts ?? ''}`
+    : UNREACHABLE;
+  if (key === tracker.recorded) return;
+  tracker.recorded = key;
+  storeArduinoLights({ id: machine.id, name: machine.doc.name }, lights, new Date(now));
+}
+
 function getTracker(location: string): Tracker {
   let tracker = trackers.get(location);
   if (!tracker) {
@@ -136,6 +161,7 @@ function getTracker(location: string): Tracker {
       lastFailure: null,
       greenSince: null,
       yellowSince: null,
+      recorded: null,
     };
     trackers.set(location, tracker);
   }
