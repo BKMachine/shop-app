@@ -29,7 +29,11 @@
           @pointerleave="handleBlankPressCancel()"
           @pointerup="handleBlankPressCancel()"
         >
-          <MachineTile v-if="!isBlankTile(element)" :data="element" />
+          <MachineTile
+            v-if="!isBlankTile(element)"
+            :data="element"
+            :show-offline-cycle-times="showOfflineCycleTimes"
+          />
           <div v-else class="blank-tile">
             <button
               aria-label="Delete blank tile"
@@ -101,6 +105,11 @@
             </v-list-item>
           </v-list>
         </v-menu>
+        <v-list-item
+          :prepend-icon="showOfflineCycleTimes ? 'mdi-timer-off-outline' : 'mdi-timer-outline'"
+          :title="showOfflineCycleTimes ? 'Hide Offline Cycle Times' : 'Show Offline Cycle Times'"
+          @click="showOfflineCycleTimes = !showOfflineCycleTimes"
+        />
         <v-list-item
           prepend-icon="mdi-plus-box-outline"
           title="Add Blank Tile"
@@ -203,6 +212,8 @@ type DepartmentPerformanceTrend = 'steady' | 'up' | 'down';
 const router = useRouter();
 const tiles = ref<StatusTile[]>([]);
 const resetOrderConfirmVisible = ref(false);
+// Session-only: offline tiles hide their last cycle again on reload.
+const showOfflineCycleTimes = ref(false);
 const includedDepartmentKeys = ref<string[]>(readIncludedDepartments());
 const departmentOptions = ref<string[]>([]);
 const departmentPerformance = ref<DepartmentPerformanceEntry[]>([]);

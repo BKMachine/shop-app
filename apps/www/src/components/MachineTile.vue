@@ -120,37 +120,10 @@
               </div>
             </v-tooltip>
             <div v-else class="d-flex justify-space-between align-center">
-              <div>
-                <div v-if="hasLastCycle">
-                  Last Cycle:
-                  <v-tooltip v-if="cycleHistory.length > 1" location="bottom" open-delay="150">
-                    <template #activator="{ props: tooltipProps }">
-                      <span v-bind="tooltipProps" class="last-cycle-value last-cycle-value--hover">
-                        {{ lastCycle }}
-                      </span>
-                    </template>
-                    <div class="cycle-history-tooltip">
-                      <div
-                        v-for="(cycle, index) in cycleHistory"
-                        :key="`${props.data.id}-cycle-${index}`"
-                        :class="[
-                          'cycle-history-tooltip__row',
-                          index === 0 ? 'cycle-history-tooltip__row--latest' : '',
-                        ]"
-                      >
-                        <span class="cycle-history-tooltip__index">{{ index + 1 }}.</span>
-                        <span>{{ formatCycleDuration(cycle) }}</span>
-                      </div>
-                    </div>
-                  </v-tooltip>
-                  <span v-else class="last-cycle-value">{{ lastCycle }}</span>
-                  <span v-if="hasMacroTimer"> ({{ macroTimer }})</span>
-                </div>
-                <div v-else>
-                  Last Cycle: ---
-                  <span v-if="hasMacroTimer"> ({{ macroTimer }})</span>
-                </div>
-              </div>
+              <MachineLastCycle
+                :last-cycle="data.state.lastCycle"
+                :macro-timer="hasMacroTimer ? macroTimer : undefined"
+              />
               <div>{{ timerText }}</div>
             </div>
             <!-- <div v-if="data.state.lastOperatorTime" :class="{ 'long-change': longChange }">
@@ -160,6 +133,12 @@
           </div>
         </div>
       </div>
+    </div>
+    <div v-else-if="showOfflineCycleTimes" class="details offline-cycle">
+      <MachineLastCycle
+        :last-cycle="data.state.lastCycle"
+        :macro-timer="hasMacroTimer ? macroTimer : undefined"
+      />
     </div>
   </div>
   <!-- <div class="machine">
@@ -190,6 +169,7 @@
 import { Duration } from 'luxon';
 import { computed } from 'vue';
 import offlineImg from '@/assets/img/offline.png';
+import MachineLastCycle from '@/components/MachineLastCycle.vue';
 import ScheduleMismatchIcon from '@/components/schedule/ScheduleMismatchIcon.vue';
 import logos from '@/plugins/dynamic_logos.js';
 import { alarms as alarmMutations } from '@/plugins/mutations.js';
@@ -197,6 +177,8 @@ import useNowStore from '@/stores/now.js';
 
 const props = defineProps<{
   data: MachineInfo;
+  /** Reveal the last cycle on offline tiles; online tiles always show it. */
+  showOfflineCycleTimes?: boolean;
 }>();
 const nowStore = useNowStore();
 
@@ -214,37 +196,6 @@ const seconds = computed(() => {
 const timerText = computed(() => {
   const dur = Duration.fromObject({ seconds: seconds.value });
   return dur.toFormat('hh:mm:ss');
-});
-
-function normalizeCycleHistory(lastCycle: MachineLastCycle) {
-  if (Array.isArray(lastCycle)) {
-    return lastCycle.filter((cycle) => cycle > 0);
-  }
-
-  return lastCycle > 0 ? [lastCycle] : [];
-}
-
-function formatCycleDuration(milliseconds: number) {
-  const seconds = Math.floor(milliseconds / 1000);
-  const dur = Duration.fromObject({ seconds });
-  if (dur.as('hours') > 1) return dur.toFormat('h:mm:ss');
-  return dur.toFormat('m:ss');
-}
-
-const cycleHistory = computed(() => {
-  return normalizeCycleHistory(props.data.state.lastCycle);
-});
-
-const latestLastCycle = computed(() => {
-  return cycleHistory.value[0] ?? 0;
-});
-
-const hasLastCycle = computed(() => {
-  return latestLastCycle.value > 0;
-});
-
-const lastCycle = computed(() => {
-  return formatCycleDuration(latestLastCycle.value);
 });
 
 const currentPartText = computed(() => {
@@ -626,38 +577,8 @@ const rapid = computed(() => {
   background-color: #bd0000;
 }
 
-.last-cycle-value {
-  display: inline-block;
-}
-
-.last-cycle-value--hover {
-  cursor: help;
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 2px;
-}
-
-.cycle-history-tooltip {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.cycle-history-tooltip__row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.cycle-history-tooltip__row--latest {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.cycle-history-tooltip__index {
-  min-width: 1.25rem;
-  opacity: 0.7;
+.offline-cycle {
+  margin-top: auto;
 }
 
 .other-jobs-menu .job-row {
