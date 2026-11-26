@@ -3,6 +3,7 @@ import {
   ensureRoutingOperationIds,
   migratePartRoutingFromCycleTimes,
 } from './database/lib/part/part_service.js';
+import PrinterService from './database/lib/printer/printer_service.js';
 import ScheduleService from './database/lib/schedule/schedule_service.js';
 import logger from './logger.js';
 import * as server from './server/index.js';
@@ -19,6 +20,8 @@ export async function start(): Promise<void> {
   if (partsGivenOpIds) logger.info(`Gave routing ops ids on ${partsGivenOpIds} parts.`);
   const bookingsLinked = await ScheduleService.backfillRoutingIds();
   if (bookingsLinked) logger.info(`Linked ${bookingsLinked} schedule bookings to routing op ids.`);
+  const printersAdded = await PrinterService.seedDefaults();
+  if (printersAdded) logger.info(`Added ${printersAdded} default printers.`);
   server.start();
 }
 

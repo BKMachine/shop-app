@@ -8,6 +8,7 @@ import JobView from '@/views/jobs/JobView.vue';
 import LocationsView from '@/views/LocationsView.vue';
 import MachiningCalculatorView from '@/views/MachiningCalculatorView.vue';
 import MaterialsView from '@/views/MaterialsView.vue';
+import PhotoView from '@/views/PhotoView.vue';
 import PartsView from '@/views/parts/PartsView.vue';
 import PartView from '@/views/parts/PartView.vue';
 import ScheduleView from '@/views/ScheduleView.vue';
@@ -115,6 +116,14 @@ const router = createRouter({
       path: '/materials',
       name: 'materials',
       component: MaterialsView,
+    },
+    {
+      // Phone page for taking a photo and uploading or printing it. Full screen so
+      // it works as an iPhone home-screen app ("Add to Home Screen" from here).
+      path: '/photo',
+      name: 'photo',
+      component: PhotoView,
+      meta: { bare: true },
     },
     {
       path: '/shipments',

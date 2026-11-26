@@ -8,6 +8,8 @@
   >
     <v-img v-if="item.logo" class="logo" :src="item.logo" />
     <span v-else>{{ item.name }}</span>
+    <!-- Optional corner marker, e.g. whether a printer shows in the Android app -->
+    <span v-if="$slots.badge" class="tile-badge"><slot :item="item" name="badge" /></span>
     <v-tooltip activator="parent" location="top" offset="-20" open-delay="500">
       {{ item.name }}
     </v-tooltip>
@@ -48,5 +50,11 @@ defineEmits(['create', 'edit']);
 .logo {
   width: 100px;
   height: 100px;
+}
+.tile-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  display: flex;
 }
 </style>

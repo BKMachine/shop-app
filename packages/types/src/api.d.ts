@@ -92,6 +92,29 @@ declare global {
     __v?: number;
   }
 
+  /* PRINTER */
+
+  interface PrinterFields {
+    /** Name shown in the web settings and the Android app. */
+    name: string;
+    /** Network hostname, e.g. sharp.bkmachine.lan; jobs go to ipp://<hostname>/ipp/print. */
+    hostname: string;
+    /** Whether phones list this printer for photo printing (Android app and /photo page). */
+    showInAndroid: boolean;
+  }
+
+  interface Printer extends PrinterFields {
+    _id: string;
+    __v?: number;
+  }
+
+  interface PrinterCreate extends PrinterFields {}
+
+  interface PrinterUpdate extends PrinterFields {
+    _id: string;
+    __v?: number;
+  }
+
   /* REPORT */
 
   interface Email {
