@@ -167,8 +167,13 @@
               <ScheduleMismatchIcon
                 v-if="runningByMachine.get(machine.id)?.mismatch"
                 class="schedule-board__mismatch"
+                :class="{ 'schedule-board__mismatch--clickable': !display }"
+                :role="display ? undefined : 'button'"
                 :running-job-numbers="runningByMachine.get(machine.id)?.jobNumbers"
                 :scheduled-job-number="runningByMachine.get(machine.id)?.scheduledJobNumber"
+                :tabindex="display ? undefined : 0"
+                @click.stop="showRunningJobInList(machine.id)"
+                @keydown.enter.space.prevent.stop="showRunningJobInList(machine.id)"
               />
               <div class="schedule-board__machine">{{ machine.displayName }}</div>
               <div class="schedule-board__department">{{ machine.department }}</div>
@@ -221,11 +226,11 @@
               <span>Due</span>
             </div>
             <div
-              v-if="priorOpsMarkerOffset != null"
-              class="schedule-board__prior-marker"
-              :style="{ left: `${priorOpsMarkerOffset * dayWidth}px` }"
+              v-if="jobOpsEndOffset != null"
+              class="schedule-board__ops-end-marker"
+              :style="{ left: `${jobOpsEndOffset * dayWidth}px` }"
             >
-              <span>Prior ops done</span>
+              <span>Ops done</span>
             </div>
 
             <ScheduleTile
@@ -723,6 +728,17 @@ async function fetchRunningJobs() {
   }
 }
 
+/** Filters the job list down to the job running on a machine, so it can be booked or found. */
+function showRunningJobInList(machineId: string) {
+  if (props.display) return;
+  const jobNumber = runningByMachine.value.get(machineId)?.jobNumbers[0];
+  if (jobNumber == null) return;
+  backlogOpen.value = true;
+  // The running job is often booked somewhere already; show it either way.
+  hideScheduled.value = false;
+  backlogSearch.value = `#${jobNumber}`;
+}
+
 /** Running jobs and bookings both change the comparison; batch bursts of updates into one load. */
 function refreshRunningJobs() {
   if (runningRefreshTimer) clearTimeout(runningRefreshTimer);
@@ -963,25 +979,18 @@ const dueMarkerOffset = computed(() => {
 });
 
 /**
- * Where the job's earlier ops all finish, as days into the range, for the op being dragged or
- * edited. Starting a short op later than this can still finish alongside the ops before it.
+ * Where the job's other booked ops all finish, as days into the range, for the op being dragged or
+ * edited. Starting a short op later than this can still finish alongside the rest of the job.
  */
-const priorOpsMarkerOffset = computed(() => {
+const jobOpsEndOffset = computed(() => {
   const state = drag.value?.active ? drag.value : null;
   const job = state ? state.job : dialogOpen.value ? dialogJob.value : null;
   if (!job) return null;
   const ownId = state ? state.entryId : (dialogEntry.value?._id ?? null);
-  const bookable = state
-    ? (state.bookable ?? (state.entryId ? entryOps.value.get(state.entryId) : null))
-    : dialogBookable.value;
-  const op = bookable?.op;
-  if (op == null) return null;
 
   let end: string | null = null;
   for (const entry of displayEntries.value) {
     if (entry.job._id !== job._id || entry._id === ownId || entry._id === PREVIEW_ID) continue;
-    const entryOp = entryOps.value.get(entry._id)?.op;
-    if (entryOp == null || entryOp >= op) continue;
     const entryEnd = scheduleEnd(entry);
     if (!end || entryEnd > end) end = entryEnd;
   }
@@ -1107,6 +1116,9 @@ const matchingBookables = computed(() => {
     .filter(({ job, operation, scheduledCount }) => {
       if (hideScheduled.value && scheduledCount) return false;
       if (!search) return true;
+      // `#134` matches that job number only, not every job or part containing 134.
+      const jobOnly = /^#(\d+)$/.exec(search);
+      if (jobOnly) return String(job.jobNumber) === jobOnly[1];
       return [
         String(job.jobNumber),
         job.customerName,
@@ -1995,6 +2007,17 @@ onBeforeUnmount(() => {
   right: 4px;
 }
 
+.schedule-board__mismatch--clickable {
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.schedule-board__mismatch--clickable:hover,
+.schedule-board__mismatch--clickable:focus-visible {
+  background: rgba(var(--v-theme-warning), 0.18);
+  outline: none;
+}
+
 .schedule-board__machine {
   overflow: hidden;
   font-weight: 600;
@@ -2103,26 +2126,26 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.schedule-board__prior-marker {
-  --schedule-prior-marker: #c4a1ff;
+.schedule-board__ops-end-marker {
+  --schedule-ops-end-marker: #c4a1ff;
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 2;
   width: 0;
-  border-left: 2px dashed var(--schedule-prior-marker);
+  border-left: 2px dashed var(--schedule-ops-end-marker);
   pointer-events: none;
 }
 
 /* Sits under the Due label so the two stay readable when they land on the same day. */
-.schedule-board__prior-marker span {
+.schedule-board__ops-end-marker span {
   position: sticky;
   top: 18px;
   display: inline-block;
   margin-top: 18px;
   padding: 0 4px;
   border-radius: 0 4px 4px 0;
-  background: var(--schedule-prior-marker);
+  background: var(--schedule-ops-end-marker);
   color: #1f1235;
   font-size: 0.68rem;
   font-weight: 700;
