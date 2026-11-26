@@ -214,6 +214,7 @@
                   density="comfortable"
                   :disabled="!manualOrderEnabled"
                   elevation="2"
+                  title="Manual order: add to the reorder report until stock is received"
                   variant="tonal"
                 >
                   <v-icon icon="mdi-cart-arrow-down" />
@@ -224,21 +225,32 @@
                 <v-card>
                   <v-card-title>Manual Order</v-card-title>
                   <v-card-text>
-                    <v-row>How many items would you like to order? </v-row>
-                    <v-row class="mt-4">
-                      <v-text-field
-                        v-model="manualOrderAmount"
-                        label="Amount"
-                        min="1"
-                        placeholder="1"
-                        type="number"
-                        @keydown="isNumber"
-                      />
-                    </v-row>
+                    <div>
+                      How many would you like to order? The tool will show on the reorder report and
+                      in the tooling email until stock is received.
+                    </div>
+                    <v-text-field
+                      v-model.number="manualOrderAmount"
+                      class="mt-4"
+                      hide-details
+                      label="Amount"
+                      min="1"
+                      type="number"
+                      @keydown="isNumber"
+                      @keydown.enter="addManualOrder"
+                    />
                   </v-card-text>
                   <v-card-actions>
                     <v-spacer />
-                    <v-btn color="green" variant="elevated" @click="addManualOrder"> Order </v-btn>
+                    <v-btn
+                      color="green"
+                      :disabled="!isValidManualOrderAmount"
+                      :loading="manualOrderSaving"
+                      variant="elevated"
+                      @click="addManualOrder"
+                    >
+                      Order
+                    </v-btn>
                     <v-btn color="red" variant="elevated" @click="closeManualOrderDialog">
                       Cancel
                     </v-btn>
@@ -246,6 +258,17 @@
                 </v-card>
               </template>
             </v-dialog>
+            <v-chip
+              v-if="tool.manualOrderQty"
+              class="ml-3"
+              closable
+              color="accent"
+              density="comfortable"
+              title="Remove the manual order"
+              @click:close="cancelManualOrder"
+            >
+              Manual Order: {{ tool.manualOrderQty }}
+            </v-chip>
             <v-switch
               v-model="tool.autoReorder"
               class="ml-6"
@@ -472,6 +495,7 @@ const defaultToolValues: Partial<Tool> = {
   stock: 0,
   reorderThreshold: 0,
   reorderQty: 0,
+  manualOrderQty: 0,
   autoReorder: false,
   onOrder: false,
   flutes: 0,
@@ -803,6 +827,7 @@ function toComparableTool(toolValue: Tool) {
     techDataLink: normalizeComparableString(toolValue.techDataLink),
     orderLink: normalizeComparableString(toolValue.orderLink),
     orderedOn: normalizeComparableString(toolValue.orderedOn),
+    manualOrderQty: toolValue.manualOrderQty || 0,
     location: normalizeComparableString(toolValue.location),
     position: normalizeComparableString(toolValue.position),
     flutes: normalizeComparableNumber(toolValue.flutes),
@@ -848,6 +873,7 @@ const comparableFieldLabels = {
   cost: 'Cost',
   reorderQty: 'Reorder Qty',
   reorderThreshold: 'Min Stock Qty',
+  manualOrderQty: 'Manual Order Qty',
   toolType: 'Tool Type',
   flutes: 'Flutes',
   cuttingDia: 'Cutting Dia',
@@ -1243,22 +1269,46 @@ function printLocation() {
 }
 
 const manualOrderDialog = ref(false);
-const manualOrderAmount = ref(1);
+const manualOrderAmount = ref<number>(1);
+const manualOrderSaving = ref(false);
+// The reorder report and email only include tools with an item, vendor and supplier
 const manualOrderEnabled = computed(() => {
-  return tool.value.item && tool.value.vendor && tool.value.supplier;
+  return Boolean(tool.value._id && tool.value.item && tool.value.vendor && tool.value.supplier);
+});
+const isValidManualOrderAmount = computed(() => {
+  return Number.isInteger(manualOrderAmount.value) && manualOrderAmount.value > 0;
 });
 
+watch(manualOrderDialog, (open) => {
+  if (open) manualOrderAmount.value = tool.value.manualOrderQty || tool.value.reorderQty || 1;
+});
+
+// Saves the tool (including any other pending edits) with the manual order qty applied
+async function saveManualOrderQty(qty: number) {
+  const previous = { manualOrderQty: tool.value.manualOrderQty, onOrder: tool.value.onOrder };
+  tool.value.manualOrderQty = qty;
+  // A new manual order needs to be ordered, so it should show as un-ordered on the report
+  if (qty > 0) tool.value.onOrder = false;
+
+  const saved = await persistTool();
+  if (!saved) Object.assign(tool.value, previous);
+  return saved;
+}
+
 async function addManualOrder() {
-  // await saveTool(true);
-  toastSuccess('Manual order placed');
-  closeManualOrderDialog();
+  if (!isValidManualOrderAmount.value || manualOrderSaving.value) return;
+  manualOrderSaving.value = true;
+  const saved = await saveManualOrderQty(manualOrderAmount.value);
+  manualOrderSaving.value = false;
+  if (saved) closeManualOrderDialog();
+}
+
+async function cancelManualOrder() {
+  await saveManualOrderQty(0);
 }
 
 function closeManualOrderDialog() {
   manualOrderDialog.value = false;
-  setTimeout(() => {
-    manualOrderAmount.value = 1;
-  }, 1000);
 }
 
 /* TECHNICAL TAB LOGIC */

@@ -72,6 +72,7 @@ function toToolSummary(tool: ToolPopulatedDoc) {
     reorderThreshold: tool.reorderThreshold,
     reorderQty: tool.reorderQty,
     autoReorder: tool.autoReorder,
+    manualOrderQty: tool.manualOrderQty ?? 0,
     onOrder: tool.onOrder,
     orderedOn: tool.orderedOn ?? null,
     location: tool.location || null,

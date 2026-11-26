@@ -186,10 +186,13 @@ async function findByScanCode(scanCode: string): Promise<ToolPopulatedDoc | null
     .populate<{ supplier?: Supplier | null }>('supplier');
 }
 
-async function getAutoReorders(): Promise<ToolPopulatedDoc[]> {
+// Tools that need ordering: auto reorders at or below their threshold, plus manual orders
+async function getReorders(): Promise<ToolPopulatedDoc[]> {
   return Tool.find({
-    $expr: { $lte: ['$stock', '$reorderThreshold'] },
-    autoReorder: true,
+    $or: [
+      { autoReorder: true, $expr: { $lte: ['$stock', '$reorderThreshold'] } },
+      { manualOrderQty: { $gt: 0 } },
+    ],
     vendor: { $ne: null },
     supplier: { $ne: null },
   })
@@ -266,6 +269,7 @@ async function stock(
 function computedToolChanges<
   T extends {
     onOrder: boolean;
+    manualOrderQty?: number;
     stockLastUpdatedAt?: string | null;
     orderedOn?: string;
     stock: number;
@@ -274,7 +278,10 @@ function computedToolChanges<
   // Set the orderedOn date if onOrder is newly set to true
   if (newTool.onOrder && !oldTool.onOrder) newTool.orderedOn = new Date().toISOString();
   // Assume if the current stock has increased that the order has been fulfilled
-  if (newTool.stock > oldTool.stock) newTool.onOrder = false;
+  if (newTool.stock > oldTool.stock) {
+    newTool.onOrder = false;
+    newTool.manualOrderQty = 0;
+  }
   newTool.stockLastUpdatedAt =
     newTool.stock !== oldTool.stock
       ? new Date().toISOString()
@@ -296,7 +303,7 @@ export default {
   findByScanCode,
   create,
   update,
-  getAutoReorders,
+  getReorders,
   pick,
   stock,
   getToolLocations,

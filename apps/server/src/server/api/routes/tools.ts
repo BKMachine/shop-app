@@ -28,6 +28,7 @@ const ToolFieldsSchema = z.strictObject({
   autoReorder: z.boolean(),
   reorderQty: z.number(),
   reorderThreshold: z.number(),
+  manualOrderQty: z.number().int().min(0).optional(),
   productLink: z.string().optional(),
   techDataLink: z.string().optional(),
   orderLink: z.string().optional(),
@@ -136,10 +137,10 @@ router.get('/tools/positions', async (req, res, next) => {
   }
 });
 
-// Get tools that are at or below their reorder threshold and have autoReorder enabled
+// Get tools that need ordering: auto reorders at or below threshold, plus manual orders
 router.get('/tools/reorders', async (_req, res, next) => {
   try {
-    const reorders = await Tools.getAutoReorders();
+    const reorders = await Tools.getReorders();
     res.status(200).json(reorders);
   } catch (e) {
     next(e);

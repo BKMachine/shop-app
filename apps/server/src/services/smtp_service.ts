@@ -18,6 +18,26 @@ function isReorderTool(tool: ToolPopulatedDoc): tool is ReorderTool {
   return Boolean(tool.vendor && tool.supplier && tool.item);
 }
 
+type OrderQtyFields = Pick<
+  ToolFields,
+  'autoReorder' | 'stock' | 'reorderThreshold' | 'reorderQty' | 'manualOrderQty'
+>;
+
+// Reorder qty only counts when the auto reorder has actually triggered
+function getAutoOrderQty(tool: OrderQtyFields): number {
+  const triggered = tool.autoReorder && tool.stock <= tool.reorderThreshold;
+  return triggered ? Number(tool.reorderQty) || 0 : 0;
+}
+
+// Order the larger of the triggered auto reorder qty and the manual order qty
+function getOrderQty(tool: OrderQtyFields): number {
+  return Math.max(getAutoOrderQty(tool), Number(tool.manualOrderQty) || 0);
+}
+
+function isManualOrderQty(tool: OrderQtyFields): boolean {
+  return (Number(tool.manualOrderQty) || 0) > getAutoOrderQty(tool);
+}
+
 const transporter = nodemailer.createTransport({
   host: 'mail.bkmachine.net',
   port: 465,
@@ -62,7 +82,7 @@ new CronJob(
 );
 
 async function reorders() {
-  const tools = await Tool.getAutoReorders();
+  const tools = await Tool.getReorders();
   const sorted = tools
     .filter((tool) => !tool.onOrder)
     .filter(isReorderTool)
@@ -73,10 +93,7 @@ async function reorders() {
       }
       return left.supplier.name > right.supplier.name ? 1 : -1;
     });
-  const totalCost = sorted.reduce(
-    (sum, tool) => sum + Number(tool.cost) * Number(tool.reorderQty),
-    0,
-  );
+  const totalCost = sorted.reduce((sum, tool) => sum + Number(tool.cost) * getOrderQty(tool), 0);
 
   let html = `<p style="color: #c62828; font-size: 18px; font-weight: 700; margin: 0;">Estimated Total: ${formatCurrency(totalCost)}</p><br>`;
   let supplier: string;
@@ -93,7 +110,8 @@ async function reorders() {
     const orderLink = tool.orderLink
       ? ` - <a href="${escapeHtml(tool.orderLink)}">[Order]</a>`
       : '';
-    html += `${escapeHtml(tool.item)} - Qty: ${tool.reorderQty} - $${tool.cost}/ea.${orderLink}<br>`;
+    const manual = isManualOrderQty(tool) ? ' (manual)' : '';
+    html += `${escapeHtml(tool.item)} - Qty: ${getOrderQty(tool)}${manual} - $${tool.cost}/ea.${orderLink}<br>`;
   });
 
   const recipients = await getToolReportRecipients();

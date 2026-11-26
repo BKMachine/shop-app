@@ -9,7 +9,8 @@
       <v-divider />
       <div v-for="(tool, j) in item[1]" :key="tool._id">
         <input :checked="tool.onOrder" class="mr-2" type="checkbox" @click="toggleOnOrder(tool)" />
-        <span class="item"> {{ tool.item }}&nbsp;- Qty: {{ tool.reorderQty }}</span>
+        <span class="item"> {{ tool.item }}&nbsp;- Qty: {{ getOrderQty(tool) }}</span>
+        <span v-if="isManualOrderQty(tool)" class="manual"> (manual)</span>
         <span class="line"> - </span>
         <span class="subtotal">{{ getCost(tool) }}</span>
         <span> <v-icon class="ml-2" icon="mdi-open-in-app" size="16" @click="open(tool)" /> </span>
@@ -44,9 +45,23 @@ function formatCost(cost: number): string {
   return USDollar.format(cost);
 }
 
+// Reorder qty only counts when the auto reorder has actually triggered
+function getAutoOrderQty(tool: Tool): number {
+  const triggered = tool.autoReorder && tool.stock <= tool.reorderThreshold;
+  return triggered ? tool.reorderQty || 0 : 0;
+}
+
+// Order the larger of the triggered auto reorder qty and the manual order qty
+function getOrderQty(tool: Tool): number {
+  return Math.max(getAutoOrderQty(tool), tool.manualOrderQty || 0);
+}
+
+function isManualOrderQty(tool: Tool): boolean {
+  return (tool.manualOrderQty || 0) > getAutoOrderQty(tool);
+}
+
 function getCost(tool: Tool): string {
-  if (!tool.cost || !tool.reorderQty) return formatCost(0);
-  return formatCost(tool.cost * tool.reorderQty);
+  return formatCost((tool.cost || 0) * getOrderQty(tool));
 }
 
 type Item = [brand: string, matches: Tool[]];
@@ -85,7 +100,7 @@ const items = computed<Item[]>(() => {
 
 const total = computed(() => {
   return tools.value.reduce((a, b) => {
-    const qty = b.reorderQty || 0;
+    const qty = getOrderQty(b);
     const cost = b.cost || 0;
     return qty * cost + a;
   }, 0);
@@ -95,7 +110,7 @@ const unOrderedTotal = computed(() => {
   return tools.value
     .filter((x) => !x.onOrder)
     .reduce((a, b) => {
-      const qty = b.reorderQty || 0;
+      const qty = getOrderQty(b);
       const cost = b.cost || 0;
       return qty * cost + a;
     }, 0);
@@ -132,6 +147,10 @@ function mail() {
 <style scoped>
 .bold {
   font-weight: bolder;
+}
+.manual {
+  font-style: italic;
+  opacity: 0.7;
 }
 .space {
   height: 20px;

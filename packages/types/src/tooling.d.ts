@@ -16,6 +16,7 @@ declare global {
     autoReorder: boolean;
     reorderQty: number;
     reorderThreshold: number;
+    manualOrderQty?: number;
     productLink?: string;
     techDataLink?: string;
     orderLink?: string;

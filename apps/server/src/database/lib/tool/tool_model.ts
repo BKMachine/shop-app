@@ -26,6 +26,7 @@ const schema = new Schema<ToolDocumentFields>({
   autoReorder: { type: Boolean, default: false },
   reorderQty: { type: Number, default: 0 },
   reorderThreshold: { type: Number, default: 0 },
+  manualOrderQty: { type: Number, default: 0 },
   productLink: String,
   techDataLink: String,
   orderLink: String,
